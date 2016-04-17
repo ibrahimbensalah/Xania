@@ -2,11 +2,12 @@
 using System.Linq;
 using System.Linq.Expressions;
 
-namespace Xania.Ledger.Domain.Repositories
+namespace Xania.Data
 {
     public interface IRepository<TModel>: IQueryable<TModel>
-        where TModel: class
     {
+        TModel Create();
+
         void Add(TModel model);
 
         void Delete(Expression<Func<TModel, bool>> predicate);
