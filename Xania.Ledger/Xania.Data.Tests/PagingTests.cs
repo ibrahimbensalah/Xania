@@ -26,7 +26,7 @@ namespace Xania.Data.Tests
         [Test]
         public void OrderByDynamicFieldTest()
         {
-            var ordered = _persons.OrderBy("FirstName");
+            var ordered = _persons.OrderBy("First name");
             ordered.Select(e => e.FirstName).Should().BeInAscendingOrder();
         }
 
@@ -35,7 +35,7 @@ namespace Xania.Data.Tests
         {
             var request = new PageRequest<DefaultRequestFilter>()
             {
-                Filter = new DefaultRequestFilter { {"FirstName", "Ibrahim"} }
+                Filter = new DefaultRequestFilter { {"first name", "Ibrahim"} }
             };
 
             var page = _persons.ToPageResult(request);

@@ -45,6 +45,7 @@
     <Compile Include="Models\LedgerMutation.cs" />
     <Compile Include="Models\PhysicalFile.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Services\PhysicalFileRepository.cs" />
     <Compile Include="Services\JournalService.cs" />
   </ItemGroup>
   <ItemGroup>

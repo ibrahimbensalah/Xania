@@ -46,14 +46,11 @@ namespace Xania.Data
             };
         }
 
-        public static IQueryable<TModel> OrderBy<TModel>(this IQueryable<TModel> queryable, string field)
+        public static IQueryable<TModel> OrderBy<TModel>(this IQueryable<TModel> queryable, string propertyExpr)
         {
-            if (string.IsNullOrEmpty(field))
-                return queryable;
-
-            var property = typeof (TModel).GetProperty(field, BindingFlags.Instance | BindingFlags.IgnoreCase | BindingFlags.Public);
+            var property = typeof(TModel).FindProperty(propertyExpr);
             if (property == null)
-                throw new InvalidOperationException(string.Format("Property '{0}' not found in type '{1}'", field, typeof(TModel).FullName));
+                return queryable;
 
             var type  = typeof (OrderByHandler<,>).MakeGenericType(typeof (TModel), property.PropertyType);
             var ctor = type.GetConstructors().Single();
@@ -86,6 +83,23 @@ namespace Xania.Data
                 return queryable.OrderBy(lambdaX);
             }
         }
+        public static PropertyInfo FindProperty(this Type type, string propertyExpr)
+        {
+            if (propertyExpr == null)
+                return null;
+
+            propertyExpr = propertyExpr.Replace(" ", string.Empty);
+
+            if (string.IsNullOrEmpty(propertyExpr))
+                return null;
+
+            var property = type.GetProperty(propertyExpr,
+                BindingFlags.Instance | BindingFlags.IgnoreCase | BindingFlags.Public);
+            if (property == null)
+                throw new ArgumentOutOfRangeException("Property not found" + type.FullName, propertyExpr);
+            return property;
+        }
+
     }
 
     public interface IPageRequest
@@ -112,16 +126,15 @@ namespace Xania.Data
             Expression expr = null;
             foreach (var kvp in this)
             {
-                PropertyInfo property = GetProperty<TModel>(kvp.Key);
-                var propertyValue = GetValue(kvp.Value, property.PropertyType);
+                var modelProperty = typeof(TModel).FindProperty(kvp.Key);
+                var propertyValue = GetValue(kvp.Value, modelProperty.PropertyType);
 
                 if (propertyValue == null)
                     continue;
 
-                var modelProperty = typeof(TModel).GetProperty(property.Name);
-                var propertyX = Expression.Property(paramX, property.Name);
+                var propertyX = Expression.Property(paramX, modelProperty.Name);
                 Expression valueX = Expression.Constant(propertyValue);
-                if (modelProperty.PropertyType != property.PropertyType)
+                if (modelProperty.PropertyType != modelProperty.PropertyType)
                     valueX = Expression.Convert(valueX, modelProperty.PropertyType);
 
                 var equalsX = Expression.Equal(propertyX, valueX);
@@ -140,15 +153,6 @@ namespace Xania.Data
             if (converter.CanConvertFrom(typeof (string)))
                 return converter.ConvertFrom(value);
             return value;
-        }
-
-        private PropertyInfo GetProperty<TModel>(string propertyName)
-        {
-            var property = typeof (TModel).GetProperty(propertyName,
-                BindingFlags.Instance | BindingFlags.IgnoreCase | BindingFlags.Public);
-            if (property == null)
-                throw new MissingFieldException(typeof(TModel).FullName, propertyName);
-            return property;
         }
     }
 
