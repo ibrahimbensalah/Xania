@@ -1,23 +1,22 @@
-﻿using System;
-using System.IO;
+﻿using System.IO;
 using System.Text;
 using FluentAssertions;
 using NUnit.Framework;
-using Xania.Ledger.Domain.Services;
 
-namespace Xania.Ledger.Domain.Tests.Services
+namespace Xania.DataAccess.Tests
 {
     public class PhysicalFileServiceTests
     {
-        private PhysicalFileRepository _repository;
+        private DiskStreamRepository _repository;
 
         [SetUp]
         public void SetupService()
         {
             var dir = Path.Combine(Path.GetTempPath(), "file-resources-xn");
+            Directory.CreateDirectory(dir);
             Directory.Delete(dir, true);
 
-            _repository = new PhysicalFileRepository(dir);
+            _repository = new DiskStreamRepository(dir);
         }
 
         [TestCase("some content 1")]

@@ -7,8 +7,8 @@
     <ProjectGuid>{BA3B6BB4-97F8-4F6D-839E-9547B05D2090}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Xania.Data.Tests</RootNamespace>
-    <AssemblyName>Xania.Data.Tests</AssemblyName>
+    <RootNamespace>Xania.DataAccess.Tests</RootNamespace>
+    <AssemblyName>Xania.DataAccess.Tests</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>
@@ -52,15 +52,16 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="PagingTests.cs" />
+    <Compile Include="PhysicalFileRepositoryTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Xania.Data\Xania.Data.csproj">
-      <Project>{38105131-f4d3-43fb-90e2-dbcc2155dc47}</Project>
-      <Name>Xania.Data</Name>
+    <ProjectReference Include="..\Xania.DataAccess\Xania.DataAccess.csproj">
+      <Project>{38105131-F4D3-43FB-90E2-DBCC2155DC47}</Project>
+      <Name>Xania.DataAccess</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

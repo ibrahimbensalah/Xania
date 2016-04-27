@@ -39,19 +39,17 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Models\IAttachment.cs" />
+    <Compile Include="Models\Attachment.cs" />
     <Compile Include="Models\JournalEntry.cs" />
     <Compile Include="Models\Ledger.cs" />
     <Compile Include="Models\LedgerMutation.cs" />
-    <Compile Include="Models\PhysicalFile.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Services\PhysicalFileRepository.cs" />
     <Compile Include="Services\JournalService.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Xania.Data\Xania.Data.csproj">
+    <ProjectReference Include="..\Xania.DataAccess\Xania.DataAccess.csproj">
       <Project>{38105131-F4D3-43FB-90E2-DBCC2155DC47}</Project>
-      <Name>Xania.Data</Name>
+      <Name>Xania.DataAccess</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

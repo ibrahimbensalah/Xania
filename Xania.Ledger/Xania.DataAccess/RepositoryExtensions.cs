@@ -4,9 +4,8 @@ using System.ComponentModel;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using Microsoft.SqlServer.Server;
 
-namespace Xania.Data
+namespace Xania.DataAccess
 {
     public static class RepositoryExtensions
     {

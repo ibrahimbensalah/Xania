@@ -1,10 +1,8 @@
-﻿using System;
-using System.Linq;
-using System.Linq.Expressions;
+﻿using System.Linq;
 using FluentAssertions;
 using NUnit.Framework;
 
-namespace Xania.Data.Tests
+namespace Xania.DataAccess.Tests
 {
     public class PagingTests
     {
