@@ -5,7 +5,7 @@ namespace Xania.DataAccess
 {
     public interface IStreamRepository
     {
-        void Add(Guid resourceId, Stream contentStream);
-        Stream Get(Guid resourceId);
+        void Add(string folder, Guid resourceId, Action<Stream> writer);
+        Stream Get(string folder, Guid resourceId);
     }
 }

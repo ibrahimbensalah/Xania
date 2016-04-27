@@ -42,7 +42,7 @@ namespace Xania.Ledger.WebApi.Controllers
                 using (var contentStream = File.OpenRead(file.LocalFileName))
                 {
                     var resourceId = Guid.NewGuid();
-                    _fileRepository.Add(new GenericFile(contentStream)
+                    _fileRepository.Add("uploads", new GenericFile(contentStream)
                     {
                         ContentType = file.Headers.ContentType.MediaType,
                         Name = file.Headers.ContentDisposition.FileName,

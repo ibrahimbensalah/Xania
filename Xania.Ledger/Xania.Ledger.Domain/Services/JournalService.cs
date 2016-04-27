@@ -30,7 +30,7 @@ namespace Xania.Ledger.Domain.Services
         public Attachment CreateAttachment(string name, Stream contentStream)
         {
             Guid resourceId = Guid.NewGuid();
-            _streamRepository.Add(resourceId, contentStream);
+            _streamRepository.Add("attachments", resourceId, contentStream);
             return new Attachment
             {
                 ResourceId = resourceId,

@@ -234,3 +234,4 @@ _Pvt_Extensions
 
 # FAKE - F# Make
 .fake/
+/Xania.Ledger/Xania.Ledger.WebApi/App_Data

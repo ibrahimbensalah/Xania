@@ -29,9 +29,9 @@ namespace Xania.DataAccess.Tests
         {
             // arrange
             // act
-            var resourceId = _repository.Add(StringToStream(content));
+            var resourceId = _repository.Add("test", StringToStream(content));
             // assert
-            using (var stream = _repository.Get(resourceId))
+            using (var stream = _repository.Get("test", resourceId))
             {
                 var reader = new StreamReader(stream);
                 reader.ReadToEnd().Should().Be(content);
@@ -41,8 +41,8 @@ namespace Xania.DataAccess.Tests
         [Test]
         public void WeShouldGetListOfAllAvailableFiles()
         {
-            var res1 = _repository.Add(StringToStream("some content 1"));
-            var res2 = _repository.Add(StringToStream("some content 2"));
+            var res1 = _repository.Add("test", StringToStream("some content 1"));
+            var res2 = _repository.Add("test", StringToStream("some content 2"));
 
             _repository.List().Should().BeEquivalentTo(res1, res2);
         }

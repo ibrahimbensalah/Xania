@@ -6,8 +6,8 @@ namespace Xania.DataAccess
 {
     public interface IFileRepository
     {
-        void Add(IFile file);
-        IFile Get(Guid resourceId);
+        void Add(string folder, IFile file);
+        IFile Get(string folder, Guid resourceId);
     }
 
     public interface IFile
@@ -51,22 +51,23 @@ namespace Xania.DataAccess
         private readonly IRepository<FileMetadata> _metadataRepository;
         private readonly IStreamRepository _streamRepository;
 
-        public FileRepository(IRepository<FileMetadata> metadataRepository, IStreamRepository streamRepository)
+        public FileRepository(IRepository<FileMetadata> metadataRepository,
+            IStreamRepository streamRepository)
         {
             _metadataRepository = metadataRepository;
             _streamRepository = streamRepository;
         }
 
-        public void Add(IFile file)
+        public void Add(string folder, IFile file)
         {
             var metadata = FileMetadata.FromFile(file);
             file.Read(s =>
             {
-                _streamRepository.Add(metadata.ResourceId, s);
+                _streamRepository.Add(folder, metadata.ResourceId, s);
             });
         }
 
-        public IFile Get(Guid resourceId)
+        public IFile Get(string folder, Guid resourceId)
         {
             var qu =
                 from f in _metadataRepository
@@ -77,10 +78,11 @@ namespace Xania.DataAccess
             if (metadata == null)
                 return null;
 
-            return metadata.ToFile(() => _streamRepository.Get(metadata.ResourceId));
+            return metadata.ToFile(() => _streamRepository.Get(folder, metadata.ResourceId));
         }
 
     }
+
     public class FileMetadata
     {
         public string Name { get; set; }

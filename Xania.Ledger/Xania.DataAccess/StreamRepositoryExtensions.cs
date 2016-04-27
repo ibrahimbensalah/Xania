@@ -5,11 +5,16 @@ namespace Xania.DataAccess
 {
     public static class StreamRepositoryExtensions
     {
-        public static Guid Add(this IStreamRepository streamRepository, Stream stream)
+        public static Guid Add(this IStreamRepository streamRepository, string folder, Stream stream)
         {
             var resourceId = Guid.NewGuid();
-            streamRepository.Add(resourceId, stream);
+            streamRepository.Add(folder, resourceId, stream.CopyTo);
             return resourceId;
+        }
+
+        public static void Add(this IStreamRepository streamRepository, string folder, Guid resourceId, Stream stream)
+        {
+            streamRepository.Add(folder, resourceId, stream.CopyTo);
         }
     }
 }

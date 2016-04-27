@@ -16,32 +16,34 @@ namespace Xania.DataAccess
             _rootDirectory = rootDirectory;
         }
 
-        public void Add(Guid resourceId, Stream contentStream)
+        public void Add(string folder, Guid resourceId, Action<Stream> writer)
         {
             lock (_syncObject)
             {
                 Directory.CreateDirectory(_rootDirectory);
-                var filePath = GetFilePath(resourceId);
+                var filePath = GetFilePath(folder, resourceId);
                 using (var fileStream = System.IO.File.OpenWrite(filePath))
                 {
-                    contentStream.CopyTo(fileStream);
+                    writer(fileStream);
                     fileStream.Flush();
                     fileStream.Close();
                 }
             }
         }
 
-        public Stream Get(Guid resourceId)
+        public Stream Get(string folder, Guid resourceId)
         {
             lock (_syncObject)
             {
-                return DiskFile.OpenRead(GetFilePath(resourceId));
+                return DiskFile.OpenRead(GetFilePath(folder, resourceId));
             }
         }
 
-        private string GetFilePath(Guid resourceId)
+        private string GetFilePath(string folder, Guid resourceId)
         {
-            var filePath = Path.Combine(_rootDirectory, resourceId + ".xn");
+            var dir = Path.Combine(_rootDirectory, folder);
+            Directory.CreateDirectory(dir);
+            var filePath = Path.Combine(dir, resourceId + ".xn");
             return filePath;
         }
 

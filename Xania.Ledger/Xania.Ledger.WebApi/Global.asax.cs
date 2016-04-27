@@ -21,11 +21,11 @@ namespace Xania.Ledger.WebApi
 
             var uploadDir =
                 ConfigurationManager.AppSettings["xn:upload_dir"] ??
-                AppDomain.CurrentDomain.BaseDirectory + VirtualPathUtility.ToAbsolute("~/App_Data/uploads");
+                AppDomain.CurrentDomain.BaseDirectory + VirtualPathUtility.ToAbsolute("~/App_Data");
 
             GlobalConfiguration.Configuration.DependencyResolver = new XaniaDependencyResolver
             {
-                new ConventionBasedResolver(),
+                new ConventionBasedResolver(typeof(WebApiApplication).Assembly),
                 new IdentityResolver().For<ApiController>(),
                 new RegistryResolver()
                     .Register(new DiskStreamRepository(uploadDir))
@@ -33,6 +33,10 @@ namespace Xania.Ledger.WebApi
                     .Register<FileRepository>()
             };
         }
+    }
+
+    public class MyDbContext
+    {
     }
 
     partial class XaniaDependencyResolver: IDependencyResolver
