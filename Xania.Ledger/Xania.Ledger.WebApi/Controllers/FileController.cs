@@ -15,6 +15,7 @@ namespace Xania.Ledger.WebApi.Controllers
             _fileRepository = fileRepository;
         }
 
+        [HttpGet]
         public IHttpActionResult Ping()
         {
             return Ok("pong");

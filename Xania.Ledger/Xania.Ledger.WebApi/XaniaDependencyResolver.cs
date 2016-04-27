@@ -6,7 +6,7 @@ using Xania.IoC.Resolvers;
 
 namespace Xania.Ledger.WebApi
 {
-    public class XaniaDependencyResolver : ResolverCollection, IDependencyResolver
+    public partial class XaniaDependencyResolver : ResolverCollection
     {
 		IResolver Resolver { get { return this; } }
 
@@ -23,7 +23,7 @@ namespace Xania.Ledger.WebApi
 
     public static class XaniaResolverExtensions
     {
-        public static IResolver PerRequest(this IResolver resolver, MvcApplication app)
+        public static IResolver PerRequest(this IResolver resolver, HttpApplication app)
         {
             var scopeProvider = ScopeProvider.FromBackingStore(() => app.Context.Items);
             app.EndRequest += (sender, args) =>
@@ -33,7 +33,7 @@ namespace Xania.Ledger.WebApi
             return resolver.PerScope(scopeProvider);
         }
 
-        public static IResolver PerSession(this IResolver resolver, MvcApplication app)
+        public static IResolver PerSession(this IResolver resolver, HttpApplication app)
         {
             return resolver.PerScope(new PerSessionScopeProvider());
         }
