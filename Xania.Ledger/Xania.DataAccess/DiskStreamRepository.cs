@@ -14,14 +14,13 @@ namespace Xania.DataAccess
         public DiskStreamRepository(string rootDirectory)
         {
             _rootDirectory = rootDirectory;
-
-            Directory.CreateDirectory(_rootDirectory);
         }
 
         public void Add(Guid resourceId, Stream contentStream)
         {
             lock (_syncObject)
             {
+                Directory.CreateDirectory(_rootDirectory);
                 var filePath = GetFilePath(resourceId);
                 using (var fileStream = System.IO.File.OpenWrite(filePath))
                 {

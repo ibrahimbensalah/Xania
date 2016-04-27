@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Configuration;
 using System.Linq;
 using System.Web;
 using System.Web.Http;
@@ -17,12 +18,16 @@ namespace Xania.Ledger.WebApi
         {
             GlobalConfiguration.Configure(WebApiConfig.Register);
 
+            var uploadDir =
+                ConfigurationManager.AppSettings["xn:upload_dir"] ??
+                VirtualPathUtility.ToAbsolute("~/App_Data/uploads");
+
             GlobalConfiguration.Configuration.DependencyResolver = new XaniaDependencyResolver
             {
                 new ConventionBasedResolver(),
                 new IdentityResolver().For<ApiController>(),
                 new RegistryResolver()
-                    .Register(new DiskStreamRepository(@"c:\temp\xn-ledger"))
+                    .Register(new DiskStreamRepository(uploadDir))
                     .Register(typeof(RepositoryBase<>))
                     .Register<FileRepository>()
             };
