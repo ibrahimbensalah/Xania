@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Configuration;
+using System.IO;
 using System.Linq;
 using System.Web;
 using System.Web.Http;
@@ -20,7 +21,7 @@ namespace Xania.Ledger.WebApi
 
             var uploadDir =
                 ConfigurationManager.AppSettings["xn:upload_dir"] ??
-                VirtualPathUtility.ToAbsolute("~/App_Data/uploads");
+                AppDomain.CurrentDomain.BaseDirectory + VirtualPathUtility.ToAbsolute("~/App_Data/uploads");
 
             GlobalConfiguration.Configuration.DependencyResolver = new XaniaDependencyResolver
             {
@@ -43,7 +44,6 @@ namespace Xania.Ledger.WebApi
 
         public void Dispose()
         {
-            throw new NotImplementedException();
         }
     }
 

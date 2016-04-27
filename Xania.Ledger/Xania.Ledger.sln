@@ -24,6 +24,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".nuget", ".nuget", "{97A670
 		.nuget\NuGet.targets = .nuget\NuGet.targets
 	EndProjectSection
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Xania.Ledger.Web", "Xania.Ledger.Web\Xania.Ledger.Web.csproj", "{6F34C243-13AA-4E9C-9A36-DA30C8F27498}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -50,6 +52,10 @@ Global
 		{D4A5A4F5-1B73-4A3A-949B-5EF325856249}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D4A5A4F5-1B73-4A3A-949B-5EF325856249}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D4A5A4F5-1B73-4A3A-949B-5EF325856249}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6F34C243-13AA-4E9C-9A36-DA30C8F27498}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6F34C243-13AA-4E9C-9A36-DA30C8F27498}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6F34C243-13AA-4E9C-9A36-DA30C8F27498}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6F34C243-13AA-4E9C-9A36-DA30C8F27498}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -60,5 +66,6 @@ Global
 		{38105131-F4D3-43FB-90E2-DBCC2155DC47} = {D0B5A52A-3892-4034-91C5-74E4DBF1EEEF}
 		{BA3B6BB4-97F8-4F6D-839E-9547B05D2090} = {2E94C4D9-0FA1-4CEC-B1E2-1BD68156A10C}
 		{D4A5A4F5-1B73-4A3A-949B-5EF325856249} = {D0B5A52A-3892-4034-91C5-74E4DBF1EEEF}
+		{6F34C243-13AA-4E9C-9A36-DA30C8F27498} = {D0B5A52A-3892-4034-91C5-74E4DBF1EEEF}
 	EndGlobalSection
 EndGlobal

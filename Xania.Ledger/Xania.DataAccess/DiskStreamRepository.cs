@@ -25,6 +25,7 @@ namespace Xania.DataAccess
                 using (var fileStream = System.IO.File.OpenWrite(filePath))
                 {
                     contentStream.CopyTo(fileStream);
+                    fileStream.Flush();
                     fileStream.Close();
                 }
             }

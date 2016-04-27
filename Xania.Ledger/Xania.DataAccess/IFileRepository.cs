@@ -60,6 +60,10 @@ namespace Xania.DataAccess
         public void Add(IFile file)
         {
             var metadata = FileMetadata.FromFile(file);
+            file.Read(s =>
+            {
+                _streamRepository.Add(metadata.ResourceId, s);
+            });
         }
 
         public IFile Get(Guid resourceId)
