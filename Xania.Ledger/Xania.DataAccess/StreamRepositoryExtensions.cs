@@ -16,5 +16,16 @@ namespace Xania.DataAccess
         {
             streamRepository.Add(folder, resourceId, stream.CopyTo);
         }
+
+        public static T Read<T>(this IStreamRepository streamRepository, string folder, Guid resourceId, Func<Stream, T> reader)
+        {
+            var result = default(T);
+            streamRepository.Read(folder, resourceId, s =>
+            {
+                result = reader(s);
+            });
+            return result;
+        }
+
     }
 }

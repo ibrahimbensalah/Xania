@@ -10,7 +10,7 @@ using Xania.DataAccess;
 
 namespace Xania.Ledger.WebApi.Controllers
 {
-    public class FileController: ApiController
+    public class FileController : ApiController
     {
         private readonly IFileRepository _fileRepository;
 
@@ -39,19 +39,12 @@ namespace Xania.Ledger.WebApi.Controllers
 
             foreach (MultipartFileData file in provider.FileData)
             {
-                using (var contentStream = File.OpenRead(file.LocalFileName))
+                _fileRepository.Add("uploads", new DiskFile(file.LocalFileName)
                 {
-                    var resourceId = Guid.NewGuid();
-                    _fileRepository.Add("uploads", new GenericFile(contentStream)
-                    {
-                        ContentType = file.Headers.ContentType.MediaType,
-                        Name = file.Headers.ContentDisposition.FileName,
-                        ResourceId = resourceId
-                    });
-
-                    Trace.WriteLine(file.Headers.ContentDisposition.FileName);
-                    Trace.WriteLine("Server file path: " + file.LocalFileName);
-                }
+                    ContentType = file.Headers.ContentType.MediaType,
+                    Name = file.Headers.ContentDisposition.FileName,
+                    ResourceId = Guid.NewGuid()
+                });
             }
 
             return Request.CreateResponse(HttpStatusCode.OK);

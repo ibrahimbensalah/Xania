@@ -15,32 +15,56 @@ namespace Xania.DataAccess
         string Name { get; }
         string ContentType { get; }
         Guid ResourceId { get; }
+        void CopyTo(Stream output);
+    }
+
+    public interface IOutputStream
+    {
+        string Name { get; }
+        string ContentType { get; }
+        Guid ResourceId { get; }
         void Read(Action<Stream> reader);
     }
 
-    public class GenericFile : IFile
+    public class RepositoryFile: IFile
     {
-        private readonly Func<Stream> _streamFunc;
+        private readonly IStreamRepository _streamRepository;
+        private readonly string _folder;
 
-        public GenericFile(Stream stream)
-            : this(() => stream)
+        public RepositoryFile(IStreamRepository streamRepository, string folder)
         {
+            _streamRepository = streamRepository;
+            _folder = folder;
         }
 
-        public GenericFile(Func<Stream> streamFunc)
+        public string Name { get; set; }
+        public string ContentType { get; set; }
+        public Guid ResourceId { get; set; }
+        public void CopyTo(Stream output)
         {
-            _streamFunc = streamFunc;
+            _streamRepository.Read(_folder, ResourceId, s => s.CopyTo(output));
+        }
+    }
+
+    public class DiskFile : IFile
+    {
+        private readonly string _filePath;
+
+        public DiskFile(string filePath)
+        {
+            _filePath = filePath;
         }
 
         public string Name { get; set; }
         public string ContentType { get; set; }
         public Guid ResourceId { get; set; }
 
-        public void Read(Action<Stream> reader)
+        public void CopyTo(Stream output)
         {
-            using (var stream = _streamFunc())
+            using (var stream = File.OpenRead(_filePath))
             {
-                reader(stream);
+                stream.CopyTo(output);
+                output.Flush();
                 stream.Close();
             }
         }
@@ -61,10 +85,7 @@ namespace Xania.DataAccess
         public void Add(string folder, IFile file)
         {
             var metadata = FileMetadata.FromFile(file);
-            file.Read(s =>
-            {
-                _streamRepository.Add(folder, metadata.ResourceId, s);
-            });
+            _streamRepository.Add(folder, metadata.ResourceId, file.CopyTo);
         }
 
         public IFile Get(string folder, Guid resourceId)
@@ -78,7 +99,12 @@ namespace Xania.DataAccess
             if (metadata == null)
                 return null;
 
-            return metadata.ToFile(() => _streamRepository.Get(folder, metadata.ResourceId));
+            return new RepositoryFile(_streamRepository, folder)
+            {
+                ResourceId = metadata.ResourceId,
+                Name = metadata.Name,
+                ContentType = metadata.ContentType
+            };
         }
 
     }
@@ -96,16 +122,6 @@ namespace Xania.DataAccess
                 Name = file.Name,
                 ContentType = file.ContentType,
                 ResourceId = file.ResourceId
-            };
-        }
-
-        public IFile ToFile(Func<Stream> stream)
-        {
-            return new GenericFile(stream)
-            {
-                ResourceId = ResourceId,
-                Name = Name,
-                ContentType = ContentType
             };
         }
     }

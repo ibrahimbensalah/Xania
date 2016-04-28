@@ -28,14 +28,14 @@ namespace Xania.DataAccess.Tests
         public void WeShouldBeAbleToFindFileWhenAdded(string content)
         {
             // arrange
-            // act
             var resourceId = _repository.Add("test", StringToStream(content));
-            // assert
-            using (var stream = _repository.Get("test", resourceId))
+            // act
+            _repository.Read("test", resourceId, s =>
             {
-                var reader = new StreamReader(stream);
+                // assert
+                var reader = new StreamReader(s);
                 reader.ReadToEnd().Should().Be(content);
-            }
+            });
         }
 
         [Test]
@@ -44,7 +44,7 @@ namespace Xania.DataAccess.Tests
             var res1 = _repository.Add("test", StringToStream("some content 1"));
             var res2 = _repository.Add("test", StringToStream("some content 2"));
 
-            _repository.List().Should().BeEquivalentTo(res1, res2);
+            _repository.List("test").Should().BeEquivalentTo(res1, res2);
         }
 
         private Stream StringToStream(string someContent)

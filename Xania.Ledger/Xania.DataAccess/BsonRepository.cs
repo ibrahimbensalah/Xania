@@ -21,11 +21,18 @@ namespace Xania.DataAccess
             var resourceId = Guid.NewGuid();
             _streamRepository.Add(typeof(TModel).Name, resourceId, s =>
             {
+                var doc = MongoDB.Bson.BsonBinaryData.Create(model);
+                var writer= new BsonBinaryWriter(s);
+                writer.WriteBinaryData(doc);
             });
         }
 
         public IEnumerator<TModel> GetEnumerator()
         {
+            foreach (var id in _streamRepository.List(typeof(TModel).Name))
+            {
+                // _streamRepository.Read()
+            }
             yield break;
         }
 

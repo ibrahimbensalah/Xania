@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using DiskFile = System.IO.File;
 
 namespace Xania.DataAccess
 {
@@ -22,7 +21,7 @@ namespace Xania.DataAccess
             {
                 Directory.CreateDirectory(_rootDirectory);
                 var filePath = GetFilePath(folder, resourceId);
-                using (var fileStream = System.IO.File.OpenWrite(filePath))
+                using (var fileStream = File.OpenWrite(filePath))
                 {
                     writer(fileStream);
                     fileStream.Flush();
@@ -31,11 +30,15 @@ namespace Xania.DataAccess
             }
         }
 
-        public Stream Get(string folder, Guid resourceId)
+        public void Read(string folder, Guid resourceId, Action<Stream> reader)
         {
             lock (_syncObject)
             {
-                return DiskFile.OpenRead(GetFilePath(folder, resourceId));
+                using (var stream = File.OpenRead(GetFilePath(folder, resourceId)))
+                {
+                    reader(stream);
+                    stream.Close();
+                }
             }
         }
 
@@ -47,10 +50,11 @@ namespace Xania.DataAccess
             return filePath;
         }
 
-        public IEnumerable<Guid> List()
+        public IEnumerable<Guid> List(string folder)
         {
+            var dir = Path.Combine(_rootDirectory, folder);
             return
-                Directory.GetFiles(_rootDirectory, "*.xn")
+                Directory.GetFiles(dir, "*.xn")
                     .Select(fileName => new FileInfo(fileName))
                     .Select(file => file.Name.Substring(0, file.Name.Length - ".xn".Length))
                     .Select(Guid.Parse);
