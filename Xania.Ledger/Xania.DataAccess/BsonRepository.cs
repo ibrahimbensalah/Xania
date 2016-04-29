@@ -1,12 +1,11 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using MongoDB.Bson;
 using MongoDB.Bson.IO;
+using MongoDB.Bson.Serialization;
 
 namespace Xania.DataAccess
 {
-
     public class BsonRepository<TModel>: IEnumerable<TModel>
     {
         private readonly IStreamRepository _streamRepository;
@@ -19,11 +18,12 @@ namespace Xania.DataAccess
         public virtual void Add(TModel model)
         {
             var resourceId = Guid.NewGuid();
-            _streamRepository.Add(typeof(TModel).Name, resourceId, s =>
+            _streamRepository.Add(typeof(TModel).Name, resourceId, stream =>
             {
-                var doc = MongoDB.Bson.BsonBinaryData.Create(model);
-                var writer= new BsonBinaryWriter(s);
-                writer.WriteBinaryData(doc);
+                using (var bsonWriter = new BsonBinaryWriter(stream))
+                {
+                    BsonSerializer.Serialize(bsonWriter, typeof(TModel), model, e => {});
+                }
             });
         }
 
@@ -31,9 +31,14 @@ namespace Xania.DataAccess
         {
             foreach (var id in _streamRepository.List(typeof(TModel).Name))
             {
-                // _streamRepository.Read()
+                yield return _streamRepository.Read(typeof(TModel).Name, id, stream =>
+                {
+                    using (var bsonReader = new BsonBinaryReader(stream))
+                    {
+                        return BsonSerializer.Deserialize<TModel>(bsonReader);
+                    }
+                });
             }
-            yield break;
         }
 
         IEnumerator IEnumerable.GetEnumerator()
