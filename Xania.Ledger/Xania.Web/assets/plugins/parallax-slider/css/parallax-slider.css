@@ -59,12 +59,15 @@
 	font-weight: 400 !important;
 }
 .da-slide h2 i {
-	font-size: 36px;
+    font-size: 36px;
 	font-style:normal;
 	padding:0 5px;
 	text-transform:uppercase;
-	background-color: rgba(46, 98, 0, 0.8);
+	/*background-color: rgba(46, 98, 0, 0.8);*/
+    background-color: #00a3f0;
+    background-color: rgba(0, 126, 185, 0.5);
 }
+
 .da-slide p {
 	font-family: 'Open Sans', sans-serif;
 	font-size:18px;

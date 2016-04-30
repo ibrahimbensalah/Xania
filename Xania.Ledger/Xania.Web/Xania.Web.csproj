@@ -551,6 +551,8 @@
     <Content Include="assets\img\logo2-default.png" />
     <Content Include="assets\img\logo3-dark.png" />
     <Content Include="assets\img\logo3-light.png" />
+    <Content Include="assets\img\logo_wide-black.PNG" />
+    <Content Include="assets\img\logo_wide.PNG" />
     <Content Include="assets\img\main\img1.jpg" />
     <Content Include="assets\img\main\img10.jpg" />
     <Content Include="assets\img\main\img11.jpg" />
