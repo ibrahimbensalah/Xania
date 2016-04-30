@@ -28,12 +28,10 @@ namespace Xania.Ledger.WebApi.Controllers
         public async Task<HttpResponseMessage> Add()
         {
             if (!Request.Content.IsMimeMultipartContent())
-            {
                 throw new HttpResponseException(HttpStatusCode.UnsupportedMediaType);
-            }
-
-            string root = HttpContext.Current.Server.MapPath("~/App_Data");
-            var provider = new MultipartFormDataStreamProvider(root);
+            
+            string rootPath = Url.Content("~/App_Data");
+            var provider = new MultipartFormDataStreamProvider(rootPath);
 
             await Request.Content.ReadAsMultipartAsync(provider);
 
