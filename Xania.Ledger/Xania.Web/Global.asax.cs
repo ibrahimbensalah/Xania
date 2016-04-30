@@ -1,37 +1,53 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Configuration;
-using System.IO;
-using System.Linq;
+﻿using System.Configuration;
 using System.Web;
+using System.Web.Hosting;
 using System.Web.Http;
 using System.Web.Http.Dependencies;
 using System.Web.Routing;
 using Xania.DataAccess;
 using Xania.IoC;
 using Xania.IoC.Resolvers;
+using Xania.Web.Controllers;
 
-namespace Xania.Ledger.WebApi
+namespace Xania.Web
 {
-    public class WebApiApplication : System.Web.HttpApplication
+    public class WebApiApplication : HttpApplication
     {
         protected void Application_Start()
         {
-            GlobalConfiguration.Configure(WebApiConfig.Register);
+            ConfigureWebApi();
+            ConfigureMvc();
+        }
 
-            var uploadDir =
-                ConfigurationManager.AppSettings["xn:upload_dir"] ??
-                AppDomain.CurrentDomain.BaseDirectory + VirtualPathUtility.ToAbsolute("~/App_Data");
+        private static void ConfigureWebApi()
+        {
+            GlobalConfiguration.Configure(WebApiConfig.Register);
 
             GlobalConfiguration.Configuration.DependencyResolver = new XaniaDependencyResolver
             {
-                new ConventionBasedResolver(typeof(WebApiApplication).Assembly),
+                new ConventionBasedResolver(typeof (WebApiApplication).Assembly),
                 new IdentityResolver().For<ApiController>(),
                 new RegistryResolver()
-                    .Register(new DiskStreamRepository(uploadDir))
-                    .Register(typeof(RepositoryBase<>))
+                    .Register(new XaniaConfiguration
+                    {
+                        UploadDir = GetUploadDir()
+                    })
+                    .Register(new DiskStreamRepository(GetUploadDir()))
+                    .Register(typeof (RepositoryBase<>))
                     .Register<FileRepository>()
             };
+        }
+
+        private static string GetUploadDir()
+        {
+            return 
+                ConfigurationManager.AppSettings["xn:upload_dir"] ??
+                HostingEnvironment.MapPath("~/App_Data");
+        }
+
+        private void ConfigureMvc()
+        {
+            RouteConfig.RegisterRoutes(RouteTable.Routes);
         }
     }
 
@@ -39,7 +55,7 @@ namespace Xania.Ledger.WebApi
     {
     }
 
-    partial class XaniaDependencyResolver: IDependencyResolver
+    partial class XaniaDependencyResolver : IDependencyResolver
     {
         public IDependencyScope BeginScope()
         {

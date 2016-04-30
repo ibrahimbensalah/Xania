@@ -4,7 +4,7 @@ using System.Web;
 using Xania.IoC;
 using Xania.IoC.Resolvers;
 
-namespace Xania.Ledger.WebApi
+namespace Xania.Web
 {
     public partial class XaniaDependencyResolver : ResolverCollection
     {
