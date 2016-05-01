@@ -4393,11 +4393,6 @@
     <Content Include="Views\Home\Index.cshtml" />
     <Content Include="Views\web.config" />
     <Content Include="Views\Shared\_Layout.cshtml" />
-    <Content Include="assets\php\sky-forms-pro\demo-comment-process.php" />
-    <Content Include="assets\php\sky-forms-pro\demo-contacts-process.php" />
-    <Content Include="assets\php\sky-forms-pro\demo-login-process.php" />
-    <Content Include="assets\php\sky-forms-pro\demo-order-process.php" />
-    <Content Include="assets\php\sky-forms-pro\demo-review-process.php" />
     <Content Include="assets\plugins\animated-headline\partials\_layout.scss" />
     <Content Include="assets\plugins\animated-headline\partials\_mixins.scss" />
     <Content Include="assets\plugins\animated-headline\partials\_variables.scss" />
