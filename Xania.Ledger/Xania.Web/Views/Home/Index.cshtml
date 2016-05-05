@@ -53,8 +53,8 @@
                 <i class="fa fa-rocket service-icon"></i>
                 <div class="desc">
                     <h4>Launch Ready</h4>
-                    <form method="POST" enctype="multipart/form-data" action="@Url.Content("~/api/file/add")">
-                        <input type="file" name="file" />
+                    <form method="POST" enctype="multipart/form-data" action="@Url.Content(@"~/api/file/add")">
+                        <input type="file" name="file" multiple="multiple" />
                         <button type="submit">upload</button>
                     </form>
                 </div>

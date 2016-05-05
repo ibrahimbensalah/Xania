@@ -9,12 +9,6 @@ namespace Xania.DataAccess
 {
     public static class RepositoryExtensions
     {
-        public static void Delete<TModel>(this IRepository<TModel> repository, TModel model) 
-            where TModel : class
-        {
-            repository.Delete(m => m == model);
-        }
-
         public static Page<TModel> Page<TModel>(this IRepository<TModel> repository, IPageRequest request)
         {
             return repository.ToPageResult(request);

@@ -33,7 +33,7 @@ namespace Xania.Web
                         UploadDir = GetUploadDir()
                     })
                     .Register(new DiskStreamRepository(GetUploadDir()))
-                    .Register(typeof (RepositoryBase<>))
+                    .Register(typeof (TransientRepository<>))
                     .Register<FileRepository>()
             };
         }

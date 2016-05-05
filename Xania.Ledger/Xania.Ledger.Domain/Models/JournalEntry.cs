@@ -13,6 +13,6 @@ namespace Xania.Ledger.Domain.Models
 
         public virtual ICollection<LedgerMutation> Mutations { get; set; }
 
-        public virtual ICollection<Attachment> Attachments { get; set; }
+        public virtual ICollection<Guid> Attachments { get; set; }
     }
 }

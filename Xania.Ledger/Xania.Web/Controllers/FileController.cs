@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Configuration;
 using System.IO;
 using System.Net;
@@ -35,18 +36,21 @@ namespace Xania.Web.Controllers
 
             await Request.Content.ReadAsMultipartAsync(provider);
 
+            var resources = new List<Guid>();
             foreach (MultipartFileData file in provider.FileData)
             {
+                var resourceId = Guid.NewGuid();
+                resources.Add(resourceId);
                 _fileRepository.Add("uploads", new DiskFile(file.LocalFileName)
                 {
                     ContentType = file.Headers.ContentType.MediaType,
                     Name = file.Headers.ContentDisposition.FileName,
-                    ResourceId = Guid.NewGuid()
+                    ResourceId = resourceId
                 });
                 File.Delete(file.LocalFileName);
             }
 
-            return Request.CreateResponse(HttpStatusCode.OK);
+            return Request.CreateResponse(HttpStatusCode.OK, resources);
         }
     }
 
