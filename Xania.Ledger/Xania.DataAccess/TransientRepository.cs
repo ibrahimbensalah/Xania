@@ -7,16 +7,16 @@ namespace Xania.DataAccess
     public class TransientRepository<TModel> : IRepository<TModel>
         where TModel : new()
     {
-        private readonly List<TModel> _items;
+        private static readonly List<TModel> Items;
 
-        public TransientRepository()
+        static TransientRepository()
         {
-            _items = new List<TModel>();
+            Items = new List<TModel>();
         }
 
         public IEnumerator<TModel> GetEnumerator()
         {
-            return _items.GetEnumerator();
+            return Items.GetEnumerator();
         }
 
         IEnumerator IEnumerable.GetEnumerator()
@@ -31,12 +31,12 @@ namespace Xania.DataAccess
 
         public void Add(TModel model)
         {
-            _items.Add(model);
+            Items.Add(model);
         }
 
         public void Delete(TModel model)
         {
-            _items.Remove(model);
+            Items.Remove(model);
         }
     }
 }
