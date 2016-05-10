@@ -89,10 +89,6 @@
     <Reference Include="System.Configuration" />
     <Reference Include="System.Web.Services" />
     <Reference Include="System.EnterpriseServices" />
-    <Reference Include="Xania.IoC, Version=1.0.76.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\Xania.IoC.1.0.76.0\lib\net45\Xania.IoC.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Reference Include="System.Net.Http.Formatting">
@@ -4380,13 +4376,11 @@
   <ItemGroup>
     <Compile Include="App_Start\RouteConfig.cs" />
     <Compile Include="App_Start\WebApiConfig.cs" />
-    <Compile Include="Controllers\FileController.cs" />
     <Compile Include="Controllers\HomeController.cs" />
     <Compile Include="Global.asax.cs">
       <DependentUpon>Global.asax</DependentUpon>
     </Compile>
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="XaniaDependencyResolver.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="packages.config" />
@@ -4613,16 +4607,6 @@
   <ItemGroup>
     <Folder Include="App_Data\" />
     <Folder Include="Models\" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\Xania.DataAccess\Xania.DataAccess.csproj">
-      <Project>{38105131-F4D3-43FB-90E2-DBCC2155DC47}</Project>
-      <Name>Xania.DataAccess</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Xania.Ledger.Web\Xania.Ledger.Web.csproj">
-      <Project>{f8fd76bb-fab8-4a12-bbca-f772b92c57eb}</Project>
-      <Name>Xania.Ledger.Web</Name>
-    </ProjectReference>
   </ItemGroup>
   <PropertyGroup>
     <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">10.0</VisualStudioVersion>

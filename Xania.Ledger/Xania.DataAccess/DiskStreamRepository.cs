@@ -52,7 +52,13 @@ namespace Xania.DataAccess
 
         public IEnumerable<Guid> List(string folder)
         {
-            var dir = Path.Combine(_rootDirectory, folder);
+            var dir = string.IsNullOrEmpty(folder)
+                ? _rootDirectory
+                : Path.Combine(_rootDirectory, folder);
+
+            if (!Directory.Exists(dir)) 
+                return Enumerable.Empty<Guid>();
+
             return
                 Directory.GetFiles(dir, "*.xn")
                     .Select(fileName => new FileInfo(fileName))
