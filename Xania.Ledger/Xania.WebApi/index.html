@@ -1,0 +1,178 @@
+﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <title></title>
+    <style type="text/css">
+        .xn-files {
+            height: 100px;
+            border: 2px solid black;
+        }
+
+        .xn-files-focused {
+            border-color: red;
+        }
+    </style>
+    <script type="text/javascript">
+        "strict";
+
+        function ready(fn) {
+            if (document.readyState !== 'loading') {
+                fn();
+            } else {
+                document.addEventListener('DOMContentLoaded', fn);
+            }
+        }
+        function addClass(el, className) {
+            if (el.classList)
+                el.classList.add(className);
+            else
+                el.className += ' ' + className;
+        }
+        function removeClass(el, className) {
+            if (el.classList)
+                el.classList.remove(className);
+            else
+                el.className = el.className
+                    .replace(new RegExp('(^|\\b)' + className.split(' ').join('|') + '(\\b|$)', 'gi'), ' ');
+        }
+        var Promise = function (context) {
+            var doneHandlers = [];
+
+            return {
+                done : function(next) {
+                    doneHandlers.push(next);
+                },
+                attach: function(other) {
+                    doneHandlers.push(other.fire);
+                },
+                fire: function () {
+                    for (var i = 0; i < doneHandlers.length; i++) {
+                        var h = doneHandlers[i];
+                        h.apply(context, arguments);
+                    }
+                }
+            }
+        }
+        function get(url) {
+            var promise = new Promise();
+            var request = new XMLHttpRequest();
+            request.open('GET', url, true);
+
+            request.onload = function () {
+                if (request.status >= 200 && request.status < 400) {
+                    promise.fire(request.responseText);
+                } else {
+                    // We reached our target server, but it returned an error
+                    alert('request failed');
+                }
+            };
+
+            request.onerror = function () {
+                // There was a connection error of some sort
+            };
+
+            request.send();
+
+            return promise;
+        }
+        function sendFiles(url, files) {
+            var i = 0,
+                promise = new Promise(),
+                len = files.length;
+
+            var formData = new FormData();
+            for (; i < len; i++) {
+                var file = files[i];
+                formData.append("file", file, file.name);
+            }
+
+            // Set up the request.
+            var xhr = new XMLHttpRequest();
+            // Open the connection.
+            xhr.open('POST', url, true);
+            // Set up a handler for when the request finishes.
+            xhr.onload = function () {
+                if (xhr.status === 200 || xhr.status === 201) {
+                    // File(s) uploaded.
+                    promise.fire();
+                } else {
+                    alert('An error occurred: ' + xhr.status + ' - ' + xhr.description);
+                }
+            };
+            // Send the Data.
+            xhr.send(formData);
+
+            return promise;
+        }
+        function initDropFiles(url, target) {
+            var promise = new Promise();
+
+            target.addEventListener("dragover", function (event) {
+                event.preventDefault();
+                addClass(target, 'xn-files-focused');
+            }, false);
+
+            target.addEventListener("dragleave", function (event) {
+                removeClass(target, 'xn-files-focused');
+            }, false);
+
+            target.addEventListener("mouseout", function (event) {
+                removeClass(target, 'xn-files-focused');
+            }, false);
+
+            target.addEventListener("drop", function (event) {
+                removeClass(target, 'xn-files-focused');
+                // cancel default actions
+                event.preventDefault();
+
+                sendFiles(url, event.dataTransfer.files).attach(promise);
+            }, false);
+
+            return promise;
+        }
+        function initAjaxUpload(url, form) {
+            var promise = new Promise();
+            form.addEventListener("submit", function () {
+                event.preventDefault();
+                var fileInput = form.querySelector("input[type='file']");
+                if (!!fileInput) {
+                    sendFiles(url, fileInput.files).attach(promise);
+                }
+            });
+
+            return promise;
+        }
+        function initFileList(url) {
+            return get(url)
+                .done(function (json) {
+                    var arr = JSON.parse(json);
+                    for (var i = 0 ; i < arr.length ; i++)
+                        console.log(arr[i].Url);
+                });
+        }
+        ready(function () {
+            var target = document.getElementById("my-files");
+            var form = target.querySelector("form[enctype='multipart/form-data']");
+            if (!!form) {
+                var url = form.action;
+                var update = initFileList.bind(this, url);
+                initDropFiles(url, target).done(update);
+                initAjaxUpload(url, form).done(update);
+                update();
+            }
+        });
+
+    </script>
+</head>
+<body>
+
+
+    <div id="my-files" class="xn-files">
+        <form method="post" enctype="multipart/form-data" action="http://localhost:32130/data/file/xhr-uploads">
+            <input type="file" name="file" multiple="multiple" />
+            <button type="submit">upload</button>
+        </form>
+    </div>
+
+</body>
+</html>

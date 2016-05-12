@@ -1,10 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Configuration;
-using System.Linq;
+﻿using System.Configuration;
 using System.Web.Hosting;
 using System.Web.Http;
-using System.Web.Http.Dependencies;
 using Xania.DataAccess;
 using Xania.IoC;
 using Xania.IoC.Resolvers;
