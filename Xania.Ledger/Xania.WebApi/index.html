@@ -53,6 +53,13 @@
                 }
             }
         }
+        var HtmlTemplate = function() {
+            return {
+                render: function(obj) {
+                    
+                }
+            };
+        }
         function get(url) {
             var promise = new Promise();
             var request = new XMLHttpRequest();
@@ -142,17 +149,17 @@
 
             return promise;
         }
-        function initFileList(url) {
+        function initFileList(tpl, url) {
             return get(url)
                 .done(function (json) {
                     var arr = JSON.parse(json);
-                    for (var i = 0 ; i < arr.length ; i++)
-                        console.log(arr[i].Url);
+                    tpl.render(arr);
                 });
         }
         ready(function () {
             var target = document.getElementById("my-files");
             var form = target.querySelector("form[enctype='multipart/form-data']");
+            var tpl = new HtmlTemplate(target);
             if (!!form) {
                 var url = form.action;
                 var update = initFileList.bind(this, url);
