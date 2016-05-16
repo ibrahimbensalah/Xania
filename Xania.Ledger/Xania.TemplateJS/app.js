@@ -15,6 +15,12 @@ var Greeter = (function () {
     };
     return Greeter;
 })();
+var OrganisationViewModel = (function () {
+    function OrganisationViewModel(values) {
+        this.values = values;
+    }
+    return OrganisationViewModel;
+})();
 window.onload = function () {
     var el = document.getElementById('content');
     var greeter = new Greeter(el);

@@ -10,13 +10,30 @@
 <body>
     <h1>TypeScript HTML App</h1>
 
-    <div id="content">
-        <ul data-url="organisation.json" require-module="Organisation">
-            <li data-model="Employees" class="{{cellClass}}">
-                {{name}}
-                <button event-click="{{sayHello}}">click me</button>
-            </li>
-        </ul>
-    </div>
+<div id="content">
+    <ul data-model="organisation.json" view-model="Organisation">
+        <li data-model="@employees" event-click="@updateCell" class="@style.cellClass">
+            @name <button event-click="@sayHello">click me</button>
+        </li>
+    </ul>
+</div>
+    <table>
+        <tr>
+            <td data-model="cells.json" class="hour-cell">
+                <div data-class="cellClass" on-click="updateCell" view-model="Cell">
+                    <div class="time" css="@style.showHour">
+                        @hours:00
+                    </div>
+                    <div data-style="style.showSpinner">
+                        ...
+                    </div>
+                    <div data-style="style.showSearchResults">
+                        <div>@status.searchResults.options</div>
+                        <div class="result-label">results</div>
+                    </div>
+                </div>
+            </td>
+        </tr>
+    </table>
 </body>
 </html>
