@@ -9,19 +9,18 @@
 </head>
 <body>
     <h1>TypeScript HTML App</h1>
-
-<div id="content">
-    <ul data-model="organisation.json" view-model="Organisation">
-        <li data-model="@employees" event-click="@updateCell" class="@style.cellClass">
-            @name <button event-click="@sayHello">click me</button>
-        </li>
-    </ul>
-</div>
+    <div id="content">
+        <ul data-from="o in url:get(a, b, c)" view-model="Organisation">
+            <li data-model="@employees" event-click="@updateCell" class="@style.cellClass">
+                @name <button event-click="@sayHello">click me</button>
+            </li>
+        </ul>
+    </div>
     <table>
         <tr>
-            <td data-model="cells.json" class="hour-cell">
+            <td data-from="cells.json" class="hour-cell">
                 <div data-class="cellClass" on-click="updateCell" view-model="Cell">
-                    <div class="time" css="@style.showHour">
+                    <div class="time" style="@showHour">
                         @hours:00
                     </div>
                     <div data-style="style.showSpinner">

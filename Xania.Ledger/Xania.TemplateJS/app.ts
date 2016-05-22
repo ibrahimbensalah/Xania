@@ -32,3 +32,4 @@ window.onload = () => {
     var greeter = new Greeter(el);
     greeter.start();
 };
+
