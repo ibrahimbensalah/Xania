@@ -100,20 +100,12 @@ var SelectManyExpression = (function () {
         for (var i = 0; i < source.length; i++) {
             var collection = ensureIsArray(this.collectionFunc(source[i]));
             for (var e = 0; e < collection.length; e++) {
-                result.push(this.extend(collection[i], source[i]));
+                var p = Xania.proxy(source[i]);
+                p.defineProperty(this.varName, (function (x) { return x; }).bind(this, collection[e]));
+                result.push(p.create());
             }
         }
         return result;
-    };
-    SelectManyExpression.prototype.extend = function (obj, parent) {
-        var r = {};
-        var keys = Object.keys(parent);
-        for (var i = 0; i < keys.length; i++) {
-            var k = keys[i];
-            r[k] = parent[k];
-        }
-        r[this.varName] = obj;
-        return r;
     };
     SelectManyExpression.create = function (expr) {
         var m = expr.match(/^(\w+)\s+in\s+((\w+)\s*:\s*)?(.*)$/i);
@@ -194,6 +186,42 @@ var Map = (function () {
         return key && this.get(key);
     };
     return Map;
+})();
+var Xania = (function () {
+    function Xania() {
+    }
+    // ReSharper disable InconsistentNaming
+    Xania.proxy = function (B) {
+        function Proxy() { }
+        for (var k in B.constructor) {
+            if (B.constructor.hasOwnProperty(k)) {
+                Proxy[k] = B.constructor[k];
+            }
+        }
+        function __() { this.constructor = Proxy; }
+        __.prototype = B.constructor.prototype;
+        Proxy.prototype = new __();
+        for (var prop in B) {
+            if (B.hasOwnProperty(prop)) {
+                Object.defineProperty(Proxy.prototype, prop, {
+                    get: (function (obj, p) { return obj[p]; }).bind(this, B, prop),
+                    enumerable: true,
+                    configurable: true
+                });
+            }
+        }
+        return {
+            create: function () { return new Proxy; },
+            defineProperty: function (prop, getter) {
+                Object.defineProperty(Proxy.prototype, prop, {
+                    get: getter,
+                    enumerable: true,
+                    configurable: true
+                });
+            }
+        };
+    };
+    return Xania;
 })();
 var A = (function () {
     function A() {

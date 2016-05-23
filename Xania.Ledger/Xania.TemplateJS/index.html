@@ -5,17 +5,21 @@
     <meta charset="utf-8" />
     <title>TypeScript HTML App</title>
     <link rel="stylesheet" href="app.css" type="text/css" />
+    <link href="Content/qunit.css" rel="stylesheet"/>
+
     <script src="app.js"></script>
+    <script src="Scripts/qunit.js"></script>
 </head>
 <body>
     <h1>TypeScript HTML App</h1>
-    <div id="content">
+<div id="content">
         <ul data-from="o in url:get(a, b, c)" view-model="Organisation">
-            <li data-model="@employees" event-click="@updateCell" class="@style.cellClass">
-                @name <button event-click="@sayHello">click me</button>
-            </li>
-        </ul>
-    </div>
+        <li data-model="@employees" event-click="@updateCell" class="@style.cellClass">
+            @name <button event-click="@sayHello">click me</button>
+        </li>
+    </ul>
+
+</div>
     <table>
         <tr>
             <td data-from="cells.json" class="hour-cell">
@@ -23,10 +27,10 @@
                     <div class="time" style="@showHour">
                         @hours:00
                     </div>
-                    <div data-style="style.showSpinner">
+                    <div css="@style.showSpinner">
                         ...
                     </div>
-                    <div data-style="style.showSearchResults">
+                    <div css="@style.showSearchResults">
                         <div>@status.searchResults.options</div>
                         <div class="result-label">results</div>
                     </div>

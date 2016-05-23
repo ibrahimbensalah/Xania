@@ -62,14 +62,14 @@ describe("Template Engine", function () {
 });
 
 describe("Select Many Expression", function() {
-    it('should collect result objects', function () {
+    it("should collect result objects", function () {
         var expr = SelectManyExpression.create("emp in org.employees");
         var result = expr.execute({ org: xania });
         expect(result.length).toEqual(1);
         expect(result[0].emp.firstName).toEqual("Ibrahim");
         expect(result[0].emp.lastName).toEqual("ben Salah");
     });
-    it('should support any source expression', function () {
+    it("should support any source expression", function () {
         var expr = SelectManyExpression.create("emp in {n: org.name}");
         var result = expr.execute({ org: xania });
         expect(result.length).toEqual(1);
@@ -78,33 +78,20 @@ describe("Select Many Expression", function() {
     });
 });
 
-describe("Context Object", function () {
-    it("should expose properties", function () {
+describe("Proxy creation", function () {
+    it("should be able to proxy instance object", function () {
+        var b = { test: 1, test2: function() { return 2 }, bla: "bla" };
+        var proxy = Xania.proxy(b);
+        proxy.defineProperty("xprop", function () { return 'x'; });
+        var t = proxy.create();
 
-        var ctor = function() { console.log("fn ctor"); };
-        function fn() { this.constructor = ctor; }
-        fn.prototype = A.prototype;
-        var Proxy = (function (context) {
-            proxy.prototype = new fn();
-            function proxy() {
-            }
-            return proxy;
-        })({});
+        expect(t.test).toEqual(1);
+        expect(t.test2()).toEqual(2);
+        expect(t.bla).toEqual("bla");
+        expect(t.xprop).toEqual("x");
 
-        var a = new A();
-
-        var obj = new Proxy();
-        console.log(obj);
-
-        //var model = {x: 1, y: 2};
-        //var ctx = (function (context) {
-        //    function ctor () {
-
-        //    }
-        //    return ctor;
-        //})(model);
-        //ctx.defineProperty("z", { get: function () { return 3; } });
-
+        b.bla = "bla2";
+        expect(t.bla).toEqual("bla2");
     });
 });
 

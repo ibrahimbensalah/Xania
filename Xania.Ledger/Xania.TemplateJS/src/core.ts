@@ -117,22 +117,12 @@ class SelectManyExpression {
         for (let i = 0; i < source.length; i++) {
             const collection = ensureIsArray(this.collectionFunc(source[i]));
             for (let e = 0; e < collection.length; e++) {
-                result.push(this.extend(collection[i], source[i]));
+                var p = Xania.proxy(source[i]);
+                p.defineProperty(this.varName, (x => { return x; }).bind(this, collection[e]));
+                result.push(p.create());
             }
         }
         return result;
-    }
-
-    extend(obj, parent) {
-        var r = {};
-        const keys = Object.keys(parent);
-        for (let i = 0; i < keys.length; i++) {
-            const k = keys[i];
-            r[k] = parent[k];
-        }
-
-        r[this.varName] = obj;
-        return r;
     }
 
     static create(expr) {
@@ -216,6 +206,42 @@ class Map<T> {
         var key = this.keys[i];
         return key && this.get(key);
     }
+}
+
+class Xania {
+    // ReSharper disable InconsistentNaming
+    static proxy(B) {
+        function Proxy() { }
+        for (var k in B.constructor) {
+            if (B.constructor.hasOwnProperty(k)) {
+                Proxy[k] = B.constructor[k];
+            }
+        }
+        function __() { this.constructor = Proxy; }
+        __.prototype = B.constructor.prototype;
+        Proxy.prototype = new __();
+
+        for (var prop in B) {
+            if (B.hasOwnProperty(prop)) {
+                Object.defineProperty(Proxy.prototype, prop, {
+                    get: ((obj, p) => obj[p]).bind(this, B, prop),
+                    enumerable: true,
+                    configurable: true
+                });
+            }
+        }
+        return {
+            create() { return new Proxy; },
+            defineProperty(prop, getter) {
+                Object.defineProperty(Proxy.prototype, prop, {
+                    get: getter,
+                    enumerable: true,
+                    configurable: true
+                });
+            }
+        }
+    }
+    // ReSharper restore InconsistentNaming
 }
 
 class A {
