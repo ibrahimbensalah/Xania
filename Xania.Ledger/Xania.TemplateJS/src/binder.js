@@ -11,23 +11,23 @@ var Binder = (function () {
 var TemplateEngine = (function () {
     function TemplateEngine() {
     }
-    TemplateEngine.compile = function (template) {
-        if (!template || !template.trim()) {
+    TemplateEngine.compile = function (input) {
+        if (!input || !input.trim()) {
             return null;
         }
-        template = template.replace(/\n/g, "\\n");
+        var template = input.replace(/\n/g, "\\n");
         var params = "";
         var returnExpr = template.replace(/@([a-z_][\.a-z0-9_]*)/gim, function (a, b) {
             var paramIdx = "arg" + params.length;
-            params += "var " + paramIdx + " = m." + b + ";\n";
+            params += "var " + paramIdx + " = " + b + ";";
             return "\" + " + paramIdx + " + \"";
         });
-        if (params.length) {
-            if (!TemplateEngine.cacheFn[template]) {
-                var functionBody = params + "return \"" + returnExpr + "\"";
-                TemplateEngine.cacheFn[template] = new Function("m", functionBody);
+        if (params.length > 0) {
+            if (!TemplateEngine.cacheFn[input]) {
+                var functionBody = "with(m) {" + params + "return \"" + returnExpr + "\"}";
+                TemplateEngine.cacheFn[input] = new Function("m", functionBody);
             }
-            return TemplateEngine.cacheFn[template];
+            return TemplateEngine.cacheFn[input];
         }
         return function () { return returnExpr; };
     };

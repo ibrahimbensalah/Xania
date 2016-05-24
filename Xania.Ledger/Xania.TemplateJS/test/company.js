@@ -1,5 +1,19 @@
 /// <reference path="../src/core.ts" />
 /// <reference path="../scripts/typings/es6-promise/es6-promise.d.ts" />
+var __extends = (this && this.__extends) || function (d, b) {
+    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
+    function __() { this.constructor = d; }
+    __.prototype = b.prototype;
+    d.prototype = new __();
+};
+var A = (function () {
+    function A() {
+    }
+    A.prototype.getZero = function () {
+        return 0;
+    };
+    return A;
+})();
 var Employee = (function () {
     function Employee(firstName, lastName) {
         this.firstName = firstName;
@@ -7,16 +21,21 @@ var Employee = (function () {
     }
     return Employee;
 })();
-var Company = (function () {
+var Company = (function (_super) {
+    __extends(Company, _super);
     function Company(name, employees) {
+        _super.call(this);
         this.name = name;
         this.employees = employees;
     }
     Company.xania = function () {
         return new Company("Xania", [new Employee("Ibrahim", "ben Salah")]);
     };
+    Company.prototype.getName = function () {
+        return this.name;
+    };
     return Company;
-})();
+})(A);
 var Url = (function () {
     function Url() {
     }

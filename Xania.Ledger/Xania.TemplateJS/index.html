@@ -14,18 +14,18 @@
 <body>
     <h1>TypeScript HTML App</h1>
 
-<div id="content">
-    <ul data-from="o in url.get('')" view-model="Organisation">
-        <li data-model="@employees" event-click="@updateCell" class="@style.cellClass">
-            @name <button event-click="@sayHello">click me</button>
-        </li>
-    </ul>
-</div>
+    <div id="content">
+        <ul data-from="o in url.get('').map(createOrganisation)">
+            <li data-model="@employees" event-click="@updateCell" class="@style.cellClass">
+                @name <button event-click="@sayHello">click me</button>
+            </li>
+        </ul>
+    </div>
 
-<script type="text/javascript">
-    Binder.bind(document.getElementById("content"), { xn: Company.xania(), url: Url });
-</script>
-<table>
+    <script type="text/javascript">
+        Binder.bind(document.getElementById("content"), { xn: Company.xania(), url: Url });
+    </script>
+    <table>
         <tr>
             <td data-from="cells.json" class="hour-cell">
                 <div data-class="cellClass" on-click="updateCell" view-model="Cell">

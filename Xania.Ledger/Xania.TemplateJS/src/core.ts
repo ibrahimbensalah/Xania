@@ -78,7 +78,6 @@ class DomTemplate implements IDomTemplate {
     }
 
     private renderTag(context) {
-        debugger;
         return {
             name: this.tag,
             context: context,
@@ -179,25 +178,31 @@ class Util {
 
     static proxy(B) {
         function Proxy() { }
-        for (var k in B.constructor) {
-            if (B.constructor.hasOwnProperty(k)) {
-                Proxy[k] = B.constructor[k];
-            }
-        }
-        function __() {
+
+        function getter(prop) {
             // ReSharper disable once SuspiciousThisUsage
-            this.constructor = Proxy;
+            return this[prop];
         }
 
-        __.prototype = B.constructor.prototype;
-        Proxy.prototype = new __();
+        if (B.constructor !== Object) {
+            function __() {
+                // ReSharper disable once SuspiciousThisUsage
+                this.constructor = Proxy;
+            };
 
-        for (var prop in B) {
-            if (B.hasOwnProperty(prop)) {
+            __.prototype = B.constructor.prototype;
+            Proxy.prototype = new __();
+        }
+
+        var arr = Array.isArray(B) ? B : [B];
+        Proxy.prototype.map = Array.prototype.map.bind(arr);
+
+        for (let baseProp in B) {
+            if (B.hasOwnProperty(baseProp)) {
                 Object.defineProperty(Proxy.prototype,
-                    prop,
+                    baseProp,
                     {
-                        get: ((obj, p) => obj[p]).bind(this, B, prop),
+                        get: getter.bind(B, baseProp),
                         enumerable: true,
                         configurable: true
                     });

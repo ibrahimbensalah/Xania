@@ -59,7 +59,6 @@ var DomTemplate = (function () {
         return result;
     };
     DomTemplate.prototype.renderTag = function (context) {
-        debugger;
         return {
             name: this.tag,
             context: context,
@@ -161,21 +160,25 @@ var Util = (function () {
     }
     Util.proxy = function (B) {
         function Proxy() { }
-        for (var k in B.constructor) {
-            if (B.constructor.hasOwnProperty(k)) {
-                Proxy[k] = B.constructor[k];
-            }
-        }
-        function __() {
+        function getter(prop) {
             // ReSharper disable once SuspiciousThisUsage
-            this.constructor = Proxy;
+            return this[prop];
         }
-        __.prototype = B.constructor.prototype;
-        Proxy.prototype = new __();
-        for (var prop in B) {
-            if (B.hasOwnProperty(prop)) {
-                Object.defineProperty(Proxy.prototype, prop, {
-                    get: (function (obj, p) { return obj[p]; }).bind(this, B, prop),
+        if (B.constructor !== Object) {
+            function __() {
+                // ReSharper disable once SuspiciousThisUsage
+                this.constructor = Proxy;
+            }
+            ;
+            __.prototype = B.constructor.prototype;
+            Proxy.prototype = new __();
+        }
+        var arr = Array.isArray(B) ? B : [B];
+        Proxy.prototype.map = Array.prototype.map.bind(arr);
+        for (var baseProp in B) {
+            if (B.hasOwnProperty(baseProp)) {
+                Object.defineProperty(Proxy.prototype, baseProp, {
+                    get: getter.bind(B, baseProp),
                     enumerable: true,
                     configurable: true
                 });

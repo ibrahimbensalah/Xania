@@ -17,25 +17,25 @@ class Binder {
 class TemplateEngine {
     private static cacheFn: any = {};
 
-    static compile(template) {
-        if (!template || !template.trim()) {
+    static compile(input) {
+        if (!input || !input.trim()) {
             return null;
         }
 
-        template = template.replace(/\n/g, "\\n");
+        var template = input.replace(/\n/g, "\\n");
         var params = "";
         var returnExpr = template.replace(/@([a-z_][\.a-z0-9_]*)/gim, (a, b) => {
             var paramIdx = `arg${params.length}`;
-            params += `var ${paramIdx} = m.${b};\n`;
+            params += `var ${paramIdx} = ${b};`;
             return `" + ${paramIdx} + "`;
         });
 
-        if (params.length) {
-            if (!TemplateEngine.cacheFn[returnExpr]) {
-                const functionBody = `${params}return "${returnExpr}"`;
-                TemplateEngine.cacheFn[returnExpr] = new Function("m", functionBody);
+        if (params.length > 0) {
+            if (!TemplateEngine.cacheFn[input]) {
+                const functionBody = `with(m) {${params}return "${returnExpr}"}`;
+                TemplateEngine.cacheFn[input] = new Function("m", functionBody);
             }
-            return TemplateEngine.cacheFn[returnExpr];
+            return TemplateEngine.cacheFn[input];
         }
         return () => returnExpr;
     }

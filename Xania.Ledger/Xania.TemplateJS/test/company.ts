@@ -1,16 +1,26 @@
 ﻿/// <reference path="../src/core.ts" />
 /// <reference path="../scripts/typings/es6-promise/es6-promise.d.ts" />
 
-class Employee {
-    constructor(public firstName: string, public lastName: string) { }
+class A {
+    getZero() {
+        return 0;
+    }
 }
-class Company {
+class Employee {
+    constructor(public firstName: string, public lastName: string) {
+    }
+}
+class Company extends A {
     public constructor(public name: string, public employees: Employee[]) {
-
+        super();
     }
 
     static xania() {
         return new Company("Xania", [new Employee("Ibrahim", "ben Salah")]);
+    }
+
+    getName() {
+        return this.name;
     }
 }
 class Url {
