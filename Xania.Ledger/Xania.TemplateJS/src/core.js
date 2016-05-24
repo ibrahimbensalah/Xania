@@ -1,9 +1,3 @@
-var __extends = (this && this.__extends) || function (d, b) {
-    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
-    function __() { this.constructor = d; }
-    __.prototype = b.prototype;
-    d.prototype = new __();
-};
 var DomTemplate = (function () {
     function DomTemplate(tag) {
         this.tag = tag;
@@ -21,31 +15,28 @@ var DomTemplate = (function () {
         this.children.push(child);
     };
     DomTemplate.prototype.render = function (model) {
-        var source = this.getSource(model);
-        return this.renderMany(source);
-    };
-    DomTemplate.prototype.renderMany = function (source) {
         var result = [];
-        for (var i = 0; i < source.length; i++) {
-            result.push(this.renderTag(source[i]));
-        }
+        this.renderAsync(model, function (tag) {
+            result.push(tag);
+        });
         return result;
     };
-    DomTemplate.prototype.getSource = function (model) {
+    DomTemplate.prototype.renderAsync = function (model, resolve) {
+        var _this = this;
         if (model === null || typeof (model) === "undefined")
-            return [];
-        var arr = Array.isArray(model) ? model : [model];
+            return;
         var selectManyExpr = this.selectManyExpr;
         if (!!selectManyExpr) {
-            var result = [];
-            var many = selectManyExpr.execute(model);
-            for (var i = 0; i < many.length; i++) {
-                result.push(many[i]);
-            }
-            return result;
+            selectManyExpr
+                .executeAsync(model, function (src) {
+                resolve(_this.renderTag(src));
+            });
         }
         else {
-            return arr;
+            var arr = Array.isArray(model) ? model : [model];
+            for (var i = 0; i < arr.length; i++) {
+                resolve(this.renderTag(arr[i]));
+            }
         }
     };
     DomTemplate.prototype.renderAttributes = function (context) {
@@ -61,14 +52,14 @@ var DomTemplate = (function () {
         var result = [];
         for (var i = 0; i < this.children.length; i++) {
             var child = this.children[i];
-            var domElements = child.render(context);
-            for (var e = 0; e < domElements.length; e++) {
-                result.push(domElements[e]);
-            }
+            child.renderAsync(context, function (dom) {
+                result.push(dom);
+            });
         }
         return result;
     };
     DomTemplate.prototype.renderTag = function (context) {
+        debugger;
         return {
             name: this.tag,
             context: context,
@@ -95,17 +86,31 @@ var SelectManyExpression = (function () {
         this.collectionFunc = collectionFunc;
     }
     SelectManyExpression.prototype.execute = function (model) {
-        var ensureIsArray = SelectManyExpression.ensureIsArray, source = ensureIsArray(model);
         var result = [];
+        this.executeAsync(model, result.push.bind(result));
+        return result;
+    };
+    SelectManyExpression.prototype.executeAsync = function (model, resolve) {
+        var _this = this;
+        var ensureIsArray = SelectManyExpression.ensureIsArray, source = ensureIsArray(model);
+        var arrayHandler = function (src, data) {
+            var arr = ensureIsArray(data);
+            for (var e = 0; e < arr.length; e++) {
+                var p = Util.proxy(src);
+                p.defineProperty(_this.varName, (function (x) { return x; }).bind(_this, arr[e]));
+                var obj = p.create();
+                resolve(obj);
+            }
+        };
         for (var i = 0; i < source.length; i++) {
-            var collection = ensureIsArray(this.collectionFunc(source[i]));
-            for (var e = 0; e < collection.length; e++) {
-                var p = Xania.proxy(source[i]);
-                p.defineProperty(this.varName, (function (x) { return x; }).bind(this, collection[e]));
-                result.push(p.create());
+            var col = this.collectionFunc(source[i]);
+            if (typeof (col.then) === "function") {
+                col.then(arrayHandler.bind(this, source[i]));
+            }
+            else {
+                arrayHandler(source[i], col);
             }
         }
-        return result;
     };
     SelectManyExpression.create = function (expr) {
         var m = expr.match(/^(\w+)\s+in\s+((\w+)\s*:\s*)?(.*)$/i);
@@ -119,48 +124,11 @@ var SelectManyExpression = (function () {
         return Array.isArray(obj) ? obj : [obj];
     };
     SelectManyExpression.createSourceFunc = function (directive, sourceExpr) {
-        if (!directive || directive === "ctx")
+        if (directive === "url")
             return new Function("m", "with(m) { return " + sourceExpr + "; }");
-        else if (directive === "url")
-            return new Function("m", "with(m) { return " + sourceExpr + "; }");
+        return new Function("m", "with(m) { return " + sourceExpr + "; }");
     };
     return SelectManyExpression;
-})();
-var Binder = (function () {
-    function Binder() {
-    }
-    Binder.bind = function (rootModel, rootDom) {
-        var stack = [{ dom: rootDom, viewModel: rootModel }];
-        while (stack.length > 0) {
-        }
-    };
-    return Binder;
-})();
-var TemplateEngine = (function () {
-    function TemplateEngine() {
-    }
-    TemplateEngine.compile = function (template) {
-        if (!template || !template.trim()) {
-            return null;
-        }
-        template = template.replace(/\n/g, "\\n");
-        var params = "";
-        var returnExpr = template.replace(/@([a-z_][\.a-z0-9_]*)/gim, function (a, b) {
-            var paramIdx = "arg" + params.length;
-            params += "var " + paramIdx + " = m." + b + ";\n";
-            return "\" + " + paramIdx + " + \"";
-        });
-        if (params.length) {
-            if (!TemplateEngine.cacheFn[returnExpr]) {
-                var functionBody = params + "return \"" + returnExpr + "\"";
-                TemplateEngine.cacheFn[returnExpr] = new Function("m", functionBody);
-            }
-            return TemplateEngine.cacheFn[returnExpr];
-        }
-        return function () { return returnExpr; };
-    };
-    TemplateEngine.cacheFn = {};
-    return TemplateEngine;
 })();
 var Map = (function () {
     function Map() {
@@ -187,18 +155,21 @@ var Map = (function () {
     };
     return Map;
 })();
-var Xania = (function () {
-    function Xania() {
+// ReSharper disable InconsistentNaming
+var Util = (function () {
+    function Util() {
     }
-    // ReSharper disable InconsistentNaming
-    Xania.proxy = function (B) {
+    Util.proxy = function (B) {
         function Proxy() { }
         for (var k in B.constructor) {
             if (B.constructor.hasOwnProperty(k)) {
                 Proxy[k] = B.constructor[k];
             }
         }
-        function __() { this.constructor = Proxy; }
+        function __() {
+            // ReSharper disable once SuspiciousThisUsage
+            this.constructor = Proxy;
+        }
         __.prototype = B.constructor.prototype;
         Proxy.prototype = new __();
         for (var prop in B) {
@@ -211,7 +182,9 @@ var Xania = (function () {
             }
         }
         return {
-            create: function () { return new Proxy; },
+            create: function () {
+                return new Proxy;
+            },
             defineProperty: function (prop, getter) {
                 Object.defineProperty(Proxy.prototype, prop, {
                     get: getter,
@@ -221,25 +194,7 @@ var Xania = (function () {
             }
         };
     };
-    return Xania;
+    return Util;
 })();
-var A = (function () {
-    function A() {
-    }
-    Object.defineProperty(A.prototype, "test", {
-        get: function () {
-            return 1;
-        },
-        enumerable: true,
-        configurable: true
-    });
-    return A;
-})();
-var ContextObject = (function (_super) {
-    __extends(ContextObject, _super);
-    function ContextObject() {
-        _super.apply(this, arguments);
-    }
-    return ContextObject;
-})(A);
+// ReSharper restore InconsistentNaming
 //# sourceMappingURL=core.js.map

@@ -1,11 +1,22 @@
 ﻿/// <reference path="../src/core.js" />
+/// <reference path="../src/binder.js" />
 /// <reference path="company.js" />
 "use strict";
 
 // ReSharper disable UndeclaredGlobalVariableUsing
 
-var xania = new Company("Xania", [new Employee("Ibrahim", "ben Salah")]);
 var compile = TemplateEngine.compile;
+var xania = Company.xania();
+
+var debugtest = function () {
+    debugger;
+    var elt = new DomTemplate("div");
+    elt.data.add("from", "x in url.get('Xania')");
+    elt.addAttribute("title", compile("@x"));
+    // act
+    var dom = elt.render({ url: Url })[0];
+    debugger;
+}
 
 describe("Dom Template", function () {
     it("should be able to render attributes", function () {
@@ -39,11 +50,23 @@ describe("Dom Template", function () {
         childEl.data.add("from", "emp in b.employees");
         // act
         var view = elt.render({ "org": xania });
-        var dom = view[0];
         // assert
-        expect(view.length).toEqual(1);
-        expect(dom.children.length).toEqual(1);
-        expect(dom.children[0].attributes.title).toEqual("C:Ibrahim-B:Xania-A:Xania");
+         expect(view.length).toEqual(1);
+         expect(view[0].children.length).toEqual(1);
+         expect(view[0].children[0].attributes.title).toEqual("C:Ibrahim-B:Xania-A:Xania");
+    });
+    it("should support promises", function () {
+        // arrange
+        var elt = new DomTemplate("div");
+        elt.data.add("from", "x in url('Xania')");
+        elt.addAttribute("title", compile("@x"));
+        var url = function(href) {
+            return { then: function(res) { res(href); } }
+        };
+        // act
+        var dom = elt.render({ url: url })[0];
+        // assert
+        expect(dom.attributes.title).toEqual("Xania");
     });
 });
 
@@ -61,7 +84,7 @@ describe("Template Engine", function () {
     });
 });
 
-describe("Select Many Expression", function() {
+describe("Select Many Expression", function () {
     it("should collect result objects", function () {
         var expr = SelectManyExpression.create("emp in org.employees");
         var result = expr.execute({ org: xania });
@@ -80,8 +103,8 @@ describe("Select Many Expression", function() {
 
 describe("Proxy creation", function () {
     it("should be able to proxy instance object", function () {
-        var b = { test: 1, test2: function() { return 2 }, bla: "bla" };
-        var proxy = Xania.proxy(b);
+        var b = { test: 1, test2: function () { return 2 }, bla: "bla" };
+        var proxy = Util.proxy(b);
         proxy.defineProperty("xprop", function () { return 'x'; });
         var t = proxy.create();
 

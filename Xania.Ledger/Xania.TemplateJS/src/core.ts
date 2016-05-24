@@ -1,14 +1,11 @@
 ﻿interface IDomTemplate {
-    render(model:any);
-}
-
-interface IDomElement {
+    render(model: any);
 }
 
 class DomTemplate implements IDomTemplate {
     private attributes = new Map<any>();
     public data = new Map<string>();
-    private children: IDomTemplate[] = [];
+    private children: DomTemplate[] = [];
 
     constructor(public tag: string) {
     }
@@ -22,41 +19,34 @@ class DomTemplate implements IDomTemplate {
         this.attributes.add(name, tpl);
     }
 
-    public addChild(child: IDomTemplate) {
+    public addChild(child: DomTemplate) {
         this.children.push(child);
     }
 
     public render(model: any) {
-        var source = this.getSource(model);
-        return this.renderMany(source);
-    }
-
-    public renderMany(source: any) {
         var result = [];
-
-        for (var i = 0; i < source.length; i++) {
-            result.push(this.renderTag(source[i]));
-        }
-
+        this.renderAsync(model, tag => {
+            result.push(tag);
+        });
         return result;
     }
 
-    private getSource(model: any) {
+    protected renderAsync(model: any, resolve: any) {
         if (model === null || typeof (model) === "undefined")
-            return [];
+            return;
 
-        const arr = Array.isArray(model) ? model : [model];
-
-        var selectManyExpr = this.selectManyExpr;
+        const selectManyExpr = this.selectManyExpr;
         if (!!selectManyExpr) {
-            var result = [];
-            var many = selectManyExpr.execute(model);
-            for (let i = 0; i < many.length; i++) {
-                result.push(many[i]);
-            }
-            return result;
+            selectManyExpr
+                .executeAsync(model,
+                    src => {
+                        resolve(this.renderTag(src));
+                    });
         } else {
-            return arr;
+            const arr = Array.isArray(model) ? model : [model];
+            for (let i = 0; i < arr.length; i++) {
+                resolve(this.renderTag(arr[i]));
+            }
         }
     }
 
@@ -78,16 +68,17 @@ class DomTemplate implements IDomTemplate {
 
         for (var i = 0; i < this.children.length; i++) {
             var child = this.children[i];
-            var domElements = child.render(context);
-            for (var e = 0; e < domElements.length; e++) {
-                result.push(domElements[e]);
-            }
+            child.renderAsync(context,
+                dom => {
+                    result.push(dom);
+                });
         }
 
         return result;
     }
 
     private renderTag(context) {
+        debugger;
         return {
             name: this.tag,
             context: context,
@@ -110,23 +101,38 @@ class SelectManyExpression {
     }
 
     execute(model) {
-        const ensureIsArray = SelectManyExpression.ensureIsArray,
-            source = ensureIsArray(model);
-
         var result = [];
-        for (let i = 0; i < source.length; i++) {
-            const collection = ensureIsArray(this.collectionFunc(source[i]));
-            for (let e = 0; e < collection.length; e++) {
-                var p = Xania.proxy(source[i]);
-                p.defineProperty(this.varName, (x => { return x; }).bind(this, collection[e]));
-                result.push(p.create());
-            }
-        }
+        this.executeAsync(model, result.push.bind(result));
         return result;
     }
 
+    executeAsync(model, resolve) {
+        const ensureIsArray = SelectManyExpression.ensureIsArray,
+            source = ensureIsArray(model);
+
+        const arrayHandler = (src, data) => {
+            var arr = ensureIsArray(data);
+            for (let e = 0; e < arr.length; e++) {
+                const p = Util.proxy(src);
+                p.defineProperty(this.varName, (x => { return x; }).bind(this, arr[e]));
+                var obj = p.create();
+                resolve(obj);
+            }
+        };
+
+        for (let i = 0; i < source.length; i++) {
+            const col = this.collectionFunc(source[i]);
+
+            if (typeof (col.then) === "function") {
+                col.then(arrayHandler.bind(this, source[i]));
+            } else {
+                arrayHandler(source[i], col);
+            }
+        }
+    }
+
     static create(expr) {
-        var m = expr.match(/^(\w+)\s+in\s+((\w+)\s*:\s*)?(.*)$/i);
+        const m = expr.match(/^(\w+)\s+in\s+((\w+)\s*:\s*)?(.*)$/i);
         if (!!m) {
             const [, varName, , directive, sourceExpr] = m;
             return new SelectManyExpression(varName, this.createSourceFunc(directive || 'ctx', sourceExpr));
@@ -139,52 +145,12 @@ class SelectManyExpression {
     }
 
     static createSourceFunc(directive, sourceExpr): Function {
-        if (!directive || directive === "ctx")
+        if (directive === "url")
             return new Function("m", `with(m) { return ${sourceExpr}; }`);
-        else if (directive === "url")
-            return new Function("m", `with(m) { return ${sourceExpr}; }`);
+        return new Function("m", `with(m) { return ${sourceExpr}; }`);
     }
 }
 
-class Binder {
-
-    static bind(rootModel: any, rootDom: IDomElement) {
-        const stack = [{ dom: rootDom, viewModel: rootModel }];
-
-        while (stack.length > 0) {
-            // var current = stack.pop();
-            // var dom = current.dom;
-            // var viewModel = current.viewModel;
-        }
-    }
-}
-
-class TemplateEngine {
-    private static cacheFn: any = {};
-
-    static compile(template) {
-        if (!template || !template.trim()) {
-            return null;
-        }
-
-        template = template.replace(/\n/g, "\\n");
-        var params = "";
-        var returnExpr = template.replace(/@([a-z_][\.a-z0-9_]*)/gim, (a, b) => {
-            var paramIdx = `arg${params.length}`;
-            params += `var ${paramIdx} = m.${b};\n`;
-            return `" + ${paramIdx} + "`;
-        });
-
-        if (params.length) {
-            if (!TemplateEngine.cacheFn[returnExpr]) {
-                const functionBody = `${params}return "${returnExpr}"`;
-                TemplateEngine.cacheFn[returnExpr] = new Function("m", functionBody);
-            }
-            return TemplateEngine.cacheFn[returnExpr];
-        }
-        return () => returnExpr;
-    }
-} 
 class Map<T> {
     private items = {};
     public keys: string[] = [];
@@ -208,8 +174,9 @@ class Map<T> {
     }
 }
 
-class Xania {
-    // ReSharper disable InconsistentNaming
+// ReSharper disable InconsistentNaming
+class Util {
+
     static proxy(B) {
         function Proxy() { }
         for (var k in B.constructor) {
@@ -217,38 +184,39 @@ class Xania {
                 Proxy[k] = B.constructor[k];
             }
         }
-        function __() { this.constructor = Proxy; }
+        function __() {
+            // ReSharper disable once SuspiciousThisUsage
+            this.constructor = Proxy;
+        }
+
         __.prototype = B.constructor.prototype;
         Proxy.prototype = new __();
 
         for (var prop in B) {
             if (B.hasOwnProperty(prop)) {
-                Object.defineProperty(Proxy.prototype, prop, {
-                    get: ((obj, p) => obj[p]).bind(this, B, prop),
-                    enumerable: true,
-                    configurable: true
-                });
+                Object.defineProperty(Proxy.prototype,
+                    prop,
+                    {
+                        get: ((obj, p) => obj[p]).bind(this, B, prop),
+                        enumerable: true,
+                        configurable: true
+                    });
             }
         }
         return {
-            create() { return new Proxy; },
+            create() {
+                return new Proxy;
+            },
             defineProperty(prop, getter) {
-                Object.defineProperty(Proxy.prototype, prop, {
-                    get: getter,
-                    enumerable: true,
-                    configurable: true
-                });
+                Object.defineProperty(Proxy.prototype,
+                    prop,
+                    {
+                        get: getter,
+                        enumerable: true,
+                        configurable: true
+                    });
             }
         }
     }
-    // ReSharper restore InconsistentNaming
 }
-
-class A {
-    get test() {
-        return 1;
-    }
-}
-
-class ContextObject extends A {
-}
+// ReSharper restore InconsistentNaming
