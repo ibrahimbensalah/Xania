@@ -24,7 +24,8 @@ class TemplateEngine {
 
         var template = input.replace(/\n/g, "\\n");
         var params = "";
-        var returnExpr = template.replace(/@([a-z_][\.a-z0-9_]*)/gim, (a, b) => {
+        // var returnExpr = template.replace(/@([a-z_][\.a-z0-9_]*)/gim, (a, b) => {
+        var returnExpr = template.replace(/@([\w\(\)\.]+)/gim, function (a, b) {
             var paramIdx = `arg${params.length}`;
             params += `var ${paramIdx} = ${b};`;
             return `" + ${paramIdx} + "`;

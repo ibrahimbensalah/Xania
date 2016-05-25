@@ -10,9 +10,13 @@ var xania = Company.xania();
 
 var debugtest = function () {
     debugger;
-    var parent = Util.proxy({ a: 1 }).create();
-    var obj = Util.proxy(parent).create();
-    var a = obj.a;
+    // arrange
+    var elt = new DomTemplate("div");
+    elt.data.add("from", "x:Company in [{name: 'Xania'}]");
+    elt.addAttribute("title", compile("@x.name"));
+    // act
+    var dom = elt.render()[0];
+    var title = dom.attributes.title;
     debugger;
 }
 
@@ -68,6 +72,16 @@ describe("Dom Template", function () {
             // assert
             expect(dom.attributes.title).toEqual("Xania");
         });
+    it('should support typed from expression', function() {
+        // arrange
+        var elt = new DomTemplate("div");
+        elt.data.add("from", "x:Company in [{name: 'Xania'}]");
+        elt.addAttribute("title", compile("@x.name"));
+        // act
+        var dom = elt.render()[0];
+        // assert
+        expect(dom.attributes.title).toEqual("Xania");
+    });
     it("should support map",
         function () {
             // arrange

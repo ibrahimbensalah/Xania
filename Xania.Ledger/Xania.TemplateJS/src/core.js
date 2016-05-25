@@ -16,7 +16,7 @@ var DomTemplate = (function () {
     };
     DomTemplate.prototype.render = function (model) {
         var result = [];
-        this.renderAsync(model, function (tag) {
+        this.renderAsync(model || {}, function (tag) {
             result.push(tag);
         });
         return result;
@@ -112,9 +112,9 @@ var SelectManyExpression = (function () {
         }
     };
     SelectManyExpression.create = function (expr) {
-        var m = expr.match(/^(\w+)\s+in\s+((\w+)\s*:\s*)?(.*)$/i);
+        var m = expr.match(/^(\w+)(\s*:\s*(\w+))?\s+in\s+((\w+)\s*:\s*)?(.*)$/i);
         if (!!m) {
-            var varName = m[1], directive = m[3], sourceExpr = m[4];
+            var varName = m[1], viewModel = m[3], directive = m[5], sourceExpr = m[6];
             return new SelectManyExpression(varName, this.createSourceFunc(directive || 'ctx', sourceExpr));
         }
         return null;

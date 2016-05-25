@@ -25,7 +25,7 @@ class DomTemplate implements IDomTemplate {
 
     public render(model: any) {
         var result = [];
-        this.renderAsync(model, tag => {
+        this.renderAsync(model || {}, tag => {
             result.push(tag);
         });
         return result;
@@ -131,9 +131,9 @@ class SelectManyExpression {
     }
 
     static create(expr) {
-        const m = expr.match(/^(\w+)\s+in\s+((\w+)\s*:\s*)?(.*)$/i);
+        const m = expr.match(/^(\w+)(\s*:\s*(\w+))?\s+in\s+((\w+)\s*:\s*)?(.*)$/i);
         if (!!m) {
-            const [, varName, , directive, sourceExpr] = m;
+            const [, varName,,viewModel, , directive, sourceExpr] = m;
             return new SelectManyExpression(varName, this.createSourceFunc(directive || 'ctx', sourceExpr));
         }
         return null;
