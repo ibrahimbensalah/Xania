@@ -14,8 +14,8 @@
 <body>
     <h1>TypeScript HTML App</h1>
 
-    <div id="content">
-        <ul data-from="o in url.get('').map(createOrganisation)">
+    <div id="content" view-model="Organisation">
+        <ul data-from="o in url.get('')">
             <li data-model="@employees" event-click="@updateCell" class="@style.cellClass">
                 @name <button event-click="@sayHello">click me</button>
             </li>

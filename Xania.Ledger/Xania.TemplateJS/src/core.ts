@@ -113,7 +113,7 @@ class SelectManyExpression {
             var arr = ensureIsArray(data);
             for (let e = 0; e < arr.length; e++) {
                 const p = Util.proxy(src);
-                p.defineProperty(this.varName, (x => { return x; }).bind(this, arr[e]));
+                p.prop(this.varName, (x => { return x; }).bind(this, arr[e]));
                 var obj = p.create();
                 resolve(obj);
             }
@@ -184,35 +184,47 @@ class Util {
             return this[prop];
         }
 
-        if (B.constructor !== Object) {
-            function __() {
-                // ReSharper disable once SuspiciousThisUsage
-                this.constructor = Proxy;
-            };
+        function __() {
+            // ReSharper disable once SuspiciousThisUsage
+            this.constructor = Proxy;
+        };
 
-            __.prototype = B.constructor.prototype;
+        if (typeof B === "function") {
+            __.prototype = B.prototype;
             Proxy.prototype = new __();
-        }
+        } else {
+            if (B.constructor !== Object) {
+                __.prototype = B.constructor.prototype;
+                Proxy.prototype = new __();
+            }
+            var arr = Array.isArray(B) ? B : [B];
+            Proxy.prototype.map = Array.prototype.map.bind(arr);
 
-        var arr = Array.isArray(B) ? B : [B];
-        Proxy.prototype.map = Array.prototype.map.bind(arr);
-
-        for (let baseProp in B) {
-            if (B.hasOwnProperty(baseProp)) {
-                Object.defineProperty(Proxy.prototype,
-                    baseProp,
-                    {
-                        get: getter.bind(B, baseProp),
-                        enumerable: true,
-                        configurable: true
-                    });
+            for (let baseProp in B) {
+                if (B.hasOwnProperty(baseProp)) {
+                    Object.defineProperty(Proxy.prototype,
+                        baseProp,
+                        {
+                            get: getter.bind(B, baseProp),
+                            enumerable: true,
+                            configurable: true
+                        });
+                }
             }
         }
-        return {
+        var pub = {
             create() {
                 return new Proxy;
             },
-            defineProperty(prop, getter) {
+            init(obj) {
+                for (var p in obj) {
+                    if (obj.hasOwnProperty(p)) {
+                        pub.prop(p, getter.bind(obj, p));
+                    }
+                }
+                return pub;
+            },
+            prop(prop, getter) {
                 Object.defineProperty(Proxy.prototype,
                     prop,
                     {
@@ -220,8 +232,10 @@ class Util {
                         enumerable: true,
                         configurable: true
                     });
+                return pub;
             }
         }
+        return pub;
     }
 }
 // ReSharper restore InconsistentNaming

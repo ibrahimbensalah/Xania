@@ -10,15 +10,15 @@ var xania = Company.xania();
 
 var debugtest = function () {
     debugger;
-            var parent = Util.proxy({a: 1}).create();
-            var obj = Util.proxy(parent).create();
+    var parent = Util.proxy({ a: 1 }).create();
+    var obj = Util.proxy(parent).create();
     var a = obj.a;
     debugger;
 }
 
 describe("Dom Template", function () {
     it("should be able to render attributes",
-        function() {
+        function () {
             // arrange
             var elt = new DomTemplate("div");
             elt.addAttribute("title", compile("@name"));
@@ -29,7 +29,7 @@ describe("Dom Template", function () {
             expect(dom.name).toEqual("div");
         });
     it("should be able to render hierarchical dom",
-        function() {
+        function () {
             // arrange
             var elt = new DomTemplate("div");
             var childEl = new DomTemplate("span");
@@ -42,7 +42,7 @@ describe("Dom Template", function () {
             expect(dom.children[0].attributes.title).toEqual("t:Xania");
         });
     it("should be able to render parent context",
-        function() {
+        function () {
             var elt = new DomTemplate("div");
             elt.data.add("from", "b in ctx : org");
             var childEl = new DomTemplate("span");
@@ -57,25 +57,25 @@ describe("Dom Template", function () {
             expect(view[0].children[0].attributes.title).toEqual("C:Ibrahim-B:Xania-A:Xania");
         });
     it("should support promises",
-        function() {
+        function () {
             // arrange
             var elt = new DomTemplate("div");
             elt.data.add("from", "x in url('Xania')");
             elt.addAttribute("title", compile("@x"));
-            var url = function(href) { return { then: function(res) { res(href); } } };
+            var url = function (href) { return { then: function (res) { res(href); } } };
             // act
             var dom = elt.render({ url: url })[0];
             // assert
             expect(dom.attributes.title).toEqual("Xania");
         });
     it("should support map",
-        function() {
+        function () {
             // arrange
             var elt = new DomTemplate("div");
             elt.data.add("from", "x in arr.map(brak)");
             elt.addAttribute("title", compile("@x"));
             // act
-            var dom = elt.render({ arr: ['Xania'], brak: function(x) { return "[" + x + "]" } })[0];
+            var dom = elt.render({ arr: ['Xania'], brak: function (x) { return "[" + x + "]" } })[0];
             // assert
             expect(dom.attributes.title).toEqual("[Xania]");
         });
@@ -86,9 +86,9 @@ describe("Template Engine", function () {
         var tpl = compile("hallo template");
         var result = tpl();
         expect(result).toEqual("hallo template");
-        });
+    });
     it("should compile member expression",
-        function() {
+        function () {
             var tpl = compile("hallo @a.b-hi @a.c");
 
             var result = tpl({
@@ -100,7 +100,7 @@ describe("Template Engine", function () {
 
 describe("Select Many Expression", function () {
     it("should collect result objects",
-        function() {
+        function () {
             var expr = SelectManyExpression.create("emp in org.employees");
             var result = expr.execute({ org: xania });
             expect(result.length).toEqual(1);
@@ -108,7 +108,7 @@ describe("Select Many Expression", function () {
             expect(result[0].emp.lastName).toEqual("ben Salah");
         });
     it("should support any source expression",
-        function() {
+        function () {
             var expr = SelectManyExpression.create("emp in {n: org.name}");
             var result = expr.execute({ org: xania });
             expect(result.length).toEqual(1);
@@ -117,19 +117,19 @@ describe("Select Many Expression", function () {
         });
 });
 
-describe("Proxy", function() {
+describe("Proxy", function () {
     it("should be able to proxy complex object",
-        function() {
+        function () {
             var xania = Company.xania();
             var proxy = Util.proxy(xania).create();
 
             expect(proxy.getName()).toEqual("Xania");
         });
     it("should be able to proxy instance object",
-        function() {
-            var b = { test: 1, test2: function() { return 2 }, bla: "bla" };
+        function () {
+            var b = { test: 1, test2: function () { return 2 }, bla: "bla" };
             var proxy = Util.proxy(b);
-            proxy.defineProperty("xprop", function() { return 'x'; });
+            proxy.prop("xprop", function () { return 'x'; });
             var t = proxy.create();
 
             expect(t.test).toEqual(1);
@@ -141,24 +141,31 @@ describe("Proxy", function() {
             expect(t.bla).toEqual("bla2");
         });
     it("should be able to map on primitive as it was an array",
-        function() {
+        function () {
             var obj = Util.proxy(1).create();
             expect(typeof (obj.map)).toEqual("function");
-            var result = obj.map(function(x) { return x + 1 });
+            var result = obj.map(function (x) { return x + 1 });
             expect(result).toEqual([2]);
         });
     it("should be able to map on array",
-        function() {
+        function () {
             var obj = Util.proxy([1, 2]).create();
             expect(typeof (obj.map)).toEqual("function");
-            var result = obj.map(function(x) { return x + 1 });
+            var result = obj.map(function (x) { return x + 1 });
             expect(result).toEqual([2, 3]);
         });
     it("should be able to proxy a proxy",
         function () {
-            var parent = Util.proxy({a: 1}).create();
+            var parent = Util.proxy({ a: 1 }).create();
             var obj = Util.proxy(parent).create();
             expect(obj.a).toEqual(1);
+        });
+    it("should be able to extend given type",
+        function() {
+            var company = Util.proxy(Company)
+                .init({ "name": 123 })
+                .create();
+            expect(company.getName()).toEqual(123);
         });
 });
 

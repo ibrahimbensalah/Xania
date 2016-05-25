@@ -96,7 +96,7 @@ var SelectManyExpression = (function () {
             var arr = ensureIsArray(data);
             for (var e = 0; e < arr.length; e++) {
                 var p = Util.proxy(src);
-                p.defineProperty(_this.varName, (function (x) { return x; }).bind(_this, arr[e]));
+                p.prop(_this.varName, (function (x) { return x; }).bind(_this, arr[e]));
                 var obj = p.create();
                 resolve(obj);
             }
@@ -164,38 +164,54 @@ var Util = (function () {
             // ReSharper disable once SuspiciousThisUsage
             return this[prop];
         }
-        if (B.constructor !== Object) {
-            function __() {
-                // ReSharper disable once SuspiciousThisUsage
-                this.constructor = Proxy;
-            }
-            ;
-            __.prototype = B.constructor.prototype;
+        function __() {
+            // ReSharper disable once SuspiciousThisUsage
+            this.constructor = Proxy;
+        }
+        ;
+        if (typeof B === "function") {
+            __.prototype = B.prototype;
             Proxy.prototype = new __();
         }
-        var arr = Array.isArray(B) ? B : [B];
-        Proxy.prototype.map = Array.prototype.map.bind(arr);
-        for (var baseProp in B) {
-            if (B.hasOwnProperty(baseProp)) {
-                Object.defineProperty(Proxy.prototype, baseProp, {
-                    get: getter.bind(B, baseProp),
-                    enumerable: true,
-                    configurable: true
-                });
+        else {
+            if (B.constructor !== Object) {
+                __.prototype = B.constructor.prototype;
+                Proxy.prototype = new __();
+            }
+            var arr = Array.isArray(B) ? B : [B];
+            Proxy.prototype.map = Array.prototype.map.bind(arr);
+            for (var baseProp in B) {
+                if (B.hasOwnProperty(baseProp)) {
+                    Object.defineProperty(Proxy.prototype, baseProp, {
+                        get: getter.bind(B, baseProp),
+                        enumerable: true,
+                        configurable: true
+                    });
+                }
             }
         }
-        return {
+        var pub = {
             create: function () {
                 return new Proxy;
             },
-            defineProperty: function (prop, getter) {
+            init: function (obj) {
+                for (var p in obj) {
+                    if (obj.hasOwnProperty(p)) {
+                        pub.prop(p, getter.bind(obj, p));
+                    }
+                }
+                return pub;
+            },
+            prop: function (prop, getter) {
                 Object.defineProperty(Proxy.prototype, prop, {
                     get: getter,
                     enumerable: true,
                     configurable: true
                 });
+                return pub;
             }
         };
+        return pub;
     };
     return Util;
 })();
