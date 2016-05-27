@@ -14,21 +14,19 @@ var DomTemplate = (function () {
     DomTemplate.prototype.addChild = function (child) {
         this.children.push(child);
     };
-    DomTemplate.prototype.render = function (model) {
+    DomTemplate.prototype.render = function (context) {
         var result = [];
-        this.renderAsync(model || {}, function (tag) {
+        this.renderAsync(context, function (tag) {
             result.push(tag);
         });
         return result;
     };
-    DomTemplate.prototype.renderAsync = function (model, resolve) {
+    DomTemplate.prototype.renderAsync = function (context, resolve) {
         var _this = this;
-        if (model === null || typeof (model) === "undefined")
-            return;
-        var selectManyExpr = this.selectManyExpr;
+        var model = context || {}, selectManyExpr = this.selectManyExpr(context.loader);
         if (!!selectManyExpr) {
             selectManyExpr
-                .executeAsync(model, function (src) {
+                .executeAsync(context, function (src) {
                 resolve(_this.renderTag(src));
             });
         }
@@ -61,42 +59,43 @@ var DomTemplate = (function () {
     DomTemplate.prototype.renderTag = function (context) {
         return {
             name: this.tag,
-            context: context,
             attributes: this.renderAttributes(context),
             children: this.renderChildren(context)
         };
     };
-    Object.defineProperty(DomTemplate.prototype, "selectManyExpr", {
-        get: function () {
-            var expr = this.data.get("from");
-            if (!!expr) {
-                return SelectManyExpression.create(expr);
-            }
-            return null;
-        },
-        enumerable: true,
-        configurable: true
-    });
+    DomTemplate.prototype.selectManyExpr = function (loader) {
+        var expr = this.data.get("from");
+        if (!!expr) {
+            return SelectManyExpression.create(expr);
+        }
+        return null;
+    };
     return DomTemplate;
 })();
 var SelectManyExpression = (function () {
-    function SelectManyExpression(varName, collectionFunc) {
+    function SelectManyExpression(varName, itemType, collectionFunc) {
         this.varName = varName;
+        this.itemType = itemType;
         this.collectionFunc = collectionFunc;
     }
-    SelectManyExpression.prototype.execute = function (model) {
+    SelectManyExpression.prototype.execute = function (context) {
         var result = [];
-        this.executeAsync(model, result.push.bind(result));
+        this.executeAsync(context, result.push.bind(result));
         return result;
     };
-    SelectManyExpression.prototype.executeAsync = function (model, resolve) {
+    SelectManyExpression.prototype.executeAsync = function (context, resolve) {
         var _this = this;
-        var ensureIsArray = SelectManyExpression.ensureIsArray, source = ensureIsArray(model);
+        var ensureIsArray = SelectManyExpression.ensureIsArray, source = ensureIsArray(context);
+        var viewModel = this.getViewModel(context);
         var arrayHandler = function (src, data) {
             var arr = ensureIsArray(data);
             for (var e = 0; e < arr.length; e++) {
                 var p = Util.proxy(src);
-                p.prop(_this.varName, (function (x) { return x; }).bind(_this, arr[e]));
+                p.prop(_this.varName, (function (x) {
+                    return typeof viewModel !== "undefined" && viewModel !== null
+                        ? Util.proxy(viewModel).init(x).create()
+                        : x;
+                }).bind(_this, arr[e]));
                 var obj = p.create();
                 resolve(obj);
             }
@@ -111,11 +110,23 @@ var SelectManyExpression = (function () {
             }
         }
     };
+    SelectManyExpression.prototype.getViewModel = function (context) {
+        if (typeof this.itemType == "undefined")
+            return null;
+        switch (typeof (this.itemType)) {
+            case "string":
+                return context.loader.import(this.itemType);
+            case "function":
+                return this.itemType;
+            default:
+                return Object;
+        }
+    };
     SelectManyExpression.create = function (expr) {
         var m = expr.match(/^(\w+)(\s*:\s*(\w+))?\s+in\s+((\w+)\s*:\s*)?(.*)$/i);
         if (!!m) {
-            var varName = m[1], viewModel = m[3], directive = m[5], sourceExpr = m[6];
-            return new SelectManyExpression(varName, this.createSourceFunc(directive || 'ctx', sourceExpr));
+            var varName = m[1], itemType = m[3], directive = m[5], sourceExpr = m[6];
+            return new SelectManyExpression(varName, itemType, this.createSourceFunc(directive || 'ctx', sourceExpr));
         }
         return null;
     };
@@ -126,6 +137,10 @@ var SelectManyExpression = (function () {
         if (directive === "url")
             return new Function("m", "with(m) { return " + sourceExpr + "; }");
         return new Function("m", "with(m) { return " + sourceExpr + "; }");
+    };
+    SelectManyExpression.getViewModel = function (name, context) {
+        var fun = new Function("m", "with(m) { return " + name + "; }");
+        return fun(context);
     };
     return SelectManyExpression;
 })();

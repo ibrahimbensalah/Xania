@@ -1,5 +1,5 @@
 ﻿interface IDomTemplate {
-    render(model: any);
+    render(context: any);
 }
 
 class DomTemplate implements IDomTemplate {
@@ -23,22 +23,20 @@ class DomTemplate implements IDomTemplate {
         this.children.push(child);
     }
 
-    public render(model: any) {
+    public render(context: any) {
         var result = [];
-        this.renderAsync(model || {}, tag => {
+        this.renderAsync(context, tag => {
             result.push(tag);
         });
         return result;
     }
 
-    protected renderAsync(model: any, resolve: any) {
-        if (model === null || typeof (model) === "undefined")
-            return;
-
-        const selectManyExpr = this.selectManyExpr;
+    protected renderAsync(context: any, resolve: any) {
+        var model = context || {},
+            selectManyExpr = this.selectManyExpr(context.loader);
         if (!!selectManyExpr) {
             selectManyExpr
-                .executeAsync(model,
+                .executeAsync(context,
                     src => {
                         resolve(this.renderTag(src));
                     });
@@ -80,13 +78,12 @@ class DomTemplate implements IDomTemplate {
     private renderTag(context) {
         return {
             name: this.tag,
-            context: context,
             attributes: this.renderAttributes(context),
             children: this.renderChildren(context)
         };
     }
 
-    public get selectManyExpr(): SelectManyExpression {
+    public selectManyExpr(loader): SelectManyExpression {
         const expr = this.data.get("from");
         if (!!expr) {
             return SelectManyExpression.create(expr);
@@ -96,24 +93,30 @@ class DomTemplate implements IDomTemplate {
 }
 
 class SelectManyExpression {
-    constructor(public varName: string, public collectionFunc: Function) {
+    constructor(public varName: string, private itemType: string, public collectionFunc: Function) {
     }
 
-    execute(model) {
+    execute(context) {
         var result = [];
-        this.executeAsync(model, result.push.bind(result));
+        this.executeAsync(context, result.push.bind(result));
         return result;
     }
 
-    executeAsync(model, resolve) {
+    executeAsync(context, resolve) {
         const ensureIsArray = SelectManyExpression.ensureIsArray,
-            source = ensureIsArray(model);
+            source = ensureIsArray(context);
+
+        var viewModel = this.getViewModel(context);
 
         const arrayHandler = (src, data) => {
             var arr = ensureIsArray(data);
             for (let e = 0; e < arr.length; e++) {
                 const p = Util.proxy(src);
-                p.prop(this.varName, (x => { return x; }).bind(this, arr[e]));
+                p.prop(this.varName, (x => {
+                    return typeof viewModel !== "undefined" && viewModel !== null
+                        ? Util.proxy(viewModel).init(x).create()
+                        : x;
+                }).bind(this, arr[e]));
                 var obj = p.create();
                 resolve(obj);
             }
@@ -130,11 +133,25 @@ class SelectManyExpression {
         }
     }
 
+    public getViewModel(context) {
+        if (typeof this.itemType == "undefined")
+            return null;
+
+        switch (typeof (this.itemType)) {
+            case "string":
+                return context.loader.import(this.itemType);
+            case "function":
+                return this.itemType;
+            default:
+                return Object;
+        }
+    }
+
     static create(expr) {
         const m = expr.match(/^(\w+)(\s*:\s*(\w+))?\s+in\s+((\w+)\s*:\s*)?(.*)$/i);
         if (!!m) {
-            const [, varName,,viewModel, , directive, sourceExpr] = m;
-            return new SelectManyExpression(varName, this.createSourceFunc(directive || 'ctx', sourceExpr));
+            const [, varName, , itemType, , directive, sourceExpr] = m;
+            return new SelectManyExpression(varName, itemType, this.createSourceFunc(directive || 'ctx', sourceExpr));
         }
         return null;
     }
@@ -147,6 +164,11 @@ class SelectManyExpression {
         if (directive === "url")
             return new Function("m", `with(m) { return ${sourceExpr}; }`);
         return new Function("m", `with(m) { return ${sourceExpr}; }`);
+    }
+
+    static getViewModel(name, context): Function {
+        const fun = new Function("m", `with(m) { return ${name}; }`);
+        return fun(context);
     }
 }
 

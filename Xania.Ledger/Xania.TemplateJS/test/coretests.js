@@ -13,9 +13,13 @@ var debugtest = function () {
     // arrange
     var elt = new DomTemplate("div");
     elt.data.add("from", "x:Company in [{name: 'Xania'}]");
-    elt.addAttribute("title", compile("@x.name"));
+    elt.addAttribute("title", compile("@x.getName()"));
+    var loader = {
+        "import": function (type) { return Company; }
+    };
     // act
-    var dom = elt.render()[0];
+    var dom = elt.render({ loader: loader })[0];
+    // assert
     var title = dom.attributes.title;
     debugger;
 }
@@ -76,9 +80,12 @@ describe("Dom Template", function () {
         // arrange
         var elt = new DomTemplate("div");
         elt.data.add("from", "x:Company in [{name: 'Xania'}]");
-        elt.addAttribute("title", compile("@x.name"));
+        elt.addAttribute("title", compile("@x.getName()"));
+        var loader = {
+            "import": function(type) { return Company; }
+        };
         // act
-        var dom = elt.render()[0];
+        var dom = elt.render({ loader: loader })[0];
         // assert
         expect(dom.attributes.title).toEqual("Xania");
     });
