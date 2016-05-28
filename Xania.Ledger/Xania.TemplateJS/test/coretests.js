@@ -11,16 +11,11 @@ var xania = Company.xania();
 var debugtest = function () {
     debugger;
     // arrange
-    var elt = new DomTemplate("div");
-    elt.data.add("from", "x:Company in [{name: 'Xania'}]");
-    elt.addAttribute("title", compile("@x.getName()"));
-    var loader = {
-        "import": function (type) { return Company; }
-    };
+    // arrange
+    var elt = new TagElement("div");
+    elt.addAttribute("title", compile("@name"));
     // act
-    var dom = elt.render({ loader: loader })[0];
-    // assert
-    var title = dom.attributes.title;
+    var dom = elt.render(xania)[0];
     debugger;
 }
 
@@ -28,7 +23,7 @@ describe("Dom Template", function () {
     it("should be able to render attributes",
         function () {
             // arrange
-            var elt = new DomTemplate("div");
+            var elt = new TagElement("div");
             elt.addAttribute("title", compile("@name"));
             // act
             var dom = elt.render(xania)[0];
@@ -39,8 +34,8 @@ describe("Dom Template", function () {
     it("should be able to render hierarchical dom",
         function () {
             // arrange
-            var elt = new DomTemplate("div");
-            var childEl = new DomTemplate("span");
+            var elt = new TagElement("div");
+            var childEl = new TagElement("span");
             elt.addChild(childEl);
             childEl.addAttribute("title", compile("t:@name"));
             // act
@@ -51,9 +46,9 @@ describe("Dom Template", function () {
         });
     it("should be able to render parent context",
         function () {
-            var elt = new DomTemplate("div");
+            var elt = new TagElement("div");
             elt.data.add("from", "b in ctx : org");
-            var childEl = new DomTemplate("span");
+            var childEl = new TagElement("span");
             elt.addChild(childEl);
             childEl.addAttribute("title", compile("C:@emp.firstName-B:@b.name-A:@org.name"));
             childEl.data.add("from", "emp in b.employees");
@@ -67,7 +62,7 @@ describe("Dom Template", function () {
     it("should support promises",
         function () {
             // arrange
-            var elt = new DomTemplate("div");
+            var elt = new TagElement("div");
             elt.data.add("from", "x in url('Xania')");
             elt.addAttribute("title", compile("@x"));
             var url = function (href) { return { then: function (res) { res(href); } } };
@@ -78,7 +73,7 @@ describe("Dom Template", function () {
         });
     it('should support typed from expression', function() {
         // arrange
-        var elt = new DomTemplate("div");
+        var elt = new TagElement("div");
         elt.data.add("from", "x:Company in [{name: 'Xania'}]");
         elt.addAttribute("title", compile("@x.getName()"));
         var loader = {
@@ -92,7 +87,7 @@ describe("Dom Template", function () {
     it("should support map",
         function () {
             // arrange
-            var elt = new DomTemplate("div");
+            var elt = new TagElement("div");
             elt.data.add("from", "x in arr.map(brak)");
             elt.addAttribute("title", compile("@x"));
             // act

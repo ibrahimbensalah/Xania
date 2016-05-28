@@ -1,43 +1,54 @@
-var DomTemplate = (function () {
-    function DomTemplate(tag) {
-        this.tag = tag;
+var TextContent = (function () {
+    function TextContent(tpl) {
+        this.tpl = tpl;
+    }
+    TextContent.prototype.render = function (context) {
+        if (typeof this.tpl == "function")
+            return [this.tpl(context.model)];
+        else
+            return [this.tpl];
+    };
+    return TextContent;
+})();
+var TagElement = (function () {
+    function TagElement(name) {
+        this.name = name;
         this.attributes = new Map();
         this.data = new Map();
         this.children = [];
+        this.modelAccessor = this.defaultModelAccessor.bind(this);
     }
-    DomTemplate.prototype.addAttribute = function (name, value) {
+    TagElement.prototype.addAttribute = function (name, value) {
         var tpl = typeof (value) === "function"
             ? value
             : function () { return value; };
         this.attributes.add(name, tpl);
     };
-    DomTemplate.prototype.addChild = function (child) {
+    TagElement.prototype.addChild = function (child) {
         this.children.push(child);
     };
-    DomTemplate.prototype.render = function (context) {
+    TagElement.prototype.render = function (context) {
         var result = [];
         this.renderAsync(context, function (tag) {
             result.push(tag);
         });
         return result;
     };
-    DomTemplate.prototype.renderAsync = function (context, resolve) {
-        var _this = this;
-        var model = context || {}, selectManyExpr = this.selectManyExpr(context.loader);
-        if (!!selectManyExpr) {
-            selectManyExpr
-                .executeAsync(context, function (src) {
-                resolve(_this.renderTag(src));
-            });
+    TagElement.prototype.bind = function (modelAccessor) {
+        if (!modelAccessor)
+            throw new Error("Argument null");
+        this.modelAccessor = modelAccessor;
+    };
+    TagElement.prototype.renderAsync = function (context, resolve) {
+        var model = this.modelAccessor(context), compose = Util.compose(resolve, this.renderTag.bind(this)), iter = Util.map.bind(this, compose);
+        if (typeof (model.then) === "function") {
+            model.then(iter);
         }
         else {
-            var arr = Array.isArray(model) ? model : [model];
-            for (var i = 0; i < arr.length; i++) {
-                resolve(this.renderTag(arr[i]));
-            }
+            iter(model);
         }
     };
-    DomTemplate.prototype.renderAttributes = function (context) {
+    TagElement.prototype.renderAttributes = function (context) {
         var result = {}, attrs = this.attributes;
         for (var i = 0; i < attrs.keys.length; i++) {
             var name = attrs.keys[i];
@@ -46,7 +57,7 @@ var DomTemplate = (function () {
         }
         return result;
     };
-    DomTemplate.prototype.renderChildren = function (context) {
+    TagElement.prototype.renderChildren = function (context) {
         var result = [];
         for (var i = 0; i < this.children.length; i++) {
             var child = this.children[i];
@@ -56,21 +67,44 @@ var DomTemplate = (function () {
         }
         return result;
     };
-    DomTemplate.prototype.renderTag = function (context) {
+    TagElement.prototype.renderTag = function (context) {
         return {
-            name: this.tag,
+            name: this.name,
             attributes: this.renderAttributes(context),
             children: this.renderChildren(context)
         };
     };
-    DomTemplate.prototype.selectManyExpr = function (loader) {
-        var expr = this.data.get("from");
+    TagElement.prototype.defaultModelAccessor = function (context) {
+        var model = context || {}, fromExpr = this.data.get("from") || this.data.get("for");
+        if (!!fromExpr) {
+            var expr = SelectManyExpression.create(fromExpr);
+            return {
+                then: function (resolve) {
+                    return expr.executeAsync(model, function (src) {
+                        resolve(src);
+                    });
+                }
+            };
+        }
+        else {
+            return {
+                then: function (resolve) {
+                    var arr = Array.isArray(model) ? model : [model];
+                    for (var i = 0; i < arr.length; i++) {
+                        resolve(arr[i]);
+                    }
+                }
+            };
+        }
+    };
+    TagElement.prototype.selectManyExpr = function (loader) {
+        var expr = this.data.get("from") || this.data.get("for");
         if (!!expr) {
             return SelectManyExpression.create(expr);
         }
         return null;
     };
-    return DomTemplate;
+    return TagElement;
 })();
 var SelectManyExpression = (function () {
     function SelectManyExpression(varName, itemType, collectionFunc) {
@@ -173,6 +207,29 @@ var Map = (function () {
 var Util = (function () {
     function Util() {
     }
+    Util.map = function (fn, data) {
+        if (Array.isArray(data)) {
+            for (var i = 0; i < data.length; i++) {
+                fn.call(this, data[i]);
+            }
+        }
+        else {
+            fn.call(this, data);
+        }
+    };
+    Util.compose = function () {
+        var fns = [];
+        for (var _i = 0; _i < arguments.length; _i++) {
+            fns[_i - 0] = arguments[_i];
+        }
+        return function (result) {
+            for (var i = fns.length - 1; i > -1; i--) {
+                // ReSharper disable once SuspiciousThisUsage
+                result = fns[i].call(this, result);
+            }
+            return result;
+        };
+    };
     Util.proxy = function (B) {
         function Proxy() { }
         function getter(prop) {

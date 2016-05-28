@@ -15,33 +15,16 @@
     <h1>TypeScript HTML App</h1>
 
     <div id="content" view-model="Organisation">
-        <ul data-from="o in url.get('')">
-            <li data-model="@employees" event-click="@updateCell" class="@style.cellClass">
-                @name <button event-click="@sayHello">click me</button>
+        <ul data-for="o:Organisation in url('~/api/organisation')">
+            <li data-for="emp in o.employees" event-click="@updateCell" class="@style.cellClass">
+                @name <button click.bind="emp.sayHello">click me</button>
             </li>
         </ul>
     </div>
 
     <script type="text/javascript">
-        Binder.bind(document.getElementById("content"), { xn: Company.xania(), url: Url });
+        var binder = new Binder();
+        binder.bind(document.getElementById("content"), { xn: Company.xania(), url: Url });
     </script>
-    <table>
-        <tr>
-            <td data-from="cells.json" class="hour-cell">
-                <div data-class="cellClass" on-click="updateCell" view-model="Cell">
-                    <div class="time" style="@showHour">
-                        @hours:00
-                    </div>
-                    <div css="@style.showSpinner">
-                        ...
-                    </div>
-                    <div css="@style.showSearchResults">
-                        <div>@status.searchResults.options</div>
-                        <div class="result-label">results</div>
-                    </div>
-                </div>
-            </td>
-        </tr>
-    </table>
 </body>
 </html>

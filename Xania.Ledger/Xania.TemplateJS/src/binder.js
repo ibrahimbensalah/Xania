@@ -1,10 +1,31 @@
 var Binder = (function () {
-    function Binder() {
+    function Binder(compile) {
+        if (compile === void 0) { compile = TemplateEngine.compile; }
+        this.compile = compile;
     }
-    Binder.bind = function (rootModel, rootDom) {
-        var stack = [{ dom: rootDom, viewModel: rootModel }];
+    Binder.prototype.bind = function (rootDom, rootModel) {
+        var result = [];
+        var stack = [{ node: rootDom, push: Array.prototype.push.bind(result) }];
         while (stack.length > 0) {
+            var cur = stack.pop();
+            var node = cur.node;
+            var push = cur.push;
+            if (node.nodeType === 1) {
+                var element = node;
+                var template = new TagElement(element.tagName);
+                push(template);
+                for (var i = element.childNodes.length - 1; i >= 0; i--) {
+                    stack.push({ node: element.childNodes[i], push: template.addChild.bind(template) });
+                }
+            }
+            else if (node.nodeType === 3) {
+                var tpl = this.compile(node.textContent);
+                // stack.push(child.textContent);
+                // tpl = this.compileTemplate(child.textContent, childScope);
+                push(new TextContent(tpl || node.textContent));
+            }
         }
+        console.log(result);
     };
     return Binder;
 })();

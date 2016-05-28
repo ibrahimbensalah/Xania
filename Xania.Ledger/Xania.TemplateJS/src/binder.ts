@@ -1,16 +1,35 @@
-﻿interface IDomElement {
-}
+﻿class Binder {
 
-class Binder {
+    constructor(public compile: Function = TemplateEngine.compile) {
 
-    static bind(rootModel: any, rootDom: IDomElement) {
-        const stack = [{ dom: rootDom, viewModel: rootModel }];
+    }
+
+    bind(rootDom: HTMLElement, rootModel: any) {
+
+        var result = [];
+        const stack = [{ node: <Node>rootDom, push: Array.prototype.push.bind(result) }];
 
         while (stack.length > 0) {
-            // var current = stack.pop();
-            // var dom = current.dom;
-            // var viewModel = current.viewModel;
+            const cur = stack.pop();
+            const node: Node = cur.node;
+            const push = cur.push;
+
+            if (node.nodeType === 1) {
+                var element = <HTMLElement>node;
+                var template = new TagElement(element.tagName);
+                push(template);
+
+                for (let i = element.childNodes.length-1; i >= 0; i--) {
+                    stack.push({ node: element.childNodes[i], push: template.addChild.bind(template) });
+                }
+            } else if (node.nodeType === 3) {
+                const tpl = this.compile(node.textContent);
+                // stack.push(child.textContent);
+                // tpl = this.compileTemplate(child.textContent, childScope);
+                push(new TextContent(tpl || node.textContent));
+            }
         }
+        console.log(result);
     }
 }
 

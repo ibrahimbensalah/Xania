@@ -1,13 +1,26 @@
-﻿interface IDomTemplate {
-    render(context: any);
+﻿interface IDomElement {
+    render(context: any): any[];
 }
 
-class DomTemplate implements IDomTemplate {
+class TextContent implements IDomElement {
+    constructor(private tpl) {
+
+    }
+    render(context): any[] {
+        if (typeof this.tpl == "function")
+            return [this.tpl(context.model)];
+        else
+            return [this.tpl];
+    }
+}
+
+class TagElement implements IDomElement {
     private attributes = new Map<any>();
     public data = new Map<string>();
-    private children: DomTemplate[] = [];
+    private children: TagElement[] = [];
+    private modelAccessor: Function = this.defaultModelAccessor.bind(this);
 
-    constructor(public tag: string) {
+    constructor(public name: string) {
     }
 
     public addAttribute(name: string, value: string) {
@@ -19,7 +32,7 @@ class DomTemplate implements IDomTemplate {
         this.attributes.add(name, tpl);
     }
 
-    public addChild(child: DomTemplate) {
+    public addChild(child: TagElement) {
         this.children.push(child);
     }
 
@@ -31,20 +44,21 @@ class DomTemplate implements IDomTemplate {
         return result;
     }
 
+    public bind(modelAccessor: Function) {
+        if (!modelAccessor)
+            throw new Error("Argument null");
+
+        this.modelAccessor = modelAccessor;
+    }
+
     protected renderAsync(context: any, resolve: any) {
-        var model = context || {},
-            selectManyExpr = this.selectManyExpr(context.loader);
-        if (!!selectManyExpr) {
-            selectManyExpr
-                .executeAsync(context,
-                    src => {
-                        resolve(this.renderTag(src));
-                    });
+        const model = this.modelAccessor(context),
+            compose = Util.compose(resolve, this.renderTag.bind(this)),
+            iter = Util.map.bind(this, compose);
+        if (typeof (model.then) === "function") {
+            model.then(iter);
         } else {
-            const arr = Array.isArray(model) ? model : [model];
-            for (let i = 0; i < arr.length; i++) {
-                resolve(this.renderTag(arr[i]));
-            }
+            iter(model);
         }
     }
 
@@ -77,14 +91,40 @@ class DomTemplate implements IDomTemplate {
 
     private renderTag(context) {
         return {
-            name: this.tag,
+            name: this.name,
             attributes: this.renderAttributes(context),
             children: this.renderChildren(context)
         };
     }
 
+    private defaultModelAccessor(context) {
+        var model = context || {},
+            fromExpr = this.data.get("from") || this.data.get("for");
+
+        if (!!fromExpr) {
+            var expr = SelectManyExpression.create(fromExpr);
+            return {
+                then(resolve) {
+                    return expr.executeAsync(model,
+                        src => {
+                            resolve(src);
+                        });
+                }
+            };
+        } else {
+            return {
+                then(resolve) {
+                    const arr = Array.isArray(model) ? model : [model];
+                    for (let i = 0; i < arr.length; i++) {
+                        resolve(arr[i]);
+                    }
+                }
+            }
+        }
+    }
+
     public selectManyExpr(loader): SelectManyExpression {
-        const expr = this.data.get("from");
+        const expr = this.data.get("from") || this.data.get("for");
         if (!!expr) {
             return SelectManyExpression.create(expr);
         }
@@ -197,6 +237,26 @@ class Map<T> {
 
 // ReSharper disable InconsistentNaming
 class Util {
+
+    static map(fn: Function, data: any) {
+        if (Array.isArray(data)) {
+            for (let i = 0; i < data.length; i++) {
+                fn.call(this, data[i]);
+            }
+        } else {
+            fn.call(this, data);
+        }
+    }
+
+    static compose(...fns: Function[]): Function {
+        return function (result) {
+            for (var i = fns.length - 1; i > -1; i--) {
+                // ReSharper disable once SuspiciousThisUsage
+                result = fns[i].call(this, result);
+            }
+            return result;
+        };
+    }
 
     static proxy(B) {
         function Proxy() { }
