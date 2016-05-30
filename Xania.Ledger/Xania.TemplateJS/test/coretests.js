@@ -10,12 +10,12 @@ var xania = Company.xania();
 
 var debugtest = function () {
     debugger;
-    // arrange
-    // arrange
     var elt = new TagElement("div");
-    elt.addAttribute("title", compile("@name"));
+    elt.bind("x in url('Xania')");
+    elt.attr("title", compile("@x"));
+    var url = function (href) { return { then: function (res) { res(href); } } };
     // act
-    var dom = elt.render(xania)[0];
+    var dom = elt.render({ url: url })[0];
     debugger;
 }
 
@@ -23,8 +23,7 @@ describe("Dom Template", function () {
     it("should be able to render attributes",
         function () {
             // arrange
-            var elt = new TagElement("div");
-            elt.addAttribute("title", compile("@name"));
+            var elt = new TagElement("div").attr("title", compile("@name"));
             // act
             var dom = elt.render(xania)[0];
             // assert
@@ -37,7 +36,7 @@ describe("Dom Template", function () {
             var elt = new TagElement("div");
             var childEl = new TagElement("span");
             elt.addChild(childEl);
-            childEl.addAttribute("title", compile("t:@name"));
+            childEl.attr("title", compile("t:@name"));
             // act
             var dom = elt.render(xania)[0];
             // assert
@@ -47,11 +46,11 @@ describe("Dom Template", function () {
     it("should be able to render parent context",
         function () {
             var elt = new TagElement("div");
-            elt.data.add("from", "b in ctx : org");
+            elt.for("b in ctx : org");
             var childEl = new TagElement("span");
             elt.addChild(childEl);
-            childEl.addAttribute("title", compile("C:@emp.firstName-B:@b.name-A:@org.name"));
-            childEl.data.add("from", "emp in b.employees");
+            childEl.attr("title", compile("C:@emp.firstName-B:@b.name-A:@org.name"));
+            childEl.for("emp in b.employees");
             // act
             var view = elt.render({ "org": xania });
             // assert
@@ -63,46 +62,48 @@ describe("Dom Template", function () {
         function () {
             // arrange
             var elt = new TagElement("div");
-            elt.data.add("from", "x in url('Xania')");
-            elt.addAttribute("title", compile("@x"));
+            elt.for("x in url('Xania')");
+            elt.attr("title", compile("@x"));
             var url = function (href) { return { then: function (res) { res(href); } } };
             // act
             var dom = elt.render({ url: url })[0];
             // assert
             expect(dom.attributes.title).toEqual("Xania");
         });
-    it('should support typed from expression', function() {
-        // arrange
-        var elt = new TagElement("div");
-        elt.data.add("from", "x:Company in [{name: 'Xania'}]");
-        elt.addAttribute("title", compile("@x.getName()"));
-        var loader = {
-            "import": function(type) { return Company; }
-        };
-        // act
-        var dom = elt.render({ loader: loader })[0];
-        // assert
-        expect(dom.attributes.title).toEqual("Xania");
-    });
+    it('should support typed from expression',
+        function() {
+            // arrange
+            var elt = new TagElement("div");
+            elt.for("x:Company in [{name: 'Xania'}]");
+            elt.attr("title", compile("@x.getName()"));
+            var loader = {
+                "import": function(type) { return Company; }
+            };
+            // act
+            var dom = elt.render({ loader: loader })[0];
+            // assert
+            expect(dom.attributes.title).toEqual("Xania");
+        });
     it("should support map",
         function () {
             // arrange
-            var elt = new TagElement("div");
-            elt.data.add("from", "x in arr.map(brak)");
-            elt.addAttribute("title", compile("@x"));
+            var elt = new TagElement("div")
+                .for("x in arr.map(bracket)")
+                .attr("title", compile("@x"));
             // act
-            var dom = elt.render({ arr: ['Xania'], brak: function (x) { return "[" + x + "]" } })[0];
+            var view = elt.render({ arr: ['Xania'], bracket: function (x) { return "[" + x + "]" } });
             // assert
-            expect(dom.attributes.title).toEqual("[Xania]");
+            expect(view[0].attributes.title).toEqual("[Xania]");
         });
 });
 
 describe("Template Engine", function () {
-    it("should compile when zero params", function () {
-        var tpl = compile("hallo template");
-        var result = tpl();
-        expect(result).toEqual("hallo template");
-    });
+    it("should compile when zero params",
+        function() {
+            var tpl = compile("hallo template");
+            var result = tpl();
+            expect(result).toEqual("hallo template");
+        });
     it("should compile member expression",
         function () {
             var tpl = compile("hallo @a.b-hi @a.c");
@@ -177,7 +178,7 @@ describe("Proxy", function () {
             expect(obj.a).toEqual(1);
         });
     it("should be able to extend given type",
-        function() {
+        function () {
             var company = Util.proxy(Company)
                 .init({ "name": 123 })
                 .create();

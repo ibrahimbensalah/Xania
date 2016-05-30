@@ -8,9 +8,13 @@ class TextContent implements IDomElement {
     }
     render(context): any[] {
         if (typeof this.tpl == "function")
-            return [this.tpl(context.model)];
+            return [this.tpl(context)];
         else
             return [this.tpl];
+    }
+
+    renderAsync(context, resolve) {
+        resolve(this.render(context));
     }
 }
 
@@ -23,6 +27,10 @@ class TagElement implements IDomElement {
     constructor(public name: string) {
     }
 
+    public attr(name: string, value: string) {
+        return this.addAttribute(name, value);
+    }
+
     public addAttribute(name: string, value: string) {
 
         var tpl = typeof (value) === "function"
@@ -30,6 +38,8 @@ class TagElement implements IDomElement {
             : () => value;
 
         this.attributes.add(name, tpl);
+
+        return this;
     }
 
     public addChild(child: TagElement) {
@@ -44,11 +54,19 @@ class TagElement implements IDomElement {
         return result;
     }
 
-    public bind(modelAccessor: Function) {
-        if (!modelAccessor)
-            throw new Error("Argument null");
+    public for(modelAccessor) {
+        if (typeof modelAccessor === "string") {
+            var expr = SelectManyExpression.parse(modelAccessor);
 
-        this.modelAccessor = modelAccessor;
+            this.modelAccessor = model => ({
+                then(resolve) {
+                    return expr.executeAsync({ model : model }, resolve);
+                }
+            });
+        } else {
+            this.modelAccessor = modelAccessor;
+        }
+        return this;
     }
 
     protected renderAsync(context: any, resolve: any) {
@@ -102,7 +120,7 @@ class TagElement implements IDomElement {
             fromExpr = this.data.get("from") || this.data.get("for");
 
         if (!!fromExpr) {
-            var expr = SelectManyExpression.create(fromExpr);
+            var expr = SelectManyExpression.parse(fromExpr);
             return {
                 then(resolve) {
                     return expr.executeAsync(model,
@@ -126,7 +144,7 @@ class TagElement implements IDomElement {
     public selectManyExpr(loader): SelectManyExpression {
         const expr = this.data.get("from") || this.data.get("for");
         if (!!expr) {
-            return SelectManyExpression.create(expr);
+            return SelectManyExpression.parse(expr);
         }
         return null;
     }
@@ -144,9 +162,8 @@ class SelectManyExpression {
 
     executeAsync(context, resolve) {
         const ensureIsArray = SelectManyExpression.ensureIsArray,
-            source = ensureIsArray(context);
-
-        var viewModel = this.getViewModel(context);
+            source = ensureIsArray(context.model),
+            viewModel = this.getViewModel(context.loader);
 
         const arrayHandler = (src, data) => {
             var arr = ensureIsArray(data);
@@ -173,13 +190,13 @@ class SelectManyExpression {
         }
     }
 
-    public getViewModel(context) {
+    public getViewModel(loader) {
         if (typeof this.itemType == "undefined")
             return null;
 
         switch (typeof (this.itemType)) {
             case "string":
-                return context.loader.import(this.itemType);
+                return loader.import(this.itemType);
             case "function":
                 return this.itemType;
             default:
@@ -187,7 +204,7 @@ class SelectManyExpression {
         }
     }
 
-    static create(expr) {
+    static parse(expr) {
         const m = expr.match(/^(\w+)(\s*:\s*(\w+))?\s+in\s+((\w+)\s*:\s*)?(.*)$/i);
         if (!!m) {
             const [, varName, , itemType, , directive, sourceExpr] = m;

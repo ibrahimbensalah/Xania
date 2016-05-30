@@ -4,9 +4,12 @@ var TextContent = (function () {
     }
     TextContent.prototype.render = function (context) {
         if (typeof this.tpl == "function")
-            return [this.tpl(context.model)];
+            return [this.tpl(context)];
         else
             return [this.tpl];
+    };
+    TextContent.prototype.renderAsync = function (context, resolve) {
+        resolve(this.render(context));
     };
     return TextContent;
 })();
@@ -18,11 +21,15 @@ var TagElement = (function () {
         this.children = [];
         this.modelAccessor = this.defaultModelAccessor.bind(this);
     }
+    TagElement.prototype.attr = function (name, value) {
+        return this.addAttribute(name, value);
+    };
     TagElement.prototype.addAttribute = function (name, value) {
         var tpl = typeof (value) === "function"
             ? value
             : function () { return value; };
         this.attributes.add(name, tpl);
+        return this;
     };
     TagElement.prototype.addChild = function (child) {
         this.children.push(child);
@@ -34,10 +41,19 @@ var TagElement = (function () {
         });
         return result;
     };
-    TagElement.prototype.bind = function (modelAccessor) {
-        if (!modelAccessor)
-            throw new Error("Argument null");
-        this.modelAccessor = modelAccessor;
+    TagElement.prototype.for = function (modelAccessor) {
+        if (typeof modelAccessor === "string") {
+            var expr = SelectManyExpression.parse(modelAccessor);
+            this.modelAccessor = function (model) { return ({
+                then: function (resolve) {
+                    return expr.executeAsync({ model: model }, resolve);
+                }
+            }); };
+        }
+        else {
+            this.modelAccessor = modelAccessor;
+        }
+        return this;
     };
     TagElement.prototype.renderAsync = function (context, resolve) {
         var model = this.modelAccessor(context), compose = Util.compose(resolve, this.renderTag.bind(this)), iter = Util.map.bind(this, compose);
@@ -77,7 +93,7 @@ var TagElement = (function () {
     TagElement.prototype.defaultModelAccessor = function (context) {
         var model = context || {}, fromExpr = this.data.get("from") || this.data.get("for");
         if (!!fromExpr) {
-            var expr = SelectManyExpression.create(fromExpr);
+            var expr = SelectManyExpression.parse(fromExpr);
             return {
                 then: function (resolve) {
                     return expr.executeAsync(model, function (src) {
@@ -100,7 +116,7 @@ var TagElement = (function () {
     TagElement.prototype.selectManyExpr = function (loader) {
         var expr = this.data.get("from") || this.data.get("for");
         if (!!expr) {
-            return SelectManyExpression.create(expr);
+            return SelectManyExpression.parse(expr);
         }
         return null;
     };
@@ -119,8 +135,7 @@ var SelectManyExpression = (function () {
     };
     SelectManyExpression.prototype.executeAsync = function (context, resolve) {
         var _this = this;
-        var ensureIsArray = SelectManyExpression.ensureIsArray, source = ensureIsArray(context);
-        var viewModel = this.getViewModel(context);
+        var ensureIsArray = SelectManyExpression.ensureIsArray, source = ensureIsArray(context.model), viewModel = this.getViewModel(context.loader);
         var arrayHandler = function (src, data) {
             var arr = ensureIsArray(data);
             for (var e = 0; e < arr.length; e++) {
@@ -144,19 +159,19 @@ var SelectManyExpression = (function () {
             }
         }
     };
-    SelectManyExpression.prototype.getViewModel = function (context) {
+    SelectManyExpression.prototype.getViewModel = function (loader) {
         if (typeof this.itemType == "undefined")
             return null;
         switch (typeof (this.itemType)) {
             case "string":
-                return context.loader.import(this.itemType);
+                return loader.import(this.itemType);
             case "function":
                 return this.itemType;
             default:
                 return Object;
         }
     };
-    SelectManyExpression.create = function (expr) {
+    SelectManyExpression.parse = function (expr) {
         var m = expr.match(/^(\w+)(\s*:\s*(\w+))?\s+in\s+((\w+)\s*:\s*)?(.*)$/i);
         if (!!m) {
             var varName = m[1], itemType = m[3], directive = m[5], sourceExpr = m[6];

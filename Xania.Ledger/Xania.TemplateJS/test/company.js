@@ -39,6 +39,9 @@ var Company = (function (_super) {
 var Url = (function () {
     function Url() {
     }
+    Url.dummy = function (x) {
+        return x;
+    };
     Url.get = function (href) {
         return new Promise(function (resolve, reject) {
             var request = new XMLHttpRequest();

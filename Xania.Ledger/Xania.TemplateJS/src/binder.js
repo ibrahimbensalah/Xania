@@ -1,8 +1,30 @@
 var Binder = (function () {
-    function Binder(compile) {
+    function Binder(loader, compile) {
         if (compile === void 0) { compile = TemplateEngine.compile; }
+        this.loader = loader;
         this.compile = compile;
     }
+    Binder.prototype.createExpr = function (fromExpr) {
+        var self = this;
+        var expr = SelectManyExpression.parse(fromExpr);
+        return function (model) { return ({
+            then: function (resolve) {
+                var context = { model: model, loader: self.loader };
+                return expr.executeAsync(context, resolve);
+            }
+        }); };
+    };
+    Binder.prototype.bindAttr = function (tagElement, attr) {
+        var name = attr.name;
+        if (name === "data-for" || name === "data-from") {
+            tagElement.for(this.createExpr(attr.value));
+        }
+        else {
+            var tpl = this.compile(attr.value);
+            tagElement.attr(name, tpl || attr.value);
+        }
+    };
+    ;
     Binder.prototype.bind = function (rootDom, rootModel) {
         var result = [];
         var stack = [{ node: rootDom, push: Array.prototype.push.bind(result) }];
@@ -11,22 +33,50 @@ var Binder = (function () {
             var node = cur.node;
             var push = cur.push;
             if (node.nodeType === 1) {
-                var element = node;
-                var template = new TagElement(element.tagName);
+                var elt = node;
+                var template = new TagElement(elt.tagName);
                 push(template);
-                for (var i = element.childNodes.length - 1; i >= 0; i--) {
-                    stack.push({ node: element.childNodes[i], push: template.addChild.bind(template) });
+                for (var i = 0; !!elt.attributes && i < elt.attributes.length; i++) {
+                    var attribute = elt.attributes[i];
+                    this.bindAttr(template, attribute);
+                }
+                for (var i_1 = elt.childNodes.length - 1; i_1 >= 0; i_1--) {
+                    stack.push({ node: elt.childNodes[i_1], push: template.addChild.bind(template) });
                 }
             }
             else if (node.nodeType === 3) {
                 var tpl = this.compile(node.textContent);
-                // stack.push(child.textContent);
-                // tpl = this.compileTemplate(child.textContent, childScope);
                 push(new TextContent(tpl || node.textContent));
             }
         }
-        console.log(result);
+        rootDom.innerHTML = this.toHtml(result[0].render(rootModel));
     };
+    Binder.prototype.toHtml = function (tags) {
+        var html = "";
+        debugger;
+        for (var i = 0; i < tags.length; i++) {
+            var tag = tags[i];
+            if (typeof tag == "string")
+                html += tag;
+            else {
+                html += "<" + tag.name;
+                for (var e = 0; e < tag.attributes.length; e++) {
+                    var attr = tag.attributes[e];
+                    html += " " + attr.name + "=\"" + attr.value + "\"";
+                }
+                html += ">";
+                for (var j = 0; j < tag.children.length; j++) {
+                    if (Array.isArray(tag.children[j]))
+                        html += this.toHtml(tag.children[j]);
+                    else
+                        html += this.toHtml([tag.children[j]]);
+                }
+                html += "</" + tag.name + ">";
+            }
+        }
+        return html;
+    };
+    ;
     return Binder;
 })();
 var TemplateEngine = (function () {

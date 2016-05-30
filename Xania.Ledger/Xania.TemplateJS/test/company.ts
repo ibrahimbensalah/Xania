@@ -24,6 +24,9 @@ class Company extends A {
     }
 }
 class Url {
+    static dummy(x) {
+        return x;
+    }
     static get(href) {
         return new Promise((resolve: any, reject) => {
             var request = new XMLHttpRequest();
