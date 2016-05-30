@@ -17,7 +17,10 @@
 
     bindAttr(tagElement: TagElement, attr: Attr) {
         const name = attr.name;
-        if (name === "data-for" || name === "data-from") {
+        if (name === "click") {
+            const fn = new Function("m", `with(m) { return ${attr.value}; }`);
+            tagElement.addEvent("click", fn);
+        } else if (name === "data-for" || name === "data-from") {
             tagElement.for(this.createExpr(attr.value));
         } else {
             const tpl = this.compile(attr.value);
@@ -52,12 +55,18 @@
             }
         }
 
-        rootDom.innerHTML = this.toHtml(result[0].render(rootModel));
+        // rootDom.innerHTML = this.toHtml(result[0].render(rootModel));
+
+        var dom = this.toDOM(result[0].render(rootModel));
+        for (var i = 0; i < dom.length; i++) {
+            document.body.appendChild(dom[i]);
+        }
+
+        // console.log(dom);
     }
 
     toHtml(tags): string {
         var html = "";
-        debugger;
         for (var i = 0; i < tags.length; i++) {
             var tag = tags[i];
             if (typeof tag == "string")
@@ -72,10 +81,43 @@
                 for (var j = 0; j < tag.children.length; j++) {
                     if (Array.isArray(tag.children[j]))
                         html += this.toHtml(tag.children[j]);
-                    else 
-                        html += this.toHtml([ tag.children[j] ]);
+                    else
+                        html += this.toHtml([tag.children[j]]);
                 }
                 html += `</${tag.name}>`;
+            }
+        }
+        return html;
+    };
+
+    toDOM(tags): HTMLElement[] {
+        var html = [];
+        for (var i = 0; i < tags.length; i++) {
+            var tag = tags[i];
+            if (typeof tag == "string")
+                html.push(document.createTextNode(tag));
+            else {
+                var elt = document.createElement(tag.name);
+                html.push(elt);
+                for (var attrName in tag.attributes) {
+                    var domAttr = document.createAttribute(attrName);
+                    domAttr.value = tag.attributes[attrName];
+                    elt.setAttributeNode(domAttr);
+                }
+                for (var n = 0; n < tag.events.length; n++) {
+                    var event = tag.events[n];
+                    // console.log(event.name);
+                    elt.addEventListener("click", event.handler);
+                }
+                for (var j = 0; j < tag.children.length; j++) {
+                    var children = Array.isArray(tag.children[j]) 
+                        ? this.toDOM(tag.children[j])
+                        : this.toDOM([tag.children[j]]);
+
+                    for (var m in children) {
+                        elt.appendChild(children[m]);
+                    }
+                }
             }
         }
         return html;
@@ -90,7 +132,7 @@ class TemplateEngine {
             return null;
         }
 
-        var template = input.replace(/\n/g, "\\n");
+        var template = input.replace(/\n/g, "\\\n");
         var params = "";
         // var returnExpr = template.replace(/@([a-z_][\.a-z0-9_]*)/gim, (a, b) => {
         var returnExpr = template.replace(/@([\w\(\)\.]+)/gim, function (a, b) {

@@ -20,6 +20,7 @@ class TextContent implements IDomElement {
 
 class TagElement implements IDomElement {
     private attributes = new Map<any>();
+    private events = new Map<any>();
     public data = new Map<string>();
     private children: TagElement[] = [];
     private modelAccessor: Function = this.defaultModelAccessor.bind(this);
@@ -40,6 +41,10 @@ class TagElement implements IDomElement {
         this.attributes.add(name, tpl);
 
         return this;
+    }
+
+    public addEvent(name, callback) {
+        this.events.add(name, callback);
     }
 
     public addChild(child: TagElement) {
@@ -107,9 +112,22 @@ class TagElement implements IDomElement {
         return result;
     }
 
+    private renderEvents(context) {
+        var result = [];
+        for (var i = 0; i < this.events.keys.length; i++) {
+            var eventName = this.events.keys[i];
+            var callback = this.events.elementAt(i);
+
+            result.push({ name: eventName, handler: callback(context) });
+        }
+
+        return result;
+    }
+
     private renderTag(context) {
         return {
             name: this.name,
+            events: this.renderEvents(context),
             attributes: this.renderAttributes(context),
             children: this.renderChildren(context)
         };
@@ -139,7 +157,7 @@ class TagElement implements IDomElement {
                 }
             }
         }
-    }
+    } 
 
     public selectManyExpr(loader): SelectManyExpression {
         const expr = this.data.get("from") || this.data.get("for");

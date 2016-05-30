@@ -19,6 +19,16 @@ var Employee = (function () {
         this.firstName = firstName;
         this.lastName = lastName;
     }
+    Object.defineProperty(Employee.prototype, "roles", {
+        get: function () {
+            return [this.firstName, this.lastName];
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Employee.prototype.sayHello = function () {
+        alert(this.firstName);
+    };
     return Employee;
 })();
 var Company = (function (_super) {
@@ -29,7 +39,10 @@ var Company = (function (_super) {
         this.employees = employees;
     }
     Company.xania = function () {
-        return new Company("Xania", [new Employee("Ibrahim", "ben Salah")]);
+        return new Company("Xania", [
+            new Employee("Ibrahim", "ben Salah"),
+            new Employee("Abeer", "Mahdi")
+        ]);
     };
     Company.prototype.getName = function () {
         return this.name;

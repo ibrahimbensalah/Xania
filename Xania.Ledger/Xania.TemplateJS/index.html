@@ -5,27 +5,40 @@
     <meta charset="utf-8" />
     <title>TypeScript HTML App</title>
     <link rel="stylesheet" href="app.css" type="text/css" />
+    <style type="text/css">
+        [data-for] {
+            display: none;
+        }
+    </style>
 
     <script src="app.js"></script>
     <script src="src/core.js"></script>
     <script src="src/binder.js"></script>
     <script src="test/company.js"></script>
+    <script>
+        function test() {
+            alert('hallo');
+        }
+    </script>
 </head>
 <body>
     <h1>TypeScript HTML App</h1>
 
-    <div id="content" view-model="Organisation">
+    <button onclick="test();">hallo</button>
+<div id="content" view-model="Organisation">
         <ul data-for="o:Organisation in xn">
             <li data-for="emp in o.employees">
-                [ @xn.name ] <button click.bind="emp.sayHello">click me</button>
+                [ @o.name ] <button click="emp.sayHello.bind(emp)">click me: @o.getName()</button>
+                [ @emp.roles ]
+                <span data-for="r in emp.roles">@r</span>
             </li>
         </ul>
     </div>
 
     <script type="text/javascript">
+        var model = { xn: [Company.xania(), Company.xania()], url: Url.dummy };
         var binder = new Binder({ 'import': function () { return OrganisationViewModel; } });
-        binder.bind(document.getElementById("content"),
-            { xn: [ Company.xania(), Company.xania() ], url: Url.dummy });
+        binder.bind(document.getElementById("content"), model);
     </script>
 </body>
 </html>

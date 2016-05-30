@@ -9,6 +9,14 @@ class A {
 class Employee {
     constructor(public firstName: string, public lastName: string) {
     }
+
+    get roles() {
+        return [this.firstName, this.lastName];
+    }
+
+    sayHello() {
+        alert(this.firstName);
+    }
 }
 class Company extends A {
     public constructor(public name: string, public employees: Employee[]) {
@@ -16,7 +24,10 @@ class Company extends A {
     }
 
     static xania() {
-        return new Company("Xania", [new Employee("Ibrahim", "ben Salah")]);
+        return new Company("Xania", [
+            new Employee("Ibrahim", "ben Salah"),
+            new Employee("Abeer", "Mahdi")
+        ]);
     }
 
     getName() {

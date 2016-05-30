@@ -16,9 +16,11 @@ var Greeter = (function () {
     return Greeter;
 })();
 var OrganisationViewModel = (function () {
-    function OrganisationViewModel(values) {
-        this.values = values;
+    function OrganisationViewModel() {
     }
+    OrganisationViewModel.prototype.getName = function () {
+        return this.name;
+    };
     return OrganisationViewModel;
 })();
 window.onload = function () {

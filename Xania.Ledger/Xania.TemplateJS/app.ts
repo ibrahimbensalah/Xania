@@ -22,8 +22,11 @@
 }
 
 class OrganisationViewModel {
-    constructor(public values: Object) {
 
+    private name: string;
+
+    getName() {
+        return this.name;
     }
 }
 

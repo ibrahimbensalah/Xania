@@ -17,6 +17,7 @@ var TagElement = (function () {
     function TagElement(name) {
         this.name = name;
         this.attributes = new Map();
+        this.events = new Map();
         this.data = new Map();
         this.children = [];
         this.modelAccessor = this.defaultModelAccessor.bind(this);
@@ -30,6 +31,9 @@ var TagElement = (function () {
             : function () { return value; };
         this.attributes.add(name, tpl);
         return this;
+    };
+    TagElement.prototype.addEvent = function (name, callback) {
+        this.events.add(name, callback);
     };
     TagElement.prototype.addChild = function (child) {
         this.children.push(child);
@@ -83,9 +87,19 @@ var TagElement = (function () {
         }
         return result;
     };
+    TagElement.prototype.renderEvents = function (context) {
+        var result = [];
+        for (var i = 0; i < this.events.keys.length; i++) {
+            var eventName = this.events.keys[i];
+            var callback = this.events.elementAt(i);
+            result.push({ name: eventName, handler: callback(context) });
+        }
+        return result;
+    };
     TagElement.prototype.renderTag = function (context) {
         return {
             name: this.name,
+            events: this.renderEvents(context),
             attributes: this.renderAttributes(context),
             children: this.renderChildren(context)
         };
