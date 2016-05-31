@@ -118,7 +118,7 @@ class TagElement implements IDomElement {
             var eventName = this.events.keys[i];
             var callback = this.events.elementAt(i);
 
-            result.push({ name: eventName, handler: callback(context) });
+            result.push({ name: eventName, handler: callback.bind(this, context) });
         }
 
         return result;

@@ -14,8 +14,8 @@ class Employee {
         return [this.firstName, this.lastName];
     }
 
-    sayHello() {
-        alert(this.firstName);
+    sayHello(prefix) {
+        alert(prefix + " : " + this.firstName);
     }
 }
 class Company extends A {

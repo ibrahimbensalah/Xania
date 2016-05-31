@@ -25,10 +25,10 @@
     <h1>TypeScript HTML App</h1>
 
     <button onclick="test();">hallo</button>
-<div id="content" view-model="Organisation">
+    <div id="content">
         <ul data-for="o:Organisation in xn">
             <li data-for="emp in o.employees">
-                [ @o.name ] <button click="emp.sayHello.bind(emp)">click me: @o.getName()</button>
+                [ @o.name ] <button click="emp.sayHello('test')">click me: @o.getName()</button>
                 [ @emp.roles ]
                 <span data-for="r in emp.roles">@r</span>
             </li>

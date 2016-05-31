@@ -26,8 +26,8 @@ var Employee = (function () {
         enumerable: true,
         configurable: true
     });
-    Employee.prototype.sayHello = function () {
-        alert(this.firstName);
+    Employee.prototype.sayHello = function (prefix) {
+        alert(prefix + " : " + this.firstName);
     };
     return Employee;
 })();
