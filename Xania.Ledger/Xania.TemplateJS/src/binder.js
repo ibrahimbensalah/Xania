@@ -28,10 +28,10 @@ var Binder = (function () {
             tagElement.attr(name, tpl || attr.value);
         }
     };
-    ;
     Binder.prototype.bind = function (rootDom, rootModel) {
         var result = [];
         var stack = [{ node: rootDom, push: Array.prototype.push.bind(result) }];
+        var i;
         while (stack.length > 0) {
             var cur = stack.pop();
             var node = cur.node;
@@ -40,12 +40,12 @@ var Binder = (function () {
                 var elt = node;
                 var template = new TagElement(elt.tagName);
                 push(template);
-                for (var i = 0; !!elt.attributes && i < elt.attributes.length; i++) {
+                for (i = 0; !!elt.attributes && i < elt.attributes.length; i++) {
                     var attribute = elt.attributes[i];
                     this.bindAttr(template, attribute);
                 }
-                for (var i_1 = elt.childNodes.length - 1; i_1 >= 0; i_1--) {
-                    stack.push({ node: elt.childNodes[i_1], push: template.addChild.bind(template) });
+                for (i = elt.childNodes.length - 1; i >= 0; i--) {
+                    stack.push({ node: elt.childNodes[i], push: template.addChild.bind(template) });
                 }
             }
             else if (node.nodeType === 3) {
@@ -55,7 +55,7 @@ var Binder = (function () {
         }
         // rootDom.innerHTML = this.toHtml(result[0].render(rootModel));
         var dom = this.toDOM(result[0].render(rootModel));
-        for (var i = 0; i < dom.length; i++) {
+        for (i = 0; i < dom.length; i++) {
             document.body.appendChild(dom[i]);
         }
         // console.log(dom);
@@ -102,7 +102,7 @@ var Binder = (function () {
                 for (var n = 0; n < tag.events.length; n++) {
                     var event = tag.events[n];
                     // console.log(event.name);
-                    elt.addEventListener("click", event.handler);
+                    elt.addEventListener(event.name, event.handler);
                 }
                 for (var j = 0; j < tag.children.length; j++) {
                     var children = Array.isArray(tag.children[j])

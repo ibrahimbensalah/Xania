@@ -114,10 +114,22 @@ class TagElement implements IDomElement {
 
     private renderEvents(context) {
         var result = [];
-        for (var i = 0; i < this.events.keys.length; i++) {
-            var eventName = this.events.keys[i];
-            var callback = this.events.elementAt(i);
 
+        if (this.name.toUpperCase() === "INPUT") {
+            debugger;
+            var name = this.attributes.get("name")(context);
+            const setter = new Function("value", `with (this) { ${name} = value; }`).bind(context);
+            result.push({
+                name: "change",
+                handler(e) {
+                    setter(e.target.value);
+                }
+            });
+        }
+        
+        for (let i = 0; i < this.events.keys.length; i++) {
+            const eventName = this.events.keys[i];
+            const callback = this.events.elementAt(i);
             result.push({ name: eventName, handler: callback.bind(this, context) });
         }
 

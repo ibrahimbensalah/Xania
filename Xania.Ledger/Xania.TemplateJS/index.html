@@ -15,19 +15,14 @@
     <script src="src/core.js"></script>
     <script src="src/binder.js"></script>
     <script src="test/company.js"></script>
-    <script>
-        function test() {
-            alert('hallo');
-        }
-    </script>
 </head>
 <body>
     <h1>TypeScript HTML App</h1>
 
-    <button onclick="test();">hallo</button>
     <div id="content">
         <ul data-for="o:Organisation in xn">
             <li data-for="emp in o.employees">
+                <input name="emp.firstName" value="@emp.firstName" />
                 [ @o.name ] <button click="emp.sayHello('test')">click me: @o.getName()</button>
                 [ @emp.roles ]
                 <span data-for="r in emp.roles">@r</span>

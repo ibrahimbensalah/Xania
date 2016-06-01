@@ -89,6 +89,17 @@ var TagElement = (function () {
     };
     TagElement.prototype.renderEvents = function (context) {
         var result = [];
+        if (this.name.toUpperCase() === "INPUT") {
+            debugger;
+            var name = this.attributes.get("name")(context);
+            var setter = new Function("value", "with (this) { " + name + " = value; }").bind(context);
+            result.push({
+                name: "change",
+                handler: function (e) {
+                    setter(e.target.value);
+                }
+            });
+        }
         for (var i = 0; i < this.events.keys.length; i++) {
             var eventName = this.events.keys[i];
             var callback = this.events.elementAt(i);
