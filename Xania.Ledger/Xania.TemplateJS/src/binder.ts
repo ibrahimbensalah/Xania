@@ -15,7 +15,7 @@
             case "function":
                 return itemType;
             default:
-                return Object;
+                return null;
         }
     }
 
@@ -36,10 +36,15 @@
         }
     }
 
-    bind(rootDom: HTMLElement, rootModel: any) {
+    bind(rootElements: HTMLElement[]) {
         const result = [];
-        const stack = [{ node: <Node>rootDom, push: Array.prototype.push.bind(result) }];
+        const stack = [];
         let i: number;
+
+        for (i = rootElements.length - 1; i >= 0; i--) {
+            stack.push({ node: rootElements[i], push: Array.prototype.push.bind(result) });
+        }
+
         while (stack.length > 0) {
             const cur = stack.pop();
             const node: Node = cur.node;
@@ -64,14 +69,7 @@
             }
         }
 
-        // rootDom.innerHTML = this.toHtml(result[0].render(rootModel));
-
-        var dom = this.toDOM(result[0].render(rootModel));
-        for (i = 0; i < dom.length; i++) {
-            document.body.appendChild(dom[i]);
-        }
-
-        // console.log(dom);
+        return result;
     }
 
     toHtml(tags): string {
@@ -99,40 +97,56 @@
         return html;
     };
 
-    toDOM(tags): HTMLElement[] {
-        var html = [];
+    toDOMAsync(tags, resolve) {
         for (var i = 0; i < tags.length; i++) {
             var tag = tags[i];
-            if (typeof tag == "string")
-                html.push(document.createTextNode(tag));
-            else {
-                var elt = document.createElement(tag.name);
-                html.push(elt);
-                for (var attrName in tag.attributes) {
+            if (typeof tag == "string") {
+                resolve(document.createTextNode(tag));
+            } else {
+                const elt = document.createElement(tag.name);
+                const tagid = document.createAttribute("__tagid");
+                tagid.value = tag.id;
+                elt.setAttributeNode(tagid);
+
+                for (let j = 0; j < tag.children.length; j++) {
+                    Array.isArray(tag.children[j])
+                        ? this.toDOMAsync(tag.children[j], elt.appendChild.bind(elt))
+                        : this.toDOMAsync([tag.children[j]], elt.appendChild.bind(elt));
+                }
+
+                for (let attrName in tag.attributes) {
+
                     if (tag.attributes.hasOwnProperty(attrName)) {
                         var domAttr = document.createAttribute(attrName);
                         domAttr.value = tag.attributes[attrName];
                         elt.setAttributeNode(domAttr);
                     }
                 }
-                for (var n = 0; n < tag.events.length; n++) {
-                    var event = tag.events[n];
-                    // console.log(event.name);
-                    elt.addEventListener(event.name, event.handler);
-                }
-                for (var j = 0; j < tag.children.length; j++) {
-                    var children = Array.isArray(tag.children[j]) 
-                        ? this.toDOM(tag.children[j])
-                        : this.toDOM([tag.children[j]]);
-
-                    for (var m in children) {
-                        elt.appendChild(children[m]);
-                    }
-                }
+                resolve(elt);
             }
         }
-        return html;
     };
+
+    createTagMap(tags) {
+        var stack = [];
+        var map = {};
+
+        for (var e = 0; e < tags.length; e++) {
+            stack.push(tags[e]);
+        }
+
+        while (stack.length > 0) {
+            var cur = stack.pop();
+
+            map[cur.id] = cur;
+
+            for (let i = 0; !!cur.children && i < cur.children.length; i++) {
+                stack.push(cur.children[i]);
+            }
+        }
+
+        return map;
+    }
 }
 
 class TemplateEngine {

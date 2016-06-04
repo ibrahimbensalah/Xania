@@ -111,24 +111,18 @@ class TagElement implements IDomElement {
     }
 
     private renderEvents(context) {
-        var result = [];
+        var result: any = {};
 
         if (this.name.toUpperCase() === "INPUT") {
-            debugger;
             var name = this.attributes.get("name")(context);
-            const setter = new Function("value", `with (this) { ${name} = value; }`).bind(context);
-            result.push({
-                name: "change",
-                handler(e) {
-                    setter(e.target.value);
-                }
-            });
+            // const setter = new Function("value", `with (this) { ${name} = value; }`).bind(context);
+            result.update = new Function("value", `with (this) { ${name} = value; }`).bind(context);
         }
-        
+
         for (let i = 0; i < this.events.keys.length; i++) {
             const eventName = this.events.keys[i];
             const callback = this.events.elementAt(i);
-            result.push({ name: eventName, handler: callback.bind(this, context) });
+            result[eventName] = callback.bind(this, context);
         }
 
         return result;
@@ -136,6 +130,8 @@ class TagElement implements IDomElement {
 
     private renderTag(context) {
         return {
+            id: Util.uuid(),
+            context: context,
             name: this.name,
             events: this.renderEvents(context),
             attributes: this.renderAttributes(context),
@@ -232,18 +228,54 @@ class Map<T> {
 // ReSharper disable InconsistentNaming
 class Util {
 
+    private static lut;
+
     static identity(x) {
         return x;
     }
 
     static map(fn: Function, data: any) {
         if (Array.isArray(data)) {
+            // var result = [];
             for (let i = 0; i < data.length; i++) {
                 fn.call(this, data[i]);
             }
+            // return result;
         } else {
             fn.call(this, data);
         }
+    }
+
+    static collect(fn: Function, data: any) {
+        if (Array.isArray(data)) {
+            var result = [];
+            for (let i = 0; i < data.length; i++) {
+                var items = fn.call(this, data[i]);
+                Array.prototype.push.apply(result, items);
+            }
+            return result;
+        } else {
+            return [ fn.call(this, data) ];
+        }
+    }
+
+    static uuid() {
+        if (!Util.lut) {
+            Util.lut = [];
+            for (var i = 0; i < 256; i++) {
+                Util.lut[i] = (i < 16 ? '0' : '') + (i).toString(16);
+            }
+        }
+        const lut = Util.lut;
+
+        var d0 = Math.random() * 0xffffffff | 0;
+            var d1 = Math.random() * 0xffffffff | 0;
+            var d2 = Math.random() * 0xffffffff | 0;
+            var d3 = Math.random() * 0xffffffff | 0;
+            return lut[d0 & 0xff] + lut[d0 >> 8 & 0xff] + lut[d0 >> 16 & 0xff] + lut[d0 >> 24 & 0xff] + '-' +
+                lut[d1 & 0xff] + lut[d1 >> 8 & 0xff] + '-' + lut[d1 >> 16 & 0x0f | 0x40] + lut[d1 >> 24 & 0xff] + '-' +
+                lut[d2 & 0x3f | 0x80] + lut[d2 >> 8 & 0xff] + '-' + lut[d2 >> 16 & 0xff] + lut[d2 >> 24 & 0xff] +
+                lut[d3 & 0xff] + lut[d3 >> 8 & 0xff] + lut[d3 >> 16 & 0xff] + lut[d3 >> 24 & 0xff];
     }
 
     static compose(...fns: Function[]): Function {

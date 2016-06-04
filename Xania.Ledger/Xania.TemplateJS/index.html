@@ -23,7 +23,7 @@
         <ul data-for="o:OrganisationViewModel in xn">
             <li data-for="emp in o.employees">
                 <input name="emp.firstName" value="@emp.firstName" />
-                [ @o.name ] <button click="emp.sayHello('test')">click me: @o.getName()</button>
+                [ @o.name ] <button name="@emp.firstName" click="emp.sayHello('test')">click me</button>
                 [ @emp.roles ]
                 <span data-for="r in emp.roles">@r</span>
             </li>
@@ -33,7 +33,39 @@
     <script type="text/javascript">
         var model = { xn: [Company.xania(), Company.xania()], url: Url.dummy };
         var binder = new Binder();
-        binder.bind(document.getElementById("content"), model);
+
+        var contentDiv = document.getElementById("content");
+        var result = binder.bind(contentDiv.childNodes, model);
+
+        var target = contentDiv;
+        var append = target.appendChild.bind(target);
+
+        var tags = Util.collect(function (e) {
+            return e.render(model);
+        }, result);
+
+        binder.toDOMAsync(tags, append);
+
+        var map = binder.createTagMap(tags);
+        target.addEventListener("click",
+            function (e) {
+                var tagid = e.target.getAttribute("__tagid");
+                var tagDefinition = map[tagid];
+                var handler = tagDefinition.events.click;
+                if (!!handler) {
+                    handler();
+                }
+            });
+        target.addEventListener("change",
+            function (e) {
+                var tagid = e.target.getAttribute("__tagid");
+                if (!!tagid && !!map[tagid] && !!map[tagid].events.update) {
+                    var handler = map[tagid].events.update;
+                    if (!!handler) {
+                        handler(e.target.value);
+                    }
+                }
+            });
     </script>
 </body>
 </html>

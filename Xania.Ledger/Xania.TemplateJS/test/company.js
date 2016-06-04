@@ -27,7 +27,7 @@ var Employee = (function () {
         configurable: true
     });
     Employee.prototype.sayHello = function (prefix) {
-        alert(prefix + " : " + this.firstName);
+        console.log(prefix + " : " + this.firstName);
     };
     return Employee;
 })();
@@ -78,5 +78,13 @@ var Url = (function () {
         });
     };
     return Url;
+})();
+var OrganisationViewModel = (function () {
+    function OrganisationViewModel() {
+    }
+    OrganisationViewModel.prototype.getName = function () {
+        return this.name;
+    };
+    return OrganisationViewModel;
 })();
 //# sourceMappingURL=company.js.map

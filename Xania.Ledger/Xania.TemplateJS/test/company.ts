@@ -15,7 +15,7 @@ class Employee {
     }
 
     sayHello(prefix) {
-        alert(prefix + " : " + this.firstName);
+        console.log(prefix + " : " + this.firstName);
     }
 }
 class Company extends A {
@@ -61,3 +61,13 @@ class Url {
         });
     }
 }
+
+class OrganisationViewModel {
+
+    private name: string;
+
+    getName() {
+        return this.name;
+    }
+}
+

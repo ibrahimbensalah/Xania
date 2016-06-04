@@ -85,27 +85,23 @@ var TagElement = (function () {
         return result;
     };
     TagElement.prototype.renderEvents = function (context) {
-        var result = [];
+        var result = {};
         if (this.name.toUpperCase() === "INPUT") {
-            debugger;
             var name = this.attributes.get("name")(context);
-            var setter = new Function("value", "with (this) { " + name + " = value; }").bind(context);
-            result.push({
-                name: "change",
-                handler: function (e) {
-                    setter(e.target.value);
-                }
-            });
+            // const setter = new Function("value", `with (this) { ${name} = value; }`).bind(context);
+            result.update = new Function("value", "with (this) { " + name + " = value; }").bind(context);
         }
         for (var i = 0; i < this.events.keys.length; i++) {
             var eventName = this.events.keys[i];
             var callback = this.events.elementAt(i);
-            result.push({ name: eventName, handler: callback.bind(this, context) });
+            result[eventName] = callback.bind(this, context);
         }
         return result;
     };
     TagElement.prototype.renderTag = function (context) {
         return {
+            id: Util.uuid(),
+            context: context,
             name: this.name,
             events: this.renderEvents(context),
             attributes: this.renderAttributes(context),
@@ -206,6 +202,7 @@ var Util = (function () {
     };
     Util.map = function (fn, data) {
         if (Array.isArray(data)) {
+            // var result = [];
             for (var i = 0; i < data.length; i++) {
                 fn.call(this, data[i]);
             }
@@ -213,6 +210,36 @@ var Util = (function () {
         else {
             fn.call(this, data);
         }
+    };
+    Util.collect = function (fn, data) {
+        if (Array.isArray(data)) {
+            var result = [];
+            for (var i = 0; i < data.length; i++) {
+                var items = fn.call(this, data[i]);
+                Array.prototype.push.apply(result, items);
+            }
+            return result;
+        }
+        else {
+            return [fn.call(this, data)];
+        }
+    };
+    Util.uuid = function () {
+        if (!Util.lut) {
+            Util.lut = [];
+            for (var i = 0; i < 256; i++) {
+                Util.lut[i] = (i < 16 ? '0' : '') + (i).toString(16);
+            }
+        }
+        var lut = Util.lut;
+        var d0 = Math.random() * 0xffffffff | 0;
+        var d1 = Math.random() * 0xffffffff | 0;
+        var d2 = Math.random() * 0xffffffff | 0;
+        var d3 = Math.random() * 0xffffffff | 0;
+        return lut[d0 & 0xff] + lut[d0 >> 8 & 0xff] + lut[d0 >> 16 & 0xff] + lut[d0 >> 24 & 0xff] + '-' +
+            lut[d1 & 0xff] + lut[d1 >> 8 & 0xff] + '-' + lut[d1 >> 16 & 0x0f | 0x40] + lut[d1 >> 24 & 0xff] + '-' +
+            lut[d2 & 0x3f | 0x80] + lut[d2 >> 8 & 0xff] + '-' + lut[d2 >> 16 & 0xff] + lut[d2 >> 24 & 0xff] +
+            lut[d3 & 0xff] + lut[d3 >> 8 & 0xff] + lut[d3 >> 16 & 0xff] + lut[d3 >> 24 & 0xff];
     };
     Util.compose = function () {
         var fns = [];
