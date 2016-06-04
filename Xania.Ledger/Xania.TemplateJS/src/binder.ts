@@ -1,18 +1,26 @@
 ﻿class Binder {
 
-    constructor(private loader: any, public compile: Function = TemplateEngine.compile) {
+    constructor(public compile: Function = TemplateEngine.compile) {
 
     }
 
+
+    public import(itemType) {
+        if (typeof itemType == "undefined")
+            return null;
+
+        switch (typeof (itemType)) {
+            case "string":
+                return window[itemType];
+            case "function":
+                return itemType;
+            default:
+                return Object;
+        }
+    }
+
     createExpr(fromExpr) {
-        var self = this;
-        var expr = SelectManyExpression.parse(fromExpr);
-        return model => ({
-            then(resolve) {
-                var context = { model: model, loader: self.loader };
-                return expr.executeAsync(context, resolve);
-            }
-        });
+        return SelectManyExpression.parse(fromExpr, this.import);
     }
 
     bindAttr(tagElement: TagElement, attr: Attr) {
@@ -101,9 +109,11 @@
                 var elt = document.createElement(tag.name);
                 html.push(elt);
                 for (var attrName in tag.attributes) {
-                    var domAttr = document.createAttribute(attrName);
-                    domAttr.value = tag.attributes[attrName];
-                    elt.setAttributeNode(domAttr);
+                    if (tag.attributes.hasOwnProperty(attrName)) {
+                        var domAttr = document.createAttribute(attrName);
+                        domAttr.value = tag.attributes[attrName];
+                        elt.setAttributeNode(domAttr);
+                    }
                 }
                 for (var n = 0; n < tag.events.length; n++) {
                     var event = tag.events[n];

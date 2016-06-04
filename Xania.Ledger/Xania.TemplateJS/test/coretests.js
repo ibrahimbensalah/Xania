@@ -10,12 +10,8 @@ var xania = Company.xania();
 
 var debugtest = function () {
     debugger;
-    var elt = new TagElement("div");
-    elt.bind("x in url('Xania')");
-    elt.attr("title", compile("@x"));
-    var url = function (href) { return { then: function (res) { res(href); } } };
-    // act
-    var dom = elt.render({ url: url })[0];
+    var expr = SelectManyExpression.parse("emp in org.employees");
+    var result = expr.execute({ org: xania });
     debugger;
 }
 
@@ -55,7 +51,7 @@ describe("Dom Template", function () {
             var view = elt.render({ "org": xania });
             // assert
             expect(view.length).toEqual(1);
-            expect(view[0].children.length).toEqual(1);
+            expect(view[0].children.length).toEqual(2);
             expect(view[0].children[0].attributes.title).toEqual("C:Ibrahim-B:Xania-A:Xania");
         });
     it("should support promises",
@@ -74,11 +70,12 @@ describe("Dom Template", function () {
         function() {
             // arrange
             var elt = new TagElement("div");
-            elt.for("x:Company in [{name: 'Xania'}]");
-            elt.attr("title", compile("@x.getName()"));
             var loader = {
-                "import": function(type) { return Company; }
+                "import": function (type) { return Company; }
             };
+            var binder = new Binder(loader, null);
+            elt.for(binder.createExpr("x:Company in [{name: 'Xania'}]"));
+            elt.attr("title", compile("@x.getName()"));
             // act
             var dom = elt.render({ loader: loader })[0];
             // assert
@@ -118,15 +115,17 @@ describe("Template Engine", function () {
 describe("Select Many Expression", function () {
     it("should collect result objects",
         function () {
-            var expr = SelectManyExpression.create("emp in org.employees");
+            var expr = SelectManyExpression.parse("emp in org.employees");
             var result = expr.execute({ org: xania });
-            expect(result.length).toEqual(1);
+            expect(result.length).toEqual(2);
             expect(result[0].emp.firstName).toEqual("Ibrahim");
             expect(result[0].emp.lastName).toEqual("ben Salah");
+            expect(result[1].emp.firstName).toEqual("Abeer");
+            expect(result[1].emp.lastName).toEqual("Mahdi");
         });
     it("should support any source expression",
         function () {
-            var expr = SelectManyExpression.create("emp in {n: org.name}");
+            var expr = SelectManyExpression.parse("emp in {n: org.name}");
             var result = expr.execute({ org: xania });
             expect(result.length).toEqual(1);
             expect(result[0].emp.n).toEqual("Xania");

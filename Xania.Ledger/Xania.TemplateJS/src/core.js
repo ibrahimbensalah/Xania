@@ -20,7 +20,7 @@ var TagElement = (function () {
         this.events = new Map();
         this.data = new Map();
         this.children = [];
-        this.modelAccessor = this.defaultModelAccessor.bind(this);
+        this.modelAccessor = Util.identity;
     }
     TagElement.prototype.attr = function (name, value) {
         return this.addAttribute(name, value);
@@ -47,16 +47,13 @@ var TagElement = (function () {
     };
     TagElement.prototype.for = function (modelAccessor) {
         if (typeof modelAccessor === "string") {
-            var expr = SelectManyExpression.parse(modelAccessor);
-            this.modelAccessor = function (model) { return ({
-                then: function (resolve) {
-                    return expr.executeAsync({ model: model }, resolve);
-                }
-            }); };
+            modelAccessor = SelectManyExpression.parse(modelAccessor);
         }
-        else {
-            this.modelAccessor = modelAccessor;
-        }
+        this.modelAccessor = function (model) { return ({
+            then: function (resolve) {
+                return modelAccessor.executeAsync(model, resolve);
+            }
+        }); };
         return this;
     };
     TagElement.prototype.renderAsync = function (context, resolve) {
@@ -115,43 +112,14 @@ var TagElement = (function () {
             children: this.renderChildren(context)
         };
     };
-    TagElement.prototype.defaultModelAccessor = function (context) {
-        var model = context || {}, fromExpr = this.data.get("from") || this.data.get("for");
-        if (!!fromExpr) {
-            var expr = SelectManyExpression.parse(fromExpr);
-            return {
-                then: function (resolve) {
-                    return expr.executeAsync(model, function (src) {
-                        resolve(src);
-                    });
-                }
-            };
-        }
-        else {
-            return {
-                then: function (resolve) {
-                    var arr = Array.isArray(model) ? model : [model];
-                    for (var i = 0; i < arr.length; i++) {
-                        resolve(arr[i]);
-                    }
-                }
-            };
-        }
-    };
-    TagElement.prototype.selectManyExpr = function (loader) {
-        var expr = this.data.get("from") || this.data.get("for");
-        if (!!expr) {
-            return SelectManyExpression.parse(expr);
-        }
-        return null;
-    };
     return TagElement;
 })();
 var SelectManyExpression = (function () {
-    function SelectManyExpression(varName, itemType, collectionFunc) {
+    function SelectManyExpression(varName, viewModel, collectionFunc, loader) {
         this.varName = varName;
-        this.itemType = itemType;
+        this.viewModel = viewModel;
         this.collectionFunc = collectionFunc;
+        this.loader = loader;
     }
     SelectManyExpression.prototype.execute = function (context) {
         var result = [];
@@ -160,7 +128,7 @@ var SelectManyExpression = (function () {
     };
     SelectManyExpression.prototype.executeAsync = function (context, resolve) {
         var _this = this;
-        var ensureIsArray = SelectManyExpression.ensureIsArray, source = ensureIsArray(context.model), viewModel = this.getViewModel(context.loader);
+        var ensureIsArray = SelectManyExpression.ensureIsArray, source = ensureIsArray(context), viewModel = this.viewModel;
         var arrayHandler = function (src, data) {
             var arr = ensureIsArray(data);
             for (var e = 0; e < arr.length; e++) {
@@ -184,23 +152,13 @@ var SelectManyExpression = (function () {
             }
         }
     };
-    SelectManyExpression.prototype.getViewModel = function (loader) {
-        if (typeof this.itemType == "undefined")
-            return null;
-        switch (typeof (this.itemType)) {
-            case "string":
-                return loader.import(this.itemType);
-            case "function":
-                return this.itemType;
-            default:
-                return Object;
-        }
-    };
-    SelectManyExpression.parse = function (expr) {
+    SelectManyExpression.parse = function (expr, loader) {
+        if (loader === void 0) { loader = function (t) { return window[t]; }; }
         var m = expr.match(/^(\w+)(\s*:\s*(\w+))?\s+in\s+((\w+)\s*:\s*)?(.*)$/i);
         if (!!m) {
             var varName = m[1], itemType = m[3], directive = m[5], sourceExpr = m[6];
-            return new SelectManyExpression(varName, itemType, this.createSourceFunc(directive || 'ctx', sourceExpr));
+            var viewModel = loader(itemType);
+            return new SelectManyExpression(varName, viewModel, this.createSourceFunc(directive || 'ctx', sourceExpr), loader);
         }
         return null;
     };
@@ -211,10 +169,6 @@ var SelectManyExpression = (function () {
         if (directive === "url")
             return new Function("m", "with(m) { return " + sourceExpr + "; }");
         return new Function("m", "with(m) { return " + sourceExpr + "; }");
-    };
-    SelectManyExpression.getViewModel = function (name, context) {
-        var fun = new Function("m", "with(m) { return " + name + "; }");
-        return fun(context);
     };
     return SelectManyExpression;
 })();
@@ -247,6 +201,9 @@ var Map = (function () {
 var Util = (function () {
     function Util() {
     }
+    Util.identity = function (x) {
+        return x;
+    };
     Util.map = function (fn, data) {
         if (Array.isArray(data)) {
             for (var i = 0; i < data.length; i++) {

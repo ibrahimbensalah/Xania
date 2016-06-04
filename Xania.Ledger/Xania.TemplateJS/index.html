@@ -20,7 +20,7 @@
     <h1>TypeScript HTML App</h1>
 
     <div id="content">
-        <ul data-for="o:Organisation in xn">
+        <ul data-for="o:OrganisationViewModel in xn">
             <li data-for="emp in o.employees">
                 <input name="emp.firstName" value="@emp.firstName" />
                 [ @o.name ] <button click="emp.sayHello('test')">click me: @o.getName()</button>
@@ -32,7 +32,7 @@
 
     <script type="text/javascript">
         var model = { xn: [Company.xania(), Company.xania()], url: Url.dummy };
-        var binder = new Binder({ 'import': function () { return OrganisationViewModel; } });
+        var binder = new Binder();
         binder.bind(document.getElementById("content"), model);
     </script>
 </body>

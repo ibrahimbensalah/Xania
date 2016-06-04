@@ -23,7 +23,7 @@ class TagElement implements IDomElement {
     private events = new Map<any>();
     public data = new Map<string>();
     private children: TagElement[] = [];
-    private modelAccessor: Function = this.defaultModelAccessor.bind(this);
+    private modelAccessor: Function = Util.identity;
 
     constructor(public name: string) {
     }
@@ -61,16 +61,14 @@ class TagElement implements IDomElement {
 
     public for(modelAccessor) {
         if (typeof modelAccessor === "string") {
-            var expr = SelectManyExpression.parse(modelAccessor);
-
-            this.modelAccessor = model => ({
-                then(resolve) {
-                    return expr.executeAsync({ model : model }, resolve);
-                }
-            });
-        } else {
-            this.modelAccessor = modelAccessor;
+            modelAccessor = SelectManyExpression.parse(modelAccessor);
         }
+
+        this.modelAccessor = model => ({
+            then(resolve) {
+                return modelAccessor.executeAsync(model, resolve);
+            }
+        });
         return this;
     }
 
@@ -144,44 +142,11 @@ class TagElement implements IDomElement {
             children: this.renderChildren(context)
         };
     }
-
-    private defaultModelAccessor(context) {
-        var model = context || {},
-            fromExpr = this.data.get("from") || this.data.get("for");
-
-        if (!!fromExpr) {
-            var expr = SelectManyExpression.parse(fromExpr);
-            return {
-                then(resolve) {
-                    return expr.executeAsync(model,
-                        src => {
-                            resolve(src);
-                        });
-                }
-            };
-        } else {
-            return {
-                then(resolve) {
-                    const arr = Array.isArray(model) ? model : [model];
-                    for (let i = 0; i < arr.length; i++) {
-                        resolve(arr[i]);
-                    }
-                }
-            }
-        }
-    } 
-
-    public selectManyExpr(loader): SelectManyExpression {
-        const expr = this.data.get("from") || this.data.get("for");
-        if (!!expr) {
-            return SelectManyExpression.parse(expr);
-        }
-        return null;
-    }
 }
 
 class SelectManyExpression {
-    constructor(public varName: string, private itemType: string, public collectionFunc: Function) {
+    constructor(public varName: string, private viewModel: string,
+        public collectionFunc: Function, private loader: any) {
     }
 
     execute(context) {
@@ -192,8 +157,8 @@ class SelectManyExpression {
 
     executeAsync(context, resolve) {
         const ensureIsArray = SelectManyExpression.ensureIsArray,
-            source = ensureIsArray(context.model),
-            viewModel = this.getViewModel(context.loader);
+            source = ensureIsArray(context),
+            viewModel = this.viewModel;
 
         const arrayHandler = (src, data) => {
             var arr = ensureIsArray(data);
@@ -220,25 +185,12 @@ class SelectManyExpression {
         }
     }
 
-    public getViewModel(loader) {
-        if (typeof this.itemType == "undefined")
-            return null;
-
-        switch (typeof (this.itemType)) {
-            case "string":
-                return loader.import(this.itemType);
-            case "function":
-                return this.itemType;
-            default:
-                return Object;
-        }
-    }
-
-    static parse(expr) {
+    static parse(expr, loader = t => <any>window[t]) {
         const m = expr.match(/^(\w+)(\s*:\s*(\w+))?\s+in\s+((\w+)\s*:\s*)?(.*)$/i);
         if (!!m) {
             const [, varName, , itemType, , directive, sourceExpr] = m;
-            return new SelectManyExpression(varName, itemType, this.createSourceFunc(directive || 'ctx', sourceExpr));
+            var viewModel = loader(itemType);
+            return new SelectManyExpression(varName, viewModel, this.createSourceFunc(directive || 'ctx', sourceExpr), loader);
         }
         return null;
     }
@@ -251,11 +203,6 @@ class SelectManyExpression {
         if (directive === "url")
             return new Function("m", `with(m) { return ${sourceExpr}; }`);
         return new Function("m", `with(m) { return ${sourceExpr}; }`);
-    }
-
-    static getViewModel(name, context): Function {
-        const fun = new Function("m", `with(m) { return ${name}; }`);
-        return fun(context);
     }
 }
 
@@ -284,6 +231,10 @@ class Map<T> {
 
 // ReSharper disable InconsistentNaming
 class Util {
+
+    static identity(x) {
+        return x;
+    }
 
     static map(fn: Function, data: any) {
         if (Array.isArray(data)) {

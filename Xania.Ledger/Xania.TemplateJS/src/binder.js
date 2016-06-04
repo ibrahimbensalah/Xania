@@ -1,18 +1,22 @@
 var Binder = (function () {
-    function Binder(loader, compile) {
+    function Binder(compile) {
         if (compile === void 0) { compile = TemplateEngine.compile; }
-        this.loader = loader;
         this.compile = compile;
     }
+    Binder.prototype.import = function (itemType) {
+        if (typeof itemType == "undefined")
+            return null;
+        switch (typeof (itemType)) {
+            case "string":
+                return window[itemType];
+            case "function":
+                return itemType;
+            default:
+                return Object;
+        }
+    };
     Binder.prototype.createExpr = function (fromExpr) {
-        var self = this;
-        var expr = SelectManyExpression.parse(fromExpr);
-        return function (model) { return ({
-            then: function (resolve) {
-                var context = { model: model, loader: self.loader };
-                return expr.executeAsync(context, resolve);
-            }
-        }); };
+        return SelectManyExpression.parse(fromExpr, this.import);
     };
     Binder.prototype.bindAttr = function (tagElement, attr) {
         var name = attr.name;
@@ -95,9 +99,11 @@ var Binder = (function () {
                 var elt = document.createElement(tag.name);
                 html.push(elt);
                 for (var attrName in tag.attributes) {
-                    var domAttr = document.createAttribute(attrName);
-                    domAttr.value = tag.attributes[attrName];
-                    elt.setAttributeNode(domAttr);
+                    if (tag.attributes.hasOwnProperty(attrName)) {
+                        var domAttr = document.createAttribute(attrName);
+                        domAttr.value = tag.attributes[attrName];
+                        elt.setAttributeNode(domAttr);
+                    }
                 }
                 for (var n = 0; n < tag.events.length; n++) {
                     var event = tag.events[n];
