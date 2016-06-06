@@ -1,20 +1,20 @@
 ﻿interface IDomElement {
-    render(context: any): any[];
+    execute(context: any): any[];
 }
 
 class TextContent implements IDomElement {
     constructor(private tpl) {
 
     }
-    render(context): any[] {
+    execute(context): any[] {
         if (typeof this.tpl == "function")
-            return [this.tpl(context)];
+            return this.tpl(context);
         else
-            return [this.tpl];
+            return this.tpl;
     }
 
-    renderAsync(context, resolve) {
-        resolve(this.render(context));
+    executeAsync(context, resolve) {
+        resolve(this.execute(context));
     }
 }
 
@@ -51,9 +51,9 @@ class TagElement implements IDomElement {
         this.children.push(child);
     }
 
-    public render(context: any) {
+    public execute(context: any) {
         var result = [];
-        this.renderAsync(context, tag => {
+        this.executeAsync(context, tag => {
             result.push(tag);
         });
         return result;
@@ -72,9 +72,9 @@ class TagElement implements IDomElement {
         return this;
     }
 
-    protected renderAsync(context: any, resolve: any) {
+    protected executeAsync(context: any, resolve: any) {
         const model = this.modelAccessor(context),
-            compose = Util.compose(resolve, this.renderTag.bind(this)),
+            compose = m => resolve(this.executeTag(m)),
             iter = Util.map.bind(this, compose);
         if (typeof (model.then) === "function") {
             model.then(iter);
@@ -83,7 +83,7 @@ class TagElement implements IDomElement {
         }
     }
 
-    private renderAttributes(context) {
+    private executeAttributes(context) {
         var result = {},
             attrs = this.attributes;
 
@@ -96,12 +96,12 @@ class TagElement implements IDomElement {
         return result;
     }
 
-    private renderChildren(context) {
+    private executeChildren(context) {
         var result = [];
 
         for (var i = 0; i < this.children.length; i++) {
             var child = this.children[i];
-            child.renderAsync(context,
+            child.executeAsync(context,
                 dom => {
                     result.push(dom);
                 });
@@ -110,7 +110,7 @@ class TagElement implements IDomElement {
         return result;
     }
 
-    private renderEvents(context) {
+    private executeEvents(context) {
         var result: any = {};
 
         if (this.name.toUpperCase() === "INPUT") {
@@ -128,14 +128,12 @@ class TagElement implements IDomElement {
         return result;
     }
 
-    private renderTag(context) {
+    private executeTag(context) {
         return {
-            id: Util.uuid(),
-            context: context,
             name: this.name,
-            events: this.renderEvents(context),
-            attributes: this.renderAttributes(context),
-            children: this.renderChildren(context)
+            events: this.executeEvents(context),
+            attributes: this.executeAttributes(context),
+            children: this.executeChildren(context)
         };
     }
 }

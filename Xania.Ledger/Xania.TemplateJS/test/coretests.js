@@ -21,7 +21,7 @@ describe("Dom Template", function () {
             // arrange
             var elt = new TagElement("div").attr("title", compile("@name"));
             // act
-            var dom = elt.render(xania)[0];
+            var dom = elt.execute(xania)[0];
             // assert
             expect(dom.attributes.title).toEqual("Xania");
             expect(dom.name).toEqual("div");
@@ -34,7 +34,7 @@ describe("Dom Template", function () {
             elt.addChild(childEl);
             childEl.attr("title", compile("t:@name"));
             // act
-            var dom = elt.render(xania)[0];
+            var dom = elt.execute(xania)[0];
             // assert
             expect(dom.children.length).toEqual(1);
             expect(dom.children[0].attributes.title).toEqual("t:Xania");
@@ -48,7 +48,7 @@ describe("Dom Template", function () {
             childEl.attr("title", compile("C:@emp.firstName-B:@b.name-A:@org.name"));
             childEl.for("emp in b.employees");
             // act
-            var view = elt.render({ "org": xania });
+            var view = elt.execute({ "org": xania });
             // assert
             expect(view.length).toEqual(1);
             expect(view[0].children.length).toEqual(2);
@@ -62,7 +62,7 @@ describe("Dom Template", function () {
             elt.attr("title", compile("@x"));
             var url = function (href) { return { then: function (res) { res(href); } } };
             // act
-            var dom = elt.render({ url: url })[0];
+            var dom = elt.execute({ url: url })[0];
             // assert
             expect(dom.attributes.title).toEqual("Xania");
         });
@@ -77,7 +77,7 @@ describe("Dom Template", function () {
             elt.for(binder.createExpr("x:Company in [{name: 'Xania'}]"));
             elt.attr("title", compile("@x.getName()"));
             // act
-            var dom = elt.render({ loader: loader })[0];
+            var dom = elt.execute({ loader: loader })[0];
             // assert
             expect(dom.attributes.title).toEqual("Xania");
         });
@@ -88,7 +88,7 @@ describe("Dom Template", function () {
                 .for("x in arr.map(bracket)")
                 .attr("title", compile("@x"));
             // act
-            var view = elt.render({ arr: ['Xania'], bracket: function (x) { return "[" + x + "]" } });
+            var view = elt.execute({ arr: ['Xania'], bracket: function (x) { return "[" + x + "]" } });
             // assert
             expect(view[0].attributes.title).toEqual("[Xania]");
         });

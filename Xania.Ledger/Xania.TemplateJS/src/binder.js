@@ -1,3 +1,13 @@
+var Binding = (function () {
+    function Binding(model) {
+        this.model = model;
+        this.elements = [];
+    }
+    Binding.prototype.attach = function (elt) {
+        this.elements.push(elt);
+    };
+    return Binding;
+})();
 var Binder = (function () {
     function Binder(compile) {
         if (compile === void 0) { compile = TemplateEngine.compile; }
@@ -18,7 +28,7 @@ var Binder = (function () {
     Binder.prototype.createExpr = function (fromExpr) {
         return SelectManyExpression.parse(fromExpr, this.import);
     };
-    Binder.prototype.bindAttr = function (tagElement, attr) {
+    Binder.prototype.parseAttr = function (tagElement, attr) {
         var name = attr.name;
         if (name === "click") {
             var fn = new Function("m", "with(m) { return " + attr.value + "; }");
@@ -32,13 +42,67 @@ var Binder = (function () {
             tagElement.attr(name, tpl || attr.value);
         }
     };
-    Binder.prototype.bind = function (rootElements) {
-        var result = [];
+    Binder.prototype.traverse = function (tags, fn) {
+        var stack = [];
+        for (var e = 0; e < tags.length; e++) {
+            stack.push(tags[e]);
+        }
+        while (stack.length > 0) {
+            var cur = stack.pop();
+            fn(cur);
+            for (var i = 0; !!cur.children && i < cur.children.length; i++) {
+                stack.push(cur.children[i]);
+            }
+        }
+    };
+    Binder.prototype.bind = function (rootDom, model, target) {
+        var _this = this;
+        target = target || document.body;
+        var bindings = [];
+        this.parseDom(rootDom)
+            .executeAsync(model, function (tag) {
+            var binding = new Binding(model);
+            _this.renderAsync(tag, function (dom) {
+                binding.attach(dom);
+                target.appendChild(dom);
+            });
+            bindings.push(binding);
+        });
+        console.log(bindings);
+        // var map = this.createTagMap(tags);
+        target.addEventListener("click", function (evt) {
+            console.log(evt.eventName);
+            //        var tagid = evt.target.getAttribute("__tagid");
+            //        if (!!tagid && !!map[tagid] && !!map[tagid].events.click) {
+            //            var tagDefinition = map[tagid];
+            //            var handler = tagDefinition.events.click;
+            //            if (!!handler) {
+            //                handler();
+            //            }
+            //        }
+        });
+        //rootDom.addEventListener("change",
+        //    evt => {
+        //        var tagid = evt.target.getAttribute("__tagid");
+        //        if (!!tagid && !!map[tagid] && !!map[tagid].events.update) {
+        //            var handler = map[tagid].events.update;
+        //            if (!!handler) {
+        //                handler(evt.target.value);
+        //            }
+        //        }
+        //    });
+        //return result;
+    };
+    Binder.prototype.parseDom = function (rootDom) {
         var stack = [];
         var i;
-        for (i = rootElements.length - 1; i >= 0; i--) {
-            stack.push({ node: rootElements[i], push: Array.prototype.push.bind(result) });
-        }
+        var rootTpl;
+        stack.push({
+            node: rootDom,
+            push: function (e) {
+                rootTpl = e;
+            }
+        });
         while (stack.length > 0) {
             var cur = stack.pop();
             var node = cur.node;
@@ -46,72 +110,39 @@ var Binder = (function () {
             if (node.nodeType === 1) {
                 var elt = node;
                 var template = new TagElement(elt.tagName);
-                push(template);
                 for (i = 0; !!elt.attributes && i < elt.attributes.length; i++) {
                     var attribute = elt.attributes[i];
-                    this.bindAttr(template, attribute);
+                    this.parseAttr(template, attribute);
                 }
                 for (i = elt.childNodes.length - 1; i >= 0; i--) {
                     stack.push({ node: elt.childNodes[i], push: template.addChild.bind(template) });
                 }
+                push(template);
             }
             else if (node.nodeType === 3) {
                 var tpl = this.compile(node.textContent);
                 push(new TextContent(tpl || node.textContent));
             }
         }
-        return result;
+        return rootTpl;
     };
-    Binder.prototype.toHtml = function (tags) {
-        var html = "";
-        for (var i = 0; i < tags.length; i++) {
-            var tag = tags[i];
-            if (typeof tag == "string")
-                html += tag;
-            else {
-                html += "<" + tag.name;
-                for (var e = 0; e < tag.attributes.length; e++) {
-                    var attr = tag.attributes[e];
-                    html += " " + attr.name + "=\"" + attr.value + "\"";
-                }
-                html += ">";
-                for (var j = 0; j < tag.children.length; j++) {
-                    if (Array.isArray(tag.children[j]))
-                        html += this.toHtml(tag.children[j]);
-                    else
-                        html += this.toHtml([tag.children[j]]);
-                }
-                html += "</" + tag.name + ">";
-            }
+    Binder.prototype.renderAsync = function (tag, resolve) {
+        if (typeof tag == "string") {
+            resolve(document.createTextNode(tag));
         }
-        return html;
-    };
-    ;
-    Binder.prototype.toDOMAsync = function (tags, resolve) {
-        for (var i = 0; i < tags.length; i++) {
-            var tag = tags[i];
-            if (typeof tag == "string") {
-                resolve(document.createTextNode(tag));
+        else {
+            var elt = document.createElement(tag.name);
+            for (var j = 0; j < tag.children.length; j++) {
+                this.renderAsync(tag.children[j], elt.appendChild.bind(elt));
             }
-            else {
-                var elt = document.createElement(tag.name);
-                var tagid = document.createAttribute("__tagid");
-                tagid.value = tag.id;
-                elt.setAttributeNode(tagid);
-                for (var j = 0; j < tag.children.length; j++) {
-                    Array.isArray(tag.children[j])
-                        ? this.toDOMAsync(tag.children[j], elt.appendChild.bind(elt))
-                        : this.toDOMAsync([tag.children[j]], elt.appendChild.bind(elt));
+            for (var attrName in tag.attributes) {
+                if (tag.attributes.hasOwnProperty(attrName)) {
+                    var domAttr = document.createAttribute(attrName);
+                    domAttr.value = tag.attributes[attrName];
+                    elt.setAttributeNode(domAttr);
                 }
-                for (var attrName in tag.attributes) {
-                    if (tag.attributes.hasOwnProperty(attrName)) {
-                        var domAttr = document.createAttribute(attrName);
-                        domAttr.value = tag.attributes[attrName];
-                        elt.setAttributeNode(domAttr);
-                    }
-                }
-                resolve(elt);
             }
+            resolve(elt);
         }
     };
     ;

@@ -2,14 +2,14 @@ var TextContent = (function () {
     function TextContent(tpl) {
         this.tpl = tpl;
     }
-    TextContent.prototype.render = function (context) {
+    TextContent.prototype.execute = function (context) {
         if (typeof this.tpl == "function")
-            return [this.tpl(context)];
+            return this.tpl(context);
         else
-            return [this.tpl];
+            return this.tpl;
     };
-    TextContent.prototype.renderAsync = function (context, resolve) {
-        resolve(this.render(context));
+    TextContent.prototype.executeAsync = function (context, resolve) {
+        resolve(this.execute(context));
     };
     return TextContent;
 })();
@@ -38,9 +38,9 @@ var TagElement = (function () {
     TagElement.prototype.addChild = function (child) {
         this.children.push(child);
     };
-    TagElement.prototype.render = function (context) {
+    TagElement.prototype.execute = function (context) {
         var result = [];
-        this.renderAsync(context, function (tag) {
+        this.executeAsync(context, function (tag) {
             result.push(tag);
         });
         return result;
@@ -56,8 +56,9 @@ var TagElement = (function () {
         }); };
         return this;
     };
-    TagElement.prototype.renderAsync = function (context, resolve) {
-        var model = this.modelAccessor(context), compose = Util.compose(resolve, this.renderTag.bind(this)), iter = Util.map.bind(this, compose);
+    TagElement.prototype.executeAsync = function (context, resolve) {
+        var _this = this;
+        var model = this.modelAccessor(context), compose = function (m) { return resolve(_this.executeTag(m)); }, iter = Util.map.bind(this, compose);
         if (typeof (model.then) === "function") {
             model.then(iter);
         }
@@ -65,7 +66,7 @@ var TagElement = (function () {
             iter(model);
         }
     };
-    TagElement.prototype.renderAttributes = function (context) {
+    TagElement.prototype.executeAttributes = function (context) {
         var result = {}, attrs = this.attributes;
         for (var i = 0; i < attrs.keys.length; i++) {
             var name = attrs.keys[i];
@@ -74,17 +75,17 @@ var TagElement = (function () {
         }
         return result;
     };
-    TagElement.prototype.renderChildren = function (context) {
+    TagElement.prototype.executeChildren = function (context) {
         var result = [];
         for (var i = 0; i < this.children.length; i++) {
             var child = this.children[i];
-            child.renderAsync(context, function (dom) {
+            child.executeAsync(context, function (dom) {
                 result.push(dom);
             });
         }
         return result;
     };
-    TagElement.prototype.renderEvents = function (context) {
+    TagElement.prototype.executeEvents = function (context) {
         var result = {};
         if (this.name.toUpperCase() === "INPUT") {
             var name = this.attributes.get("name")(context);
@@ -98,14 +99,12 @@ var TagElement = (function () {
         }
         return result;
     };
-    TagElement.prototype.renderTag = function (context) {
+    TagElement.prototype.executeTag = function (context) {
         return {
-            id: Util.uuid(),
-            context: context,
             name: this.name,
-            events: this.renderEvents(context),
-            attributes: this.renderAttributes(context),
-            children: this.renderChildren(context)
+            events: this.executeEvents(context),
+            attributes: this.executeAttributes(context),
+            children: this.executeChildren(context)
         };
     };
     return TagElement;

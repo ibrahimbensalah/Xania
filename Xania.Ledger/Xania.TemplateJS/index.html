@@ -17,55 +17,26 @@
     <script src="test/company.js"></script>
 </head>
 <body>
-    <h1>TypeScript HTML App</h1>
+<h1>TypeScript HTML App</h1>
 
-    <div id="content">
-        <ul data-for="o:OrganisationViewModel in xn">
-            <li data-for="emp in o.employees">
-                <input name="emp.firstName" value="@emp.firstName" />
-                [ @o.name ] <button name="@emp.firstName" click="emp.sayHello('test')">click me</button>
-                [ @emp.roles ]
-                <span data-for="r in emp.roles">@r</span>
-            </li>
-        </ul>
+    <div>
+        <div id="content">
+            <ul data-for="o:OrganisationViewModel in xn">
+                <li data-for="emp in o.employees">
+                    <input name="emp.firstName" value="@emp.firstName" />
+                    [ @o.name ] <button name="@emp.firstName" click="emp.sayHello('test')">click me</button>
+                    [ @emp.roles ]
+                    <span data-for="r in emp.roles">@r</span>
+                </li>
+            </ul>
+        </div>
     </div>
-
     <script type="text/javascript">
         var model = { xn: [Company.xania(), Company.xania()], url: Url.dummy };
         var binder = new Binder();
 
         var contentDiv = document.getElementById("content");
-        var result = binder.bind(contentDiv.childNodes, model);
-
-        var target = contentDiv;
-        var append = target.appendChild.bind(target);
-
-        var tags = Util.collect(function (e) {
-            return e.render(model);
-        }, result);
-
-        binder.toDOMAsync(tags, append);
-
-        var map = binder.createTagMap(tags);
-        target.addEventListener("click",
-            function (e) {
-                var tagid = e.target.getAttribute("__tagid");
-                var tagDefinition = map[tagid];
-                var handler = tagDefinition.events.click;
-                if (!!handler) {
-                    handler();
-                }
-            });
-        target.addEventListener("change",
-            function (e) {
-                var tagid = e.target.getAttribute("__tagid");
-                if (!!tagid && !!map[tagid] && !!map[tagid].events.update) {
-                    var handler = map[tagid].events.update;
-                    if (!!handler) {
-                        handler(e.target.value);
-                    }
-                }
-            });
+        binder.bind(contentDiv, model);
     </script>
 </body>
 </html>
