@@ -55,20 +55,38 @@ var Binder = (function () {
             }
         }
     };
-    Binder.prototype.bind = function (rootDom, model, target) {
-        var _this = this;
-        target = target || document.body;
-        var bindings = [];
-        this.parseDom(rootDom)
-            .executeAsync(model, function (tag) {
-            var binding = new Binding(model);
-            _this.renderAsync(tag, function (dom) {
-                binding.attach(dom);
-                target.appendChild(dom);
-            });
+    Binder.prototype.renderTemplateAsync = function (tpl, model, resolve) {
+        var self = this, bindings = [];
+        tpl.executeAsync(model, function (tpl, m) {
+            var elt = tpl.render(m);
+            for (var e = 0; !!tpl.children && e < tpl.children.length; e++) {
+                var child = tpl.children[e];
+                self.renderTemplateAsync(child, m, elt.appendChild.bind(elt));
+            }
+            var binding = new Binding(m);
+            binding.attach(elt);
             bindings.push(binding);
-        });
+            resolve(elt);
+        }.bind(this, tpl));
+        return bindings;
+    };
+    Binder.prototype.bind = function (rootDom, model, target) {
+        target = target || document.body;
+        // var bindings: Binding[] = [];
+        var tpl = this.parseDom(rootDom);
+        var bindings = this.renderTemplateAsync(tpl, model, target.appendChild.bind(target));
         console.log(bindings);
+        //tpl
+        //    .executeAsync(model,
+        //        tag => {
+        //            var binding = new Binding(model);
+        //            this.renderAsync(tag, dom => {
+        //                binding.attach(dom);
+        //                target.appendChild(dom);
+        //            });
+        //            bindings.push(binding);
+        //    });
+        //console.log(bindings);
         // var map = this.createTagMap(tags);
         target.addEventListener("click", function (evt) {
             console.log(evt.eventName);

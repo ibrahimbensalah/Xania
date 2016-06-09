@@ -2,14 +2,17 @@ var TextContent = (function () {
     function TextContent(tpl) {
         this.tpl = tpl;
     }
-    TextContent.prototype.execute = function (context) {
-        if (typeof this.tpl == "function")
-            return this.tpl(context);
-        else
-            return this.tpl;
+    TextContent.prototype.render = function (context) {
+        var text = typeof this.tpl == "function"
+            ? this.tpl(context)
+            : this.tpl;
+        return document.createTextNode(text);
     };
     TextContent.prototype.executeAsync = function (context, resolve) {
-        resolve(this.execute(context));
+        resolve(context);
+    };
+    TextContent.prototype.executeEvents = function (context) {
+        return [];
     };
     return TextContent;
 })();
@@ -57,8 +60,7 @@ var TagElement = (function () {
         return this;
     };
     TagElement.prototype.executeAsync = function (context, resolve) {
-        var _this = this;
-        var model = this.modelAccessor(context), compose = function (m) { return resolve(_this.executeTag(m)); }, iter = Util.map.bind(this, compose);
+        var model = this.modelAccessor(context), iter = Util.map.bind(this, resolve);
         if (typeof (model.then) === "function") {
             model.then(iter);
         }
@@ -99,13 +101,23 @@ var TagElement = (function () {
         }
         return result;
     };
-    TagElement.prototype.executeTag = function (context) {
-        return {
-            name: this.name,
-            events: this.executeEvents(context),
-            attributes: this.executeAttributes(context),
-            children: this.executeChildren(context)
-        };
+    TagElement.prototype.render = function (context) {
+        var elt = document.createElement(this.name);
+        var attributes = this.executeAttributes(context);
+        for (var attrName in attributes) {
+            if (attributes.hasOwnProperty(attrName)) {
+                var domAttr = document.createAttribute(attrName);
+                domAttr.value = attributes[attrName];
+                elt.setAttributeNode(domAttr);
+            }
+        }
+        return elt;
+        //return {
+        //    name: this.name,
+        //    events: this.executeEvents(context),
+        //    attributes: this.executeAttributes(context)
+        //    // children: this.children // this.executeChildren(context)
+        //};
     };
     return TagElement;
 })();

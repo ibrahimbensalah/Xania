@@ -14,10 +14,8 @@
 class Binder {
 
     constructor(public compile: Function = TemplateEngine.compile) {
-
     }
-
-
+    
     public import(itemType) {
         if (typeof itemType == "undefined")
             return null;
@@ -65,20 +63,44 @@ class Binder {
         }
     }
 
+    renderTemplateAsync(tpl: TagElement, model, resolve) {
+        var self = this,
+            bindings:Binding[] = [];
+        tpl.executeAsync(model, function (tpl, m) {
+            var elt = tpl.render(m);
+            for (var e = 0; !!tpl.children && e < tpl.children.length; e++) {
+                var child = tpl.children[e];
+                self.renderTemplateAsync(child, m, elt.appendChild.bind(elt));
+            }
+
+            var binding = new Binding(m);
+            binding.attach(elt);
+            bindings.push(binding);
+
+            resolve(elt);
+        }.bind(this, tpl));
+        return bindings;
+    }
+
     bind(rootDom, model, target) {
         target = target || document.body;
-        var bindings: Binding[] = [];
-        this.parseDom(rootDom)
-            .executeAsync(model,
-                tag => {
-                    var binding = new Binding(model);
-                    this.renderAsync(tag, dom => {
-                        binding.attach(dom);
-                        target.appendChild(dom);
-                    });
-                    bindings.push(binding);
-            });
+        // var bindings: Binding[] = [];
+        var tpl = this.parseDom(rootDom);
+
+        var bindings = this.renderTemplateAsync(tpl, model, target.appendChild.bind(target));
         console.log(bindings);
+
+        //tpl
+        //    .executeAsync(model,
+        //        tag => {
+        //            var binding = new Binding(model);
+        //            this.renderAsync(tag, dom => {
+        //                binding.attach(dom);
+        //                target.appendChild(dom);
+        //            });
+        //            bindings.push(binding);
+        //    });
+        //console.log(bindings);
 
         // var map = this.createTagMap(tags);
         target.addEventListener("click",
@@ -107,7 +129,7 @@ class Binder {
         //return result;
     }
 
-    parseDom(rootDom: HTMLElement) {
+    parseDom(rootDom: HTMLElement): TagElement {
         const stack = [];
         let i: number;
         var rootTpl;

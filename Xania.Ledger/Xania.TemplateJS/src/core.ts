@@ -1,20 +1,27 @@
 ﻿interface IDomElement {
-    execute(context: any): any[];
+    render(context: any);
+    executeEvents(context);
+    executeAsync(context: any, resolve: any);
 }
 
 class TextContent implements IDomElement {
     constructor(private tpl) {
 
     }
-    execute(context): any[] {
-        if (typeof this.tpl == "function")
-            return this.tpl(context);
-        else
-            return this.tpl;
+    render(context) {
+        var text = typeof this.tpl == "function"
+            ? this.tpl(context)
+            : this.tpl;
+
+        return document.createTextNode(text);
     }
 
-    executeAsync(context, resolve) {
-        resolve(this.execute(context));
+    public executeAsync(context: any, resolve: any) {
+        resolve(context);
+    }
+
+    public executeEvents(context) {
+        return [];
     }
 }
 
@@ -22,7 +29,7 @@ class TagElement implements IDomElement {
     private attributes = new Map<any>();
     private events = new Map<any>();
     public data = new Map<string>();
-    private children: TagElement[] = [];
+    public children: TagElement[] = [];
     private modelAccessor: Function = Util.identity;
 
     constructor(public name: string) {
@@ -72,10 +79,9 @@ class TagElement implements IDomElement {
         return this;
     }
 
-    protected executeAsync(context: any, resolve: any) {
+    public executeAsync(context: any, resolve: any) {
         const model = this.modelAccessor(context),
-            compose = m => resolve(this.executeTag(m)),
-            iter = Util.map.bind(this, compose);
+            iter = Util.map.bind(this, resolve);
         if (typeof (model.then) === "function") {
             model.then(iter);
         } else {
@@ -110,7 +116,7 @@ class TagElement implements IDomElement {
         return result;
     }
 
-    private executeEvents(context) {
+    public executeEvents(context) {
         var result: any = {};
 
         if (this.name.toUpperCase() === "INPUT") {
@@ -128,13 +134,26 @@ class TagElement implements IDomElement {
         return result;
     }
 
-    private executeTag(context) {
-        return {
-            name: this.name,
-            events: this.executeEvents(context),
-            attributes: this.executeAttributes(context),
-            children: this.executeChildren(context)
-        };
+    public render(context) {
+        var elt = document.createElement(this.name);
+
+        var attributes = this.executeAttributes(context);
+        for (let attrName in attributes) {
+
+            if (attributes.hasOwnProperty(attrName)) {
+                const domAttr = document.createAttribute(attrName);
+                domAttr.value = attributes[attrName];
+                elt.setAttributeNode(domAttr);
+            }
+        }
+
+        return elt;
+        //return {
+        //    name: this.name,
+        //    events: this.executeEvents(context),
+        //    attributes: this.executeAttributes(context)
+        //    // children: this.children // this.executeChildren(context)
+        //};
     }
 }
 
