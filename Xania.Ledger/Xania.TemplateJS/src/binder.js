@@ -1,10 +1,26 @@
 var Binding = (function () {
-    function Binding(model) {
+    function Binding(tpl, model) {
+        this.tpl = tpl;
         this.model = model;
         this.elements = [];
+        this.children = [];
     }
     Binding.prototype.attach = function (elt) {
         this.elements.push(elt);
+    };
+    Binding.prototype.updateAsync = function (target) {
+        var _this = this;
+        this.tpl.executeAsync(this.model, function (m) {
+            var elt = _this.tpl.render(m);
+            _this.attach(elt);
+            for (var e = 0; !!_this.tpl.children && e < _this.tpl.children.length; e++) {
+                var child = _this.tpl.children[e];
+                var binding = new Binding(child, m);
+                _this.children.push(binding);
+                binding.updateAsync(elt);
+            }
+            target.appendChild(elt);
+        });
     };
     return Binding;
 })();
@@ -55,27 +71,12 @@ var Binder = (function () {
             }
         }
     };
-    Binder.prototype.renderTemplateAsync = function (tpl, model, resolve) {
-        var self = this, bindings = [];
-        tpl.executeAsync(model, function (tpl, m) {
-            var elt = tpl.render(m);
-            for (var e = 0; !!tpl.children && e < tpl.children.length; e++) {
-                var child = tpl.children[e];
-                self.renderTemplateAsync(child, m, elt.appendChild.bind(elt));
-            }
-            var binding = new Binding(m);
-            binding.attach(elt);
-            bindings.push(binding);
-            resolve(elt);
-        }.bind(this, tpl));
-        return bindings;
-    };
     Binder.prototype.bind = function (rootDom, model, target) {
         target = target || document.body;
-        // var bindings: Binding[] = [];
         var tpl = this.parseDom(rootDom);
-        var bindings = this.renderTemplateAsync(tpl, model, target.appendChild.bind(target));
-        console.log(bindings);
+        var binding = new Binding(tpl, model);
+        binding.updateAsync(target);
+        console.log(binding);
         //tpl
         //    .executeAsync(model,
         //        tag => {
@@ -144,26 +145,24 @@ var Binder = (function () {
         }
         return rootTpl;
     };
-    Binder.prototype.renderAsync = function (tag, resolve) {
-        if (typeof tag == "string") {
-            resolve(document.createTextNode(tag));
-        }
-        else {
-            var elt = document.createElement(tag.name);
-            for (var j = 0; j < tag.children.length; j++) {
-                this.renderAsync(tag.children[j], elt.appendChild.bind(elt));
-            }
-            for (var attrName in tag.attributes) {
-                if (tag.attributes.hasOwnProperty(attrName)) {
-                    var domAttr = document.createAttribute(attrName);
-                    domAttr.value = tag.attributes[attrName];
-                    elt.setAttributeNode(domAttr);
-                }
-            }
-            resolve(elt);
-        }
-    };
-    ;
+    //renderAsync(tag, resolve) {
+    //    if (typeof tag == "string") {
+    //        resolve(document.createTextNode(tag));
+    //    } else {
+    //        const elt = document.createElement(tag.name);
+    //        for (let j = 0; j < tag.children.length; j++) {
+    //            this.renderAsync(tag.children[j], elt.appendChild.bind(elt));
+    //        }
+    //        for (let attrName in tag.attributes) {
+    //            if (tag.attributes.hasOwnProperty(attrName)) {
+    //                var domAttr = document.createAttribute(attrName);
+    //                domAttr.value = tag.attributes[attrName];
+    //                elt.setAttributeNode(domAttr);
+    //            }
+    //        }
+    //        resolve(elt);
+    //    }
+    //};
     Binder.prototype.createTagMap = function (tags) {
         var stack = [];
         var map = {};

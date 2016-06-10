@@ -1,14 +1,29 @@
 ﻿class Binding {
 
     private elements: HTMLElement[] = [];
+    private children: Binding[] = [];
 
-    constructor(public model: any) {
+    constructor(public tpl, public model: any) {
     }
 
     attach(elt: HTMLElement) {
         this.elements.push(elt);
     }
 
+    updateAsync(target) {
+        this.tpl.executeAsync(this.model, m => {
+            var elt = this.tpl.render(m);
+            this.attach(elt);
+            for (var e = 0; !!this.tpl.children && e < this.tpl.children.length; e++) {
+                var child = this.tpl.children[e];
+                var binding = new Binding(child, m);
+                this.children.push(binding);
+
+                binding.updateAsync(elt);
+            }
+            target.appendChild(elt);
+        });
+    }
 }
 
 class Binder {
@@ -63,32 +78,14 @@ class Binder {
         }
     }
 
-    renderTemplateAsync(tpl: TagElement, model, resolve) {
-        var self = this,
-            bindings:Binding[] = [];
-        tpl.executeAsync(model, function (tpl, m) {
-            var elt = tpl.render(m);
-            for (var e = 0; !!tpl.children && e < tpl.children.length; e++) {
-                var child = tpl.children[e];
-                self.renderTemplateAsync(child, m, elt.appendChild.bind(elt));
-            }
-
-            var binding = new Binding(m);
-            binding.attach(elt);
-            bindings.push(binding);
-
-            resolve(elt);
-        }.bind(this, tpl));
-        return bindings;
-    }
-
     bind(rootDom, model, target) {
         target = target || document.body;
-        // var bindings: Binding[] = [];
         var tpl = this.parseDom(rootDom);
 
-        var bindings = this.renderTemplateAsync(tpl, model, target.appendChild.bind(target));
-        console.log(bindings);
+        var binding = new Binding(tpl, model);
+        binding.updateAsync(target);
+
+        console.log(binding);
 
         //tpl
         //    .executeAsync(model,
@@ -167,27 +164,27 @@ class Binder {
         return rootTpl;
     }
 
-    renderAsync(tag, resolve) {
-        if (typeof tag == "string") {
-            resolve(document.createTextNode(tag));
-        } else {
-            const elt = document.createElement(tag.name);
+    //renderAsync(tag, resolve) {
+    //    if (typeof tag == "string") {
+    //        resolve(document.createTextNode(tag));
+    //    } else {
+    //        const elt = document.createElement(tag.name);
 
-            for (let j = 0; j < tag.children.length; j++) {
-                this.renderAsync(tag.children[j], elt.appendChild.bind(elt));
-            }
+    //        for (let j = 0; j < tag.children.length; j++) {
+    //            this.renderAsync(tag.children[j], elt.appendChild.bind(elt));
+    //        }
 
-            for (let attrName in tag.attributes) {
+    //        for (let attrName in tag.attributes) {
 
-                if (tag.attributes.hasOwnProperty(attrName)) {
-                    var domAttr = document.createAttribute(attrName);
-                    domAttr.value = tag.attributes[attrName];
-                    elt.setAttributeNode(domAttr);
-                }
-            }
-            resolve(elt);
-        }
-    };
+    //            if (tag.attributes.hasOwnProperty(attrName)) {
+    //                var domAttr = document.createAttribute(attrName);
+    //                domAttr.value = tag.attributes[attrName];
+    //                elt.setAttributeNode(domAttr);
+    //            }
+    //        }
+    //        resolve(elt);
+    //    }
+    //};
 
     createTagMap(tags) {
         var stack = [];
