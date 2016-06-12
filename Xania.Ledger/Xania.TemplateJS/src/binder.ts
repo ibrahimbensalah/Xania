@@ -1,36 +1,103 @@
 ﻿class Binding {
+    private data;
+    public children: Binding[] = [];
 
-    private elements: HTMLElement[] = [];
-    private children: Binding[] = [];
-
-    constructor(public tpl, public model: any) {
+    constructor(public tpl: IDomTemplate, public context: any = null) {
     }
 
-    attach(elt: HTMLElement) {
-        this.elements.push(elt);
+    public static executeAsync(tpl, context, resolve: any) {
+        const model = !!tpl.modelAccessor ? tpl.modelAccessor(context) : context,
+            iter = data => {
+                Util.map(resolve, data);
+            }
+        if (typeof (model.then) === "function") {
+            model.then(iter);
+        } else {
+            iter(model);
+        }
     }
 
-    updateAsync(target) {
-        this.tpl.executeAsync(this.model, m => {
-            var elt = this.tpl.render(m);
-            this.attach(elt);
-            for (var e = 0; !!this.tpl.children && e < this.tpl.children.length; e++) {
-                var child = this.tpl.children[e];
-                var binding = new Binding(child, m);
+    public countElements() {
+        return Util.count(this.data);
+    }
+
+    init() {
+        var result = [];
+        this.initAsync({ appendChild: result.push.bind(result) });
+        return result;
+    }
+
+    initAsync(target) {
+        Binding.executeAsync(this.tpl, this.context, model => {
+            var elt = this.tpl.render(model);
+            var childBinding = new Binding(this.tpl, model);
+            this.children.push(childBinding);
+            for (var e = 0; e < this.tpl.children().length; e++) {
+                const child = this.tpl.children()[e];
+                const binding = new Binding(child, model);
                 this.children.push(binding);
 
-                binding.updateAsync(elt);
+                binding.initAsync(elt);
             }
             target.appendChild(elt);
         });
     }
+
+    static createAsync(tpl : IDomTemplate, context, resolve) {
+        var bindings = [];
+
+        Binding.executeAsync(tpl, context, model => {
+            var elt = tpl.render(model);
+            var binding = new Binding(tpl, model);
+            bindings.push(binding);
+            for (var e = 0; e < tpl.children().length; e++) {
+                const child = tpl.children()[e];
+                const childBindings = child.bindAsync(model, elt.appendChild.bind(elt));
+                binding.children.push.apply(binding.children, childBindings);
+            }
+            resolve(elt);
+        });
+
+        return bindings;
+    }
+
+    find(elements, path: HTMLElement[]) {
+        debugger;
+        var pathIdx = path.length - 1;
+        var bindings = [ this ];
+
+        for (var i = pathIdx; i >= 0; i--) {
+            const dom = path[i];
+            const domIdx = Array.prototype.indexOf.call(elements, dom);
+
+            if (elements.length !== bindings.map(b => b.countElements()).reduceRight((x,y) => x + y))
+                throw new Error("elements.length !== bindings.length");
+
+            if (domIdx >= 0) {
+                var binding = bindings[domIdx];
+
+                if (i === 0)
+                    return binding;
+
+                bindings = binding.children;
+                elements = dom.childNodes;
+                // elements = dom.childNodes.splice(skip, take);
+            } else {
+                console.log('break; ', domIdx, dom, i, bindings.length);
+                break;
+            }
+        }
+
+        return this;
+    }
+
 }
 
 class Binder {
 
     constructor(public compile: Function = TemplateEngine.compile) {
     }
-    
+
     public import(itemType) {
         if (typeof itemType == "undefined")
             return null;
@@ -81,47 +148,65 @@ class Binder {
     bind(rootDom, model, target) {
         target = target || document.body;
         var tpl = this.parseDom(rootDom);
+        var rootElements = [];
 
-        var binding = new Binding(tpl, model);
-        binding.updateAsync(target);
+        var rootBindings = tpl.bindAsync(model, rootElements.push.bind(rootElements));
 
-        console.log(binding);
+        for (var i = 0; i < rootElements.length; i++) {
+            target.appendChild(rootElements[i]);
+        }
 
-        //tpl
-        //    .executeAsync(model,
-        //        tag => {
-        //            var binding = new Binding(model);
-        //            this.renderAsync(tag, dom => {
-        //                binding.attach(dom);
-        //                target.appendChild(dom);
-        //            });
-        //            bindings.push(binding);
-        //    });
-        //console.log(bindings);
+        function find(bindings, elements, path) {
+            var pathIdx = path.length - 1;
+
+            for (var i = pathIdx; i >= 0; i--) {
+                var dom = path[i];
+                var domIdx = Array.prototype.indexOf.call(elements, dom);
+                if (domIdx >= 0) {
+                    var binding = bindings[domIdx];
+                    if (i === 0) {
+                        return binding;
+                    }
+                    bindings = binding.children;
+                    elements = dom.childNodes;
+                } else {
+                    console.log('break; ', domIdx, dom, i, bindings.length);
+                    break;
+                }
+            }
+        }
 
         // var map = this.createTagMap(tags);
         target.addEventListener("click",
             evt => {
-                console.log(evt.eventName);
-                //        var tagid = evt.target.getAttribute("__tagid");
-                //        if (!!tagid && !!map[tagid] && !!map[tagid].events.click) {
-                //            var tagDefinition = map[tagid];
-                //            var handler = tagDefinition.events.click;
-                //            if (!!handler) {
-                //                handler();
-                //            }
-                //        }
+                var pathIdx = evt.path.indexOf(target);
+                if (pathIdx > 0) {
+                    var path = evt.path.splice(0, pathIdx);
+
+                    var b = find(rootBindings, rootElements, path);
+                    var handler = b.tpl.events.get('click');
+                    if (!!handler)
+                        handler(b.context);
+                }
             });
-        //rootDom.addEventListener("change",
-        //    evt => {
-        //        var tagid = evt.target.getAttribute("__tagid");
-        //        if (!!tagid && !!map[tagid] && !!map[tagid].events.update) {
-        //            var handler = map[tagid].events.update;
-        //            if (!!handler) {
-        //                handler(evt.target.value);
-        //            }
-        //        }
-        //    });
+
+        target.addEventListener("change",
+            evt => {
+                var pathIdx = evt.path.indexOf(target);
+                if (pathIdx > 0) {
+                    const path = evt.path.splice(0, pathIdx);
+
+                    const b = find(rootBindings, rootElements, path);
+                    const nameAttr = evt.target.attributes['name'];
+                    if (!!nameAttr) {
+                        const prop = nameAttr.value;
+                        const update = new Function("value", `with (this) { ${prop} = value; }`)
+                            .bind(b.context);
+
+                        update(evt.target.value);
+                    }
+                }
+            });
 
         //return result;
     }

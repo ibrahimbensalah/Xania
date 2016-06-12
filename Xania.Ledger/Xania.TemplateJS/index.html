@@ -17,26 +17,44 @@
     <script src="test/company.js"></script>
 </head>
 <body>
-<h1>TypeScript HTML App</h1>
+    <h1>TypeScript HTML App</h1>
 
     <div>
         <div id="content">
             <ul data-for="o:OrganisationViewModel in xn">
                 <li data-for="emp in o.employees">
                     <input name="emp.firstName" value="@emp.firstName" />
-                    [ @o.name ] <button name="@emp.firstName" click="emp.sayHello('test')">click me</button>
-                    [ @emp.roles ]
-                    <span data-for="r in emp.roles">@r</span>
+                    <button name="@emp.firstName" click="emp.sayHello('test')">[ @o.name ]</button>
+                    <span data-for="r in emp.roles">@r </span>
                 </li>
             </ul>
         </div>
     </div>
     <script type="text/javascript">
-        var model = { xn: [Company.xania(), Company.xania()], url: Url.dummy };
         var binder = new Binder();
 
         var contentDiv = document.getElementById("content");
-        binder.bind(contentDiv, model);
+        binder.bind(contentDiv, [{ xn: Company.xania() }, { xn: Company.globalgis() }]);
+
+        var compile = TemplateEngine.compile;
+        var debugtest = function () {
+            // arrange
+            var elements = [];
+            var bindings =
+                new TagElement("div")
+                    .addChild(new TextContent(compile("@comp.name")))
+                    .addChild(new TagElement("span")
+                        .for("emp in comp.employees"))
+                    .bindAsync([{ comp: Company.xania() }, { comp: Company.globalgis() }], elements.push.bind(elements));
+            // act
+            find(bindings, elements, [elements[0].childNodes[0], elements[0]]);
+            find(bindings, elements, [elements[0].childNodes[1], elements[0]]);
+            find(bindings, elements, [elements[0].childNodes[2], elements[0]]);
+        }
+
+
+        // debugtest();
+
     </script>
 </body>
 </html>

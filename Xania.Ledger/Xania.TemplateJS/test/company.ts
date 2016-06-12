@@ -26,6 +26,13 @@ class Company extends A {
     static xania() {
         return new Company("Xania", [
             new Employee("Ibrahim", "ben Salah"),
+            new Employee("Ramy", "ben Salah"),
+            new Employee("Rania", "ben Salah")
+        ]);
+    }
+
+    static globalgis() {
+        return new Company("Global GIS", [
             new Employee("Abeer", "Mahdi")
         ]);
     }

@@ -41,6 +41,12 @@ var Company = (function (_super) {
     Company.xania = function () {
         return new Company("Xania", [
             new Employee("Ibrahim", "ben Salah"),
+            new Employee("Ramy", "ben Salah"),
+            new Employee("Rania", "ben Salah")
+        ]);
+    };
+    Company.globalgis = function () {
+        return new Company("Global GIS", [
             new Employee("Abeer", "Mahdi")
         ]);
     };

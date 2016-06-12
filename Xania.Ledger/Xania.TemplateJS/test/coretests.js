@@ -8,23 +8,17 @@
 var compile = TemplateEngine.compile;
 var xania = Company.xania();
 
-var debugtest = function () {
-    debugger;
-    var expr = SelectManyExpression.parse("emp in org.employees");
-    var result = expr.execute({ org: xania });
-    debugger;
-}
-
-describe("Dom Template", function () {
-    it("should be able to render attributes",
+describe("Binding", function () {
+    it("should be able to init attributes",
         function () {
             // arrange
             var elt = new TagElement("div").attr("title", compile("@name"));
+            var binding = new Binding(elt, xania);
             // act
-            var dom = elt.execute(xania)[0];
+            var dom = binding.init()[0];
             // assert
-            expect(dom.attributes.title).toEqual("Xania");
-            expect(dom.name).toEqual("div");
+            expect(dom.attributes['title'].value).toEqual("Xania");
+            expect(dom.tagName).toEqual("DIV");
         });
     it("should be able to render hierarchical dom",
         function () {
@@ -33,11 +27,12 @@ describe("Dom Template", function () {
             var childEl = new TagElement("span");
             elt.addChild(childEl);
             childEl.attr("title", compile("t:@name"));
+            var binding = new Binding(elt, xania);
             // act
-            var dom = elt.execute(xania)[0];
+            var dom = binding.init()[0];
             // assert
-            expect(dom.children.length).toEqual(1);
-            expect(dom.children[0].attributes.title).toEqual("t:Xania");
+            expect(dom.childNodes.length).toEqual(1);
+            expect(dom.childNodes[0].attributes['title'].value).toEqual("t:Xania");
         });
     it("should be able to render parent context",
         function () {
@@ -47,12 +42,13 @@ describe("Dom Template", function () {
             elt.addChild(childEl);
             childEl.attr("title", compile("C:@emp.firstName-B:@b.name-A:@org.name"));
             childEl.for("emp in b.employees");
+            var binding = new Binding(elt, { "org": xania });
             // act
-            var view = elt.execute({ "org": xania });
+            var view = binding.init();
             // assert
             expect(view.length).toEqual(1);
-            expect(view[0].children.length).toEqual(2);
-            expect(view[0].children[0].attributes.title).toEqual("C:Ibrahim-B:Xania-A:Xania");
+            expect(view[0].childNodes.length).toEqual(3);
+            expect(view[0].childNodes[0].attributes['title'].value).toEqual("C:Ibrahim-B:Xania-A:Xania");
         });
     it("should support promises",
         function () {
@@ -61,13 +57,14 @@ describe("Dom Template", function () {
             elt.for("x in url('Xania')");
             elt.attr("title", compile("@x"));
             var url = function (href) { return { then: function (res) { res(href); } } };
+            var binding = new Binding(elt, { url: url });
             // act
-            var dom = elt.execute({ url: url })[0];
+            var dom = binding.init()[0];
             // assert
-            expect(dom.attributes.title).toEqual("Xania");
+            expect(dom.attributes['title'].value).toEqual("Xania");
         });
     it('should support typed from expression',
-        function() {
+        function () {
             // arrange
             var elt = new TagElement("div");
             var loader = {
@@ -76,10 +73,11 @@ describe("Dom Template", function () {
             var binder = new Binder(loader, null);
             elt.for(binder.createExpr("x:Company in [{name: 'Xania'}]"));
             elt.attr("title", compile("@x.getName()"));
+            var binding = new Binding(elt, { loader: loader });
             // act
-            var dom = elt.execute({ loader: loader })[0];
+            var dom = binding.init()[0];
             // assert
-            expect(dom.attributes.title).toEqual("Xania");
+            expect(dom.attributes['title'].value).toEqual("Xania");
         });
     it("should support map",
         function () {
@@ -87,16 +85,32 @@ describe("Dom Template", function () {
             var elt = new TagElement("div")
                 .for("x in arr.map(bracket)")
                 .attr("title", compile("@x"));
+            var binding = new Binding(elt, { arr: ["Xania"], bracket: function (x) { return "[" + x + "]" } });
             // act
-            var view = elt.execute({ arr: ['Xania'], bracket: function (x) { return "[" + x + "]" } });
+            var view = binding.init();
             // assert
-            expect(view[0].attributes.title).toEqual("[Xania]");
+            expect(view[0].attributes['title'].value).toEqual("[Xania]");
+        });
+    it("should count of elements of simple template",
+        function () {
+            // arrange
+            var binding =
+                new TagElement("div")
+                    .addChild(new TextContext(compile("@comp.title")))
+                    .addChild(new TagElement("span")
+                        .for("emp in comp.employees"))
+                    .bind([{ comp: xania }, { comp: Company.globalgis() }]);
+            var elements = binding.init();
+            // act
+            binding.find(elements[0].childNodes[0]);
+            // assert
+            expect(binding.countElements()).toBe(2);
         });
 });
 
 describe("Template Engine", function () {
     it("should compile when zero params",
-        function() {
+        function () {
             var tpl = compile("hallo template");
             var result = tpl();
             expect(result).toEqual("hallo template");
@@ -117,11 +131,11 @@ describe("Select Many Expression", function () {
         function () {
             var expr = SelectManyExpression.parse("emp in org.employees");
             var result = expr.execute({ org: xania });
-            expect(result.length).toEqual(2);
+            expect(result.length).toEqual(3);
             expect(result[0].emp.firstName).toEqual("Ibrahim");
             expect(result[0].emp.lastName).toEqual("ben Salah");
-            expect(result[1].emp.firstName).toEqual("Abeer");
-            expect(result[1].emp.lastName).toEqual("Mahdi");
+            expect(result[1].emp.firstName).toEqual("Ramy");
+            expect(result[1].emp.lastName).toEqual("ben Salah");
         });
     it("should support any source expression",
         function () {
@@ -182,6 +196,44 @@ describe("Proxy", function () {
                 .init({ "name": 123 })
                 .create();
             expect(company.getName()).toEqual(123);
+        });
+});
+
+describe("Array skip", function () {
+    var arr = new SkipArray([1, 2, 3, 4], 1);
+
+    it("should adjust length of the arr",
+        function () {
+            expect(arr.length).toBe(3);
+        });
+
+    it("should adjust index of the arr",
+        function () {
+            expect(arr.indexOf(2)).toBe(0);
+        });
+
+    it("should adjust element at the arr",
+        function () {
+            expect(arr.elementAt(0)).toBe(2);
+        });
+});
+
+describe("Reverse skip", function () {
+    var arr = new ReverseArray([1, 2, 3, 4]);
+
+    it("should not adjust length of the arr",
+        function () {
+            expect(arr.length).toBe(4);
+        });
+
+    it("should adjust index of the arr",
+        function () {
+            expect(arr.indexOf(2)).toBe(2);
+        });
+
+    it("should adjust element at the arr",
+        function () {
+            expect(arr.elementAt(0)).toBe(4);
         });
 });
 

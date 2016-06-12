@@ -1,10 +1,12 @@
-﻿interface IDomElement {
+﻿interface IDomTemplate {
     render(context: any);
     executeEvents(context);
     executeAsync(context: any, resolve: any);
+
+    children();
 }
 
-class TextContent implements IDomElement {
+class TextContent implements IDomTemplate {
     constructor(private tpl) {
 
     }
@@ -23,16 +25,30 @@ class TextContent implements IDomElement {
     public executeEvents(context) {
         return [];
     }
+
+    public bindAsync(model, resolve) {
+        return Binding.createAsync(this, model, resolve);
+    }
+
+    public children() {
+        return [];
+    }
+
 }
 
-class TagElement implements IDomElement {
+class TagElement implements IDomTemplate {
     private attributes = new Map<any>();
     private events = new Map<any>();
     public data = new Map<string>();
-    public children: TagElement[] = [];
-    private modelAccessor: Function = Util.identity;
+    // ReSharper disable once InconsistentNaming
+    private  _children: TagElement[] = [];
+    public modelAccessor: Function = Util.identity;
 
     constructor(public name: string) {
+    }
+
+    public children() {
+        return this._children;
     }
 
     public attr(name: string, value: string) {
@@ -55,10 +71,19 @@ class TagElement implements IDomElement {
     }
 
     public addChild(child: TagElement) {
-        this.children.push(child);
+        this._children.push(child);
+        return this;
     }
 
-    public execute(context: any) {
+    public bind(model) {
+        return new Binding(this, model);
+    }
+
+    public bindAsync(model, resolve) {
+        return Binding.createAsync(this, model, resolve);
+    }
+
+    public execute2(context: any) {
         var result = [];
         this.executeAsync(context, tag => {
             result.push(tag);
@@ -276,6 +301,12 @@ class Util {
         }
     }
 
+    static count(data) {
+        if (data === null || typeof data === "undefined")
+            return 0;
+        return !!data.length ? data.length : 1;
+    }
+
     static uuid() {
         if (!Util.lut) {
             Util.lut = [];
@@ -365,6 +396,54 @@ class Util {
             }
         }
         return pub;
+    }
+}
+
+class SkipArray {
+    constructor(private arr: any, private skip: number = 0) {
+        if (skip > arr.length)
+            throw new Error("skip is greather than the length of the arr");
+    }
+
+    get length() {
+        return this.arr.length - this.skip;
+    }
+
+    indexOf(item) {
+        const idx = this.arr.indexOf(item, this.skip);
+        if (idx < 0)
+            return idx;
+        return idx - this.skip;
+    }
+
+    elementAt(idx) {
+        var i = idx + this.skip;
+        return Array.isArray(this.arr)
+            ? this.arr[i]
+            : this.arr.elementAt(i);
+    }
+}
+
+class ReverseArray {
+    constructor(private arr: any) {
+    }
+
+    get length() {
+        return this.arr.length;
+    }
+
+    indexOf(item) {
+        const idx = this.arr.indexOf(item);
+        if (idx < 0)
+            return idx;
+        return this.arr.length - idx - 1;
+    }
+
+    elementAt(idx) {
+        var i = this.length - idx - 1;
+        return Array.isArray(this.arr)
+            ? this.arr[i]
+            : this.arr.elementAt(i);
     }
 }
 // ReSharper restore InconsistentNaming

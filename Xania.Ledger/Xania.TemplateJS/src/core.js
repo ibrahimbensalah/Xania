@@ -14,6 +14,12 @@ var TextContent = (function () {
     TextContent.prototype.executeEvents = function (context) {
         return [];
     };
+    TextContent.prototype.bindAsync = function (model, resolve) {
+        return Binding.createAsync(this, model, resolve);
+    };
+    TextContent.prototype.children = function () {
+        return [];
+    };
     return TextContent;
 })();
 var TagElement = (function () {
@@ -22,9 +28,13 @@ var TagElement = (function () {
         this.attributes = new Map();
         this.events = new Map();
         this.data = new Map();
-        this.children = [];
+        // ReSharper disable once InconsistentNaming
+        this._children = [];
         this.modelAccessor = Util.identity;
     }
+    TagElement.prototype.children = function () {
+        return this._children;
+    };
     TagElement.prototype.attr = function (name, value) {
         return this.addAttribute(name, value);
     };
@@ -39,9 +49,16 @@ var TagElement = (function () {
         this.events.add(name, callback);
     };
     TagElement.prototype.addChild = function (child) {
-        this.children.push(child);
+        this._children.push(child);
+        return this;
     };
-    TagElement.prototype.execute = function (context) {
+    TagElement.prototype.bind = function (model) {
+        return new Binding(this, model);
+    };
+    TagElement.prototype.bindAsync = function (model, resolve) {
+        return Binding.createAsync(this, model, resolve);
+    };
+    TagElement.prototype.execute2 = function (context) {
         var result = [];
         this.executeAsync(context, function (tag) {
             result.push(tag);
@@ -235,6 +252,11 @@ var Util = (function () {
             return [fn.call(this, data)];
         }
     };
+    Util.count = function (data) {
+        if (data === null || typeof data === "undefined")
+            return 0;
+        return !!data.length ? data.length : 1;
+    };
     Util.uuid = function () {
         if (!Util.lut) {
             Util.lut = [];
@@ -321,6 +343,60 @@ var Util = (function () {
         return pub;
     };
     return Util;
+})();
+var SkipArray = (function () {
+    function SkipArray(arr, skip) {
+        if (skip === void 0) { skip = 0; }
+        this.arr = arr;
+        this.skip = skip;
+        if (skip > arr.length)
+            throw new Error("skip is greather than the length of the arr");
+    }
+    Object.defineProperty(SkipArray.prototype, "length", {
+        get: function () {
+            return this.arr.length - this.skip;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    SkipArray.prototype.indexOf = function (item) {
+        var idx = this.arr.indexOf(item, this.skip);
+        if (idx < 0)
+            return idx;
+        return idx - this.skip;
+    };
+    SkipArray.prototype.elementAt = function (idx) {
+        var i = idx + this.skip;
+        return Array.isArray(this.arr)
+            ? this.arr[i]
+            : this.arr.elementAt(i);
+    };
+    return SkipArray;
+})();
+var ReverseArray = (function () {
+    function ReverseArray(arr) {
+        this.arr = arr;
+    }
+    Object.defineProperty(ReverseArray.prototype, "length", {
+        get: function () {
+            return this.arr.length;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    ReverseArray.prototype.indexOf = function (item) {
+        var idx = this.arr.indexOf(item);
+        if (idx < 0)
+            return idx;
+        return this.arr.length - idx - 1;
+    };
+    ReverseArray.prototype.elementAt = function (idx) {
+        var i = this.length - idx - 1;
+        return Array.isArray(this.arr)
+            ? this.arr[i]
+            : this.arr.elementAt(i);
+    };
+    return ReverseArray;
 })();
 // ReSharper restore InconsistentNaming
 //# sourceMappingURL=core.js.map
