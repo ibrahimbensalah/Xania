@@ -23,8 +23,9 @@
         <div id="content">
             <ul data-for="o:OrganisationViewModel in xn">
                 <li data-for="emp in o.employees">
-                    <input name="emp.firstName" value="@emp.firstName" />
-                    <button name="@emp.firstName" click="emp.sayHello('test')">[ @o.name ]</button>
+                    <input name="emp.firstName" value="@emp.firstName"/>
+                    <button click="emp.sayHello('+')">+</button>
+                    <button name="@emp.firstName" click="emp.sayHello('test 44')">[ @emp.firstName ]</button>
                     <span data-for="r in emp.roles">@r </span>
                 </li>
             </ul>

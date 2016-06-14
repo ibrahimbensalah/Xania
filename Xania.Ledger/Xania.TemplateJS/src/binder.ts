@@ -27,6 +27,10 @@
         return result;
     }
 
+    update(target) {
+        this.tpl.update(target, this.context);
+    }
+
     initAsync(target) {
         Binding.executeAsync(this.tpl, this.context, model => {
             var elt = this.tpl.render(model);
@@ -43,7 +47,7 @@
         });
     }
 
-    static createAsync(tpl : IDomTemplate, context, resolve) {
+    static createAsync(tpl: IDomTemplate, context, resolve) {
         var bindings = [];
 
         Binding.executeAsync(tpl, context, model => {
@@ -64,13 +68,13 @@
     find(elements, path: HTMLElement[]) {
         debugger;
         var pathIdx = path.length - 1;
-        var bindings = [ this ];
+        var bindings = [this];
 
         for (var i = pathIdx; i >= 0; i--) {
             const dom = path[i];
             const domIdx = Array.prototype.indexOf.call(elements, dom);
 
-            if (elements.length !== bindings.map(b => b.countElements()).reduceRight((x,y) => x + y))
+            if (elements.length !== bindings.map(b => b.countElements()).reduceRight((x, y) => x + y))
                 throw new Error("elements.length !== bindings.length");
 
             if (domIdx >= 0) {
@@ -157,23 +161,23 @@ class Binder {
         }
 
         function find(bindings, elements, path) {
-            var pathIdx = path.length - 1;
+            const pathIdx = path.length - 1;
+            const result = [];
 
-            for (var i = pathIdx; i >= 0; i--) {
-                var dom = path[i];
-                var domIdx = Array.prototype.indexOf.call(elements, dom);
+            for (let i = pathIdx; i >= 0; i--) {
+                const dom = path[i];
+                const domIdx = Array.prototype.indexOf.call(elements, dom);
                 if (domIdx >= 0) {
-                    var binding = bindings[domIdx];
-                    if (i === 0) {
-                        return binding;
-                    }
+                    const binding = bindings[domIdx];
+                    result.push(binding);
                     bindings = binding.children;
                     elements = dom.childNodes;
                 } else {
-                    console.log('break; ', domIdx, dom, i, bindings.length);
-                    break;
+                    return [];
                 }
             }
+
+            return result;
         }
 
         // var map = this.createTagMap(tags);
@@ -181,12 +185,15 @@ class Binder {
             evt => {
                 var pathIdx = evt.path.indexOf(target);
                 if (pathIdx > 0) {
-                    var path = evt.path.splice(0, pathIdx);
+                    var domPath = evt.path.splice(0, pathIdx);
 
-                    var b = find(rootBindings, rootElements, path);
-                    var handler = b.tpl.events.get('click');
-                    if (!!handler)
-                        handler(b.context);
+                    var bindingPath = find(rootBindings, rootElements, domPath);
+                    if (bindingPath.length > 0) {
+                        var b = bindingPath.pop();
+                        var handler = b.tpl.events.get('click');
+                        if (!!handler)
+                            handler(b.context);
+                    }
                 }
             });
 
@@ -194,19 +201,40 @@ class Binder {
             evt => {
                 var pathIdx = evt.path.indexOf(target);
                 if (pathIdx > 0) {
-                    const path = evt.path.splice(0, pathIdx);
+                    const elementPath = evt.path.splice(0, pathIdx);
 
-                    const b = find(rootBindings, rootElements, path);
-                    const nameAttr = evt.target.attributes['name'];
-                    if (!!nameAttr) {
-                        const prop = nameAttr.value;
-                        const update = new Function("value", `with (this) { ${prop} = value; }`)
-                            .bind(b.context);
+                    var bindingPath = find(rootBindings, rootElements, elementPath);
+                    if (bindingPath.length > 0) {
+                        var b = bindingPath.pop();
+                        const nameAttr = evt.target.attributes['name'];
+                        if (!!nameAttr) {
+                            const prop = nameAttr.value;
+                            const update = new Function("context", "value",
+                                `with (context) { ${prop} = value; }`);
 
-                        update(evt.target.value);
+                            update(b.context, evt.target.value);
+                        }
+                        updateChildren(bindingPath.pop(), evt.target.parentNode);
                     }
                 }
             });
+
+        function updateChildren(binding, node) {
+            debugger;
+            var stack = [{ b: binding, node: node }];
+            while (stack.length > 0) {
+                var cur = stack.pop();
+
+                cur.b.update(cur.node);
+
+                for (let i = 0; i < cur.b.children.length && i < cur.node.childNodes.length; i++) {
+                    const b = cur.b.children[i];
+                    const child = cur.node.childNodes[i];
+
+                    stack.push({ b: b, node: child });
+                }
+            }
+        }
 
         //return result;
     }

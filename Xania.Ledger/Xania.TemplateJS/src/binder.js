@@ -24,6 +24,9 @@ var Binding = (function () {
         this.initAsync({ appendChild: result.push.bind(result) });
         return result;
     };
+    Binding.prototype.update = function (target) {
+        this.tpl.update(target, this.context);
+    };
     Binding.prototype.initAsync = function (target) {
         var _this = this;
         Binding.executeAsync(this.tpl, this.context, function (model) {
@@ -136,48 +139,66 @@ var Binder = (function () {
         }
         function find(bindings, elements, path) {
             var pathIdx = path.length - 1;
-            for (var i = pathIdx; i >= 0; i--) {
-                var dom = path[i];
+            var result = [];
+            for (var i_1 = pathIdx; i_1 >= 0; i_1--) {
+                var dom = path[i_1];
                 var domIdx = Array.prototype.indexOf.call(elements, dom);
                 if (domIdx >= 0) {
                     var binding = bindings[domIdx];
-                    if (i === 0) {
-                        return binding;
-                    }
+                    result.push(binding);
                     bindings = binding.children;
                     elements = dom.childNodes;
                 }
                 else {
-                    console.log('break; ', domIdx, dom, i, bindings.length);
-                    break;
+                    return [];
                 }
             }
+            return result;
         }
         // var map = this.createTagMap(tags);
         target.addEventListener("click", function (evt) {
             var pathIdx = evt.path.indexOf(target);
             if (pathIdx > 0) {
-                var path = evt.path.splice(0, pathIdx);
-                var b = find(rootBindings, rootElements, path);
-                var handler = b.tpl.events.get('click');
-                if (!!handler)
-                    handler(b.context);
+                var domPath = evt.path.splice(0, pathIdx);
+                var bindingPath = find(rootBindings, rootElements, domPath);
+                if (bindingPath.length > 0) {
+                    var b = bindingPath.pop();
+                    var handler = b.tpl.events.get('click');
+                    if (!!handler)
+                        handler(b.context);
+                }
             }
         });
         target.addEventListener("change", function (evt) {
             var pathIdx = evt.path.indexOf(target);
             if (pathIdx > 0) {
-                var path = evt.path.splice(0, pathIdx);
-                var b = find(rootBindings, rootElements, path);
-                var nameAttr = evt.target.attributes['name'];
-                if (!!nameAttr) {
-                    var prop = nameAttr.value;
-                    var update = new Function("value", "with (this) { " + prop + " = value; }")
-                        .bind(b.context);
-                    update(evt.target.value);
+                var elementPath = evt.path.splice(0, pathIdx);
+                var bindingPath = find(rootBindings, rootElements, elementPath);
+                if (bindingPath.length > 0) {
+                    var b = bindingPath.pop();
+                    var nameAttr = evt.target.attributes['name'];
+                    if (!!nameAttr) {
+                        var prop = nameAttr.value;
+                        var update = new Function("context", "value", "with (context) { " + prop + " = value; }");
+                        update(b.context, evt.target.value);
+                    }
+                    updateChildren(bindingPath.pop(), evt.target.parentNode);
                 }
             }
         });
+        function updateChildren(binding, node) {
+            debugger;
+            var stack = [{ b: binding, node: node }];
+            while (stack.length > 0) {
+                var cur = stack.pop();
+                cur.b.update(cur.node);
+                for (var i_2 = 0; i_2 < cur.b.children.length && i_2 < cur.node.childNodes.length; i_2++) {
+                    var b = cur.b.children[i_2];
+                    var child = cur.node.childNodes[i_2];
+                    stack.push({ b: b, node: child });
+                }
+            }
+        }
         //return result;
     };
     Binder.prototype.parseDom = function (rootDom) {

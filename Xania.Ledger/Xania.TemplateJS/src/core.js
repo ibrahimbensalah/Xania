@@ -20,6 +20,13 @@ var TextContent = (function () {
     TextContent.prototype.children = function () {
         return [];
     };
+    TextContent.prototype.update = function (node, context) {
+        var text = typeof this.tpl == "function"
+            ? this.tpl(context)
+            : this.tpl;
+        debugger;
+        node.textContent = text;
+    };
     return TextContent;
 })();
 var TagElement = (function () {
@@ -135,6 +142,8 @@ var TagElement = (function () {
         //    attributes: this.executeAttributes(context)
         //    // children: this.children // this.executeChildren(context)
         //};
+    };
+    TagElement.prototype.update = function (node) {
     };
     return TagElement;
 })();

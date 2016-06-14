@@ -4,12 +4,13 @@
     executeAsync(context: any, resolve: any);
 
     children();
+    update(node, context);
 }
 
 class TextContent implements IDomTemplate {
     constructor(private tpl) {
-
     }
+
     render(context) {
         var text = typeof this.tpl == "function"
             ? this.tpl(context)
@@ -18,20 +19,29 @@ class TextContent implements IDomTemplate {
         return document.createTextNode(text);
     }
 
-    public executeAsync(context: any, resolve: any) {
+    executeAsync(context: any, resolve: any) {
         resolve(context);
     }
 
-    public executeEvents(context) {
+    executeEvents(context) {
         return [];
     }
 
-    public bindAsync(model, resolve) {
+    bindAsync(model, resolve) {
         return Binding.createAsync(this, model, resolve);
     }
 
-    public children() {
+    children() {
         return [];
+    }
+
+    update(node, context) {
+        var text = typeof this.tpl == "function"
+            ? this.tpl(context)
+            : this.tpl;
+
+        debugger;
+        node.textContent = text;
     }
 
 }
@@ -179,6 +189,10 @@ class TagElement implements IDomTemplate {
         //    attributes: this.executeAttributes(context)
         //    // children: this.children // this.executeChildren(context)
         //};
+    }
+
+    update(node) {
+
     }
 }
 
