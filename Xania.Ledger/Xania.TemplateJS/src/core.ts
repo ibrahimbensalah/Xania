@@ -51,7 +51,7 @@ class TagElement implements IDomTemplate {
     private events = new Map<any>();
     public data = new Map<string>();
     // ReSharper disable once InconsistentNaming
-    private  _children: TagElement[] = [];
+    private _children: TagElement[] = [];
     public modelAccessor: Function = Util.identity;
 
     constructor(public name: string) {
@@ -232,7 +232,7 @@ class SelectManyExpression {
             if (typeof (col.then) === "function") {
                 col.then(arrayHandler.bind(this, source[i]));
             } else {
-                arrayHandler(source[i], col);
+                arrayHandler.call(this, source[i], col);
             }
         }
     }
@@ -291,7 +291,9 @@ class Util {
     }
 
     static map(fn: Function, data: any) {
-        if (Array.isArray(data)) {
+        if (typeof data.map === "function") {
+            data.map(fn);
+        } else if (Array.isArray(data)) {
             // var result = [];
             for (let i = 0; i < data.length; i++) {
                 fn.call(this, data[i]);
@@ -311,7 +313,7 @@ class Util {
             }
             return result;
         } else {
-            return [ fn.call(this, data) ];
+            return [fn.call(this, data)];
         }
     }
 
@@ -331,13 +333,13 @@ class Util {
         const lut = Util.lut;
 
         var d0 = Math.random() * 0xffffffff | 0;
-            var d1 = Math.random() * 0xffffffff | 0;
-            var d2 = Math.random() * 0xffffffff | 0;
-            var d3 = Math.random() * 0xffffffff | 0;
-            return lut[d0 & 0xff] + lut[d0 >> 8 & 0xff] + lut[d0 >> 16 & 0xff] + lut[d0 >> 24 & 0xff] + '-' +
-                lut[d1 & 0xff] + lut[d1 >> 8 & 0xff] + '-' + lut[d1 >> 16 & 0x0f | 0x40] + lut[d1 >> 24 & 0xff] + '-' +
-                lut[d2 & 0x3f | 0x80] + lut[d2 >> 8 & 0xff] + '-' + lut[d2 >> 16 & 0xff] + lut[d2 >> 24 & 0xff] +
-                lut[d3 & 0xff] + lut[d3 >> 8 & 0xff] + lut[d3 >> 16 & 0xff] + lut[d3 >> 24 & 0xff];
+        var d1 = Math.random() * 0xffffffff | 0;
+        var d2 = Math.random() * 0xffffffff | 0;
+        var d3 = Math.random() * 0xffffffff | 0;
+        return lut[d0 & 0xff] + lut[d0 >> 8 & 0xff] + lut[d0 >> 16 & 0xff] + lut[d0 >> 24 & 0xff] + '-' +
+            lut[d1 & 0xff] + lut[d1 >> 8 & 0xff] + '-' + lut[d1 >> 16 & 0x0f | 0x40] + lut[d1 >> 24 & 0xff] + '-' +
+            lut[d2 & 0x3f | 0x80] + lut[d2 >> 8 & 0xff] + '-' + lut[d2 >> 16 & 0xff] + lut[d2 >> 24 & 0xff] +
+            lut[d3 & 0xff] + lut[d3 >> 8 & 0xff] + lut[d3 >> 16 & 0xff] + lut[d3 >> 24 & 0xff];
     }
 
     static compose(...fns: Function[]): Function {
@@ -371,8 +373,26 @@ class Util {
                 __.prototype = B.constructor.prototype;
                 Proxy.prototype = new __();
             }
-            var arr = Array.isArray(B) ? B : [B];
-            Proxy.prototype.map = Array.prototype.map.bind(arr);
+            // var arr = Array.isArray(B) ? B : [B];
+            Proxy.prototype.map = function(fn) {
+                // ReSharper disable once SuspiciousThisUsage
+                const self = this;
+                debugger;
+                if (typeof B.map === "function")
+                    return B.map.call(self, fn);
+                else
+                    return fn(self);
+            };
+            Object.defineProperty(Proxy.prototype, "length", {
+                get: () => {
+                    if (typeof B.length === "number")
+                        return B.length;
+                    else
+                        return 1;
+                },
+                enumerable: true,
+                configurable: true
+            });
 
             for (let baseProp in B) {
                 if (B.hasOwnProperty(baseProp)) {

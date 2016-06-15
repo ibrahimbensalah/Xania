@@ -14,19 +14,35 @@ var A = (function () {
     };
     return A;
 })();
+var Role = (function () {
+    function Role(prefix, emp) {
+        this.prefix = prefix;
+        this.emp = emp;
+    }
+    Object.defineProperty(Role.prototype, "name", {
+        get: function () {
+            return this.emp.firstName;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    return Role;
+})();
 var Employee = (function () {
     function Employee(firstName, lastName) {
         this.firstName = firstName;
         this.lastName = lastName;
+        this.roles = [new Role("admin", this), new Role("user", this)];
     }
-    Object.defineProperty(Employee.prototype, "roles", {
+    Object.defineProperty(Employee.prototype, "fullName", {
         get: function () {
-            return [this.firstName, this.lastName];
+            return this.firstName + " " + this.lastName;
         },
         enumerable: true,
         configurable: true
     });
     Employee.prototype.sayHello = function (prefix) {
+        this.roles[0].name = prefix;
         console.log(prefix + " : " + this.firstName);
     };
     return Employee;
@@ -90,6 +106,9 @@ var OrganisationViewModel = (function () {
     }
     OrganisationViewModel.prototype.getName = function () {
         return this.name;
+    };
+    OrganisationViewModel.prototype.addEmployee = function () {
+        this.employees.push(new Employee('bla', 'di bla'));
     };
     return OrganisationViewModel;
 })();

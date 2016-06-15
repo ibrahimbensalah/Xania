@@ -6,15 +6,28 @@ class A {
         return 0;
     }
 }
+
+class Role {
+    constructor(public prefix, public emp: Employee) { }
+
+    get name() {
+        return this.emp.firstName;
+    }
+}
+
 class Employee {
+    roles: Role[];
+
     constructor(public firstName: string, public lastName: string) {
+        this.roles = [new Role("admin", this), new Role("user", this)];
     }
 
-    get roles() {
-        return [this.firstName, this.lastName];
+    get fullName() {
+        return this.firstName + " " + this.lastName;
     }
 
     sayHello(prefix) {
+        this.roles[0].name = prefix;
         console.log(prefix + " : " + this.firstName);
     }
 }
@@ -72,9 +85,14 @@ class Url {
 class OrganisationViewModel {
 
     private name: string;
+    private employees: Employee[];
 
     getName() {
         return this.name;
+    }
+
+    addEmployee() {
+        this.employees.push(new Employee('bla', 'di bla'));
     }
 }
 

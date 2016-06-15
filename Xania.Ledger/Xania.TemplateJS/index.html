@@ -22,12 +22,15 @@
     <div>
         <div id="content">
             <ul data-for="o:OrganisationViewModel in xn">
+                <li>@o.getName()</li>
                 <li data-for="emp in o.employees">
                     <input name="emp.firstName" value="@emp.firstName"/>
                     <button click="emp.sayHello('+')">+</button>
                     <button name="@emp.firstName" click="emp.sayHello('test 44')">[ @emp.firstName ]</button>
-                    <span data-for="r in emp.roles">@r </span>
+                    <span data-for="r in emp.roles">@r.name </span>
+                    <div>@emp.fullName</div>
                 </li>
+                <li><button click="o.addEmployee()">add</button></li>
             </ul>
         </div>
     </div>
@@ -35,7 +38,9 @@
         var binder = new Binder();
 
         var contentDiv = document.getElementById("content");
-        binder.bind(contentDiv, [{ xn: Company.xania() }, { xn: Company.globalgis() }]);
+
+        for (var i = 0 ; i < 100 ; i++)
+            binder.bind(contentDiv, [{ xn: Company.xania() }, { xn: Company.globalgis() }]);
 
         var compile = TemplateEngine.compile;
         var debugtest = function () {

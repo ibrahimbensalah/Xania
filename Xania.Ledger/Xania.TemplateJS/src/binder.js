@@ -130,10 +130,12 @@ var Binder = (function () {
         }
     };
     Binder.prototype.bind = function (rootDom, model, target) {
+        debugger;
         target = target || document.body;
         var tpl = this.parseDom(rootDom);
         var rootElements = [];
-        var rootBindings = tpl.bindAsync(model, rootElements.push.bind(rootElements));
+        var proxy = Util.proxy(model).create();
+        var rootBindings = tpl.bindAsync(proxy, rootElements.push.bind(rootElements));
         for (var i = 0; i < rootElements.length; i++) {
             target.appendChild(rootElements[i]);
         }

@@ -181,7 +181,7 @@ var SelectManyExpression = (function () {
                 col.then(arrayHandler.bind(this, source[i]));
             }
             else {
-                arrayHandler(source[i], col);
+                arrayHandler.call(this, source[i], col);
             }
         }
     };
@@ -238,7 +238,10 @@ var Util = (function () {
         return x;
     };
     Util.map = function (fn, data) {
-        if (Array.isArray(data)) {
+        if (typeof data.map === "function") {
+            data.map(fn);
+        }
+        else if (Array.isArray(data)) {
             // var result = [];
             for (var i = 0; i < data.length; i++) {
                 fn.call(this, data[i]);
@@ -316,8 +319,26 @@ var Util = (function () {
                 __.prototype = B.constructor.prototype;
                 Proxy.prototype = new __();
             }
-            var arr = Array.isArray(B) ? B : [B];
-            Proxy.prototype.map = Array.prototype.map.bind(arr);
+            // var arr = Array.isArray(B) ? B : [B];
+            Proxy.prototype.map = function (fn) {
+                // ReSharper disable once SuspiciousThisUsage
+                var self = this;
+                debugger;
+                if (typeof B.map === "function")
+                    return B.map.call(self, fn);
+                else
+                    return fn(self);
+            };
+            Object.defineProperty(Proxy.prototype, "length", {
+                get: function () {
+                    if (typeof B.length === "number")
+                        return B.length;
+                    else
+                        return 1;
+                },
+                enumerable: true,
+                configurable: true
+            });
             for (var baseProp in B) {
                 if (B.hasOwnProperty(baseProp)) {
                     Object.defineProperty(Proxy.prototype, baseProp, {
