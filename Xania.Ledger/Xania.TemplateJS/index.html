@@ -24,11 +24,18 @@
             <ul data-for="o:OrganisationViewModel in xn">
                 <li>@o.getName()</li>
                 <li data-for="emp in o.employees">
-                    <input name="emp.firstName" value="@emp.firstName"/>
-                    <button click="emp.sayHello('+')">+</button>
-                    <button name="@emp.firstName" click="emp.sayHello('test 44')">[ @emp.firstName ]</button>
-                    <span data-for="r in emp.roles">@r.name </span>
+                    <div style="border: 1px solid red; padding: 10px;">
+                        <input name="emp.firstName" value="@emp.firstName" />
+                        <input name="emp.lastName" value="@emp.lastName" />
+                        <button click="emp.sayHello('+')">+</button>
+                        <button name="@emp.firstName" click="emp.sayHello('test 44')">[ @emp.firstName ]</button>
+                        <span data-for="r in emp.roles">@r.name </span>
+                        <div>@emp.fullName</div>
+                    </div>
                     <div>@emp.fullName</div>
+                </li>
+                <li data-for="emp in o.employees">
+                    @emp.fullName
                 </li>
                 <li><button click="o.addEmployee()">add</button></li>
             </ul>
@@ -39,8 +46,11 @@
 
         var contentDiv = document.getElementById("content");
 
-        for (var i = 0 ; i < 100 ; i++)
-            binder.bind(contentDiv, [{ xn: Company.xania() }, { xn: Company.globalgis() }]);
+        var model = [];
+        for (var i = 0; i < 10; i++)
+            model.push({ xn: Company.xania() });
+
+        binder.bind(contentDiv, model);
 
         var compile = TemplateEngine.compile;
         var debugtest = function () {

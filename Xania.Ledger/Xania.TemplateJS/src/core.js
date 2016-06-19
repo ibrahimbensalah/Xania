@@ -14,9 +14,6 @@ var TextContent = (function () {
     TextContent.prototype.executeEvents = function (context) {
         return [];
     };
-    TextContent.prototype.bindAsync = function (model, resolve) {
-        return Binding.createAsync(this, model, resolve);
-    };
     TextContent.prototype.children = function () {
         return [];
     };
@@ -24,7 +21,6 @@ var TextContent = (function () {
         var text = typeof this.tpl == "function"
             ? this.tpl(context)
             : this.tpl;
-        debugger;
         node.textContent = text;
     };
     return TextContent;
@@ -60,10 +56,10 @@ var TagElement = (function () {
         return this;
     };
     TagElement.prototype.bind = function (model) {
-        return new Binding(this, model);
+        return new Binding(this, model, 0);
     };
     TagElement.prototype.bindAsync = function (model, resolve) {
-        return Binding.createAsync(this, model, resolve);
+        return Binding.createAsync(this, model).then(resolve);
     };
     TagElement.prototype.execute2 = function (context) {
         var result = [];
@@ -72,13 +68,12 @@ var TagElement = (function () {
         });
         return result;
     };
-    TagElement.prototype.for = function (modelAccessor) {
-        if (typeof modelAccessor === "string") {
-            modelAccessor = SelectManyExpression.parse(modelAccessor);
-        }
+    TagElement.prototype.for = function (forExpression, loader) {
+        var selectManyExpr = SelectManyExpression.parse(forExpression, loader);
+        this.modelIdentifier = selectManyExpr.collectionExpr;
         this.modelAccessor = function (model) { return ({
             then: function (resolve) {
-                return modelAccessor.executeAsync(model, resolve);
+                return selectManyExpr.executeAsync(model, resolve);
             }
         }); };
         return this;
@@ -148,10 +143,10 @@ var TagElement = (function () {
     return TagElement;
 })();
 var SelectManyExpression = (function () {
-    function SelectManyExpression(varName, viewModel, collectionFunc, loader) {
+    function SelectManyExpression(varName, viewModel, collectionExpr, loader) {
         this.varName = varName;
         this.viewModel = viewModel;
-        this.collectionFunc = collectionFunc;
+        this.collectionExpr = collectionExpr;
         this.loader = loader;
     }
     SelectManyExpression.prototype.execute = function (context) {
@@ -175,8 +170,9 @@ var SelectManyExpression = (function () {
                 resolve(obj);
             }
         };
+        var collectionFunc = new Function("m", "with(m) { return " + this.collectionExpr + "; }");
         for (var i = 0; i < source.length; i++) {
-            var col = this.collectionFunc(source[i]);
+            var col = collectionFunc(source[i]);
             if (typeof (col.then) === "function") {
                 col.then(arrayHandler.bind(this, source[i]));
             }
@@ -189,19 +185,14 @@ var SelectManyExpression = (function () {
         if (loader === void 0) { loader = function (t) { return window[t]; }; }
         var m = expr.match(/^(\w+)(\s*:\s*(\w+))?\s+in\s+((\w+)\s*:\s*)?(.*)$/i);
         if (!!m) {
-            var varName = m[1], itemType = m[3], directive = m[5], sourceExpr = m[6];
+            var varName = m[1], itemType = m[3], directive = m[5], collectionExpr = m[6];
             var viewModel = loader(itemType);
-            return new SelectManyExpression(varName, viewModel, this.createSourceFunc(directive || 'ctx', sourceExpr), loader);
+            return new SelectManyExpression(varName, viewModel, collectionExpr, loader);
         }
         return null;
     };
     SelectManyExpression.ensureIsArray = function (obj) {
         return Array.isArray(obj) ? obj : [obj];
-    };
-    SelectManyExpression.createSourceFunc = function (directive, sourceExpr) {
-        if (directive === "url")
-            return new Function("m", "with(m) { return " + sourceExpr + "; }");
-        return new Function("m", "with(m) { return " + sourceExpr + "; }");
     };
     return SelectManyExpression;
 })();
@@ -244,11 +235,11 @@ var Util = (function () {
         else if (Array.isArray(data)) {
             // var result = [];
             for (var i = 0; i < data.length; i++) {
-                fn.call(this, data[i]);
+                fn.call(this, data[i], i);
             }
         }
         else {
-            fn.call(this, data);
+            fn.call(this, data, 0);
         }
     };
     Util.collect = function (fn, data) {
@@ -300,7 +291,8 @@ var Util = (function () {
         };
     };
     Util.proxy = function (B) {
-        function Proxy() { }
+        function Proxy() {
+        }
         function getter(prop) {
             // ReSharper disable once SuspiciousThisUsage
             return this[prop];
@@ -323,11 +315,10 @@ var Util = (function () {
             Proxy.prototype.map = function (fn) {
                 // ReSharper disable once SuspiciousThisUsage
                 var self = this;
-                debugger;
                 if (typeof B.map === "function")
                     return B.map.call(self, fn);
                 else
-                    return fn(self);
+                    return fn(self, 0);
             };
             Object.defineProperty(Proxy.prototype, "length", {
                 get: function () {
@@ -373,60 +364,6 @@ var Util = (function () {
         return pub;
     };
     return Util;
-})();
-var SkipArray = (function () {
-    function SkipArray(arr, skip) {
-        if (skip === void 0) { skip = 0; }
-        this.arr = arr;
-        this.skip = skip;
-        if (skip > arr.length)
-            throw new Error("skip is greather than the length of the arr");
-    }
-    Object.defineProperty(SkipArray.prototype, "length", {
-        get: function () {
-            return this.arr.length - this.skip;
-        },
-        enumerable: true,
-        configurable: true
-    });
-    SkipArray.prototype.indexOf = function (item) {
-        var idx = this.arr.indexOf(item, this.skip);
-        if (idx < 0)
-            return idx;
-        return idx - this.skip;
-    };
-    SkipArray.prototype.elementAt = function (idx) {
-        var i = idx + this.skip;
-        return Array.isArray(this.arr)
-            ? this.arr[i]
-            : this.arr.elementAt(i);
-    };
-    return SkipArray;
-})();
-var ReverseArray = (function () {
-    function ReverseArray(arr) {
-        this.arr = arr;
-    }
-    Object.defineProperty(ReverseArray.prototype, "length", {
-        get: function () {
-            return this.arr.length;
-        },
-        enumerable: true,
-        configurable: true
-    });
-    ReverseArray.prototype.indexOf = function (item) {
-        var idx = this.arr.indexOf(item);
-        if (idx < 0)
-            return idx;
-        return this.arr.length - idx - 1;
-    };
-    ReverseArray.prototype.elementAt = function (idx) {
-        var i = this.length - idx - 1;
-        return Array.isArray(this.arr)
-            ? this.arr[i]
-            : this.arr.elementAt(i);
-    };
-    return ReverseArray;
 })();
 // ReSharper restore InconsistentNaming
 //# sourceMappingURL=core.js.map

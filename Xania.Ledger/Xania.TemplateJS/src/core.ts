@@ -27,10 +27,6 @@ class TextContent implements IDomTemplate {
         return [];
     }
 
-    bindAsync(model, resolve) {
-        return Binding.createAsync(this, model, resolve);
-    }
-
     children() {
         return [];
     }
@@ -40,7 +36,6 @@ class TextContent implements IDomTemplate {
             ? this.tpl(context)
             : this.tpl;
 
-        debugger;
         node.textContent = text;
     }
 
@@ -53,6 +48,7 @@ class TagElement implements IDomTemplate {
     // ReSharper disable once InconsistentNaming
     private _children: TagElement[] = [];
     public modelAccessor: Function = Util.identity;
+    public modelIdentifier: string;
 
     constructor(public name: string) {
     }
@@ -86,11 +82,7 @@ class TagElement implements IDomTemplate {
     }
 
     public bind(model) {
-        return new Binding(this, model);
-    }
-
-    public bindAsync(model, resolve) {
-        return Binding.createAsync(this, model, resolve);
+        return new Binding(this, model, 0);
     }
 
     public execute2(context: any) {
@@ -101,14 +93,14 @@ class TagElement implements IDomTemplate {
         return result;
     }
 
-    public for(modelAccessor) {
-        if (typeof modelAccessor === "string") {
-            modelAccessor = SelectManyExpression.parse(modelAccessor);
-        }
+    public for(forExpression, loader) {
+        var selectManyExpr = SelectManyExpression.parse(forExpression, loader);
+
+        this.modelIdentifier = selectManyExpr.collectionExpr;
 
         this.modelAccessor = model => ({
             then(resolve) {
-                return modelAccessor.executeAsync(model, resolve);
+                return selectManyExpr.executeAsync(model, resolve);
             }
         });
         return this;
@@ -198,7 +190,7 @@ class TagElement implements IDomTemplate {
 
 class SelectManyExpression {
     constructor(public varName: string, private viewModel: string,
-        public collectionFunc: Function, private loader: any) {
+        public collectionExpr, private loader: any) {
     }
 
     execute(context) {
@@ -226,8 +218,10 @@ class SelectManyExpression {
             }
         };
 
+        var collectionFunc = new Function("m", `with(m) { return ${this.collectionExpr}; }`);
+
         for (let i = 0; i < source.length; i++) {
-            const col = this.collectionFunc(source[i]);
+            const col = collectionFunc(source[i]);
 
             if (typeof (col.then) === "function") {
                 col.then(arrayHandler.bind(this, source[i]));
@@ -240,21 +234,19 @@ class SelectManyExpression {
     static parse(expr, loader = t => <any>window[t]) {
         const m = expr.match(/^(\w+)(\s*:\s*(\w+))?\s+in\s+((\w+)\s*:\s*)?(.*)$/i);
         if (!!m) {
-            const [, varName, , itemType, , directive, sourceExpr] = m;
+            const [, varName, , itemType, , directive, collectionExpr] = m;
             var viewModel = loader(itemType);
-            return new SelectManyExpression(varName, viewModel, this.createSourceFunc(directive || 'ctx', sourceExpr), loader);
+            return new SelectManyExpression(
+                varName,
+                viewModel,
+                collectionExpr,
+                loader);
         }
         return null;
     }
 
     private static ensureIsArray(obj) {
         return Array.isArray(obj) ? obj : [obj];
-    }
-
-    static createSourceFunc(directive, sourceExpr): Function {
-        if (directive === "url")
-            return new Function("m", `with(m) { return ${sourceExpr}; }`);
-        return new Function("m", `with(m) { return ${sourceExpr}; }`);
     }
 }
 
@@ -296,11 +288,11 @@ class Util {
         } else if (Array.isArray(data)) {
             // var result = [];
             for (let i = 0; i < data.length; i++) {
-                fn.call(this, data[i]);
+                fn.call(this, data[i], i);
             }
             // return result;
         } else {
-            fn.call(this, data);
+            fn.call(this, data, 0);
         }
     }
 
@@ -353,7 +345,8 @@ class Util {
     }
 
     static proxy(B) {
-        function Proxy() { }
+        function Proxy() {
+        }
 
         function getter(prop) {
             // ReSharper disable once SuspiciousThisUsage
@@ -374,14 +367,13 @@ class Util {
                 Proxy.prototype = new __();
             }
             // var arr = Array.isArray(B) ? B : [B];
-            Proxy.prototype.map = function(fn) {
+            Proxy.prototype.map = function (fn) {
                 // ReSharper disable once SuspiciousThisUsage
                 const self = this;
-                debugger;
                 if (typeof B.map === "function")
                     return B.map.call(self, fn);
                 else
-                    return fn(self);
+                    return fn(self, 0);
             };
             Object.defineProperty(Proxy.prototype, "length", {
                 get: () => {
@@ -433,51 +425,4 @@ class Util {
     }
 }
 
-class SkipArray {
-    constructor(private arr: any, private skip: number = 0) {
-        if (skip > arr.length)
-            throw new Error("skip is greather than the length of the arr");
-    }
-
-    get length() {
-        return this.arr.length - this.skip;
-    }
-
-    indexOf(item) {
-        const idx = this.arr.indexOf(item, this.skip);
-        if (idx < 0)
-            return idx;
-        return idx - this.skip;
-    }
-
-    elementAt(idx) {
-        var i = idx + this.skip;
-        return Array.isArray(this.arr)
-            ? this.arr[i]
-            : this.arr.elementAt(i);
-    }
-}
-
-class ReverseArray {
-    constructor(private arr: any) {
-    }
-
-    get length() {
-        return this.arr.length;
-    }
-
-    indexOf(item) {
-        const idx = this.arr.indexOf(item);
-        if (idx < 0)
-            return idx;
-        return this.arr.length - idx - 1;
-    }
-
-    elementAt(idx) {
-        var i = this.length - idx - 1;
-        return Array.isArray(this.arr)
-            ? this.arr[i]
-            : this.arr.elementAt(i);
-    }
-}
 // ReSharper restore InconsistentNaming
