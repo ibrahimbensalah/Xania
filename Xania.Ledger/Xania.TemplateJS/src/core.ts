@@ -1,44 +1,20 @@
 ﻿interface IDomTemplate {
-    render(context: any);
-    executeEvents(context);
-    executeAsync(context: any, resolve: any);
-
-    children();
-    update(node, context);
+    bind(model, idx);
 }
 
 class TextContent implements IDomTemplate {
     constructor(private tpl) {
     }
 
-    render(context) {
-        var text = typeof this.tpl == "function"
+    execute(context) {
+        return typeof this.tpl == "function"
             ? this.tpl(context)
             : this.tpl;
-
-        return document.createTextNode(text);
     }
 
-    executeAsync(context: any, resolve: any) {
-        resolve(context);
+    bind(model, idx) {
+        return new ContentBinding(this, model, idx);
     }
-
-    executeEvents(context) {
-        return [];
-    }
-
-    children() {
-        return [];
-    }
-
-    update(node, context) {
-        var text = typeof this.tpl == "function"
-            ? this.tpl(context)
-            : this.tpl;
-
-        node.textContent = text;
-    }
-
 }
 
 class TagElement implements IDomTemplate {
@@ -82,15 +58,7 @@ class TagElement implements IDomTemplate {
     }
 
     public bind(model) {
-        return new Binding(this, model, 0);
-    }
-
-    public execute2(context: any) {
-        var result = [];
-        this.executeAsync(context, tag => {
-            result.push(tag);
-        });
-        return result;
+        return new TagBinding(this, model, 0);
     }
 
     public for(forExpression, loader) {
@@ -106,17 +74,7 @@ class TagElement implements IDomTemplate {
         return this;
     }
 
-    public executeAsync(context: any, resolve: any) {
-        const model = this.modelAccessor(context),
-            iter = Util.map.bind(this, resolve);
-        if (typeof (model.then) === "function") {
-            model.then(iter);
-        } else {
-            iter(model);
-        }
-    }
-
-    private executeAttributes(context) {
+    public executeAttributes(context) {
         var result = {},
             attrs = this.attributes;
 
@@ -129,26 +87,11 @@ class TagElement implements IDomTemplate {
         return result;
     }
 
-    private executeChildren(context) {
-        var result = [];
-
-        for (var i = 0; i < this.children.length; i++) {
-            var child = this.children[i];
-            child.executeAsync(context,
-                dom => {
-                    result.push(dom);
-                });
-        }
-
-        return result;
-    }
-
     public executeEvents(context) {
         var result: any = {};
 
         if (this.name.toUpperCase() === "INPUT") {
             var name = this.attributes.get("name")(context);
-            // const setter = new Function("value", `with (this) { ${name} = value; }`).bind(context);
             result.update = new Function("value", `with (this) { ${name} = value; }`).bind(context);
         }
 
@@ -161,31 +104,6 @@ class TagElement implements IDomTemplate {
         return result;
     }
 
-    public render(context) {
-        var elt = document.createElement(this.name);
-
-        var attributes = this.executeAttributes(context);
-        for (let attrName in attributes) {
-
-            if (attributes.hasOwnProperty(attrName)) {
-                const domAttr = document.createAttribute(attrName);
-                domAttr.value = attributes[attrName];
-                elt.setAttributeNode(domAttr);
-            }
-        }
-
-        return elt;
-        //return {
-        //    name: this.name,
-        //    events: this.executeEvents(context),
-        //    attributes: this.executeAttributes(context)
-        //    // children: this.children // this.executeChildren(context)
-        //};
-    }
-
-    update(node) {
-
-    }
 }
 
 class SelectManyExpression {
@@ -234,6 +152,7 @@ class SelectManyExpression {
     static parse(expr, loader = t => <any>window[t]) {
         const m = expr.match(/^(\w+)(\s*:\s*(\w+))?\s+in\s+((\w+)\s*:\s*)?(.*)$/i);
         if (!!m) {
+            // ReSharper disable once UnusedLocals
             const [, varName, , itemType, , directive, collectionExpr] = m;
             var viewModel = loader(itemType);
             return new SelectManyExpression(

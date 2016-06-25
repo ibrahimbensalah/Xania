@@ -1,10 +1,8 @@
 ﻿class Binding {
     private data;
-    public children: Binding[] = [];
-    private dom;
     private parent: Binding;
 
-    constructor(public tpl: IDomTemplate, public context, private idx: number) {
+    constructor(public context, private idx: number) {
     }
 
     public static executeAsync(tpl, context, resolve: any) {
@@ -20,11 +18,75 @@
     }
 
     update() {
-        this.tpl.update(this.dom, this.context);
+        throw new Error("Abstract method Binding.update");
     }
 
     init() {
-        this.dom = this.tpl.render(this.context);
+        throw new Error("Abstract method Binding.update");
+    }
+
+    static createAsync(tpl: IDomTemplate, context) {
+        return {
+            then(resolve) {
+                Binding.executeAsync(tpl, context, (model, idx) => {
+                    if (typeof idx == "undefined")
+                        throw new Error("model idx is not defined");
+
+                    resolve(tpl.bind(model, idx).init());
+                });
+            }
+        };
+    }
+}
+
+class ContentBinding extends Binding {
+    private dom;
+
+    constructor(private tpl: TextContent, context, idx: number) {
+        super(context, idx);
+    }
+
+    update() {
+        this.dom.textContent = this.tpl.execute(this.context);
+    }
+
+    init() {
+        var text = this.tpl.execute(this.context);
+        this.dom = document.createTextNode(text);
+        return this;
+    }
+}
+
+class TagBinding extends Binding {
+
+    public children: Binding[] = [];
+    protected dom;
+
+    constructor(private tpl: TagElement, context, idx: number) {
+        super(context, idx);
+    }
+
+    private renderTag() {
+        var elt = document.createElement(this.tpl.name);
+
+        var attributes = this.tpl.executeAttributes(this.context);
+        for (let attrName in attributes) {
+
+            if (attributes.hasOwnProperty(attrName)) {
+                const domAttr = document.createAttribute(attrName);
+                domAttr.value = attributes[attrName];
+                elt.setAttributeNode(domAttr);
+            }
+        }
+
+        return elt;
+    }
+
+    update() {
+    }
+
+    init() {
+        this.dom = this.renderTag();
         const children = this.tpl.children();
         for (var e = 0; e < children.length; e++) {
             Binding.createAsync(children[e], this.context)
@@ -37,18 +99,6 @@
         return this;
     }
 
-    static createAsync(tpl: IDomTemplate, context) {
-        return {
-            then(resolve) {
-                Binding.executeAsync(tpl, context, (model, idx) => {
-                    if (typeof idx == "undefined")
-                        throw new Error("model idx is not defined");
-
-                    resolve(new Binding(tpl, model, idx).init());
-                });
-            }
-        };
-    }
 }
 
 class Binder {
@@ -146,12 +196,12 @@ class Binder {
                     const nameAttr = evt.target.attributes['name'];
                     if (!!nameAttr) {
                         const prop = nameAttr.value;
-                        const update = new Function("context",
-                            "value", `with (context) { ${prop} = value; }`);
+                        const update = new Function("context", "value",
+                            `with (context) { ${prop} = value; }`);
 
                         update(b.context, evt.target.value);
                     }
-                    // b.update();
+                    b.update();
                     // updateChildren(bindingPath.pop(), evt.target.parentNode);
                 }
             }

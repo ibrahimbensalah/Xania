@@ -1,9 +1,13 @@
+var __extends = (this && this.__extends) || function (d, b) {
+    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
+    function __() { this.constructor = d; }
+    __.prototype = b.prototype;
+    d.prototype = new __();
+};
 var Binding = (function () {
-    function Binding(tpl, context, idx) {
-        this.tpl = tpl;
+    function Binding(context, idx) {
         this.context = context;
         this.idx = idx;
-        this.children = [];
     }
     Binding.executeAsync = function (tpl, context, resolve) {
         var model = !!tpl.modelAccessor ? tpl.modelAccessor(context) : context, iter = function (data) {
@@ -17,11 +21,64 @@ var Binding = (function () {
         }
     };
     Binding.prototype.update = function () {
-        this.tpl.update(this.dom, this.context);
+        throw new Error("Abstract method Binding.update");
     };
     Binding.prototype.init = function () {
+        throw new Error("Abstract method Binding.update");
+    };
+    Binding.createAsync = function (tpl, context) {
+        return {
+            then: function (resolve) {
+                Binding.executeAsync(tpl, context, function (model, idx) {
+                    if (typeof idx == "undefined")
+                        throw new Error("model idx is not defined");
+                    resolve(tpl.bind(model, idx).init());
+                });
+            }
+        };
+    };
+    return Binding;
+})();
+var ContentBinding = (function (_super) {
+    __extends(ContentBinding, _super);
+    function ContentBinding(tpl, context, idx) {
+        _super.call(this, context, idx);
+        this.tpl = tpl;
+    }
+    ContentBinding.prototype.update = function () {
+        this.dom.textContent = this.tpl.execute(this.context);
+    };
+    ContentBinding.prototype.init = function () {
+        var text = this.tpl.execute(this.context);
+        this.dom = document.createTextNode(text);
+        return this;
+    };
+    return ContentBinding;
+})(Binding);
+var TagBinding = (function (_super) {
+    __extends(TagBinding, _super);
+    function TagBinding(tpl, context, idx) {
+        _super.call(this, context, idx);
+        this.tpl = tpl;
+        this.children = [];
+    }
+    TagBinding.prototype.renderTag = function () {
+        var elt = document.createElement(this.tpl.name);
+        var attributes = this.tpl.executeAttributes(this.context);
+        for (var attrName in attributes) {
+            if (attributes.hasOwnProperty(attrName)) {
+                var domAttr = document.createAttribute(attrName);
+                domAttr.value = attributes[attrName];
+                elt.setAttributeNode(domAttr);
+            }
+        }
+        return elt;
+    };
+    TagBinding.prototype.update = function () {
+    };
+    TagBinding.prototype.init = function () {
         var _this = this;
-        this.dom = this.tpl.render(this.context);
+        this.dom = this.renderTag();
         var children = this.tpl.children();
         for (var e = 0; e < children.length; e++) {
             Binding.createAsync(children[e], this.context)
@@ -33,19 +90,8 @@ var Binding = (function () {
         }
         return this;
     };
-    Binding.createAsync = function (tpl, context) {
-        return {
-            then: function (resolve) {
-                Binding.executeAsync(tpl, context, function (model, idx) {
-                    if (typeof idx == "undefined")
-                        throw new Error("model idx is not defined");
-                    resolve(new Binding(tpl, model, idx).init());
-                });
-            }
-        };
-    };
-    return Binding;
-})();
+    return TagBinding;
+})(Binding);
 var Binder = (function () {
     function Binder(compile) {
         if (compile === void 0) { compile = TemplateEngine.compile; }
@@ -132,6 +178,7 @@ var Binder = (function () {
                         var update = new Function("context", "value", "with (context) { " + prop + " = value; }");
                         update(b.context, evt.target.value);
                     }
+                    b.update();
                 }
             }
         };

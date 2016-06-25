@@ -2,26 +2,13 @@ var TextContent = (function () {
     function TextContent(tpl) {
         this.tpl = tpl;
     }
-    TextContent.prototype.render = function (context) {
-        var text = typeof this.tpl == "function"
+    TextContent.prototype.execute = function (context) {
+        return typeof this.tpl == "function"
             ? this.tpl(context)
             : this.tpl;
-        return document.createTextNode(text);
     };
-    TextContent.prototype.executeAsync = function (context, resolve) {
-        resolve(context);
-    };
-    TextContent.prototype.executeEvents = function (context) {
-        return [];
-    };
-    TextContent.prototype.children = function () {
-        return [];
-    };
-    TextContent.prototype.update = function (node, context) {
-        var text = typeof this.tpl == "function"
-            ? this.tpl(context)
-            : this.tpl;
-        node.textContent = text;
+    TextContent.prototype.bind = function (model, idx) {
+        return new ContentBinding(this, model, idx);
     };
     return TextContent;
 })();
@@ -56,17 +43,7 @@ var TagElement = (function () {
         return this;
     };
     TagElement.prototype.bind = function (model) {
-        return new Binding(this, model, 0);
-    };
-    TagElement.prototype.bindAsync = function (model, resolve) {
-        return Binding.createAsync(this, model).then(resolve);
-    };
-    TagElement.prototype.execute2 = function (context) {
-        var result = [];
-        this.executeAsync(context, function (tag) {
-            result.push(tag);
-        });
-        return result;
+        return new TagBinding(this, model, 0);
     };
     TagElement.prototype.for = function (forExpression, loader) {
         var selectManyExpr = SelectManyExpression.parse(forExpression, loader);
@@ -78,15 +55,6 @@ var TagElement = (function () {
         }); };
         return this;
     };
-    TagElement.prototype.executeAsync = function (context, resolve) {
-        var model = this.modelAccessor(context), iter = Util.map.bind(this, resolve);
-        if (typeof (model.then) === "function") {
-            model.then(iter);
-        }
-        else {
-            iter(model);
-        }
-    };
     TagElement.prototype.executeAttributes = function (context) {
         var result = {}, attrs = this.attributes;
         for (var i = 0; i < attrs.keys.length; i++) {
@@ -96,21 +64,10 @@ var TagElement = (function () {
         }
         return result;
     };
-    TagElement.prototype.executeChildren = function (context) {
-        var result = [];
-        for (var i = 0; i < this.children.length; i++) {
-            var child = this.children[i];
-            child.executeAsync(context, function (dom) {
-                result.push(dom);
-            });
-        }
-        return result;
-    };
     TagElement.prototype.executeEvents = function (context) {
         var result = {};
         if (this.name.toUpperCase() === "INPUT") {
             var name = this.attributes.get("name")(context);
-            // const setter = new Function("value", `with (this) { ${name} = value; }`).bind(context);
             result.update = new Function("value", "with (this) { " + name + " = value; }").bind(context);
         }
         for (var i = 0; i < this.events.keys.length; i++) {
@@ -119,26 +76,6 @@ var TagElement = (function () {
             result[eventName] = callback.bind(this, context);
         }
         return result;
-    };
-    TagElement.prototype.render = function (context) {
-        var elt = document.createElement(this.name);
-        var attributes = this.executeAttributes(context);
-        for (var attrName in attributes) {
-            if (attributes.hasOwnProperty(attrName)) {
-                var domAttr = document.createAttribute(attrName);
-                domAttr.value = attributes[attrName];
-                elt.setAttributeNode(domAttr);
-            }
-        }
-        return elt;
-        //return {
-        //    name: this.name,
-        //    events: this.executeEvents(context),
-        //    attributes: this.executeAttributes(context)
-        //    // children: this.children // this.executeChildren(context)
-        //};
-    };
-    TagElement.prototype.update = function (node) {
     };
     return TagElement;
 })();
@@ -185,6 +122,7 @@ var SelectManyExpression = (function () {
         if (loader === void 0) { loader = function (t) { return window[t]; }; }
         var m = expr.match(/^(\w+)(\s*:\s*(\w+))?\s+in\s+((\w+)\s*:\s*)?(.*)$/i);
         if (!!m) {
+            // ReSharper disable once UnusedLocals
             var varName = m[1], itemType = m[3], directive = m[5], collectionExpr = m[6];
             var viewModel = loader(itemType);
             return new SelectManyExpression(varName, viewModel, collectionExpr, loader);
