@@ -13,9 +13,9 @@ describe("Binding", function () {
         function () {
             // arrange
             var elt = new TagElement("div").attr("title", compile("@name"));
-            var binding = new Binding(elt, xania);
+            var binding = new TagBinding(elt, xania);
             // act
-            var dom = binding.init()[0];
+            var dom = binding.renderTag();
             // assert
             expect(dom.attributes['title'].value).toEqual("Xania");
             expect(dom.tagName).toEqual("DIV");
@@ -27,9 +27,9 @@ describe("Binding", function () {
             var childEl = new TagElement("span");
             elt.addChild(childEl);
             childEl.attr("title", compile("t:@name"));
-            var binding = new Binding(elt, xania);
+            var binding = new TagBinding(elt, xania);
             // act
-            var dom = binding.init()[0];
+            var dom = binding.init().dom;
             // assert
             expect(dom.childNodes.length).toEqual(1);
             expect(dom.childNodes[0].attributes['title'].value).toEqual("t:Xania");
@@ -42,13 +42,12 @@ describe("Binding", function () {
             elt.addChild(childEl);
             childEl.attr("title", compile("C:@emp.firstName-B:@b.name-A:@org.name"));
             childEl.for("emp in b.employees");
-            var binding = new Binding(elt, { "org": xania });
             // act
-            var view = binding.init();
+            var bindings = Binding.create(elt, { "org": Company.xania() });
             // assert
-            expect(view.length).toEqual(1);
-            expect(view[0].childNodes.length).toEqual(3);
-            expect(view[0].childNodes[0].attributes['title'].value).toEqual("C:Ibrahim-B:Xania-A:Xania");
+            expect(bindings.length).toEqual(1);
+            expect(bindings[0].dom.childNodes.length).toEqual(3);
+            expect(bindings[0].dom.childNodes[0].attributes['title'].value).toEqual("C:Ibrahim-B:Xania-A:Xania");
         });
     it("should support promises",
         function () {
@@ -57,9 +56,9 @@ describe("Binding", function () {
             elt.for("x in url('Xania')");
             elt.attr("title", compile("@x"));
             var url = function (href) { return { then: function (res) { res(href); } } };
-            var binding = new Binding(elt, { url: url });
             // act
-            var dom = binding.init()[0];
+            var bindings = Binding.create(elt, { url: url });
+            var dom = bindings[0].dom;
             // assert
             expect(dom.attributes['title'].value).toEqual("Xania");
         });
@@ -67,15 +66,12 @@ describe("Binding", function () {
         function () {
             // arrange
             var elt = new TagElement("div");
-            var loader = {
-                "import": function (type) { return Company; }
-            };
-            var binder = new Binder(loader, null);
-            elt.for(binder.createExpr("x:Company in [{name: 'Xania'}]"));
+            var loader = function(type) { return Company; };
+            elt.for("x:Company in [{name: 'Xania'}]", loader);
             elt.attr("title", compile("@x.getName()"));
-            var binding = new Binding(elt, { loader: loader });
             // act
-            var dom = binding.init()[0];
+            var bindings = Binding.create(elt, { loader: loader });
+            var dom = bindings[0].dom;
             // assert
             expect(dom.attributes['title'].value).toEqual("Xania");
         });
@@ -85,27 +81,22 @@ describe("Binding", function () {
             var elt = new TagElement("div")
                 .for("x in arr.map(bracket)")
                 .attr("title", compile("@x"));
-            var binding = new Binding(elt, { arr: ["Xania"], bracket: function (x) { return "[" + x + "]" } });
+            var model = { arr: ["Xania"], bracket: function(x) { return "[" + x + "]" } };
             // act
-            var view = binding.init();
+            var bindings = Binding.create(elt, model);
             // assert
-            expect(view[0].attributes['title'].value).toEqual("[Xania]");
+            expect(bindings[0].dom.attributes["title"].value).toEqual("[Xania]");
         });
-    it("should count of elements of simple template",
-        function () {
-            // arrange
-            var binding =
-                new TagElement("div")
-                    .addChild(new TextContext(compile("@comp.title")))
-                    .addChild(new TagElement("span")
-                        .for("emp in comp.employees"))
-                    .bind([{ comp: xania }, { comp: Company.globalgis() }]);
-            var elements = binding.init();
-            // act
-            binding.find(elements[0].childNodes[0]);
-            // assert
-            expect(binding.countElements()).toBe(2);
-        });
+});
+
+describe("Binder", function() {
+    it("should determine dependencies", function () {
+        var dependencies = [];
+        var px = Util.extend({ emp: new Employee() }, dependencies).create();
+        console.log(px.firstName);
+
+        console.log(dependencies);
+    });
 });
 
 describe("Template Engine", function () {
@@ -151,14 +142,14 @@ describe("Proxy", function () {
     it("should be able to proxy complex object",
         function () {
             var xania = Company.xania();
-            var proxy = Util.proxy(xania).create();
+            var proxy = Util.extend(xania).create();
 
             expect(proxy.getName()).toEqual("Xania");
         });
     it("should be able to proxy instance object",
         function () {
             var b = { test: 1, test2: function () { return 2 }, bla: "bla" };
-            var proxy = Util.proxy(b);
+            var proxy = Util.extend(b);
             proxy.prop("xprop", function () { return 'x'; });
             var t = proxy.create();
 
@@ -172,68 +163,30 @@ describe("Proxy", function () {
         });
     it("should be able to map on primitive as it was an array",
         function () {
-            var obj = Util.proxy(1).create();
+            var obj = Util.extend(1).create();
             expect(typeof (obj.map)).toEqual("function");
             var result = obj.map(function (x) { return x + 1 });
             expect(result).toEqual([2]);
         });
     it("should be able to map on array",
         function () {
-            var obj = Util.proxy([1, 2]).create();
+            var obj = Util.extend([1, 2]).create();
             expect(typeof (obj.map)).toEqual("function");
             var result = obj.map(function (x) { return x + 1 });
             expect(result).toEqual([2, 3]);
         });
     it("should be able to proxy a proxy",
         function () {
-            var parent = Util.proxy({ a: 1 }).create();
-            var obj = Util.proxy(parent).create();
+            var parent = Util.extend({ a: 1 }).create();
+            var obj = Util.extend(parent).create();
             expect(obj.a).toEqual(1);
         });
     it("should be able to extend given type",
         function () {
-            var company = Util.proxy(Company)
+            var company = Util.extend(Company)
                 .init({ "name": 123 })
                 .create();
             expect(company.getName()).toEqual(123);
-        });
-});
-
-describe("Array skip", function () {
-    var arr = new SkipArray([1, 2, 3, 4], 1);
-
-    it("should adjust length of the arr",
-        function () {
-            expect(arr.length).toBe(3);
-        });
-
-    it("should adjust index of the arr",
-        function () {
-            expect(arr.indexOf(2)).toBe(0);
-        });
-
-    it("should adjust element at the arr",
-        function () {
-            expect(arr.elementAt(0)).toBe(2);
-        });
-});
-
-describe("Reverse skip", function () {
-    var arr = new ReverseArray([1, 2, 3, 4]);
-
-    it("should not adjust length of the arr",
-        function () {
-            expect(arr.length).toBe(4);
-        });
-
-    it("should adjust index of the arr",
-        function () {
-            expect(arr.indexOf(2)).toBe(2);
-        });
-
-    it("should adjust element at the arr",
-        function () {
-            expect(arr.elementAt(0)).toBe(4);
         });
 });
 

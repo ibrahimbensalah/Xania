@@ -25,6 +25,12 @@
         throw new Error("Abstract method Binding.update");
     }
 
+    static create(tpl, context) {
+        var results = [];
+        Binding.createAsync(tpl, context).then(results.push.bind(results));
+        return results;
+    }
+
     static createAsync(tpl: IDomTemplate, context) {
         return {
             then(resolve) {

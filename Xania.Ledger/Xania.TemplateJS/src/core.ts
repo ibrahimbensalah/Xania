@@ -122,17 +122,21 @@ class SelectManyExpression {
             source = ensureIsArray(context),
             viewModel = this.viewModel;
 
+        const itemHandler = (src, item) => {
+            const p = Util.extend(src);
+            p.prop(this.varName, (x => {
+                return typeof viewModel !== "undefined" && viewModel !== null
+                    ? Util.extend(viewModel).init(x).create()
+                    : x;
+            }).bind(this, item));
+            var obj = p.create();
+            resolve(obj);
+        };
         const arrayHandler = (src, data) => {
-            var arr = ensureIsArray(data);
-            for (let e = 0; e < arr.length; e++) {
-                const p = Util.proxy(src);
-                p.prop(this.varName, (x => {
-                    return typeof viewModel !== "undefined" && viewModel !== null
-                        ? Util.proxy(viewModel).init(x).create()
-                        : x;
-                }).bind(this, arr[e]));
-                var obj = p.create();
-                resolve(obj);
+            if (typeof data.map === "function") {
+                data.map(item => itemHandler(src, item));
+            } else {
+                itemHandler(src, data);
             }
         };
 
@@ -168,6 +172,18 @@ class SelectManyExpression {
         return Array.isArray(obj) ? obj : [obj];
     }
 }
+
+class Value {
+    private obj;
+    constructor(obj) {
+        this.obj = obj;
+    }
+
+    valueOf() {
+        return this.obj;
+    }
+}
+
 
 class Map<T> {
     private items = {};
@@ -263,13 +279,28 @@ class Util {
         };
     }
 
-    static proxy(B) {
+    static extend(B, listener: any = undefined) {
         function Proxy() {
+        }
+
+        function notify(prop) {
+            if (typeof listener === "function")
+                listener(prop);
         }
 
         function getter(prop) {
             // ReSharper disable once SuspiciousThisUsage
-            return this[prop];
+            var value = this[prop];
+            if (typeof value == "number" || typeof value == "boolean" || typeof value == "string") {
+                notify(prop);
+            } else if (typeof value === "object") {
+                return Util.extend(value,
+                    x => {
+                        notify(prop + "." + x);
+                    })
+                    .create();
+            }
+            return value;
         }
 
         function __() {
@@ -294,11 +325,14 @@ class Util {
                 else
                     return fn(self, 0);
             };
+            Proxy.prototype.valueOf = () => B;
+
             Object.defineProperty(Proxy.prototype, "length", {
                 get: () => {
-                    if (typeof B.length === "number")
+                    if (typeof B.length === "number") {
+                        notify("length");
                         return B.length;
-                    else
+                    } else
                         return 1;
                 },
                 enumerable: true,

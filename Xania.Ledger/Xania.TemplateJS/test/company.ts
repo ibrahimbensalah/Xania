@@ -53,6 +53,10 @@ class Company extends A {
     getName() {
         return this.name;
     }
+
+    count() {
+        return this.employees.length;
+    }
 }
 class Url {
     static dummy(x) {

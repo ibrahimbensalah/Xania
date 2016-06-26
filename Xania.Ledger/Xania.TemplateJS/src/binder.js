@@ -26,6 +26,11 @@ var Binding = (function () {
     Binding.prototype.init = function () {
         throw new Error("Abstract method Binding.update");
     };
+    Binding.create = function (tpl, context) {
+        var results = [];
+        Binding.createAsync(tpl, context).then(results.push.bind(results));
+        return results;
+    };
     Binding.createAsync = function (tpl, context) {
         return {
             then: function (resolve) {

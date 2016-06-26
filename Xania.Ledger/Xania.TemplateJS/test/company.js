@@ -69,6 +69,9 @@ var Company = (function (_super) {
     Company.prototype.getName = function () {
         return this.name;
     };
+    Company.prototype.count = function () {
+        return this.employees.length;
+    };
     return Company;
 })(A);
 var Url = (function () {

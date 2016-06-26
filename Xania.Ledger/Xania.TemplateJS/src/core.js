@@ -94,17 +94,22 @@ var SelectManyExpression = (function () {
     SelectManyExpression.prototype.executeAsync = function (context, resolve) {
         var _this = this;
         var ensureIsArray = SelectManyExpression.ensureIsArray, source = ensureIsArray(context), viewModel = this.viewModel;
+        var itemHandler = function (src, item) {
+            var p = Util.extend(src);
+            p.prop(_this.varName, (function (x) {
+                return typeof viewModel !== "undefined" && viewModel !== null
+                    ? Util.extend(viewModel).init(x).create()
+                    : x;
+            }).bind(_this, item));
+            var obj = p.create();
+            resolve(obj);
+        };
         var arrayHandler = function (src, data) {
-            var arr = ensureIsArray(data);
-            for (var e = 0; e < arr.length; e++) {
-                var p = Util.proxy(src);
-                p.prop(_this.varName, (function (x) {
-                    return typeof viewModel !== "undefined" && viewModel !== null
-                        ? Util.proxy(viewModel).init(x).create()
-                        : x;
-                }).bind(_this, arr[e]));
-                var obj = p.create();
-                resolve(obj);
+            if (typeof data.map === "function") {
+                data.map(function (item) { return itemHandler(src, item); });
+            }
+            else {
+                itemHandler(src, data);
             }
         };
         var collectionFunc = new Function("m", "with(m) { return " + this.collectionExpr + "; }");
@@ -133,6 +138,15 @@ var SelectManyExpression = (function () {
         return Array.isArray(obj) ? obj : [obj];
     };
     return SelectManyExpression;
+})();
+var Value = (function () {
+    function Value(obj) {
+        this.obj = obj;
+    }
+    Value.prototype.valueOf = function () {
+        return this.obj;
+    };
+    return Value;
 })();
 var Map = (function () {
     function Map() {
@@ -228,12 +242,27 @@ var Util = (function () {
             return result;
         };
     };
-    Util.proxy = function (B) {
+    Util.extend = function (B, listener) {
+        if (listener === void 0) { listener = undefined; }
         function Proxy() {
+        }
+        function notify(prop) {
+            if (typeof listener === "function")
+                listener(prop);
         }
         function getter(prop) {
             // ReSharper disable once SuspiciousThisUsage
-            return this[prop];
+            var value = this[prop];
+            if (typeof value == "number" || typeof value == "boolean" || typeof value == "string") {
+                notify(prop);
+            }
+            else if (typeof value === "object") {
+                return Util.extend(value, function (x) {
+                    notify(prop + "." + x);
+                })
+                    .create();
+            }
+            return value;
         }
         function __() {
             // ReSharper disable once SuspiciousThisUsage
@@ -258,10 +287,13 @@ var Util = (function () {
                 else
                     return fn(self, 0);
             };
+            Proxy.prototype.valueOf = function () { return B; };
             Object.defineProperty(Proxy.prototype, "length", {
                 get: function () {
-                    if (typeof B.length === "number")
+                    if (typeof B.length === "number") {
+                        notify("length");
                         return B.length;
+                    }
                     else
                         return 1;
                 },

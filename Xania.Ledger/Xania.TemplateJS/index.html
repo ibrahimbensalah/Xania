@@ -54,23 +54,14 @@
 
         var compile = TemplateEngine.compile;
         var debugtest = function () {
-            // arrange
-            var elements = [];
-            var bindings =
-                new TagElement("div")
-                    .addChild(new TextContent(compile("@comp.name")))
-                    .addChild(new TagElement("span")
-                        .for("emp in comp.employees"))
-                    .bindAsync([{ comp: Company.xania() }, { comp: Company.globalgis() }], elements.push.bind(elements));
-            // act
-            find(bindings, elements, [elements[0].childNodes[0], elements[0]]);
-            find(bindings, elements, [elements[0].childNodes[1], elements[0]]);
-            find(bindings, elements, [elements[0].childNodes[2], elements[0]]);
+            var deps = [];
+            var px = Util.extend(Company.xania(), deps.push.bind(deps)).create();
+            console.log(px.count());
+            console.log(deps);
         }
 
 
-        // debugtest();
-
+        debugtest();
     </script>
 </body>
 </html>
