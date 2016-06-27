@@ -133,8 +133,8 @@ describe("Select Many Expression", function () {
             var expr = SelectManyExpression.parse("emp in {n: org.name}");
             var result = expr.execute({ org: xania });
             expect(result.length).toEqual(1);
-            expect(result[0].emp.n).toEqual("Xania");
-            expect(result[0].org).toEqual(xania);
+            expect(result[0].emp.n).toEqual(xania.name);
+            expect(result[0].org.name).toEqual(xania.name);
         });
 });
 
@@ -166,7 +166,7 @@ describe("Proxy", function () {
             var obj = Util.extend(1).create();
             expect(typeof (obj.map)).toEqual("function");
             var result = obj.map(function (x) { return x + 1 });
-            expect(result).toEqual([2]);
+            expect(result).toEqual(2);
         });
     it("should be able to map on array",
         function () {
