@@ -66,7 +66,7 @@ describe("Binding", function () {
         function () {
             // arrange
             var elt = new TagElement("div");
-            var loader = function(type) { return Company; };
+            var loader = function (type) { return Company; };
             elt.for("x:Company in [{name: 'Xania'}]", loader);
             elt.attr("title", compile("@x.getName()"));
             // act
@@ -81,7 +81,7 @@ describe("Binding", function () {
             var elt = new TagElement("div")
                 .for("x in arr.map(bracket)")
                 .attr("title", compile("@x"));
-            var model = { arr: ["Xania"], bracket: function(x) { return "[" + x + "]" } };
+            var model = { arr: ["Xania"], bracket: function (x) { return "[" + x + "]" } };
             // act
             var bindings = Binding.create(elt, model);
             // assert
@@ -89,7 +89,7 @@ describe("Binding", function () {
         });
 });
 
-describe("Binder", function() {
+describe("Binder", function () {
     it("should determine dependencies", function () {
         var dependencies = [];
         var px = Util.extend({ emp: new Employee() }, dependencies).create();
@@ -187,6 +187,53 @@ describe("Proxy", function () {
                 .init({ "name": 123 })
                 .create();
             expect(company.getName()).toEqual(123);
+        });
+});
+
+describe("spy", function () {
+    it("should return getter value",
+        function () {
+            // arrange
+            var employee = new Employee("Ibrahim", "ben Salah");
+            var spy = Util.spy(employee);
+            // act
+            var instance = spy.create();
+            // assert
+            expect(instance.firstName).toEqual("Ibrahim");
+        });
+});
+
+describe("dependencies", function () {
+    var arr = [];
+    for (var i = 0; i < 1000; i++) {
+        arr.push(new Employee("Ibrahim " + i, "ben Salah " + i));
+    }
+    var bigCompany = new Company("Xania", arr);
+
+    it("should return getter value",
+        function () {
+            // arrange
+            var employee = new Employee("Ibrahim", "ben Salah");
+            var deps = [];
+            // act
+            var fullName = Util.observeProperties(employee, deps).fullName;
+            // assert
+            expect(fullName).toEqual("Ibrahim ben Salah");
+            expect(deps).toEqual(["firstName", "lastName"]);
+        });
+});
+
+describe("partial application", function () {
+
+    function func(x, y, z) {
+        console.log(arguments);
+        return x + (y * z);
+    }
+
+    it("should accept partial args",
+        function () {
+            var partial = Util.partialApp(func, 1, 2);
+            expect(partial(2)).toEqual(5);
         });
 });
 

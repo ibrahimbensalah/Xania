@@ -11,7 +11,7 @@ var Binding = (function () {
     }
     Binding.executeAsync = function (tpl, context, resolve) {
         var model = !!tpl.modelAccessor ? tpl.modelAccessor(context) : context, iter = function (data) {
-            Util.map(resolve, data);
+            Xania.map(resolve, data);
         };
         if (typeof (model.then) === "function") {
             model.then(iter);
@@ -49,12 +49,17 @@ var ContentBinding = (function (_super) {
     function ContentBinding(tpl, context, idx) {
         _super.call(this, context, idx);
         this.tpl = tpl;
+        this.deps = [];
     }
     ContentBinding.prototype.update = function () {
         this.dom.textContent = this.tpl.execute(this.context);
     };
     ContentBinding.prototype.init = function () {
-        var text = this.tpl.execute(this.context);
+        debugger;
+        var deps = [];
+        var prx = Xania.observe(this.context, deps);
+        var text = this.tpl.execute(prx);
+        console.log(this.tpl.toString(), this.context, deps);
         this.dom = document.createTextNode(text);
         return this;
     };
@@ -131,7 +136,7 @@ var Binder = (function () {
     Binder.prototype.bind = function (rootDom, model, target) {
         target = target || document.body;
         var tpl = this.parseDom(rootDom);
-        var proxy = model; //Util.proxy(model).create();
+        var proxy = model;
         var rootBindings = [];
         Binding.createAsync(tpl, proxy)
             .then(function (rootBinding) {
@@ -187,22 +192,7 @@ var Binder = (function () {
                 }
             }
         };
-        // target.addEventListener("keypress", onchange);
         target.addEventListener("keyup", onchange);
-        // target.addEventListener("keydown", onchange);
-        //function updateChildren(binding, node) {
-        //    var stack = [{ b: binding, node: node }];
-        //    while (stack.length > 0) {
-        //        var cur = stack.pop();
-        //        cur.b.update();
-        //        for (let i = 0; i < cur.b.children.length && i < cur.node.childNodes.length; i++) {
-        //            const b = cur.b.children[i];
-        //            const child = cur.node.childNodes[i];
-        //            stack.push({ b: b, node: child });
-        //        }
-        //    }
-        //}
-        //return result;
     };
     Binder.prototype.parseDom = function (rootDom) {
         var stack = [];
@@ -248,7 +238,6 @@ var TemplateEngine = (function () {
         }
         var template = input.replace(/\n/g, "\\\n");
         var params = "";
-        // var returnExpr = template.replace(/@([a-z_][\.a-z0-9_]*)/gim, (a, b) => {
         var returnExpr = template.replace(/@([\w\(\)\.]+)/gim, function (a, b) {
             var paramIdx = "arg" + params.length;
             params += "var " + paramIdx + " = " + b + ";";

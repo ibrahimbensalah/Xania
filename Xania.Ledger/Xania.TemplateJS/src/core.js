@@ -10,6 +10,9 @@ var TextContent = (function () {
     TextContent.prototype.bind = function (model, idx) {
         return new ContentBinding(this, model, idx);
     };
+    TextContent.prototype.toString = function () {
+        return this.tpl.toString();
+    };
     return TextContent;
 })();
 var TagElement = (function () {
@@ -18,9 +21,8 @@ var TagElement = (function () {
         this.attributes = new Map();
         this.events = new Map();
         this.data = new Map();
-        // ReSharper disable once InconsistentNaming
         this._children = [];
-        this.modelAccessor = Util.identity;
+        this.modelAccessor = Xania.identity;
     }
     TagElement.prototype.children = function () {
         return this._children;
@@ -95,10 +97,10 @@ var SelectManyExpression = (function () {
         var _this = this;
         var ensureIsArray = SelectManyExpression.ensureIsArray, source = ensureIsArray(context), viewModel = this.viewModel;
         var itemHandler = function (src, item) {
-            var p = Util.extend(src);
+            var p = Xania.extend(src);
             p.prop(_this.varName, (function (x) {
                 return typeof viewModel !== "undefined" && viewModel !== null
-                    ? Util.extend(viewModel).init(x).create()
+                    ? Xania.extend(viewModel).init(x).create()
                     : x;
             }).bind(_this, item));
             var obj = p.create();
@@ -127,7 +129,6 @@ var SelectManyExpression = (function () {
         if (loader === void 0) { loader = function (t) { return window[t]; }; }
         var m = expr.match(/^(\w+)(\s*:\s*(\w+))?\s+in\s+((\w+)\s*:\s*)?(.*)$/i);
         if (!!m) {
-            // ReSharper disable once UnusedLocals
             var varName = m[1], itemType = m[3], directive = m[5], collectionExpr = m[6];
             var viewModel = loader(itemType);
             return new SelectManyExpression(varName, viewModel, collectionExpr, loader);
@@ -173,19 +174,17 @@ var Map = (function () {
     };
     return Map;
 })();
-// ReSharper disable InconsistentNaming
-var Util = (function () {
-    function Util() {
+var Xania = (function () {
+    function Xania() {
     }
-    Util.identity = function (x) {
+    Xania.identity = function (x) {
         return x;
     };
-    Util.map = function (fn, data) {
+    Xania.map = function (fn, data) {
         if (typeof data.map === "function") {
             data.map(fn);
         }
         else if (Array.isArray(data)) {
-            // var result = [];
             for (var i = 0; i < data.length; i++) {
                 fn.call(this, data[i], i);
             }
@@ -194,7 +193,7 @@ var Util = (function () {
             fn.call(this, data, 0);
         }
     };
-    Util.collect = function (fn, data) {
+    Xania.collect = function (fn, data) {
         if (Array.isArray(data)) {
             var result = [];
             for (var i = 0; i < data.length; i++) {
@@ -207,19 +206,19 @@ var Util = (function () {
             return [fn.call(this, data)];
         }
     };
-    Util.count = function (data) {
+    Xania.count = function (data) {
         if (data === null || typeof data === "undefined")
             return 0;
         return !!data.length ? data.length : 1;
     };
-    Util.uuid = function () {
-        if (!Util.lut) {
-            Util.lut = [];
+    Xania.uuid = function () {
+        if (!Xania.lut) {
+            Xania.lut = [];
             for (var i = 0; i < 256; i++) {
-                Util.lut[i] = (i < 16 ? '0' : '') + (i).toString(16);
+                Xania.lut[i] = (i < 16 ? '0' : '') + (i).toString(16);
             }
         }
-        var lut = Util.lut;
+        var lut = Xania.lut;
         var d0 = Math.random() * 0xffffffff | 0;
         var d1 = Math.random() * 0xffffffff | 0;
         var d2 = Math.random() * 0xffffffff | 0;
@@ -229,43 +228,159 @@ var Util = (function () {
             lut[d2 & 0x3f | 0x80] + lut[d2 >> 8 & 0xff] + '-' + lut[d2 >> 16 & 0xff] + lut[d2 >> 24 & 0xff] +
             lut[d3 & 0xff] + lut[d3 >> 8 & 0xff] + lut[d3 >> 16 & 0xff] + lut[d3 >> 24 & 0xff];
     };
-    Util.compose = function () {
+    Xania.compose = function () {
         var fns = [];
         for (var _i = 0; _i < arguments.length; _i++) {
             fns[_i - 0] = arguments[_i];
         }
         return function (result) {
             for (var i = fns.length - 1; i > -1; i--) {
-                // ReSharper disable once SuspiciousThisUsage
                 result = fns[i].call(this, result);
             }
             return result;
         };
     };
-    Util.extend = function (B, listener) {
-        if (listener === void 0) { listener = undefined; }
-        function Proxy() {
+    Xania.partialApp = function (fn) {
+        var partialArgs = [];
+        for (var _i = 1; _i < arguments.length; _i++) {
+            partialArgs[_i - 1] = arguments[_i];
         }
-        function notify(prop) {
-            if (typeof listener === "function")
-                listener(prop);
+        return function () {
+            var additionalArgs = [];
+            for (var _i = 0; _i < arguments.length; _i++) {
+                additionalArgs[_i - 0] = arguments[_i];
+            }
+            var args = [].concat(partialArgs, additionalArgs);
+            return fn.apply(this, args);
+        };
+    };
+    Xania.observe = function (target, listener) {
+        listener = Array.isArray(listener) ? listener.push.bind(listener) : listener;
+        if (!target || typeof target !== "object")
+            return target;
+        if (Array.isArray(target))
+            return Xania.observeArray(target, listener);
+        else
+            return Xania.observeObject(target, listener);
+    };
+    Xania.observeArray = function (target, listener) {
+        var ProxyConst = window["Proxy"];
+        return new ProxyConst(target, {
+            get: function (target, idx) {
+                listener("" + idx);
+                var value = target[idx];
+                return Xania.observe(value, function (member) {
+                    listener(idx + "." + member);
+                });
+            }
+        });
+    };
+    Xania.observeObject = function (target, listener) {
+        function Spy() { }
+        function __() {
+            this.constructor = Spy;
         }
-        function getter(prop) {
-            // ReSharper disable once SuspiciousThisUsage
-            var value = this[prop];
-            if (typeof value == "number" || typeof value == "boolean" || typeof value == "string") {
-                notify(prop);
-            }
-            else if (typeof value === "object") {
-                return Util.extend(value, function (x) {
-                    notify(prop + "." + x);
-                })
-                    .create();
-            }
-            return value;
+        ;
+        if (target.constructor !== Object) {
+            __.prototype = target.constructor.prototype;
+            Spy.prototype = new __();
+        }
+        var props = Object.getOwnPropertyNames(target);
+        for (var i = 0; i < props.length; i++) {
+            var prop = props[i];
+            Object.defineProperty(Spy.prototype, prop, {
+                get: Xania.partialApp(function (obj, name) {
+                    listener(name);
+                    return Xania.observe(obj[name], function (member) {
+                        listener(name + "." + member);
+                    });
+                }, target, prop),
+                enumerable: true,
+                configurable: true
+            });
+        }
+        return new Spy;
+    };
+    Xania.spy = function (obj) {
+        var calls = [];
+        var children = {};
+        function Spy() {
         }
         function __() {
-            // ReSharper disable once SuspiciousThisUsage
+            this.constructor = Spy;
+        }
+        ;
+        __.prototype.valueOf = function () { return obj; };
+        function child(name, value) {
+            if (typeof value == "number" || typeof value == "boolean" || typeof value == "string") {
+                return value;
+            }
+            var ch = Xania.spy(value);
+            children[name] = ch;
+            return ch.create();
+        }
+        var props = Object.getOwnPropertyNames(obj);
+        for (var i = 0; i < props.length; i++) {
+            var prop = props[i];
+            if (obj.hasOwnProperty(prop)) {
+                Object.defineProperty(Spy.prototype, prop, {
+                    get: Xania.partialApp(function (obj, name) {
+                        calls.push(name);
+                        var value = obj[name];
+                        if (typeof value == "number" || typeof value == "boolean" || typeof value == "string") {
+                            calls.push(name);
+                            return value;
+                        }
+                        return child(name, value);
+                    }, obj, prop),
+                    enumerable: true,
+                    configurable: true
+                });
+            }
+            else {
+                var desc = Object.getOwnPropertyDescriptor(obj.constructor.prototype, prop);
+                if (!!desc && !!desc.get) {
+                    Object.defineProperty(Spy.prototype, prop, {
+                        get: Xania.partialApp(function (desc, name) {
+                            return child(name, desc.get.call(this));
+                        }, desc, prop),
+                        enumerable: true,
+                        configurable: true
+                    });
+                }
+                else if (!!desc && !!desc.value) {
+                    Spy.prototype[prop] = desc.value;
+                }
+            }
+        }
+        var observable = new Spy();
+        return {
+            create: function () {
+                return observable;
+            },
+            calls: function () {
+                var result = [];
+                result.push.apply(result, calls);
+                var keys = Object.keys(children);
+                for (var i = 0; i < keys.length; i++) {
+                    var key = keys[i];
+                    var child = children[key];
+                    var childCalls = child.calls();
+                    for (var e = 0; e < childCalls.length; e++) {
+                        result.push(key + "." + childCalls[e]);
+                    }
+                }
+                return result;
+            }
+        };
+    };
+    Xania.extend = function (B) {
+        function Proxy() {
+        }
+        var getter = function (prop) {
+            return this[prop];
+        };
+        function __() {
             this.constructor = Proxy;
         }
         ;
@@ -278,9 +393,7 @@ var Util = (function () {
                 __.prototype = B.constructor.prototype;
                 Proxy.prototype = new __();
             }
-            // var arr = Array.isArray(B) ? B : [B];
             Proxy.prototype.map = function (fn) {
-                // ReSharper disable once SuspiciousThisUsage
                 var self = this;
                 if (typeof B.map === "function")
                     return B.map.call(self, fn);
@@ -288,11 +401,12 @@ var Util = (function () {
                     return fn(self, 0);
             };
             Proxy.prototype.valueOf = function () { return B; };
+            Proxy.prototype.toString = B.toString.bind(B);
             Object.defineProperty(Proxy.prototype, "length", {
                 get: function () {
-                    if (typeof B.length === "number") {
-                        notify("length");
-                        return B.length;
+                    var length = B.length;
+                    if (typeof length === "number") {
+                        return length;
                     }
                     else
                         return 1;
@@ -333,7 +447,6 @@ var Util = (function () {
         };
         return pub;
     };
-    return Util;
+    return Xania;
 })();
-// ReSharper restore InconsistentNaming
 //# sourceMappingURL=core.js.map

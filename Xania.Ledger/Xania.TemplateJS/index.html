@@ -21,6 +21,13 @@
 
     <div>
         <div id="content">
+            <ul data-for="o in xn">
+                <li data-for="emp in o.employees">
+                    @emp.fullName
+                </li>
+            </ul>
+        </div>
+        <div id="content2">
             <ul data-for="o:OrganisationViewModel in xn">
                 <li>@o.getName()</li>
                 <li data-for="emp in o.employees">
@@ -47,21 +54,51 @@
         var contentDiv = document.getElementById("content");
 
         var model = [];
-        for (var i = 0; i < 10; i++)
+        for (var i = 0; i < 1; i++)
             model.push({ xn: Company.xania() });
 
         binder.bind(contentDiv, model);
 
-        var compile = TemplateEngine.compile;
-        var debugtest = function () {
-            var deps = [];
-            var px = Util.extend(Company.xania(), deps.push.bind(deps)).create();
-            console.log(px.count());
-            console.log(deps);
+        for (var fn in Array.prototype) {
+            // if (Array.prototype.hasOwnProperty(fn)) {
+            console.log(fn);
+            Array.prototype[fn] = Util.partialApp(function (name, orig) {
+                console.log(name);
+                return orig.call(this, arguments);
+            }, fn, Array.prototype[fn]);
+            // }
         }
 
+        var compile = TemplateEngine.compile;
+        var debugtest = function () {
+            // arrange
+            var arr = [];
+            for (var i = 0; i < 1000; i++) {
+                arr.push(new Employee("Ibrahim " + i, "ben Salah " + i));
+            }
+            var bigCompany = new Company("Xania", arr);
 
-        debugtest();
+            for (var e = 0; e < 1000000; e++) {
+                var spy = new window.Proxy({ xn: bigCompany },
+                {
+                    get: function(target, name) {
+                        return target[name];
+                    }
+                });
+            }
+        }
+
+        // debugtest();
+
+        // arrange
+        var employee = new Employee("Ibrahim", "ben Salah");
+        var deps = [];
+        // act
+        var proxy = Xania.observe({ emp: [ employee ] }, deps);
+        var fullName = proxy.emp[0].getName();
+        // assert
+        console.log(fullName);
+        console.log(deps);
     </script>
 </body>
 </html>

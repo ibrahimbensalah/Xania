@@ -8,7 +8,7 @@
     public static executeAsync(tpl, context, resolve: any) {
         const model = !!tpl.modelAccessor ? tpl.modelAccessor(context) : context,
             iter = data => {
-                Util.map(resolve, data);
+                Xania.map(resolve, data);
             }
         if (typeof (model.then) === "function") {
             model.then(iter);
@@ -47,6 +47,7 @@
 
 class ContentBinding extends Binding {
     private dom;
+    private deps = [];
 
     constructor(private tpl: TextContent, context, idx: number) {
         super(context, idx);
@@ -57,7 +58,13 @@ class ContentBinding extends Binding {
     }
 
     init() {
-        var text = this.tpl.execute(this.context);
+        debugger;
+        var deps = [];
+        var prx = Xania.observe(this.context, deps);
+        var text = this.tpl.execute(prx);
+
+        console.log(this.tpl.toString(), this.context, deps);
+
         this.dom = document.createTextNode(text);
         return this;
     }

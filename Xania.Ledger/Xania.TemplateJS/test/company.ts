@@ -30,6 +30,10 @@ class Employee {
         this.roles[0].name = prefix;
         console.log(prefix + " : " + this.firstName);
     }
+
+    getName() {
+        return this.fullName;
+    }
 }
 class Company extends A {
     public constructor(public name: string, public employees: Employee[]) {
