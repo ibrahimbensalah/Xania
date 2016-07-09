@@ -92,7 +92,7 @@ describe("Binding", function () {
 describe("Binder", function () {
     it("should determine dependencies", function () {
         var dependencies = [];
-        var px = Util.extend({ emp: new Employee() }, dependencies).create();
+        var px = Xania.extend({ emp: new Employee() }, dependencies).create();
         console.log(px.firstName);
 
         console.log(dependencies);
@@ -142,14 +142,14 @@ describe("Proxy", function () {
     it("should be able to proxy complex object",
         function () {
             var xania = Company.xania();
-            var proxy = Util.extend(xania).create();
+            var proxy = Xania.extend(xania).create();
 
             expect(proxy.getName()).toEqual("Xania");
         });
     it("should be able to proxy instance object",
         function () {
             var b = { test: 1, test2: function () { return 2 }, bla: "bla" };
-            var proxy = Util.extend(b);
+            var proxy = Xania.extend(b);
             proxy.prop("xprop", function () { return 'x'; });
             var t = proxy.create();
 
@@ -163,39 +163,54 @@ describe("Proxy", function () {
         });
     it("should be able to map on primitive as it was an array",
         function () {
-            var obj = Util.extend(1).create();
+            var obj = Xania.extend(1).create();
             expect(typeof (obj.map)).toEqual("function");
             var result = obj.map(function (x) { return x + 1 });
             expect(result).toEqual(2);
         });
     it("should be able to map on array",
         function () {
-            var obj = Util.extend([1, 2]).create();
+            var obj = Xania.extend([1, 2]).create();
             expect(typeof (obj.map)).toEqual("function");
             var result = obj.map(function (x) { return x + 1 });
             expect(result).toEqual([2, 3]);
         });
     it("should be able to proxy a proxy",
         function () {
-            var parent = Util.extend({ a: 1 }).create();
-            var obj = Util.extend(parent).create();
+            var parent = Xania.extend({ a: 1 }).create();
+            var obj = Xania.extend(parent).create();
             expect(obj.a).toEqual(1);
         });
     it("should be able to extend given type",
         function () {
-            var company = Util.extend(Company)
+            var company = Xania.extend(Company)
                 .init({ "name": 123 })
                 .create();
             expect(company.getName()).toEqual(123);
         });
 });
 
+describe("shallow copy",
+    function () {
+        var xania = Company.xania();
+        it("should create new object",
+            function () {
+                var copy = Xania.shallow(xania);
+                expect(copy).not.toEqual(xania);
+            });
+        it("should reuse referenced objects",
+            function () {
+                var copy = Xania.shallow(xania);
+                expect(copy.employees).toEqual(xania.employees);
+            });
+    });
+
 describe("spy", function () {
     it("should return getter value",
         function () {
             // arrange
             var employee = new Employee("Ibrahim", "ben Salah");
-            var spy = Util.spy(employee);
+            var spy = Xania.spy(employee);
             // act
             var instance = spy.create();
             // assert
@@ -216,7 +231,7 @@ describe("dependencies", function () {
             var employee = new Employee("Ibrahim", "ben Salah");
             var deps = [];
             // act
-            var fullName = Util.observeProperties(employee, deps).fullName;
+            var fullName = Xania.observe(employee, deps).fullName;
             // assert
             expect(fullName).toEqual("Ibrahim ben Salah");
             expect(deps).toEqual(["firstName", "lastName"]);
@@ -232,7 +247,7 @@ describe("partial application", function () {
 
     it("should accept partial args",
         function () {
-            var partial = Util.partialApp(func, 1, 2);
+            var partial = Xania.partialApp(func, 1, 2);
             expect(partial(2)).toEqual(5);
         });
 });

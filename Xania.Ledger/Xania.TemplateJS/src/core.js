@@ -96,32 +96,29 @@ var SelectManyExpression = (function () {
     SelectManyExpression.prototype.executeAsync = function (context, resolve) {
         var _this = this;
         var ensureIsArray = SelectManyExpression.ensureIsArray, source = ensureIsArray(context), viewModel = this.viewModel;
-        var itemHandler = function (src, item) {
-            var p = Xania.extend(src);
-            p.prop(_this.varName, (function (x) {
-                return typeof viewModel !== "undefined" && viewModel !== null
-                    ? Xania.extend(viewModel).init(x).create()
-                    : x;
-            }).bind(_this, item));
-            var obj = p.create();
-            resolve(obj);
+        var itemHandler = function (item) {
+            var result = Xania.shallow(context);
+            result[_this.varName] = typeof viewModel !== "undefined" && viewModel !== null
+                ? Xania.extend(viewModel).init(item).create()
+                : item;
+            resolve(result);
         };
-        var arrayHandler = function (src, data) {
+        var arrayHandler = function (data) {
             if (typeof data.map === "function") {
-                data.map(function (item) { return itemHandler(src, item); });
+                data.map(itemHandler);
             }
             else {
-                itemHandler(src, data);
+                itemHandler(data);
             }
         };
         var collectionFunc = new Function("m", "with(m) { return " + this.collectionExpr + "; }");
         for (var i = 0; i < source.length; i++) {
             var col = collectionFunc(source[i]);
             if (typeof (col.then) === "function") {
-                col.then(arrayHandler.bind(this, source[i]));
+                col.then(arrayHandler.bind(this));
             }
             else {
-                arrayHandler.call(this, source[i], col);
+                arrayHandler.call(this, col);
             }
         }
     };
@@ -446,6 +443,10 @@ var Xania = (function () {
             }
         };
         return pub;
+    };
+    Xania.shallow = function (obj) {
+        var assign = Object.assign;
+        return assign({}, obj);
     };
     return Xania;
 })();

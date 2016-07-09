@@ -8,7 +8,12 @@ var Binding = (function () {
     function Binding(context, idx) {
         this.context = context;
         this.idx = idx;
+        this.deps = [];
     }
+    Binding.prototype.addDependency = function (path) {
+        console.log(path);
+        this.deps.push(path);
+    };
     Binding.executeAsync = function (tpl, context, resolve) {
         var model = !!tpl.modelAccessor ? tpl.modelAccessor(context) : context, iter = function (data) {
             Xania.map(resolve, data);
@@ -49,17 +54,13 @@ var ContentBinding = (function (_super) {
     function ContentBinding(tpl, context, idx) {
         _super.call(this, context, idx);
         this.tpl = tpl;
-        this.deps = [];
     }
     ContentBinding.prototype.update = function () {
         this.dom.textContent = this.tpl.execute(this.context);
     };
     ContentBinding.prototype.init = function () {
-        debugger;
-        var deps = [];
-        var prx = Xania.observe(this.context, deps);
-        var text = this.tpl.execute(prx);
-        console.log(this.tpl.toString(), this.context, deps);
+        var observable = Xania.observe(this.context, _super.prototype.addDependency.bind(this));
+        var text = this.tpl.execute(observable);
         this.dom = document.createTextNode(text);
         return this;
     };
@@ -136,9 +137,8 @@ var Binder = (function () {
     Binder.prototype.bind = function (rootDom, model, target) {
         target = target || document.body;
         var tpl = this.parseDom(rootDom);
-        var proxy = model;
         var rootBindings = [];
-        Binding.createAsync(tpl, proxy)
+        Binding.createAsync(tpl, model)
             .then(function (rootBinding) {
             rootBindings.push(rootBinding);
             target.appendChild(rootBinding.dom);

@@ -1,8 +1,14 @@
 ﻿class Binding {
     private data;
     private parent: Binding;
+    private deps: string[] = [];
 
     constructor(public context, private idx: number) {
+    }
+
+    protected addDependency(path) {
+        console.log(path);
+        this.deps.push(path);
     }
 
     public static executeAsync(tpl, context, resolve: any) {
@@ -37,17 +43,16 @@
                 Binding.executeAsync(tpl, context, (model, idx) => {
                     if (typeof idx == "undefined")
                         throw new Error("model idx is not defined");
-
                     resolve(tpl.bind(model, idx).init());
                 });
             }
         };
     }
+
 }
 
 class ContentBinding extends Binding {
     private dom;
-    private deps = [];
 
     constructor(private tpl: TextContent, context, idx: number) {
         super(context, idx);
@@ -58,13 +63,9 @@ class ContentBinding extends Binding {
     }
 
     init() {
-        debugger;
-        var deps = [];
-        var prx = Xania.observe(this.context, deps);
-        var text = this.tpl.execute(prx);
+        var observable = Xania.observe(this.context, super.addDependency.bind(this));
 
-        console.log(this.tpl.toString(), this.context, deps);
-
+        var text = this.tpl.execute(observable);
         this.dom = document.createTextNode(text);
         return this;
     }
@@ -150,10 +151,8 @@ class Binder {
         target = target || document.body;
         var tpl = this.parseDom(rootDom);
 
-        var proxy = model;//Util.proxy(model).create();
-
         var rootBindings = [];
-        Binding.createAsync(tpl, proxy)
+        Binding.createAsync(tpl, model)
             .then(rootBinding => {
                 rootBindings.push(rootBinding);
                 target.appendChild(rootBinding.dom);
@@ -215,32 +214,10 @@ class Binder {
                         update(b.context, evt.target.value);
                     }
                     b.update();
-                    // updateChildren(bindingPath.pop(), evt.target.parentNode);
                 }
             }
         };
-        // target.addEventListener("keypress", onchange);
         target.addEventListener("keyup", onchange);
-        // target.addEventListener("keydown", onchange);
-         
-        //function updateChildren(binding, node) {
-
-        //    var stack = [{ b: binding, node: node }];
-        //    while (stack.length > 0) {
-        //        var cur = stack.pop();
-
-        //        cur.b.update();
-
-        //        for (let i = 0; i < cur.b.children.length && i < cur.node.childNodes.length; i++) {
-        //            const b = cur.b.children[i];
-        //            const child = cur.node.childNodes[i];
-
-        //            stack.push({ b: b, node: child });
-        //        }
-        //    }
-        //}
-
-        //return result;
     }
 
     parseDom(rootDom: HTMLElement): TagElement {
@@ -292,7 +269,6 @@ class TemplateEngine {
 
         var template = input.replace(/\n/g, "\\\n");
         var params = "";
-        // var returnExpr = template.replace(/@([a-z_][\.a-z0-9_]*)/gim, (a, b) => {
         var returnExpr = template.replace(/@([\w\(\)\.]+)/gim, function (a, b) {
             var paramIdx = `arg${params.length}`;
             params += `var ${paramIdx} = ${b};`;

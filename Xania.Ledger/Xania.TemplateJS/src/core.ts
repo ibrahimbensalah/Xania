@@ -1,5 +1,5 @@
 ﻿interface IDomTemplate {
-    bind(model, idx);
+    bind(model, idx): Binding;
 }
 
 class TextContent implements IDomTemplate {
@@ -126,33 +126,29 @@ class SelectManyExpression {
             source = ensureIsArray(context),
             viewModel = this.viewModel;
 
-        const itemHandler = (src, item) => {
-            const p = Xania.extend(src);
-            p.prop(this.varName, (x => {
-                return typeof viewModel !== "undefined" && viewModel !== null
-                    ? Xania.extend(viewModel).init(x).create()
-                    : x;
-            }).bind(this, item));
-            var obj = p.create();
-            resolve(obj);
+        const itemHandler = item => {
+            var result = Xania.shallow(context);
+            result[this.varName] = typeof viewModel !== "undefined" && viewModel !== null
+                ? Xania.extend(viewModel).init(item).create()
+                : item;
+            resolve(result);
         };
-        const arrayHandler = (src, data) => {
+        const arrayHandler = data => {
             if (typeof data.map === "function") {
-                data.map(item => itemHandler(src, item));
+                data.map(itemHandler);
             } else {
-                itemHandler(src, data);
+                itemHandler(data);
             }
         };
-
         var collectionFunc = new Function("m", `with(m) { return ${this.collectionExpr}; }`);
 
         for (let i = 0; i < source.length; i++) {
             const col = collectionFunc(source[i]);
 
             if (typeof (col.then) === "function") {
-                col.then(arrayHandler.bind(this, source[i]));
+                col.then(arrayHandler.bind(this));
             } else {
-                arrayHandler.call(this, source[i], col);
+                arrayHandler.call(this, col);
             }
         }
     }
@@ -518,6 +514,11 @@ class Xania {
             }
         }
         return pub;
+    }
+
+    static shallow(obj) {
+        var assign = (<any>Object).assign;
+        return assign({}, obj);
     }
 }
 
