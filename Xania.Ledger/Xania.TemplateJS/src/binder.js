@@ -11,8 +11,10 @@ var Binding = (function () {
         this.deps = [];
     }
     Binding.prototype.addDependency = function (path) {
-        console.log(path);
         this.deps.push(path);
+    };
+    Binding.prototype.dependsOn = function (path) {
+        return this.deps.indexOf(path) >= 0;
     };
     Binding.executeAsync = function (tpl, context, resolve) {
         var model = !!tpl.modelAccessor ? tpl.modelAccessor(context) : context, iter = function (data) {
@@ -135,6 +137,7 @@ var Binder = (function () {
         }
     };
     Binder.prototype.bind = function (rootDom, model, target) {
+        var _this = this;
         target = target || document.body;
         var tpl = this.parseDom(rootDom);
         var rootBindings = [];
@@ -182,17 +185,41 @@ var Binder = (function () {
                 var bindingPath = find(rootBindings, elementPath);
                 if (bindingPath.length > 0) {
                     var b = bindingPath.pop();
-                    var nameAttr = evt.target.attributes['name'];
+                    var nameAttr = evt.target.attributes["name"];
                     if (!!nameAttr) {
                         var prop = nameAttr.value;
                         var update = new Function("context", "value", "with (context) { " + prop + " = value; }");
                         update(b.context, evt.target.value);
+                        _this.updateAll(rootBindings, prop);
                     }
-                    b.update();
                 }
             }
         };
         target.addEventListener("keyup", onchange);
+    };
+    Binder.prototype.updateAll = function (rootBindings, prop) {
+        var stack = [];
+        stack.push.apply(stack, rootBindings);
+        while (stack.length > 0) {
+            var current = stack.pop();
+            if (current.dependsOn(prop))
+                current.update();
+            if (current instanceof TagBinding) {
+                var tag = current;
+                stack.push.apply(stack, tag.children);
+            }
+        }
+    };
+    Binder.prototype.updateFamily = function (b, prop) {
+        do {
+            for (var i = 0; i < b.children.length; i++) {
+                var child = b.children[i];
+                if (child instanceof ContentBinding && child.dependsOn(prop)) {
+                    child.update();
+                }
+            }
+            b = b.parent;
+        } while (b.parent);
     };
     Binder.prototype.parseDom = function (rootDom) {
         var stack = [];

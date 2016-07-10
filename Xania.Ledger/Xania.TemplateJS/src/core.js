@@ -97,29 +97,16 @@ var SelectManyExpression = (function () {
         var _this = this;
         var ensureIsArray = SelectManyExpression.ensureIsArray, source = ensureIsArray(context), viewModel = this.viewModel;
         var itemHandler = function (item) {
-            var result = Xania.shallow(context);
-            result[_this.varName] = typeof viewModel !== "undefined" && viewModel !== null
-                ? Xania.extend(viewModel).init(item).create()
+            var copy = Xania.shallow(context);
+            copy[_this.varName] = typeof viewModel !== "undefined" && viewModel !== null
+                ? Xania.construct(viewModel, item)
                 : item;
-            resolve(result);
-        };
-        var arrayHandler = function (data) {
-            if (typeof data.map === "function") {
-                data.map(itemHandler);
-            }
-            else {
-                itemHandler(data);
-            }
+            resolve(copy);
         };
         var collectionFunc = new Function("m", "with(m) { return " + this.collectionExpr + "; }");
         for (var i = 0; i < source.length; i++) {
             var col = collectionFunc(source[i]);
-            if (typeof (col.then) === "function") {
-                col.then(arrayHandler.bind(this));
-            }
-            else {
-                arrayHandler.call(this, col);
-            }
+            Xania.map(itemHandler, col);
         }
     };
     SelectManyExpression.parse = function (expr, loader) {
@@ -178,7 +165,12 @@ var Xania = (function () {
         return x;
     };
     Xania.map = function (fn, data) {
-        if (typeof data.map === "function") {
+        if (typeof data.then === "function") {
+            return data.then(function (arr) {
+                Xania.map(fn, arr);
+            });
+        }
+        else if (typeof data.map === "function") {
             data.map(fn);
         }
         else if (Array.isArray(data)) {
@@ -298,151 +290,10 @@ var Xania = (function () {
         }
         return new Spy;
     };
-    Xania.spy = function (obj) {
-        var calls = [];
-        var children = {};
-        function Spy() {
-        }
-        function __() {
-            this.constructor = Spy;
-        }
-        ;
-        __.prototype.valueOf = function () { return obj; };
-        function child(name, value) {
-            if (typeof value == "number" || typeof value == "boolean" || typeof value == "string") {
-                return value;
-            }
-            var ch = Xania.spy(value);
-            children[name] = ch;
-            return ch.create();
-        }
-        var props = Object.getOwnPropertyNames(obj);
-        for (var i = 0; i < props.length; i++) {
-            var prop = props[i];
-            if (obj.hasOwnProperty(prop)) {
-                Object.defineProperty(Spy.prototype, prop, {
-                    get: Xania.partialApp(function (obj, name) {
-                        calls.push(name);
-                        var value = obj[name];
-                        if (typeof value == "number" || typeof value == "boolean" || typeof value == "string") {
-                            calls.push(name);
-                            return value;
-                        }
-                        return child(name, value);
-                    }, obj, prop),
-                    enumerable: true,
-                    configurable: true
-                });
-            }
-            else {
-                var desc = Object.getOwnPropertyDescriptor(obj.constructor.prototype, prop);
-                if (!!desc && !!desc.get) {
-                    Object.defineProperty(Spy.prototype, prop, {
-                        get: Xania.partialApp(function (desc, name) {
-                            return child(name, desc.get.call(this));
-                        }, desc, prop),
-                        enumerable: true,
-                        configurable: true
-                    });
-                }
-                else if (!!desc && !!desc.value) {
-                    Spy.prototype[prop] = desc.value;
-                }
-            }
-        }
-        var observable = new Spy();
-        return {
-            create: function () {
-                return observable;
-            },
-            calls: function () {
-                var result = [];
-                result.push.apply(result, calls);
-                var keys = Object.keys(children);
-                for (var i = 0; i < keys.length; i++) {
-                    var key = keys[i];
-                    var child = children[key];
-                    var childCalls = child.calls();
-                    for (var e = 0; e < childCalls.length; e++) {
-                        result.push(key + "." + childCalls[e]);
-                    }
-                }
-                return result;
-            }
-        };
-    };
-    Xania.extend = function (B) {
-        function Proxy() {
-        }
-        var getter = function (prop) {
-            return this[prop];
-        };
-        function __() {
-            this.constructor = Proxy;
-        }
-        ;
-        if (typeof B === "function") {
-            __.prototype = B.prototype;
-            Proxy.prototype = new __();
-        }
-        else {
-            if (B.constructor !== Object) {
-                __.prototype = B.constructor.prototype;
-                Proxy.prototype = new __();
-            }
-            Proxy.prototype.map = function (fn) {
-                var self = this;
-                if (typeof B.map === "function")
-                    return B.map.call(self, fn);
-                else
-                    return fn(self, 0);
-            };
-            Proxy.prototype.valueOf = function () { return B; };
-            Proxy.prototype.toString = B.toString.bind(B);
-            Object.defineProperty(Proxy.prototype, "length", {
-                get: function () {
-                    var length = B.length;
-                    if (typeof length === "number") {
-                        return length;
-                    }
-                    else
-                        return 1;
-                },
-                enumerable: true,
-                configurable: true
-            });
-            for (var baseProp in B) {
-                if (B.hasOwnProperty(baseProp)) {
-                    Object.defineProperty(Proxy.prototype, baseProp, {
-                        get: getter.bind(B, baseProp),
-                        enumerable: true,
-                        configurable: true
-                    });
-                }
-            }
-        }
-        var pub = {
-            create: function () {
-                return new Proxy;
-            },
-            init: function (obj) {
-                for (var p in obj) {
-                    if (obj.hasOwnProperty(p)) {
-                        pub.prop(p, getter.bind(obj, p));
-                    }
-                }
-                return pub;
-            },
-            prop: function (prop, getter) {
-                Object.defineProperty(Proxy.prototype, prop, {
-                    get: getter,
-                    enumerable: true,
-                    configurable: true
-                });
-                return pub;
-            }
-        };
-        return pub;
+    Xania.construct = function (viewModel, data) {
+        var assign = Object.assign;
+        var instance = new viewModel;
+        return assign(instance, data);
     };
     Xania.shallow = function (obj) {
         var assign = Object.assign;

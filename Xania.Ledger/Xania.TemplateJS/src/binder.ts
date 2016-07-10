@@ -1,14 +1,17 @@
 ﻿class Binding {
     private data;
-    private parent: Binding;
     private deps: string[] = [];
+    public parent: TagBinding;
 
     constructor(public context, private idx: number) {
     }
 
     protected addDependency(path) {
-        console.log(path);
         this.deps.push(path);
+    }
+
+    public dependsOn(path): boolean {
+        return this.deps.indexOf(path) >= 0;
     }
 
     public static executeAsync(tpl, context, resolve: any) {
@@ -112,7 +115,6 @@ class TagBinding extends Binding {
         }
         return this;
     }
-
 }
 
 class Binder {
@@ -205,19 +207,48 @@ class Binder {
                 var bindingPath = find(rootBindings, elementPath);
                 if (bindingPath.length > 0) {
                     var b = bindingPath.pop();
-                    const nameAttr = evt.target.attributes['name'];
+                    const nameAttr = evt.target.attributes["name"];
                     if (!!nameAttr) {
                         const prop = nameAttr.value;
                         const update = new Function("context", "value",
                             `with (context) { ${prop} = value; }`);
-
                         update(b.context, evt.target.value);
+                        this.updateAll(rootBindings, prop);
                     }
-                    b.update();
                 }
             }
         };
         target.addEventListener("keyup", onchange);
+    }
+
+    updateAll(rootBindings: Binding[], prop: string) {
+        var stack: Binding[] = [];
+        stack.push.apply(stack, rootBindings);
+
+        while (stack.length > 0) {
+            var current = stack.pop();
+
+            if (current.dependsOn(prop))
+                current.update();
+
+            if (current instanceof TagBinding) {
+                var tag = <TagBinding>current;
+                stack.push.apply(stack, tag.children);
+            }
+        }
+    }
+
+    updateFamily(b: TagBinding, prop: string) {
+        do {
+            for (var i = 0; i < b.children.length; i++) {
+                const child = b.children[i];
+
+                if (child instanceof ContentBinding && child.dependsOn(prop)) {
+                    child.update();
+                }
+            }
+            b = b.parent;
+        } while (b.parent);
     }
 
     parseDom(rootDom: HTMLElement): TagElement {
@@ -269,7 +300,7 @@ class TemplateEngine {
 
         var template = input.replace(/\n/g, "\\\n");
         var params = "";
-        var returnExpr = template.replace(/@([\w\(\)\.]+)/gim, function (a, b) {
+        var returnExpr = template.replace(/@([\w\(\)\.]+)/gim, (a, b) => {
             var paramIdx = `arg${params.length}`;
             params += `var ${paramIdx} = ${b};`;
             return `" + ${paramIdx} + "`;

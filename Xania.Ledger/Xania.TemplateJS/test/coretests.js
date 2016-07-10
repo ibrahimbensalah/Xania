@@ -92,7 +92,7 @@ describe("Binding", function () {
 describe("Binder", function () {
     it("should determine dependencies", function () {
         var dependencies = [];
-        var px = Xania.extend({ emp: new Employee() }, dependencies).create();
+        var px = Xania.observe({ emp: new Employee() }, dependencies);
         console.log(px.firstName);
 
         console.log(dependencies);
@@ -138,58 +138,6 @@ describe("Select Many Expression", function () {
         });
 });
 
-describe("Proxy", function () {
-    it("should be able to proxy complex object",
-        function () {
-            var xania = Company.xania();
-            var proxy = Xania.extend(xania).create();
-
-            expect(proxy.getName()).toEqual("Xania");
-        });
-    it("should be able to proxy instance object",
-        function () {
-            var b = { test: 1, test2: function () { return 2 }, bla: "bla" };
-            var proxy = Xania.extend(b);
-            proxy.prop("xprop", function () { return 'x'; });
-            var t = proxy.create();
-
-            expect(t.test).toEqual(1);
-            expect(t.test2()).toEqual(2);
-            expect(t.bla).toEqual("bla");
-            expect(t.xprop).toEqual("x");
-
-            b.bla = "bla2";
-            expect(t.bla).toEqual("bla2");
-        });
-    it("should be able to map on primitive as it was an array",
-        function () {
-            var obj = Xania.extend(1).create();
-            expect(typeof (obj.map)).toEqual("function");
-            var result = obj.map(function (x) { return x + 1 });
-            expect(result).toEqual(2);
-        });
-    it("should be able to map on array",
-        function () {
-            var obj = Xania.extend([1, 2]).create();
-            expect(typeof (obj.map)).toEqual("function");
-            var result = obj.map(function (x) { return x + 1 });
-            expect(result).toEqual([2, 3]);
-        });
-    it("should be able to proxy a proxy",
-        function () {
-            var parent = Xania.extend({ a: 1 }).create();
-            var obj = Xania.extend(parent).create();
-            expect(obj.a).toEqual(1);
-        });
-    it("should be able to extend given type",
-        function () {
-            var company = Xania.extend(Company)
-                .init({ "name": 123 })
-                .create();
-            expect(company.getName()).toEqual(123);
-        });
-});
-
 describe("shallow copy",
     function () {
         var xania = Company.xania();
@@ -204,19 +152,6 @@ describe("shallow copy",
                 expect(copy.employees).toEqual(xania.employees);
             });
     });
-
-describe("spy", function () {
-    it("should return getter value",
-        function () {
-            // arrange
-            var employee = new Employee("Ibrahim", "ben Salah");
-            var spy = Xania.spy(employee);
-            // act
-            var instance = spy.create();
-            // assert
-            expect(instance.firstName).toEqual("Ibrahim");
-        });
-});
 
 describe("dependencies", function () {
     var arr = [];

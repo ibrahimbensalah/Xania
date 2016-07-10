@@ -21,13 +21,6 @@
 
     <div>
         <div id="content">
-            <ul data-for="o in xn">
-                <li data-for="emp in o.employees">
-                    @emp.fullName
-                </li>
-            </ul>
-        </div>
-        <div id="content2">
             <ul data-for="o:OrganisationViewModel in xn">
                 <li>@o.getName()</li>
                 <li data-for="emp in o.employees">
@@ -89,16 +82,6 @@
         }
 
         // debugtest();
-
-        // arrange
-        var employee = new Employee("Ibrahim", "ben Salah");
-        var deps = [];
-        // act
-        var proxy = Xania.observe({ emp: [ employee ] }, deps);
-        var fullName = proxy.emp[0].getName();
-        // assert
-        console.log(fullName);
-        console.log(deps);
     </script>
 </body>
 </html>

@@ -127,29 +127,17 @@ class SelectManyExpression {
             viewModel = this.viewModel;
 
         const itemHandler = item => {
-            var result = Xania.shallow(context);
-            result[this.varName] = typeof viewModel !== "undefined" && viewModel !== null
-                ? Xania.extend(viewModel).init(item).create()
+            var copy = Xania.shallow(context);
+            copy[this.varName] = typeof viewModel !== "undefined" && viewModel !== null
+                ? Xania.construct(viewModel, item)
                 : item;
-            resolve(result);
+            resolve(copy);
         };
-        const arrayHandler = data => {
-            if (typeof data.map === "function") {
-                data.map(itemHandler);
-            } else {
-                itemHandler(data);
-            }
-        };
-        var collectionFunc = new Function("m", `with(m) { return ${this.collectionExpr}; }`);
 
+        var collectionFunc = new Function("m", `with(m) { return ${this.collectionExpr}; }`);
         for (let i = 0; i < source.length; i++) {
             const col = collectionFunc(source[i]);
-
-            if (typeof (col.then) === "function") {
-                col.then(arrayHandler.bind(this));
-            } else {
-                arrayHandler.call(this, col);
-            }
+            Xania.map(itemHandler, col);
         }
     }
 
@@ -217,14 +205,16 @@ class Xania {
     }
 
     static map(fn: Function, data: any) {
-        if (typeof data.map === "function") {
+        if (typeof data.then === "function") {
+            return data.then(arr => {
+                Xania.map(fn, arr);
+            });
+        } else if (typeof data.map === "function") {
             data.map(fn);
         } else if (Array.isArray(data)) {
-            // var result = [];
             for (let i = 0; i < data.length; i++) {
                 fn.call(this, data[i], i);
             }
-            // return result;
         } else {
             fn.call(this, data, 0);
         }
@@ -346,174 +336,10 @@ class Xania {
         return new Spy;
     }
 
-    static spy(obj) {
-        const calls = [];
-        const children = {};
-
-        function Spy() {
-        }
-        function __() {
-            // ReSharper disable once SuspiciousThisUsage
-            this.constructor = Spy;
-        };
-        __.prototype.valueOf = () => obj;
-
-        function child(name, value) {
-            if (typeof value == "number" || typeof value == "boolean" || typeof value == "string") {
-                return value;
-            }
-
-            var ch = Xania.spy(value);
-            children[name] = ch;
-            return ch.create();
-        }
-
-        var props = Object.getOwnPropertyNames(obj);
-        for (var i = 0; i < props.length; i++) {
-            var prop = props[i];
-            if (obj.hasOwnProperty(prop)) {
-                Object.defineProperty(Spy.prototype,
-                    prop,
-                    {
-                        get: Xania.partialApp((obj, name) => {
-                            calls.push(name);
-                            // ReSharper disable once SuspiciousThisUsage
-                            var value = obj[name];
-                            if (typeof value == "number" || typeof value == "boolean" || typeof value == "string") {
-                                calls.push(name);
-                                return value;
-                            }
-                            return child(name, value);
-                        }, obj, prop),
-                        enumerable: true,
-                        configurable: true
-                    });
-            } else {
-                var desc = Object.getOwnPropertyDescriptor(obj.constructor.prototype, prop);
-                if (!!desc && !!desc.get) {
-                    Object.defineProperty(Spy.prototype,
-                        prop,
-                        {
-                            get: Xania.partialApp(function (desc, name) {
-                                // ReSharper disable once SuspiciousThisUsage
-                                return child(name, desc.get.call(this));
-                            }, desc, prop),
-                            enumerable: true,
-                            configurable: true
-                        });
-                }
-                else if (!!desc && !!desc.value) {
-                    Spy.prototype[prop] = desc.value;
-                }
-            }
-        }
-
-        var observable = new Spy();
-        return {
-            create() {
-                return observable;
-            },
-            calls() {
-                var result = [];
-                result.push.apply(result, calls);
-                var keys = Object.keys(children);
-                for (var i = 0; i < keys.length; i++) {
-                    var key = keys[i];
-                    var child = children[key];
-                    var childCalls = child.calls();
-                    for (var e = 0; e < childCalls.length; e++) {
-                        result.push(key + "." + childCalls[e]);
-                    }
-                }
-                return result;
-            }
-        };
-    }
-
-    static extend(B) {
-        function Proxy() {
-        }
-
-        var getter =
-            function (prop) {
-                // ReSharper disable once SuspiciousThisUsage
-                return this[prop];
-            };
-
-        function __() {
-            // ReSharper disable once SuspiciousThisUsage
-            this.constructor = Proxy;
-        };
-
-        if (typeof B === "function") {
-            __.prototype = B.prototype;
-            Proxy.prototype = new __();
-        } else {
-            if (B.constructor !== Object) {
-                __.prototype = B.constructor.prototype;
-                Proxy.prototype = new __();
-            }
-
-            // var arr = Array.isArray(B) ? B : [B];
-            Proxy.prototype.map = function (fn) {
-                // ReSharper disable once SuspiciousThisUsage
-                const self = this;
-                if (typeof B.map === "function")
-                    return B.map.call(self, fn);
-                else
-                    return fn(self, 0);
-            };
-            Proxy.prototype.valueOf = () => B;
-            Proxy.prototype.toString = B.toString.bind(B);
-
-            Object.defineProperty(Proxy.prototype, "length", {
-                get: () => {
-                    const length = B.length;
-                    if (typeof length === "number") {
-                        return length;
-                    } else
-                        return 1;
-                },
-                enumerable: true,
-                configurable: true
-            });
-
-            for (let baseProp in B) {
-                if (B.hasOwnProperty(baseProp)) {
-                    Object.defineProperty(Proxy.prototype,
-                        baseProp,
-                        {
-                            get: getter.bind(B, baseProp),
-                            enumerable: true,
-                            configurable: true
-                        });
-                }
-            }
-        }
-        var pub = {
-            create() {
-                return new Proxy;
-            },
-            init(obj) {
-                for (var p in obj) {
-                    if (obj.hasOwnProperty(p)) {
-                        pub.prop(p, getter.bind(obj, p));
-                    }
-                }
-                return pub;
-            },
-            prop(prop, getter) {
-                Object.defineProperty(Proxy.prototype,
-                    prop,
-                    {
-                        get: getter,
-                        enumerable: true,
-                        configurable: true
-                    });
-                return pub;
-            }
-        }
-        return pub;
+    static construct(viewModel, data) {
+        var assign = (<any>Object).assign;
+        var instance = new viewModel;
+        return assign(instance, data);
     }
 
     static shallow(obj) {
