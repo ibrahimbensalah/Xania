@@ -37,7 +37,7 @@
   </ItemGroup>
   <ItemGroup>
     <TypeScriptCompile Include="app.ts" />
-    <TypeScriptCompile Include="Scripts\typings\es6-promise\es6-promise.d.ts" />
+    <TypeScriptCompile Include="Scripts\typings\es6-shim\es6-shim.d.ts" />
     <TypeScriptCompile Include="src\binder.ts" />
     <TypeScriptCompile Include="src\core.ts" />
     <Content Include="test\coretests.js" />

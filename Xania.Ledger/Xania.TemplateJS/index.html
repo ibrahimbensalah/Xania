@@ -30,7 +30,7 @@
                         <button click="emp.sayHello('+')">+</button>
                         <button name="@emp.firstName" click="emp.sayHello('test 44')">[ @emp.firstName ]</button>
                         <span data-for="r in emp.roles">@r.name </span>
-                        <div>@emp.fullName</div>
+                        <div>@emp.fullName / @emp.getName()</div>
                     </div>
                     <div>@emp.fullName</div>
                 </li>
@@ -47,7 +47,7 @@
         var contentDiv = document.getElementById("content");
 
         var model = [];
-        for (var i = 0; i < 1; i++)
+        for (var i = 0; i < 100; i++)
             model.push({ xn: Company.xania() });
 
         binder.bind(contentDiv, model);

@@ -22,9 +22,8 @@ class TextContent implements IDomTemplate {
 }
 
 class TagElement implements IDomTemplate {
-    private attributes = new Map<any>();
-    private events = new Map<any>();
-    public data = new Map<string>();
+    private attributes = new Map<string, any>();
+    private events = new Map<string, any>();
     // ReSharper disable once InconsistentNaming
     private _children: TagElement[] = [];
     public modelAccessor: Function = Xania.identity;
@@ -47,13 +46,13 @@ class TagElement implements IDomTemplate {
             ? value
             : () => value;
 
-        this.attributes.add(name, tpl);
+        this.attributes.set(name, tpl);
 
         return this;
     }
 
     public addEvent(name, callback) {
-        this.events.add(name, callback);
+        this.events.set(name, callback);
     }
 
     public addChild(child: TagElement) {
@@ -79,14 +78,11 @@ class TagElement implements IDomTemplate {
     }
 
     public executeAttributes(context) {
-        var result = {},
-            attrs = this.attributes;
+        var result = {};
 
-        for (let i = 0; i < attrs.keys.length; i++) {
-            var name = attrs.keys[i];
-            var tpl = attrs.get(name);
+        this.attributes.forEach((tpl, name) => {
             result[name] = tpl(context);
-        }
+        });
 
         return result;
     }
@@ -99,11 +95,9 @@ class TagElement implements IDomTemplate {
             result.update = new Function("value", `with (this) { ${name} = value; }`).bind(context);
         }
 
-        for (let i = 0; i < this.events.keys.length; i++) {
-            const eventName = this.events.keys[i];
-            const callback = this.events.elementAt(i);
+        this.events.forEach((callback, eventName) => {
             result[eventName] = callback.bind(this, context);
-        }
+        });
 
         return result;
     }
@@ -172,30 +166,6 @@ class Value {
     }
 }
 
-
-class Map<T> {
-    private items = {};
-    public keys: string[] = [];
-
-    add(key: string, child: T) {
-        this.items[key] = child;
-        this.keys = Object.keys(this.items);
-    }
-
-    get(key: string): T {
-        return this.items[key];
-    }
-
-    get length() {
-        return this.keys.length;
-    }
-
-    elementAt(i: number): T {
-        var key = this.keys[i];
-        return key && this.get(key);
-    }
-}
-
 class Xania {
 
     private static lut;
@@ -218,6 +188,7 @@ class Xania {
         } else {
             fn.call(this, data, 0);
         }
+        // ReSharper disable once NotAllPathsReturnValue
     }
 
     static collect(fn: Function, data: any) {
@@ -277,35 +248,30 @@ class Xania {
         }
     }
 
-    static observe(target, listener) {
+    static observe(target, deps: Map<any, string[]>) {
         // ReSharper disable once InconsistentNaming
-        listener = Array.isArray(listener) ? listener.push.bind(listener) : listener;
-
         if (!target || typeof target !== "object")
             return target;
 
         if (Array.isArray(target))
-            return Xania.observeArray(target, listener);
+            return Xania.observeArray(target, deps);
         else
-            return Xania.observeObject(target, listener);
+            return Xania.observeObject(target, deps);
     }
 
-    static observeArray(target, listener) {
+    static observeArray(target, deps: Map<any, string[]>) {
         // ReSharper disable once InconsistentNaming
         var ProxyConst = window["Proxy"];
         return new ProxyConst(target,
             {
                 get(target, idx) {
-                    listener(`${idx}`);
                     var value = target[idx];
-                    return Xania.observe(value, member => {
-                        listener(`${idx}.${member}`);
-                    });
+                    return Xania.observe(value, deps);
                 }
             });
     }
 
-    static observeObject(target, listener) {
+    static observeObject(target, deps: Map<any, string[]>) {
         // ReSharper disable once InconsistentNaming
         function Spy() { }
         function __() { // ReSharper disable once SuspiciousThisUsage 
@@ -322,12 +288,14 @@ class Xania {
             Object.defineProperty(Spy.prototype,
                 prop,
                 {
-                    get: Xania.partialApp((obj, name) => {
-                        listener(name);
+                    get: Xania.partialApp((obj, name: string) => {
+                        if (!deps.has(obj)) {
+                            deps.set(obj, [name]);
+                        } else if (deps.get(obj).indexOf(name) < 0) {
+                            deps.get(obj).push(name);
+                        }
                         // ReSharper disable once SuspiciousThisUsage
-                        return Xania.observe(obj[name], member => {
-                            listener(name + "." + member);
-                        });
+                        return Xania.observe(obj[name], deps);
                     }, target, prop),
                     enumerable: true,
                     configurable: true

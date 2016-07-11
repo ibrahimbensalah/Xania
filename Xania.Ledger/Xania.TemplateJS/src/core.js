@@ -20,7 +20,6 @@ var TagElement = (function () {
         this.name = name;
         this.attributes = new Map();
         this.events = new Map();
-        this.data = new Map();
         this._children = [];
         this.modelAccessor = Xania.identity;
     }
@@ -34,11 +33,11 @@ var TagElement = (function () {
         var tpl = typeof (value) === "function"
             ? value
             : function () { return value; };
-        this.attributes.add(name, tpl);
+        this.attributes.set(name, tpl);
         return this;
     };
     TagElement.prototype.addEvent = function (name, callback) {
-        this.events.add(name, callback);
+        this.events.set(name, callback);
     };
     TagElement.prototype.addChild = function (child) {
         this._children.push(child);
@@ -58,25 +57,22 @@ var TagElement = (function () {
         return this;
     };
     TagElement.prototype.executeAttributes = function (context) {
-        var result = {}, attrs = this.attributes;
-        for (var i = 0; i < attrs.keys.length; i++) {
-            var name = attrs.keys[i];
-            var tpl = attrs.get(name);
+        var result = {};
+        this.attributes.forEach(function (tpl, name) {
             result[name] = tpl(context);
-        }
+        });
         return result;
     };
     TagElement.prototype.executeEvents = function (context) {
+        var _this = this;
         var result = {};
         if (this.name.toUpperCase() === "INPUT") {
             var name = this.attributes.get("name")(context);
             result.update = new Function("value", "with (this) { " + name + " = value; }").bind(context);
         }
-        for (var i = 0; i < this.events.keys.length; i++) {
-            var eventName = this.events.keys[i];
-            var callback = this.events.elementAt(i);
-            result[eventName] = callback.bind(this, context);
-        }
+        this.events.forEach(function (callback, eventName) {
+            result[eventName] = callback.bind(_this, context);
+        });
         return result;
     };
     return TagElement;
@@ -132,31 +128,6 @@ var Value = (function () {
         return this.obj;
     };
     return Value;
-})();
-var Map = (function () {
-    function Map() {
-        this.items = {};
-        this.keys = [];
-    }
-    Map.prototype.add = function (key, child) {
-        this.items[key] = child;
-        this.keys = Object.keys(this.items);
-    };
-    Map.prototype.get = function (key) {
-        return this.items[key];
-    };
-    Object.defineProperty(Map.prototype, "length", {
-        get: function () {
-            return this.keys.length;
-        },
-        enumerable: true,
-        configurable: true
-    });
-    Map.prototype.elementAt = function (i) {
-        var key = this.keys[i];
-        return key && this.get(key);
-    };
-    return Map;
 })();
 var Xania = (function () {
     function Xania() {
@@ -243,28 +214,24 @@ var Xania = (function () {
             return fn.apply(this, args);
         };
     };
-    Xania.observe = function (target, listener) {
-        listener = Array.isArray(listener) ? listener.push.bind(listener) : listener;
+    Xania.observe = function (target, deps) {
         if (!target || typeof target !== "object")
             return target;
         if (Array.isArray(target))
-            return Xania.observeArray(target, listener);
+            return Xania.observeArray(target, deps);
         else
-            return Xania.observeObject(target, listener);
+            return Xania.observeObject(target, deps);
     };
-    Xania.observeArray = function (target, listener) {
+    Xania.observeArray = function (target, deps) {
         var ProxyConst = window["Proxy"];
         return new ProxyConst(target, {
             get: function (target, idx) {
-                listener("" + idx);
                 var value = target[idx];
-                return Xania.observe(value, function (member) {
-                    listener(idx + "." + member);
-                });
+                return Xania.observe(value, deps);
             }
         });
     };
-    Xania.observeObject = function (target, listener) {
+    Xania.observeObject = function (target, deps) {
         function Spy() { }
         function __() {
             this.constructor = Spy;
@@ -279,10 +246,13 @@ var Xania = (function () {
             var prop = props[i];
             Object.defineProperty(Spy.prototype, prop, {
                 get: Xania.partialApp(function (obj, name) {
-                    listener(name);
-                    return Xania.observe(obj[name], function (member) {
-                        listener(name + "." + member);
-                    });
+                    if (!deps.has(obj)) {
+                        deps.set(obj, [name]);
+                    }
+                    else if (deps.get(obj).indexOf(name) < 0) {
+                        deps.get(obj).push(name);
+                    }
+                    return Xania.observe(obj[name], deps);
                 }, target, prop),
                 enumerable: true,
                 configurable: true

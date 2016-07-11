@@ -154,22 +154,17 @@ describe("shallow copy",
     });
 
 describe("dependencies", function () {
-    var arr = [];
-    for (var i = 0; i < 1000; i++) {
-        arr.push(new Employee("Ibrahim " + i, "ben Salah " + i));
-    }
-    var bigCompany = new Company("Xania", arr);
-
-    it("should return getter value",
+    it("should be resolved",
         function () {
             // arrange
             var employee = new Employee("Ibrahim", "ben Salah");
-            var deps = [];
+            var deps = new Map();
             // act
             var fullName = Xania.observe(employee, deps).fullName;
             // assert
+            console.log(deps);
             expect(fullName).toEqual("Ibrahim ben Salah");
-            expect(deps).toEqual(["firstName", "lastName"]);
+            expect(deps.get(employee)).toEqual(["firstName", "lastName"]);
         });
 });
 

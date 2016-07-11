@@ -1,5 +1,5 @@
 /// <reference path="../src/core.ts" />
-/// <reference path="../scripts/typings/es6-promise/es6-promise.d.ts" />
+/// <reference path="../Scripts/typings/es6-shim/es6-shim.d.ts" />
 var __extends = (this && this.__extends) || function (d, b) {
     for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
     function __() { this.constructor = d; }
@@ -42,8 +42,7 @@ var Employee = (function () {
         configurable: true
     });
     Employee.prototype.sayHello = function (prefix) {
-        this.roles[0].name = prefix;
-        console.log(prefix + " : " + this.firstName);
+        console.log("hallo ", this.fullName);
     };
     Employee.prototype.getName = function () {
         return this.fullName;

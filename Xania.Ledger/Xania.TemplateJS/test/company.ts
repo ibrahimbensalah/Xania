@@ -1,5 +1,5 @@
 ﻿/// <reference path="../src/core.ts" />
-/// <reference path="../scripts/typings/es6-promise/es6-promise.d.ts" />
+/// <reference path="../Scripts/typings/es6-shim/es6-shim.d.ts" />
 
 class A {
     getZero() {
@@ -27,8 +27,7 @@ class Employee {
     }
 
     sayHello(prefix) {
-        this.roles[0].name = prefix;
-        console.log(prefix + " : " + this.firstName);
+        console.log("hallo ", this.fullName);
     }
 
     getName() {
