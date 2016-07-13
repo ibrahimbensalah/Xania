@@ -1,6 +1,7 @@
 ﻿/// <reference path="../src/core.js" />
 /// <reference path="../src/binder.js" />
 /// <reference path="company.js" />
+
 "use strict";
 
 // ReSharper disable UndeclaredGlobalVariableUsing
@@ -153,18 +154,55 @@ describe("shallow copy",
             });
     });
 
-describe("dependencies", function () {
-    it("should be resolved",
+describe("Xania.observe", function () {
+    it("should return transparant proxy",
         function () {
             // arrange
             var employee = new Employee("Ibrahim", "ben Salah");
-            var deps = new Map();
+            var observer = new Observer();
             // act
-            var fullName = Xania.observe(employee, deps).fullName;
+            var fullName = Xania.observe(employee, observer).fullName;
             // assert
-            console.log(deps);
             expect(fullName).toEqual("Ibrahim ben Salah");
-            expect(deps.get(employee)).toEqual(["firstName", "lastName"]);
+        });
+    it("should track field dependencies",
+        function () {
+            // arrange
+            var employee = new Employee("Ibrahim", "ben Salah");
+            var observer = new Observer();
+            // act
+            var dummy = Xania.observe(employee, observer).fullName;
+            // assert
+            expect(observer.hasRead(employee, "firstName")).toEqual(true);
+            expect(observer.hasRead(employee, "lastName")).toEqual(true);
+        });
+    it("should track changes",
+        function () {
+            // arrange
+            var employee = new Employee("Ibrahim", "ben Salah");
+            var observer = new Observer();
+            // act
+            var proxy = Xania.observe(employee, observer);
+            proxy.firstName = "dummy";
+            // assert
+            expect(employee.firstName).toEqual("dummy");
+            expect(observer.hasChange(employee, "firstName")).toEqual(true);
+            expect(observer.hasChange(employee, "lastName")).toEqual(false);
+        });
+    it("should track changes of nested objects",
+        function () {
+            // arrange
+            var xania = Company.xania();
+            var employee = xania.employees[0];
+            var observer = new Observer();
+            // act
+            var proxy = Xania.observe(xania, observer);
+            proxy.employees[0].firstName = "dummy";
+            // assert
+            expect(employee.firstName).toEqual("dummy");
+            expect(observer.hasChange(employee, "firstName")).toEqual(true);
+            expect(observer.hasChange(employee, "lastName")).toEqual(false);
+            console.log(observer);
         });
 });
 

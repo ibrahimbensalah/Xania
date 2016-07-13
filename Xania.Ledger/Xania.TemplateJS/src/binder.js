@@ -8,7 +8,7 @@ var Binding = (function () {
     function Binding(context, idx) {
         this.context = context;
         this.idx = idx;
-        this.deps = new Map();
+        this.observer = new Observer();
     }
     Binding.executeAsync = function (tpl, context, resolve) {
         var model = !!tpl.modelAccessor ? tpl.modelAccessor(context) : context, iter = function (data) {
@@ -44,13 +44,7 @@ var Binding = (function () {
         };
     };
     Binding.prototype.dependsOn = function (context, prop) {
-        if (this.deps.has(context)) {
-            console.log(prop);
-            if (prop === null)
-                return true;
-            return this.deps.get(context).indexOf(prop) >= 0;
-        }
-        return false;
+        return this.observer.hasRead(context, prop);
     };
     return Binding;
 })();
@@ -64,7 +58,7 @@ var ContentBinding = (function (_super) {
         this.dom.textContent = this.tpl.execute(this.context);
     };
     ContentBinding.prototype.init = function () {
-        var observable = Xania.observe(this.context, this.deps);
+        var observable = Xania.observe(this.context, this.observer);
         var text = this.tpl.execute(observable);
         this.dom = document.createTextNode(text);
         return this;
@@ -177,8 +171,10 @@ var Binder = (function () {
                     var b = bindingPath.pop();
                     var handler = b.tpl.events.get('click');
                     if (!!handler) {
-                        handler(b.context);
-                        _this.updateAll(rootBindings, b.context, null);
+                        var observer = new Observer();
+                        var proxy = Xania.observe(b.context, observer);
+                        handler(proxy);
+                        _this.updateAll(rootBindings, observer.changes);
                     }
                 }
             }
@@ -192,23 +188,31 @@ var Binder = (function () {
                     var b = bindingPath.pop();
                     var nameAttr = evt.target.attributes["name"];
                     if (!!nameAttr) {
+                        var observer = new Observer();
+                        var proxy = Xania.observe(b.context, observer);
                         var prop = nameAttr.value;
                         var update = new Function("context", "value", "with (context) { " + prop + " = value; }");
-                        update(b.context, evt.target.value);
-                        _this.updateAll(rootBindings, b.context, prop);
+                        update(proxy, evt.target.value);
+                        for (var i = 0; i < 10000; i++) {
+                            _this.updateAll(rootBindings, observer.changes);
+                        }
                     }
                 }
             }
         };
         target.addEventListener("keyup", onchange);
     };
-    Binder.prototype.updateAll = function (rootBindings, context, prop) {
+    Binder.prototype.updateAll = function (rootBindings, changes) {
         var stack = [];
         stack.push.apply(stack, rootBindings);
         while (stack.length > 0) {
             var current = stack.pop();
-            if (current.dependsOn(context, prop))
-                current.update();
+            changes.forEach(Xania.partialApp(function (binding, props, obj) {
+                for (var i = 0; i < props.length; i++) {
+                    if (binding.dependsOn(obj, props[i]))
+                        binding.update();
+                }
+            }, current));
             if (current instanceof TagBinding) {
                 var tag = current;
                 stack.push.apply(stack, tag.children);

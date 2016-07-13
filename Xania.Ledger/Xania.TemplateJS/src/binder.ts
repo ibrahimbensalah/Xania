@@ -1,6 +1,6 @@
 ﻿class Binding {
     private data;
-    public deps = new Map<any, string[]>();
+    public observer = new Observer();
     public parent: TagBinding;
 
     constructor(public context, private idx: number) {
@@ -45,14 +45,7 @@
     }
 
     dependsOn(context, prop: string) {
-        if (this.deps.has(context)) {
-            console.log(prop);
-            if (prop === null)
-                return true;
-
-            return this.deps.get(context).indexOf(prop) >= 0;
-        }
-        return false;
+        return this.observer.hasRead(context, prop);
     }
 }
 
@@ -68,7 +61,7 @@ class ContentBinding extends Binding {
     }
 
     init() {
-        var observable = Xania.observe(this.context, this.deps);
+        var observable = Xania.observe(this.context, this.observer);
 
         var text = this.tpl.execute(observable);
         this.dom = document.createTextNode(text);
@@ -196,11 +189,10 @@ class Binder {
                         var b = bindingPath.pop();
                         var handler = b.tpl.events.get('click');
                         if (!!handler) {
-                            // var deps = new Map<;
-                            // var observable = Xania.observe(b.context, deps);
-                            handler(b.context);
-                            // console.log(deps);
-                            this.updateAll(rootBindings, b.context, null);
+                            var observer = new Observer();
+                            var proxy = Xania.observe(b.context, observer);
+                            handler(proxy);
+                            this.updateAll(rootBindings, observer.changes);
                         }
                     }
                 }
@@ -216,11 +208,15 @@ class Binder {
                     var b = bindingPath.pop();
                     const nameAttr = evt.target.attributes["name"];
                     if (!!nameAttr) {
+                        var observer = new Observer();
+                        var proxy = Xania.observe(b.context, observer);
                         const prop = nameAttr.value;
                         const update = new Function("context", "value",
                             `with (context) { ${prop} = value; }`);
-                        update(b.context, evt.target.value);
-                        this.updateAll(rootBindings, b.context, prop);
+                        update(proxy, evt.target.value);
+                        for (var i = 0; i < 10000; i++) {
+                            this.updateAll(rootBindings, observer.changes);
+                        }
                     }
                 }
             }
@@ -228,15 +224,19 @@ class Binder {
         target.addEventListener("keyup", onchange);
     }
 
-    updateAll(rootBindings: Binding[], context: any, prop: string) {
+    updateAll(rootBindings: Binding[], changes: Map<any, string[]>) {
         var stack: Binding[] = [];
         stack.push.apply(stack, rootBindings);
 
         while (stack.length > 0) {
-            var current = stack.pop();
+            const current = stack.pop();
 
-            if (current.dependsOn(context, prop))
-                current.update();
+            changes.forEach(Xania.partialApp((binding, props, obj) => {
+                for (let i = 0; i < props.length; i++) {
+                    if (binding.dependsOn(obj, props[i]))
+                        binding.update();
+                }
+            }, current));
 
             if (current instanceof TagBinding) {
                 var tag = <TagBinding>current;

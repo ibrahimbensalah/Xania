@@ -129,6 +129,45 @@ var Value = (function () {
     };
     return Value;
 })();
+var Observer = (function () {
+    function Observer() {
+        this.deps = new Map();
+        this.changes = new Map();
+    }
+    Observer.prototype.setRead = function (obj, prop) {
+        if (!this.deps.has(obj)) {
+            this.deps.set(obj, [prop]);
+        }
+        else if (this.deps.get(obj).indexOf(prop) < 0) {
+            this.deps.get(obj).push(prop);
+        }
+    };
+    Observer.prototype.setChange = function (obj, prop) {
+        if (!this.changes.has(obj)) {
+            this.changes.set(obj, [prop]);
+        }
+        else if (this.changes.get(obj).indexOf(prop) < 0) {
+            this.changes.get(obj).push(prop);
+        }
+    };
+    Observer.prototype.hasRead = function (context, prop) {
+        if (this.deps.has(context)) {
+            if (prop === null)
+                return true;
+            return this.deps.get(context).indexOf(prop) >= 0;
+        }
+        return false;
+    };
+    Observer.prototype.hasChange = function (context, prop) {
+        if (this.changes.has(context)) {
+            if (prop === null)
+                return true;
+            return this.changes.get(context).indexOf(prop) >= 0;
+        }
+        return false;
+    };
+    return Observer;
+})();
 var Xania = (function () {
     function Xania() {
     }
@@ -214,24 +253,24 @@ var Xania = (function () {
             return fn.apply(this, args);
         };
     };
-    Xania.observe = function (target, deps) {
+    Xania.observe = function (target, observer) {
         if (!target || typeof target !== "object")
             return target;
         if (Array.isArray(target))
-            return Xania.observeArray(target, deps);
+            return Xania.observeArray(target, observer);
         else
-            return Xania.observeObject(target, deps);
+            return Xania.observeObject(target, observer);
     };
-    Xania.observeArray = function (target, deps) {
+    Xania.observeArray = function (target, observer) {
         var ProxyConst = window["Proxy"];
         return new ProxyConst(target, {
             get: function (target, idx) {
                 var value = target[idx];
-                return Xania.observe(value, deps);
+                return Xania.observe(value, observer);
             }
         });
     };
-    Xania.observeObject = function (target, deps) {
+    Xania.observeObject = function (target, observer) {
         function Spy() { }
         function __() {
             this.constructor = Spy;
@@ -246,13 +285,12 @@ var Xania = (function () {
             var prop = props[i];
             Object.defineProperty(Spy.prototype, prop, {
                 get: Xania.partialApp(function (obj, name) {
-                    if (!deps.has(obj)) {
-                        deps.set(obj, [name]);
-                    }
-                    else if (deps.get(obj).indexOf(name) < 0) {
-                        deps.get(obj).push(name);
-                    }
-                    return Xania.observe(obj[name], deps);
+                    observer.setRead(obj, name);
+                    return Xania.observe(obj[name], observer);
+                }, target, prop),
+                set: Xania.partialApp(function (obj, name, value) {
+                    observer.setChange(obj, name);
+                    obj[name] = value;
                 }, target, prop),
                 enumerable: true,
                 configurable: true

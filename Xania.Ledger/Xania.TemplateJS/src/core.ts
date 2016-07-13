@@ -166,6 +166,47 @@ class Value {
     }
 }
 
+class Observer {
+    public deps = new Map<any, string[]>();
+    public changes = new Map<any, string[]>();
+
+    setRead(obj: any, prop: string) {
+        if (!this.deps.has(obj)) {
+            this.deps.set(obj, [prop]);
+        } else if (this.deps.get(obj).indexOf(prop) < 0) {
+            this.deps.get(obj).push(prop);
+        }
+    }
+
+    setChange(obj: any, prop: any) {
+        if (!this.changes.has(obj)) {
+            this.changes.set(obj, [prop]);
+        } else if (this.changes.get(obj).indexOf(prop) < 0) {
+            this.changes.get(obj).push(prop);
+        }
+    }
+
+    hasRead(context, prop: string) {
+        if (this.deps.has(context)) {
+            if (prop === null)
+                return true;
+
+            return this.deps.get(context).indexOf(prop) >= 0;
+        }
+        return false;
+    }
+
+    hasChange(context, prop: string) {
+        if (this.changes.has(context)) {
+            if (prop === null)
+                return true;
+
+            return this.changes.get(context).indexOf(prop) >= 0;
+        }
+        return false;
+    }
+}
+
 class Xania {
 
     private static lut;
@@ -248,30 +289,30 @@ class Xania {
         }
     }
 
-    static observe(target, deps: Map<any, string[]>) {
+    static observe(target, observer: Observer) {
         // ReSharper disable once InconsistentNaming
         if (!target || typeof target !== "object")
             return target;
 
         if (Array.isArray(target))
-            return Xania.observeArray(target, deps);
+            return Xania.observeArray(target, observer);
         else
-            return Xania.observeObject(target, deps);
+            return Xania.observeObject(target, observer);
     }
 
-    static observeArray(target, deps: Map<any, string[]>) {
+    static observeArray(target, observer: Observer) {
         // ReSharper disable once InconsistentNaming
         var ProxyConst = window["Proxy"];
         return new ProxyConst(target,
             {
                 get(target, idx) {
                     var value = target[idx];
-                    return Xania.observe(value, deps);
+                    return Xania.observe(value, observer);
                 }
             });
     }
 
-    static observeObject(target, deps: Map<any, string[]>) {
+    static observeObject(target, observer: Observer) {
         // ReSharper disable once InconsistentNaming
         function Spy() { }
         function __() { // ReSharper disable once SuspiciousThisUsage 
@@ -289,13 +330,12 @@ class Xania {
                 prop,
                 {
                     get: Xania.partialApp((obj, name: string) => {
-                        if (!deps.has(obj)) {
-                            deps.set(obj, [name]);
-                        } else if (deps.get(obj).indexOf(name) < 0) {
-                            deps.get(obj).push(name);
-                        }
-                        // ReSharper disable once SuspiciousThisUsage
-                        return Xania.observe(obj[name], deps);
+                        observer.setRead(obj, name);
+                        return Xania.observe(obj[name], observer);
+                    }, target, prop),
+                    set: Xania.partialApp((obj, name: string, value: any) => {
+                        observer.setChange(obj, name);
+                        obj[name] = value;
                     }, target, prop),
                     enumerable: true,
                     configurable: true
