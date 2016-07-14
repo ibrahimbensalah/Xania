@@ -167,14 +167,14 @@ class Value {
 }
 
 class Observer {
-    public deps = new Map<any, string[]>();
+    public reads = new Map<any, string[]>();
     public changes = new Map<any, string[]>();
 
     setRead(obj: any, prop: string) {
-        if (!this.deps.has(obj)) {
-            this.deps.set(obj, [prop]);
-        } else if (this.deps.get(obj).indexOf(prop) < 0) {
-            this.deps.get(obj).push(prop);
+        if (!this.reads.has(obj)) {
+            this.reads.set(obj, [prop]);
+        } else if (this.reads.get(obj).indexOf(prop) < 0) {
+            this.reads.get(obj).push(prop);
         }
     }
 
@@ -187,11 +187,11 @@ class Observer {
     }
 
     hasRead(context, prop: string) {
-        if (this.deps.has(context)) {
+        if (this.reads.has(context)) {
             if (prop === null)
                 return true;
 
-            return this.deps.get(context).indexOf(prop) >= 0;
+            return this.reads.get(context).indexOf(prop) >= 0;
         }
         return false;
     }

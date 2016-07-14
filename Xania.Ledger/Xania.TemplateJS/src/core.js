@@ -131,15 +131,15 @@ var Value = (function () {
 })();
 var Observer = (function () {
     function Observer() {
-        this.deps = new Map();
+        this.reads = new Map();
         this.changes = new Map();
     }
     Observer.prototype.setRead = function (obj, prop) {
-        if (!this.deps.has(obj)) {
-            this.deps.set(obj, [prop]);
+        if (!this.reads.has(obj)) {
+            this.reads.set(obj, [prop]);
         }
-        else if (this.deps.get(obj).indexOf(prop) < 0) {
-            this.deps.get(obj).push(prop);
+        else if (this.reads.get(obj).indexOf(prop) < 0) {
+            this.reads.get(obj).push(prop);
         }
     };
     Observer.prototype.setChange = function (obj, prop) {
@@ -151,10 +151,10 @@ var Observer = (function () {
         }
     };
     Observer.prototype.hasRead = function (context, prop) {
-        if (this.deps.has(context)) {
+        if (this.reads.has(context)) {
             if (prop === null)
                 return true;
-            return this.deps.get(context).indexOf(prop) >= 0;
+            return this.reads.get(context).indexOf(prop) >= 0;
         }
         return false;
     };

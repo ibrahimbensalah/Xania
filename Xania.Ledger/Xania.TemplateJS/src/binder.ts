@@ -44,6 +44,24 @@
         };
     }
 
+    accept(visit: Function) {
+        var stack = [this];
+        while (stack.length > 0) {
+            var cur = stack.pop();
+            visit(cur);
+
+            if (cur instanceof TagBinding) {
+                let children = (<TagBinding>cur).children;
+                for (var i = 0; i < children.length; i++)
+                    stack.push(children[i]);
+            }
+        }
+    }
+
+    dependencies() {
+        return this.observer.reads;
+    }
+
     dependsOn(context, prop: string) {
         return this.observer.hasRead(context, prop);
     }
@@ -148,12 +166,14 @@ class Binder {
         target = target || document.body;
         var tpl = this.parseDom(rootDom);
 
-        var rootBindings = [];
+        var rootBindings: Binding[] = [];
+        const map = new Map<any, [Binding]>();
         Binding.createAsync(tpl, model)
-            .then(rootBinding => {
+            .then((rootBinding: Binding) => {
                 rootBindings.push(rootBinding);
-                target.appendChild(rootBinding.dom);
+                target.appendChild((<any>rootBinding).dom);
             });
+
 
         function find(bindings, path) {
             const result = [];
@@ -225,24 +245,35 @@ class Binder {
     }
 
     updateAll(rootBindings: Binding[], changes: Map<any, string[]>) {
-        var stack: Binding[] = [];
-        stack.push.apply(stack, rootBindings);
-
-        while (stack.length > 0) {
-            const current = stack.pop();
-
-            changes.forEach(Xania.partialApp((binding, props, obj) => {
-                for (let i = 0; i < props.length; i++) {
-                    if (binding.dependsOn(obj, props[i]))
-                        binding.update();
-                }
-            }, current));
-
-            if (current instanceof TagBinding) {
-                var tag = <TagBinding>current;
-                stack.push.apply(stack, tag.children);
+        if (!(<any>window).__map) {
+            (<any>window).__map = new Map<any, [Binding]>();
+            for (let n = 0; n < rootBindings.length; n++) {
+                rootBindings[n].accept((b: Binding) => {
+                    b.dependencies().forEach((props, obj) => {
+                        if ((<any>window).__map.has(obj))
+                            (<any>window).__map.get(obj).push(b);
+                        else
+                            (<any>window).__map.set(obj, [b]);
+                    });
+                });
             }
         }
+        const map = (<any>window).__map;
+
+        changes.forEach((props, obj) => {
+            if (map.has(obj)) {
+                const bindings = map.get(obj);
+                for (let e = 0; e < bindings.length; e++) {
+                    const binding = bindings[e];
+                    for (let i = 0; i < props.length; i++) {
+                        if (binding.dependsOn(obj, props[i])) {
+                            binding.update();
+                            break;
+                        }
+                    }
+                }
+            }
+        });
     }
 
     updateFamily(b: TagBinding, prop: string) {
