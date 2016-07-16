@@ -131,6 +131,7 @@ class SelectManyExpression {
         var collectionFunc = new Function("m", `with(m) { return ${this.collectionExpr}; }`);
         for (let i = 0; i < source.length; i++) {
             const col = collectionFunc(source[i]);
+            console.log(col);
             Xania.map(itemHandler, col);
         }
     }
@@ -166,45 +167,9 @@ class Value {
     }
 }
 
-class Observer {
-    public reads = new Map<any, string[]>();
-    public changes = new Map<any, string[]>();
-
-    setRead(obj: any, prop: string) {
-        if (!this.reads.has(obj)) {
-            this.reads.set(obj, [prop]);
-        } else if (this.reads.get(obj).indexOf(prop) < 0) {
-            this.reads.get(obj).push(prop);
-        }
-    }
-
-    setChange(obj: any, prop: any) {
-        if (!this.changes.has(obj)) {
-            this.changes.set(obj, [prop]);
-        } else if (this.changes.get(obj).indexOf(prop) < 0) {
-            this.changes.get(obj).push(prop);
-        }
-    }
-
-    hasRead(context, prop: string) {
-        if (this.reads.has(context)) {
-            if (prop === null)
-                return true;
-
-            return this.reads.get(context).indexOf(prop) >= 0;
-        }
-        return false;
-    }
-
-    hasChange(context, prop: string) {
-        if (this.changes.has(context)) {
-            if (prop === null)
-                return true;
-
-            return this.changes.get(context).indexOf(prop) >= 0;
-        }
-        return false;
-    }
+interface IObserver {
+    setRead(obj: any, prop: string);
+    setChange(obj: any, prop: any);
 }
 
 class Xania {
@@ -289,7 +254,7 @@ class Xania {
         }
     }
 
-    static observe(target, observer: Observer) {
+    static observe(target, observer: IObserver) {
         // ReSharper disable once InconsistentNaming
         if (!target || typeof target !== "object")
             return target;
@@ -300,19 +265,18 @@ class Xania {
             return Xania.observeObject(target, observer);
     }
 
-    static observeArray(target, observer: Observer) {
+    static observeArray(target, observer: IObserver) {
         // ReSharper disable once InconsistentNaming
         var ProxyConst = window["Proxy"];
-        return new ProxyConst(target,
-            {
-                get(target, idx) {
-                    var value = target[idx];
-                    return Xania.observe(value, observer);
-                }
-            });
+        return new ProxyConst(target, {
+            get(target, idx) {
+                var value = target[idx];
+                return Xania.observe(value, observer);
+            }
+        });
     }
 
-    static observeObject(target, observer: Observer) {
+    static observeObject(target, observer: IObserver) {
         // ReSharper disable once InconsistentNaming
         function Spy() { }
         function __() { // ReSharper disable once SuspiciousThisUsage 

@@ -100,6 +100,7 @@ class OrganisationViewModel {
 
     addEmployee() {
         this.employees.push(new Employee('bla', 'di bla'));
+        console.log(this.employees.length);
     }
 }
 

@@ -8,7 +8,6 @@ var Binding = (function () {
     function Binding(context, idx) {
         this.context = context;
         this.idx = idx;
-        this.observer = new Observer();
     }
     Binding.executeAsync = function (tpl, context, resolve) {
         var model = !!tpl.modelAccessor ? tpl.modelAccessor(context) : context, iter = function (data) {
@@ -24,30 +23,30 @@ var Binding = (function () {
     Binding.prototype.update = function () {
         throw new Error("Abstract method Binding.update");
     };
-    Binding.prototype.init = function () {
+    Binding.prototype.init = function (depGraph) {
         throw new Error("Abstract method Binding.update");
     };
-    Binding.create = function (tpl, context) {
+    Binding.create = function (tpl, context, depGraph) {
         var results = [];
-        Binding.createAsync(tpl, context).then(results.push.bind(results));
+        Binding.createAsync(tpl, context, depGraph).then(results.push.bind(results));
         return results;
     };
-    Binding.createAsync = function (tpl, context) {
+    Binding.createAsync = function (tpl, context, depGraph) {
         return {
             then: function (resolve) {
                 Binding.executeAsync(tpl, context, function (model, idx) {
                     if (typeof idx == "undefined")
                         throw new Error("model idx is not defined");
-                    resolve(tpl.bind(model, idx).init());
+                    resolve(tpl.bind(model, idx).init(depGraph));
                 });
             }
         };
     };
-    Binding.prototype.accept = function (visit) {
+    Binding.prototype.accept = function (visitor) {
         var stack = [this];
         while (stack.length > 0) {
             var cur = stack.pop();
-            visit(cur);
+            visitor(cur);
             if (cur instanceof TagBinding) {
                 var children = cur.children;
                 for (var i = 0; i < children.length; i++)
@@ -55,13 +54,53 @@ var Binding = (function () {
             }
         }
     };
-    Binding.prototype.dependencies = function () {
-        return this.observer.reads;
-    };
-    Binding.prototype.dependsOn = function (context, prop) {
-        return this.observer.hasRead(context, prop);
-    };
     return Binding;
+})();
+var DependencyGraph = (function () {
+    function DependencyGraph() {
+        this.map = new Map();
+    }
+    DependencyGraph.prototype.add = function (object, property, binding) {
+        if (this.map.has(object)) {
+            var deps = this.map.get(object);
+            if (deps.hasOwnProperty(property))
+                deps[property].push(binding);
+            else
+                deps[property] = [binding];
+        }
+        else {
+            var deps = {};
+            deps[property] = [binding];
+            this.map.set(object, deps);
+        }
+        return this;
+    };
+    DependencyGraph.prototype.get = function (object, property) {
+        if (!this.map.has(object))
+            return [];
+        var deps = this.map.get(object);
+        var result = [];
+        if (deps.hasOwnProperty(property))
+            result.push.apply(result, deps[property]);
+        return result;
+    };
+    DependencyGraph.prototype.observer = function (binding) {
+        if (binding === void 0) { binding = null; }
+        var self = this;
+        return {
+            setRead: function (obj, property) {
+                if (!!binding)
+                    self.add(obj, property, binding);
+            },
+            setChange: function (obj, property) {
+                var bindings = self.get(obj, property);
+                for (var i = 0; i < bindings.length; i++) {
+                    bindings[i].dirty = true;
+                }
+            }
+        };
+    };
+    return DependencyGraph;
 })();
 var ContentBinding = (function (_super) {
     __extends(ContentBinding, _super);
@@ -70,10 +109,13 @@ var ContentBinding = (function (_super) {
         this.tpl = tpl;
     }
     ContentBinding.prototype.update = function () {
-        this.dom.textContent = this.tpl.execute(this.context);
+        if (this.dirty) {
+            this.dom.textContent = this.tpl.execute(this.context);
+            this.dirty = false;
+        }
     };
-    ContentBinding.prototype.init = function () {
-        var observable = Xania.observe(this.context, this.observer);
+    ContentBinding.prototype.init = function (depGraph) {
+        var observable = Xania.observe(this.context, depGraph.observer(this));
         var text = this.tpl.execute(observable);
         this.dom = document.createTextNode(text);
         return this;
@@ -87,9 +129,9 @@ var TagBinding = (function (_super) {
         this.tpl = tpl;
         this.children = [];
     }
-    TagBinding.prototype.renderTag = function () {
+    TagBinding.prototype.renderTag = function (model) {
         var elt = document.createElement(this.tpl.name);
-        var attributes = this.tpl.executeAttributes(this.context);
+        var attributes = this.tpl.executeAttributes(model);
         for (var attrName in attributes) {
             if (attributes.hasOwnProperty(attrName)) {
                 var domAttr = document.createAttribute(attrName);
@@ -100,13 +142,28 @@ var TagBinding = (function (_super) {
         return elt;
     };
     TagBinding.prototype.update = function () {
+        if (this.dirty) {
+            var elt = this.dom;
+            var attributes = this.tpl.executeAttributes(this.context);
+            for (var attrName in attributes) {
+                if (attributes.hasOwnProperty(attrName)) {
+                    var domAttr = elt.attributes[attrName];
+                    if (!!domAttr) {
+                        domAttr.value = attributes[attrName];
+                        elt.setAttributeNode(domAttr);
+                    }
+                }
+            }
+            this.dirty = false;
+        }
     };
-    TagBinding.prototype.init = function () {
+    TagBinding.prototype.init = function (depGraph) {
         var _this = this;
-        this.dom = this.renderTag();
+        var observable = Xania.observe(this.context, depGraph.observer(this));
+        this.dom = this.renderTag(observable);
         var children = this.tpl.children();
         for (var e = 0; e < children.length; e++) {
-            Binding.createAsync(children[e], this.context)
+            Binding.createAsync(children[e], this.context, depGraph)
                 .then(function (child) {
                 child.parent = _this;
                 _this.dom.appendChild(child.dom);
@@ -153,8 +210,8 @@ var Binder = (function () {
         target = target || document.body;
         var tpl = this.parseDom(rootDom);
         var rootBindings = [];
-        var map = new Map();
-        Binding.createAsync(tpl, model)
+        var depGraph = new DependencyGraph();
+        Binding.createAsync(tpl, model, depGraph)
             .then(function (rootBinding) {
             rootBindings.push(rootBinding);
             target.appendChild(rootBinding.dom);
@@ -187,10 +244,9 @@ var Binder = (function () {
                     var b = bindingPath.pop();
                     var handler = b.tpl.events.get('click');
                     if (!!handler) {
-                        var observer = new Observer();
-                        var proxy = Xania.observe(b.context, observer);
+                        var proxy = Xania.observe(b.context, depGraph.observer());
                         handler(proxy);
-                        _this.updateAll(rootBindings, observer.changes);
+                        _this.updateBindings(rootBindings);
                     }
                 }
             }
@@ -204,57 +260,21 @@ var Binder = (function () {
                     var b = bindingPath.pop();
                     var nameAttr = evt.target.attributes["name"];
                     if (!!nameAttr) {
-                        var observer = new Observer();
-                        var proxy = Xania.observe(b.context, observer);
+                        var proxy = Xania.observe(b.context, depGraph.observer());
                         var prop = nameAttr.value;
                         var update = new Function("context", "value", "with (context) { " + prop + " = value; }");
                         update(proxy, evt.target.value);
-                        for (var i = 0; i < 10000; i++) {
-                            _this.updateAll(rootBindings, observer.changes);
-                        }
+                        _this.updateBindings(rootBindings);
                     }
                 }
             }
         };
         target.addEventListener("keyup", onchange);
     };
-    Binder.prototype.updateAll = function (rootBindings, changes) {
-        if (!window.__map) {
-            window.__map = new Map();
-            for (var n = 0; n < rootBindings.length; n++) {
-                rootBindings[n].accept(function (b) {
-                    b.dependencies().forEach(function (props, obj) {
-                        if (window.__map.has(obj))
-                            window.__map.get(obj).push(b);
-                        else
-                            window.__map.set(obj, [b]);
-                    });
-                });
-            }
+    Binder.prototype.updateBindings = function (bindings) {
+        for (var i = 0; i < bindings.length; i++) {
+            bindings[i].accept(function (b) { return b.update(); });
         }
-        var map = window.__map;
-        changes.forEach(function (props, obj) {
-            if (map.has(obj)) {
-                var bindings = map.get(obj);
-                for (var e = 0; e < bindings.length; e++) {
-                    var binding = bindings[e];
-                    for (var i = 0; i < props.length; i++) {
-                        if (binding.dependsOn(obj, props[i])) {
-                            binding.update();
-                            break;
-                        }
-                    }
-                }
-            }
-        });
-    };
-    Binder.prototype.updateFamily = function (b, prop) {
-        do {
-            for (var i = 0; i < b.children.length; i++) {
-                var child = b.children[i];
-            }
-            b = b.parent;
-        } while (b.parent);
     };
     Binder.prototype.parseDom = function (rootDom) {
         var stack = [];

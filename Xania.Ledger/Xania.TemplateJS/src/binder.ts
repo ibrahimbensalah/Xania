@@ -1,6 +1,6 @@
 ﻿class Binding {
     private data;
-    public observer = new Observer();
+    public dirty: boolean;
     public parent: TagBinding;
 
     constructor(public context, private idx: number) {
@@ -22,48 +22,90 @@
         throw new Error("Abstract method Binding.update");
     }
 
-    init() {
+    init(depGraph: DependencyGraph) {
         throw new Error("Abstract method Binding.update");
     }
 
-    static create(tpl, context) {
+    static create(tpl, context, depGraph: DependencyGraph) {
         var results = [];
-        Binding.createAsync(tpl, context).then(results.push.bind(results));
+        Binding.createAsync(tpl, context, depGraph).then(results.push.bind(results));
         return results;
     }
 
-    static createAsync(tpl: IDomTemplate, context) {
+    static createAsync(tpl: IDomTemplate, context, depGraph: DependencyGraph) {
         return {
             then(resolve) {
                 Binding.executeAsync(tpl, context, (model, idx) => {
                     if (typeof idx == "undefined")
                         throw new Error("model idx is not defined");
-                    resolve(tpl.bind(model, idx).init());
+                    resolve(tpl.bind(model, idx).init(depGraph));
                 });
             }
         };
     }
 
-    accept(visit: Function) {
+    accept(visitor: Function) {
         var stack = [this];
         while (stack.length > 0) {
             var cur = stack.pop();
-            visit(cur);
+            visitor(cur);
 
             if (cur instanceof TagBinding) {
-                let children = (<TagBinding>cur).children;
+                let children = cur.children;
                 for (var i = 0; i < children.length; i++)
                     stack.push(children[i]);
             }
         }
     }
+}
 
-    dependencies() {
-        return this.observer.reads;
+class DependencyGraph {
+    private map = new Map<any, any>();
+
+    add(object: any, property: string, binding: Binding) {
+        if (this.map.has(object)) {
+            const deps = this.map.get(object);
+
+            if (deps.hasOwnProperty(property))
+                deps[property].push(binding);
+            else
+                deps[property] = [binding];
+        } else {
+            const deps = {};
+            deps[property] = [binding];
+            this.map.set(object, deps);
+        }
+
+        return this;
     }
 
-    dependsOn(context, prop: string) {
-        return this.observer.hasRead(context, prop);
+    get(object: any, property: string) {
+        if (!this.map.has(object))
+            return [];
+
+        const deps = this.map.get(object);
+        const result: Binding[] = [];
+
+        if (deps.hasOwnProperty(property))
+            result.push.apply(result, deps[property]);
+
+        return result;
+    }
+
+    observer(binding: Binding = null): IObserver {
+        var self = this;
+        return {
+            setRead(obj, property) {
+                if (!!binding)
+                    self.add(obj, property, binding);
+            },
+            setChange(obj, property: string) {
+                var bindings = self.get(obj, property);
+                for (var i = 0; i < bindings.length; i++) {
+                    bindings[i].dirty = true;
+                }
+            }
+        };
     }
 }
 
@@ -75,14 +117,18 @@ class ContentBinding extends Binding {
     }
 
     update() {
-        this.dom.textContent = this.tpl.execute(this.context);
+        if (this.dirty) {
+            this.dom.textContent = this.tpl.execute(this.context);
+            this.dirty = false;
+        }
     }
 
-    init() {
-        var observable = Xania.observe(this.context, this.observer);
+    init(depGraph: DependencyGraph) {
+        var observable = Xania.observe(this.context, depGraph.observer(this));
 
         var text = this.tpl.execute(observable);
         this.dom = document.createTextNode(text);
+
         return this;
     }
 }
@@ -90,18 +136,17 @@ class ContentBinding extends Binding {
 class TagBinding extends Binding {
 
     public children: Binding[] = [];
-    protected dom;
+    protected dom: HTMLElement;
 
     constructor(private tpl: TagElement, context, idx: number) {
         super(context, idx);
     }
 
-    private renderTag() {
-        var elt = document.createElement(this.tpl.name);
+    private renderTag(model) {
+        const elt = document.createElement(this.tpl.name);
 
-        var attributes = this.tpl.executeAttributes(this.context);
+        var attributes = this.tpl.executeAttributes(model);
         for (let attrName in attributes) {
-
             if (attributes.hasOwnProperty(attrName)) {
                 const domAttr = document.createAttribute(attrName);
                 domAttr.value = attributes[attrName];
@@ -113,13 +158,30 @@ class TagBinding extends Binding {
     }
 
     update() {
+        if (this.dirty) {
+            var elt = this.dom;
+
+            var attributes = this.tpl.executeAttributes(this.context);
+            for (let attrName in attributes) {
+                if (attributes.hasOwnProperty(attrName)) {
+                    const domAttr = elt.attributes[attrName];
+                    if (!!domAttr) {
+                        domAttr.value = attributes[attrName];
+                        elt.setAttributeNode(domAttr);
+                    }
+                }
+            }
+            this.dirty = false;
+        }
     }
 
-    init() {
-        this.dom = this.renderTag();
+    init(depGraph: DependencyGraph) {
+        var observable = Xania.observe(this.context, depGraph.observer(this));
+        this.dom = this.renderTag(observable);
+
         const children = this.tpl.children();
         for (var e = 0; e < children.length; e++) {
-            Binding.createAsync(children[e], this.context)
+            Binding.createAsync(children[e], this.context, depGraph)
                 .then(child => {
                     child.parent = this;
                     this.dom.appendChild(child.dom);
@@ -167,8 +229,9 @@ class Binder {
         var tpl = this.parseDom(rootDom);
 
         var rootBindings: Binding[] = [];
-        const map = new Map<any, [Binding]>();
-        Binding.createAsync(tpl, model)
+        var depGraph = new DependencyGraph();
+
+        Binding.createAsync(tpl, model, depGraph)
             .then((rootBinding: Binding) => {
                 rootBindings.push(rootBinding);
                 target.appendChild((<any>rootBinding).dom);
@@ -197,7 +260,6 @@ class Binder {
 
             return result;
         }
-
         target.addEventListener("click",
             evt => {
                 var pathIdx = evt.path.indexOf(target);
@@ -209,10 +271,10 @@ class Binder {
                         var b = bindingPath.pop();
                         var handler = b.tpl.events.get('click');
                         if (!!handler) {
-                            var observer = new Observer();
-                            var proxy = Xania.observe(b.context, observer);
+                            var proxy = Xania.observe(b.context, depGraph.observer());
                             handler(proxy);
-                            this.updateAll(rootBindings, observer.changes);
+
+                            this.updateBindings(rootBindings);
                         }
                     }
                 }
@@ -228,15 +290,13 @@ class Binder {
                     var b = bindingPath.pop();
                     const nameAttr = evt.target.attributes["name"];
                     if (!!nameAttr) {
-                        var observer = new Observer();
-                        var proxy = Xania.observe(b.context, observer);
+                        const proxy = Xania.observe(b.context, depGraph.observer());
                         const prop = nameAttr.value;
                         const update = new Function("context", "value",
                             `with (context) { ${prop} = value; }`);
                         update(proxy, evt.target.value);
-                        for (var i = 0; i < 10000; i++) {
-                            this.updateAll(rootBindings, observer.changes);
-                        }
+
+                        this.updateBindings(rootBindings);
                     }
                 }
             }
@@ -244,49 +304,10 @@ class Binder {
         target.addEventListener("keyup", onchange);
     }
 
-    updateAll(rootBindings: Binding[], changes: Map<any, string[]>) {
-        if (!(<any>window).__map) {
-            (<any>window).__map = new Map<any, [Binding]>();
-            for (let n = 0; n < rootBindings.length; n++) {
-                rootBindings[n].accept((b: Binding) => {
-                    b.dependencies().forEach((props, obj) => {
-                        if ((<any>window).__map.has(obj))
-                            (<any>window).__map.get(obj).push(b);
-                        else
-                            (<any>window).__map.set(obj, [b]);
-                    });
-                });
-            }
+    updateBindings(bindings: Binding[]) {
+        for (var i = 0; i < bindings.length; i++) {
+            bindings[i].accept(b => b.update());
         }
-        const map = (<any>window).__map;
-
-        changes.forEach((props, obj) => {
-            if (map.has(obj)) {
-                const bindings = map.get(obj);
-                for (let e = 0; e < bindings.length; e++) {
-                    const binding = bindings[e];
-                    for (let i = 0; i < props.length; i++) {
-                        if (binding.dependsOn(obj, props[i])) {
-                            binding.update();
-                            break;
-                        }
-                    }
-                }
-            }
-        });
-    }
-
-    updateFamily(b: TagBinding, prop: string) {
-        do {
-            for (var i = 0; i < b.children.length; i++) {
-                const child = b.children[i];
-
-                //if (child instanceof ContentBinding && child.dependsOn(prop)) {
-                //    child.update();
-                //}
-            }
-            b = b.parent;
-        } while (b.parent);
     }
 
     parseDom(rootDom: HTMLElement): TagElement {

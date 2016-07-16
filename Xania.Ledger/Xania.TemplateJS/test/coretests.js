@@ -220,4 +220,20 @@ describe("partial application", function () {
         });
 });
 
+describe("dependency graph", function () {
+    it("should register binding", function () {
+        var graph = new DependencyGraph();
+        var xania = Company.xania();
+
+        var b1 = new Binding();
+        var b2 = new Binding();
+
+        graph.add(xania, "employees", b1);
+        graph.add(xania, "employees", b2);
+
+        console.log(graph);
+
+        expect(graph.get(xania, "employees")).toEqual([b1, b2]);
+    });
+});
 // ReSharper restore UndeclaredGlobalVariableUsing

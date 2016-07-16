@@ -102,6 +102,7 @@ var SelectManyExpression = (function () {
         var collectionFunc = new Function("m", "with(m) { return " + this.collectionExpr + "; }");
         for (var i = 0; i < source.length; i++) {
             var col = collectionFunc(source[i]);
+            console.log(col);
             Xania.map(itemHandler, col);
         }
     };
@@ -128,45 +129,6 @@ var Value = (function () {
         return this.obj;
     };
     return Value;
-})();
-var Observer = (function () {
-    function Observer() {
-        this.reads = new Map();
-        this.changes = new Map();
-    }
-    Observer.prototype.setRead = function (obj, prop) {
-        if (!this.reads.has(obj)) {
-            this.reads.set(obj, [prop]);
-        }
-        else if (this.reads.get(obj).indexOf(prop) < 0) {
-            this.reads.get(obj).push(prop);
-        }
-    };
-    Observer.prototype.setChange = function (obj, prop) {
-        if (!this.changes.has(obj)) {
-            this.changes.set(obj, [prop]);
-        }
-        else if (this.changes.get(obj).indexOf(prop) < 0) {
-            this.changes.get(obj).push(prop);
-        }
-    };
-    Observer.prototype.hasRead = function (context, prop) {
-        if (this.reads.has(context)) {
-            if (prop === null)
-                return true;
-            return this.reads.get(context).indexOf(prop) >= 0;
-        }
-        return false;
-    };
-    Observer.prototype.hasChange = function (context, prop) {
-        if (this.changes.has(context)) {
-            if (prop === null)
-                return true;
-            return this.changes.get(context).indexOf(prop) >= 0;
-        }
-        return false;
-    };
-    return Observer;
 })();
 var Xania = (function () {
     function Xania() {
