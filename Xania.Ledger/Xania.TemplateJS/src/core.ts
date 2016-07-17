@@ -131,7 +131,6 @@ class SelectManyExpression {
         var collectionFunc = new Function("m", `with(m) { return ${this.collectionExpr}; }`);
         for (let i = 0; i < source.length; i++) {
             const col = collectionFunc(source[i]);
-            console.log(col);
             Xania.map(itemHandler, col);
         }
     }
@@ -269,9 +268,18 @@ class Xania {
         // ReSharper disable once InconsistentNaming
         var ProxyConst = window["Proxy"];
         return new ProxyConst(target, {
-            get(target, idx) {
-                var value = target[idx];
-                return Xania.observe(value, observer);
+            get(target, property) {
+                observer.setRead(target, property);
+                return Xania.observe(target[property], observer);
+            },
+            set(target, property, value, receiver) {
+                console.log("array set", property, value);
+                target[property] = value;
+                observer.setChange(target, property);
+                return true;
+            },
+            apply(target, thisArg, argumentsList) {
+                console.log("apply", argumentsList);
             }
         });
     }

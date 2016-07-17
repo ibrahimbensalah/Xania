@@ -102,7 +102,6 @@ var SelectManyExpression = (function () {
         var collectionFunc = new Function("m", "with(m) { return " + this.collectionExpr + "; }");
         for (var i = 0; i < source.length; i++) {
             var col = collectionFunc(source[i]);
-            console.log(col);
             Xania.map(itemHandler, col);
         }
     };
@@ -226,9 +225,18 @@ var Xania = (function () {
     Xania.observeArray = function (target, observer) {
         var ProxyConst = window["Proxy"];
         return new ProxyConst(target, {
-            get: function (target, idx) {
-                var value = target[idx];
-                return Xania.observe(value, observer);
+            get: function (target, property) {
+                observer.setRead(target, property);
+                return Xania.observe(target[property], observer);
+            },
+            set: function (target, property, value, receiver) {
+                console.log("array set", property, value);
+                target[property] = value;
+                observer.setChange(target, property);
+                return true;
+            },
+            apply: function (target, thisArg, argumentsList) {
+                console.log("apply", argumentsList);
             }
         });
     };

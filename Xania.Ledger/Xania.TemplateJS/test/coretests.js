@@ -90,16 +90,6 @@ describe("Binding", function () {
         });
 });
 
-describe("Binder", function () {
-    it("should determine dependencies", function () {
-        var dependencies = [];
-        var px = Xania.observe({ emp: new Employee() }, dependencies);
-        console.log(px.firstName);
-
-        console.log(dependencies);
-    });
-});
-
 describe("Template Engine", function () {
     it("should compile when zero params",
         function () {
@@ -203,6 +193,28 @@ describe("Xania.observe", function () {
             expect(observer.hasChange(employee, "firstName")).toEqual(true);
             expect(observer.hasChange(employee, "lastName")).toEqual(false);
             console.log(observer);
+        });
+    it("should track array addition",
+        function () {
+            var arr = [];
+            var observer = new Observer();
+            var proxy = Xania.observe(arr, observer);
+            proxy.push(1);
+
+            expect(arr).toEqual([1]);
+            expect(observer.hasChange(arr, "length")).toEqual(true);
+            expect(observer.hasChange(arr, "0")).toEqual(true);
+        });
+
+    it("should track array removal",
+        function () {
+            var arr = [1, 2, 3];
+            var observer = new Observer();
+            var proxy = Xania.observe(arr, observer);
+            proxy.pop();
+
+            expect(arr).toEqual([1, 2]);
+            expect(observer.hasChange(arr, "length")).toEqual(true);
         });
 });
 

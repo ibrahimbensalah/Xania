@@ -130,6 +130,7 @@ var TagBinding = (function (_super) {
         this.children = [];
     }
     TagBinding.prototype.renderTag = function (model) {
+        if (model === void 0) { model = this.context; }
         var elt = document.createElement(this.tpl.name);
         var attributes = this.tpl.executeAttributes(model);
         for (var attrName in attributes) {
@@ -159,6 +160,7 @@ var TagBinding = (function (_super) {
     };
     TagBinding.prototype.init = function (depGraph) {
         var _this = this;
+        if (depGraph === void 0) { depGraph = new DependencyGraph(); }
         var observable = Xania.observe(this.context, depGraph.observer(this));
         this.dom = this.renderTag(observable);
         var children = this.tpl.children();
@@ -246,6 +248,7 @@ var Binder = (function () {
                     if (!!handler) {
                         var proxy = Xania.observe(b.context, depGraph.observer());
                         handler(proxy);
+                        console.log(b.context);
                         _this.updateBindings(rootBindings);
                     }
                 }

@@ -22,16 +22,16 @@
     <div>
         <div id="content">
             <ul data-for="o:OrganisationViewModel in xn">
-                <li>@o.getName()</li>
+                <li>@o.getName() @xn.count()</li>
                 <li data-for="emp in o.employees">
                     <div style="border: 2px solid @emp.firstName; padding: 10px;">
-                        <input name="emp.firstName" value="@emp.firstName" />
-                        <input name="emp.color" value="red" />
-                        <input name="emp.lastName" value="@emp.lastName" />
+                        <input name="emp.firstName" value="@emp.firstName"/>
+                        <input name="emp.color" value="red"/>
+                        <input name="emp.lastName" value="@emp.lastName"/>
                         <button click="emp.sayHello('+')">+</button>
                         <span data-for="r in emp.roles">@r.name </span>
                         <div>fullName : @emp.fullName</div>
-                        <div>getName  : @emp.getName()</div>
+                        <div>getName : @emp.getName()</div>
                     </div>
                     <div>@emp.fullName</div>
                 </li>
@@ -53,15 +53,6 @@
 
         binder.bind(contentDiv, model);
 
-        for (var fn in Array.prototype) {
-            // if (Array.prototype.hasOwnProperty(fn)) {
-            console.log(fn);
-            Array.prototype[fn] = Util.partialApp(function (name, orig) {
-                console.log(name);
-                return orig.call(this, arguments);
-            }, fn, Array.prototype[fn]);
-            // }
-        }
     </script>
 </body>
 </html>

@@ -142,7 +142,7 @@ class TagBinding extends Binding {
         super(context, idx);
     }
 
-    private renderTag(model) {
+    private renderTag(model = this.context) {
         const elt = document.createElement(this.tpl.name);
 
         var attributes = this.tpl.executeAttributes(model);
@@ -175,7 +175,7 @@ class TagBinding extends Binding {
         }
     }
 
-    init(depGraph: DependencyGraph) {
+    init(depGraph: DependencyGraph = new DependencyGraph()) {
         var observable = Xania.observe(this.context, depGraph.observer(this));
         this.dom = this.renderTag(observable);
 
@@ -273,6 +273,8 @@ class Binder {
                         if (!!handler) {
                             var proxy = Xania.observe(b.context, depGraph.observer());
                             handler(proxy);
+
+                            console.log(b.context);
 
                             this.updateBindings(rootBindings);
                         }

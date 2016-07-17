@@ -113,6 +113,48 @@ var OrganisationViewModel = (function () {
         this.employees.push(new Employee('bla', 'di bla'));
         console.log(this.employees.length);
     };
+    OrganisationViewModel.prototype.count = function () {
+        return this.employees.length;
+    };
     return OrganisationViewModel;
+})();
+var Observer = (function () {
+    function Observer() {
+        this.reads = new Map();
+        this.changes = new Map();
+    }
+    Observer.prototype.setRead = function (obj, prop) {
+        if (!this.reads.has(obj)) {
+            this.reads.set(obj, [prop]);
+        }
+        else if (this.reads.get(obj).indexOf(prop) < 0) {
+            this.reads.get(obj).push(prop);
+        }
+    };
+    Observer.prototype.setChange = function (obj, prop) {
+        if (!this.changes.has(obj)) {
+            this.changes.set(obj, [prop]);
+        }
+        else if (this.changes.get(obj).indexOf(prop) < 0) {
+            this.changes.get(obj).push(prop);
+        }
+    };
+    Observer.prototype.hasRead = function (context, prop) {
+        if (this.reads.has(context)) {
+            if (prop === null)
+                return true;
+            return this.reads.get(context).indexOf(prop) >= 0;
+        }
+        return false;
+    };
+    Observer.prototype.hasChange = function (context, prop) {
+        if (this.changes.has(context)) {
+            if (prop === null)
+                return true;
+            return this.changes.get(context).indexOf(prop) >= 0;
+        }
+        return false;
+    };
+    return Observer;
 })();
 //# sourceMappingURL=company.js.map
