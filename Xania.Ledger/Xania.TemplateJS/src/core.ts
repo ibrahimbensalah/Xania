@@ -26,7 +26,7 @@ class TagElement implements IDomTemplate {
     private events = new Map<string, any>();
     // ReSharper disable once InconsistentNaming
     private _children: TagElement[] = [];
-    public modelAccessor: Function = Xania.identity;
+    public modelAccessor: Function;// = Xania.identity;
     public modelIdentifier: string;
 
     constructor(public name: string) {
@@ -121,11 +121,14 @@ class SelectManyExpression {
             viewModel = this.viewModel;
 
         const itemHandler = item => {
-            var copy = Xania.shallow(context);
-            copy[this.varName] = typeof viewModel !== "undefined" && viewModel !== null
+            var result = {};
+            result[this.varName] = typeof viewModel !== "undefined" && viewModel !== null
                 ? Xania.construct(viewModel, item)
                 : item;
-            resolve(copy);
+            resolve(result);
+            // var copy = Xania.shallow(context);
+            // copy[this.varName] = result;
+            // resolve(copy);
         };
 
         var collectionFunc = new Function("m", `with(m) { return ${this.collectionExpr}; }`);
@@ -292,6 +295,7 @@ class Xania {
             __.prototype = target.constructor.prototype;
             Spy.prototype = new __();
         }
+        Spy.prototype.valueOf = () => target;
 
         const props = Object.getOwnPropertyNames(target);
         for (let i = 0; i < props.length; i++) {
@@ -321,9 +325,10 @@ class Xania {
     }
 
     static shallow(obj) {
-        var assign = (<any>Object).assign;
-        return assign({}, obj);
+        return Xania.assign({}, obj);
     }
+
+    static assign = (<any>Object).assign;
 }
 
 // ReSharper restore InconsistentNaming

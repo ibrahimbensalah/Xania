@@ -11,20 +11,27 @@ var Binding = (function () {
     }
     Binding.executeAsync = function (tpl, context, observer, resolve) {
         if (!!tpl.modelAccessor) {
-            var observable = observer.observe(context, {
-                notify: function () {
-                }
-            });
-            console.log(observable, context);
-            var model = tpl.modelAccessor(context);
-            var iter = function (data) {
-                Xania.map(resolve, data);
-            };
-            if (typeof (model.then) === "function") {
-                model.then(iter);
+            if (Array.isArray(context))
+                throw new Error("invalid argument array");
+            var model;
+            if (!!observer) {
+                var observable = observer.observe(context, {
+                    notify: function () {
+                    }
+                });
+                model = tpl.modelAccessor(context);
             }
             else {
-                iter(model);
+                model = tpl.modelAccessor(context);
+            }
+            var merge = function (result, idx) {
+                resolve(Xania.assign({}, context, result), idx);
+            };
+            if (typeof (model.then) === "function") {
+                model.then(function (data) { return Xania.map(merge, data); });
+            }
+            else {
+                Xania.map(resolve, model);
             }
         }
         else {

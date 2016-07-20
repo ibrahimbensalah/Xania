@@ -13,22 +13,30 @@ class Binding implements ISubsriber {
     public static executeAsync(tpl, context, observer: Observer, resolve: any) {
         // const model = !!tpl.modelAccessor ? tpl.modelAccessor(context) : context,
         if (!!tpl.modelAccessor) {
-            var observable = observer.observe(context, {
-                notify() {
-                }
-            });
+            if (Array.isArray(context))
+                throw new Error("invalid argument array");
 
-            console.log(observable, context);
+            let model;
+            if (!!observer) {
+                var observable = observer.observe(context,
+                {
+                    notify() {
+                    }
+                });
 
-            const model = tpl.modelAccessor(context);
-            var iter = data => {
-                Xania.map(resolve, data);
+                model = tpl.modelAccessor(context);
+            } else {
+                model = tpl.modelAccessor(context);
             }
 
+            var merge = (result, idx) => {
+                resolve(Xania.assign({}, context, result), idx);
+            };
+
             if (typeof (model.then) === "function") {
-                model.then(iter);
+                model.then(data => Xania.map(merge, data));
             } else {
-                iter(model);
+                Xania.map(resolve, model);
             }
         } else {
             Xania.map(resolve, context);

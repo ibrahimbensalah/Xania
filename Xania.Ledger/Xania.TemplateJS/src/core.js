@@ -21,7 +21,6 @@ var TagElement = (function () {
         this.attributes = new Map();
         this.events = new Map();
         this._children = [];
-        this.modelAccessor = Xania.identity;
     }
     TagElement.prototype.children = function () {
         return this._children;
@@ -93,11 +92,11 @@ var SelectManyExpression = (function () {
         var _this = this;
         var ensureIsArray = SelectManyExpression.ensureIsArray, source = ensureIsArray(context), viewModel = this.viewModel;
         var itemHandler = function (item) {
-            var copy = Xania.shallow(context);
-            copy[_this.varName] = typeof viewModel !== "undefined" && viewModel !== null
+            var result = {};
+            result[_this.varName] = typeof viewModel !== "undefined" && viewModel !== null
                 ? Xania.construct(viewModel, item)
                 : item;
-            resolve(copy);
+            resolve(result);
         };
         var collectionFunc = new Function("m", "with(m) { return " + this.collectionExpr + "; }");
         for (var i = 0; i < source.length; i++) {
@@ -248,6 +247,7 @@ var Xania = (function () {
             __.prototype = target.constructor.prototype;
             Spy.prototype = new __();
         }
+        Spy.prototype.valueOf = function () { return target; };
         var props = Object.getOwnPropertyNames(target);
         for (var i = 0; i < props.length; i++) {
             var prop = props[i];
@@ -272,9 +272,9 @@ var Xania = (function () {
         return assign(instance, data);
     };
     Xania.shallow = function (obj) {
-        var assign = Object.assign;
-        return assign({}, obj);
+        return Xania.assign({}, obj);
     };
+    Xania.assign = Object.assign;
     return Xania;
 })();
 //# sourceMappingURL=core.js.map
