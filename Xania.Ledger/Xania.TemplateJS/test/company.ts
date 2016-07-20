@@ -100,15 +100,25 @@ class OrganisationViewModel {
 
     addEmployee() {
         this.employees.push(new Employee('bla', 'di bla'));
-        console.log(this.employees.length);
     }
+
+    clearFirstNames() {
+        let employees = this.employees;
+        for (var idx in employees) {
+            if (employees.hasOwnProperty(idx)) {
+                var emp = employees[idx];
+                emp.firstName = "";
+            }
+        }
+    }
+
 
     count() {
         return this.employees.length;
     }
 }
 
-class Observer {
+class ObserverHelper {
     public reads = new Map<any, string[]>();
     public changes = new Map<any, string[]>();
 

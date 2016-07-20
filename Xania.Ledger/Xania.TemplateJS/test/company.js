@@ -111,19 +111,27 @@ var OrganisationViewModel = (function () {
     };
     OrganisationViewModel.prototype.addEmployee = function () {
         this.employees.push(new Employee('bla', 'di bla'));
-        console.log(this.employees.length);
+    };
+    OrganisationViewModel.prototype.clearFirstNames = function () {
+        var employees = this.employees;
+        for (var idx in employees) {
+            if (employees.hasOwnProperty(idx)) {
+                var emp = employees[idx];
+                emp.firstName = "";
+            }
+        }
     };
     OrganisationViewModel.prototype.count = function () {
         return this.employees.length;
     };
     return OrganisationViewModel;
 })();
-var Observer = (function () {
-    function Observer() {
+var ObserverHelper = (function () {
+    function ObserverHelper() {
         this.reads = new Map();
         this.changes = new Map();
     }
-    Observer.prototype.setRead = function (obj, prop) {
+    ObserverHelper.prototype.setRead = function (obj, prop) {
         if (!this.reads.has(obj)) {
             this.reads.set(obj, [prop]);
         }
@@ -131,7 +139,7 @@ var Observer = (function () {
             this.reads.get(obj).push(prop);
         }
     };
-    Observer.prototype.setChange = function (obj, prop) {
+    ObserverHelper.prototype.setChange = function (obj, prop) {
         if (!this.changes.has(obj)) {
             this.changes.set(obj, [prop]);
         }
@@ -139,7 +147,7 @@ var Observer = (function () {
             this.changes.get(obj).push(prop);
         }
     };
-    Observer.prototype.hasRead = function (context, prop) {
+    ObserverHelper.prototype.hasRead = function (context, prop) {
         if (this.reads.has(context)) {
             if (prop === null)
                 return true;
@@ -147,7 +155,7 @@ var Observer = (function () {
         }
         return false;
     };
-    Observer.prototype.hasChange = function (context, prop) {
+    ObserverHelper.prototype.hasChange = function (context, prop) {
         if (this.changes.has(context)) {
             if (prop === null)
                 return true;
@@ -155,6 +163,6 @@ var Observer = (function () {
         }
         return false;
     };
-    return Observer;
+    return ObserverHelper;
 })();
 //# sourceMappingURL=company.js.map

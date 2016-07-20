@@ -9,35 +9,46 @@ var Binding = (function () {
         this.context = context;
         this.idx = idx;
     }
-    Binding.executeAsync = function (tpl, context, resolve) {
-        var model = !!tpl.modelAccessor ? tpl.modelAccessor(context) : context, iter = function (data) {
-            Xania.map(resolve, data);
-        };
-        if (typeof (model.then) === "function") {
-            model.then(iter);
+    Binding.executeAsync = function (tpl, context, observer, resolve) {
+        if (!!tpl.modelAccessor) {
+            var observable = observer.observe(context, {
+                notify: function () {
+                }
+            });
+            console.log(observable, context);
+            var model = tpl.modelAccessor(context);
+            var iter = function (data) {
+                Xania.map(resolve, data);
+            };
+            if (typeof (model.then) === "function") {
+                model.then(iter);
+            }
+            else {
+                iter(model);
+            }
         }
         else {
-            iter(model);
+            Xania.map(resolve, context);
         }
     };
     Binding.prototype.update = function () {
         throw new Error("Abstract method Binding.update");
     };
-    Binding.prototype.init = function (depGraph) {
+    Binding.prototype.init = function (observer) {
         throw new Error("Abstract method Binding.update");
     };
-    Binding.create = function (tpl, context, depGraph) {
+    Binding.create = function (tpl, context, observer) {
         var results = [];
-        Binding.createAsync(tpl, context, depGraph).then(results.push.bind(results));
+        Binding.createAsync(tpl, context, observer).then(results.push.bind(results));
         return results;
     };
-    Binding.createAsync = function (tpl, context, depGraph) {
+    Binding.createAsync = function (tpl, context, observer) {
         return {
             then: function (resolve) {
-                Binding.executeAsync(tpl, context, function (model, idx) {
+                Binding.executeAsync(tpl, context, observer, function (model, idx) {
                     if (typeof idx == "undefined")
                         throw new Error("model idx is not defined");
-                    resolve(tpl.bind(model, idx).init(depGraph));
+                    resolve(tpl.bind(model, idx).init(observer));
                 });
             }
         };
@@ -54,15 +65,18 @@ var Binding = (function () {
             }
         }
     };
+    Binding.prototype.notify = function (object, property) {
+        this.dirty = true;
+    };
     return Binding;
 })();
-var DependencyGraph = (function () {
-    function DependencyGraph() {
-        this.map = new Map();
+var Observer = (function () {
+    function Observer() {
+        this.subscriptions = new Map();
     }
-    DependencyGraph.prototype.add = function (object, property, binding) {
-        if (this.map.has(object)) {
-            var deps = this.map.get(object);
+    Observer.prototype.subscribe = function (object, property, binding) {
+        if (this.subscriptions.has(object)) {
+            var deps = this.subscriptions.get(object);
             if (deps.hasOwnProperty(property))
                 deps[property].push(binding);
             else
@@ -71,36 +85,44 @@ var DependencyGraph = (function () {
         else {
             var deps = {};
             deps[property] = [binding];
-            this.map.set(object, deps);
+            this.subscriptions.set(object, deps);
         }
         return this;
     };
-    DependencyGraph.prototype.get = function (object, property) {
-        if (!this.map.has(object))
+    Observer.prototype.get = function (object, property) {
+        if (!this.subscriptions.has(object))
             return [];
-        var deps = this.map.get(object);
+        var deps = this.subscriptions.get(object);
         var result = [];
-        if (deps.hasOwnProperty(property))
+        if (deps.hasOwnProperty(property) || deps.hasOwnProperty("*"))
             result.push.apply(result, deps[property]);
         return result;
     };
-    DependencyGraph.prototype.observer = function (binding) {
-        if (binding === void 0) { binding = null; }
+    Observer.prototype.observe = function (context, binding) {
         var self = this;
-        return {
+        return Xania.observe(context, {
             setRead: function (obj, property) {
-                if (!!binding)
-                    self.add(obj, property, binding);
+                self.subscribe(obj, property, binding);
+            },
+            setChange: function (obj, property) {
+                throw new Error("invalid change");
+            }
+        });
+    };
+    Observer.prototype.track = function (context) {
+        var self = this;
+        return Xania.observe(context, {
+            setRead: function () {
             },
             setChange: function (obj, property) {
                 var bindings = self.get(obj, property);
                 for (var i = 0; i < bindings.length; i++) {
-                    bindings[i].dirty = true;
+                    bindings[i].notify(obj, property);
                 }
             }
-        };
+        });
     };
-    return DependencyGraph;
+    return Observer;
 })();
 var ContentBinding = (function (_super) {
     __extends(ContentBinding, _super);
@@ -114,8 +136,8 @@ var ContentBinding = (function (_super) {
             this.dirty = false;
         }
     };
-    ContentBinding.prototype.init = function (depGraph) {
-        var observable = Xania.observe(this.context, depGraph.observer(this));
+    ContentBinding.prototype.init = function (observer) {
+        var observable = observer.observe(this.context, this);
         var text = this.tpl.execute(observable);
         this.dom = document.createTextNode(text);
         return this;
@@ -158,14 +180,14 @@ var TagBinding = (function (_super) {
             this.dirty = false;
         }
     };
-    TagBinding.prototype.init = function (depGraph) {
+    TagBinding.prototype.init = function (observer) {
         var _this = this;
-        if (depGraph === void 0) { depGraph = new DependencyGraph(); }
-        var observable = Xania.observe(this.context, depGraph.observer(this));
+        if (observer === void 0) { observer = new Observer(); }
+        var observable = observer.observe(this.context, this);
         this.dom = this.renderTag(observable);
         var children = this.tpl.children();
         for (var e = 0; e < children.length; e++) {
-            Binding.createAsync(children[e], this.context, depGraph)
+            Binding.createAsync(children[e], this.context, observer)
                 .then(function (child) {
                 child.parent = _this;
                 _this.dom.appendChild(child.dom);
@@ -212,8 +234,8 @@ var Binder = (function () {
         target = target || document.body;
         var tpl = this.parseDom(rootDom);
         var rootBindings = [];
-        var depGraph = new DependencyGraph();
-        Binding.createAsync(tpl, model, depGraph)
+        var observer = new Observer();
+        Binding.createAsync(tpl, model, observer)
             .then(function (rootBinding) {
             rootBindings.push(rootBinding);
             target.appendChild(rootBinding.dom);
@@ -246,9 +268,8 @@ var Binder = (function () {
                     var b = bindingPath.pop();
                     var handler = b.tpl.events.get('click');
                     if (!!handler) {
-                        var proxy = Xania.observe(b.context, depGraph.observer());
-                        handler(proxy);
-                        console.log(b.context);
+                        var observable = observer.track(b.context);
+                        handler(observable);
                         _this.updateBindings(rootBindings);
                     }
                 }
@@ -263,7 +284,7 @@ var Binder = (function () {
                     var b = bindingPath.pop();
                     var nameAttr = evt.target.attributes["name"];
                     if (!!nameAttr) {
-                        var proxy = Xania.observe(b.context, depGraph.observer());
+                        var proxy = observer.track(b.context);
                         var prop = nameAttr.value;
                         var update = new Function("context", "value", "with (context) { " + prop + " = value; }");
                         update(proxy, evt.target.value);

@@ -149,7 +149,7 @@ describe("Xania.observe", function () {
         function () {
             // arrange
             var employee = new Employee("Ibrahim", "ben Salah");
-            var observer = new Observer();
+            var observer = new ObserverHelper();
             // act
             var fullName = Xania.observe(employee, observer).fullName;
             // assert
@@ -159,7 +159,7 @@ describe("Xania.observe", function () {
         function () {
             // arrange
             var employee = new Employee("Ibrahim", "ben Salah");
-            var observer = new Observer();
+            var observer = new ObserverHelper();
             // act
             var dummy = Xania.observe(employee, observer).fullName;
             // assert
@@ -170,7 +170,7 @@ describe("Xania.observe", function () {
         function () {
             // arrange
             var employee = new Employee("Ibrahim", "ben Salah");
-            var observer = new Observer();
+            var observer = new ObserverHelper();
             // act
             var proxy = Xania.observe(employee, observer);
             proxy.firstName = "dummy";
@@ -184,7 +184,7 @@ describe("Xania.observe", function () {
             // arrange
             var xania = Company.xania();
             var employee = xania.employees[0];
-            var observer = new Observer();
+            var observer = new ObserverHelper();
             // act
             var proxy = Xania.observe(xania, observer);
             proxy.employees[0].firstName = "dummy";
@@ -197,7 +197,7 @@ describe("Xania.observe", function () {
     it("should track array addition",
         function () {
             var arr = [];
-            var observer = new Observer();
+            var observer = new ObserverHelper();
             var proxy = Xania.observe(arr, observer);
             proxy.push(1);
 
@@ -209,7 +209,7 @@ describe("Xania.observe", function () {
     it("should track array removal",
         function () {
             var arr = [1, 2, 3];
-            var observer = new Observer();
+            var observer = new ObserverHelper();
             var proxy = Xania.observe(arr, observer);
             proxy.pop();
 
@@ -234,14 +234,14 @@ describe("partial application", function () {
 
 describe("dependency graph", function () {
     it("should register binding", function () {
-        var graph = new DependencyGraph();
+        var graph = new Observer();
         var xania = Company.xania();
 
         var b1 = new Binding();
         var b2 = new Binding();
 
-        graph.add(xania, "employees", b1);
-        graph.add(xania, "employees", b2);
+        graph.subscribe(xania, "employees", b1);
+        graph.subscribe(xania, "employees", b2);
 
         console.log(graph);
 

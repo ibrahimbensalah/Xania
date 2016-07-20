@@ -230,13 +230,11 @@ var Xania = (function () {
                 return Xania.observe(target[property], observer);
             },
             set: function (target, property, value, receiver) {
-                console.log("array set", property, value);
                 target[property] = value;
                 observer.setChange(target, property);
                 return true;
             },
             apply: function (target, thisArg, argumentsList) {
-                console.log("apply", argumentsList);
             }
         });
     };

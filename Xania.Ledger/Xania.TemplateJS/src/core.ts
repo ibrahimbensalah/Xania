@@ -273,13 +273,11 @@ class Xania {
                 return Xania.observe(target[property], observer);
             },
             set(target, property, value, receiver) {
-                console.log("array set", property, value);
                 target[property] = value;
                 observer.setChange(target, property);
                 return true;
             },
             apply(target, thisArg, argumentsList) {
-                console.log("apply", argumentsList);
             }
         });
     }
