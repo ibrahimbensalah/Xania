@@ -21,7 +21,7 @@
 
     <div>
         <div id="content">
-            <ul data-for="o:OrganisationViewModel in xn">
+            <ul data-for="o in xn">
                 <li>@o.getName() @xn.count()</li>
                 <li data-for="emp in o.employees">
                     <div style="border: 2px solid @emp.firstName; padding: 10px;">
@@ -56,15 +56,6 @@
 
         var compile = TemplateEngine.compile;
         var xania = Company.xania();
-
-        var elt = new TagElement("div");
-        elt.for("b in ctx : org");
-        var childEl = new TagElement("span");
-        elt.addChild(childEl);
-        childEl.attr("title", compile("C:@emp.firstName-B:@b.name-A:@org.name"));
-        childEl.for("emp in b.employees");
-        // act
-        var bindings = Binding.create(elt, { "org": Company.xania() });
 
     </script>
 </body>

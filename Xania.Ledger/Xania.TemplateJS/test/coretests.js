@@ -125,7 +125,6 @@ describe("Select Many Expression", function () {
             var result = expr.execute({ org: xania });
             expect(result.length).toEqual(1);
             expect(result[0].emp.n).toEqual(xania.name);
-            expect(result[0].org.name).toEqual(xania.name);
         });
 });
 
@@ -215,6 +214,24 @@ describe("Xania.observe", function () {
 
             expect(arr).toEqual([1, 2]);
             expect(observer.hasChange(arr, "length")).toEqual(true);
+        });
+
+    it("should be able to unwrap",
+        function() {
+            var context = {
+                a: Company.xania()
+            };
+            var observer = new Observer();
+            var observable = observer.observe(context);
+
+            var result = {
+                emp: observable.a.employees[0],
+                x: { y: observable.a.employees[0] }
+            };
+            var unwrapped = Xania.unwrap(result);
+            expect(unwrapped.emp.isSpy).toEqual(undefined);
+            expect(unwrapped.x.isSpy).toEqual(undefined);
+            expect(unwrapped.x.y.isSpy).toEqual(undefined);
         });
 });
 

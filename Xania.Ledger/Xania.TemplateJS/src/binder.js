@@ -13,25 +13,28 @@ var Binding = (function () {
         if (!!tpl.modelAccessor) {
             if (Array.isArray(context))
                 throw new Error("invalid argument array");
-            var model;
-            if (!!observer) {
-                var observable = observer.observe(context, {
-                    notify: function () {
-                    }
-                });
-                model = tpl.modelAccessor(context);
-            }
-            else {
-                model = tpl.modelAccessor(context);
-            }
             var merge = function (result, idx) {
                 resolve(Xania.assign({}, context, result), idx);
             };
-            if (typeof (model.then) === "function") {
-                model.then(function (data) { return Xania.map(merge, data); });
+            function update(target) {
+                var model = tpl.modelAccessor(target);
+                if (typeof (model.then) === "function") {
+                    model.then(function (data) { return Xania.map(merge, data); });
+                }
+                else {
+                    Xania.map(resolve, model);
+                }
+            }
+            if (!!observer) {
+                var observable = observer.observe(context, {
+                    notify: function () {
+                        update(context);
+                    }
+                });
+                update(observable);
             }
             else {
-                Xania.map(resolve, model);
+                update(context);
             }
         }
         else {

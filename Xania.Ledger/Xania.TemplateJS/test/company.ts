@@ -7,8 +7,10 @@ class A {
     }
 }
 
-class Role {
-    constructor(public prefix, public emp: Employee) { }
+class Role extends A {
+    constructor(public prefix, public emp: Employee) {
+        super();
+    }
 
     get name() {
         return this.emp.firstName;
@@ -60,6 +62,20 @@ class Company extends A {
     count() {
         return this.employees.length;
     }
+
+    addEmployee() {
+        this.employees.push(new Employee('bla', 'di bla'));
+    }
+
+    clearFirstNames() {
+        let employees = this.employees;
+        for (var idx in employees) {
+            if (employees.hasOwnProperty(idx)) {
+                var emp = employees[idx];
+                emp.firstName = "";
+            }
+        }
+    }
 }
 class Url {
     static dummy(x) {
@@ -94,10 +110,6 @@ class OrganisationViewModel {
     private name: string;
     private employees: Employee[];
 
-    getName() {
-        return this.name;
-    }
-
     addEmployee() {
         this.employees.push(new Employee('bla', 'di bla'));
     }
@@ -110,11 +122,6 @@ class OrganisationViewModel {
                 emp.firstName = "";
             }
         }
-    }
-
-
-    count() {
-        return this.employees.length;
     }
 }
 

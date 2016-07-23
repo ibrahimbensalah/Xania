@@ -122,6 +122,7 @@ class SelectManyExpression {
 
         const itemHandler = item => {
             var result = {};
+            item = Xania.unwrap(item);
             result[this.varName] = typeof viewModel !== "undefined" && viewModel !== null
                 ? Xania.construct(viewModel, item)
                 : item;
@@ -285,17 +286,40 @@ class Xania {
         });
     }
 
+    static unwrap(obj) {
+        if (typeof (obj) !== "object")
+            return obj;
+
+        if (!!obj._unwrapping)
+            return obj;
+
+        if (!!obj.isSpy) {
+            return obj.valueOf();
+        }
+
+        obj._unwrapping = true;
+        for (let prop in obj) {
+            if (obj.hasOwnProperty(prop)) {
+                obj[prop] = Xania.unwrap(obj[prop]);
+            }
+        }
+        delete obj._unwrapping;
+
+        return obj;
+    }
+
     static observeObject(target, observer: IObserver) {
         // ReSharper disable once InconsistentNaming
-        function Spy() { }
-        function __() { // ReSharper disable once SuspiciousThisUsage 
-            this.constructor = Spy;
-        };
+        function Spy() {}
         if (target.constructor !== Object) {
+            function __() { // ReSharper disable once SuspiciousThisUsage 
+                this.constructor = Spy;
+            };
             __.prototype = target.constructor.prototype;
             Spy.prototype = new __();
         }
         Spy.prototype.valueOf = () => target;
+        Object.defineProperty(Spy.prototype, "isSpy", { get() { return true; }, enumerable: false });
 
         const props = Object.getOwnPropertyNames(target);
         for (let i = 0; i < props.length; i++) {
@@ -319,16 +343,57 @@ class Xania {
     }
 
     static construct(viewModel, data) {
-        var assign = (<any>Object).assign;
-        var instance = new viewModel;
-        return assign(instance, data);
+        //return Xania.assign(new viewModel, data);
+
+        function Proxy() {
+        }
+        function __() {
+            // ReSharper disable once SuspiciousThisUsage
+            this.constructor = Proxy;
+        };
+        __.prototype = data.constructor.prototype;
+        Proxy.prototype = new __();
+
+        for (let fn in viewModel.prototype) {
+            if (viewModel.prototype.hasOwnProperty(fn)) {
+                console.log(fn);
+                Proxy.prototype[fn] = viewModel.prototype[fn];
+            }
+        }
+
+        for (let prop in data) {
+            if (data.hasOwnProperty(prop)) {
+                Object.defineProperty(Proxy.prototype,
+                    prop,
+                    {
+                        get: Xania.partialApp((obj, name) => this[name], data, prop),
+                        enumerable: false,
+                        configurable: false
+                    }
+                );
+            }
+        }
+        Proxy.prototype.valueOf = () => Xania.construct(viewModel, data.valueOf());
+
+        return new Proxy();
     }
 
     static shallow(obj) {
         return Xania.assign({}, obj);
     }
 
-    static assign = (<any>Object).assign;
+    // static assign = (<any>Object).assign;
+    static assign(target, ...args) {
+        for (var i = 0; i < args.length; i++) {
+            const object = args[i];
+            for (let prop in object) {
+                if (object.hasOwnProperty(prop)) {
+                    target[prop] = object[prop];
+                }
+            }
+        }
+        return target;  
+    }
 }
 
 // ReSharper restore InconsistentNaming

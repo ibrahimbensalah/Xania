@@ -14,8 +14,10 @@ var A = (function () {
     };
     return A;
 })();
-var Role = (function () {
+var Role = (function (_super) {
+    __extends(Role, _super);
     function Role(prefix, emp) {
+        _super.call(this);
         this.prefix = prefix;
         this.emp = emp;
     }
@@ -27,7 +29,7 @@ var Role = (function () {
         configurable: true
     });
     return Role;
-})();
+})(A);
 var Employee = (function () {
     function Employee(firstName, lastName) {
         this.firstName = firstName;
@@ -74,6 +76,18 @@ var Company = (function (_super) {
     Company.prototype.count = function () {
         return this.employees.length;
     };
+    Company.prototype.addEmployee = function () {
+        this.employees.push(new Employee('bla', 'di bla'));
+    };
+    Company.prototype.clearFirstNames = function () {
+        var employees = this.employees;
+        for (var idx in employees) {
+            if (employees.hasOwnProperty(idx)) {
+                var emp = employees[idx];
+                emp.firstName = "";
+            }
+        }
+    };
     return Company;
 })(A);
 var Url = (function () {
@@ -106,9 +120,6 @@ var Url = (function () {
 var OrganisationViewModel = (function () {
     function OrganisationViewModel() {
     }
-    OrganisationViewModel.prototype.getName = function () {
-        return this.name;
-    };
     OrganisationViewModel.prototype.addEmployee = function () {
         this.employees.push(new Employee('bla', 'di bla'));
     };
@@ -120,9 +131,6 @@ var OrganisationViewModel = (function () {
                 emp.firstName = "";
             }
         }
-    };
-    OrganisationViewModel.prototype.count = function () {
-        return this.employees.length;
     };
     return OrganisationViewModel;
 })();
