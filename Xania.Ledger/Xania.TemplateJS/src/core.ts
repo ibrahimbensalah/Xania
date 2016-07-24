@@ -120,16 +120,13 @@ class SelectManyExpression {
             source = ensureIsArray(context),
             viewModel = this.viewModel;
 
-        const itemHandler = item => {
+        const itemHandler = (item, idx) => {
             var result = {};
             item = Xania.unwrap(item);
             result[this.varName] = typeof viewModel !== "undefined" && viewModel !== null
                 ? Xania.construct(viewModel, item)
                 : item;
-            resolve(result);
-            // var copy = Xania.shallow(context);
-            // copy[this.varName] = result;
-            // resolve(copy);
+            resolve(result, idx);
         };
 
         var collectionFunc = new Function("m", `with(m) { return ${this.collectionExpr}; }`);

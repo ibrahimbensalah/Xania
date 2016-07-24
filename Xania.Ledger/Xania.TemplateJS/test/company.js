@@ -43,6 +43,13 @@ var Employee = (function () {
         enumerable: true,
         configurable: true
     });
+    Object.defineProperty(Employee.prototype, "random", {
+        get: function () {
+            return Math.random();
+        },
+        enumerable: true,
+        configurable: true
+    });
     Employee.prototype.sayHello = function (prefix) {
         console.log("hallo ", this.fullName);
     };

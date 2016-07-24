@@ -91,13 +91,13 @@ var SelectManyExpression = (function () {
     SelectManyExpression.prototype.executeAsync = function (context, resolve) {
         var _this = this;
         var ensureIsArray = SelectManyExpression.ensureIsArray, source = ensureIsArray(context), viewModel = this.viewModel;
-        var itemHandler = function (item) {
+        var itemHandler = function (item, idx) {
             var result = {};
             item = Xania.unwrap(item);
             result[_this.varName] = typeof viewModel !== "undefined" && viewModel !== null
                 ? Xania.construct(viewModel, item)
                 : item;
-            resolve(result);
+            resolve(result, idx);
         };
         var collectionFunc = new Function("m", "with(m) { return " + this.collectionExpr + "; }");
         for (var i = 0; i < source.length; i++) {

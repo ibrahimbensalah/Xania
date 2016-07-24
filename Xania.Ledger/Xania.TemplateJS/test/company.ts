@@ -28,6 +28,10 @@ class Employee {
         return this.firstName + " " + this.lastName;
     }
 
+    get random() {
+        return Math.random();
+    }
+
     sayHello(prefix) {
         console.log("hallo ", this.fullName);
     }

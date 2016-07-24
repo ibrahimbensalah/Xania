@@ -1,17 +1,30 @@
 ﻿interface ISubsriber {
-    notify(object: any, property: string);
+    notify();
 }
 
-class Binding implements ISubsriber {
+interface IBinding {
+    context;
+    addChild(child, idx: number);
+}
+
+class Binding implements IBinding {
     private data;
-    public dirty: boolean;
     public parent: TagBinding;
 
     constructor(public context, private idx: number) {
     }
 
+    static update(target, tpl, resolve) {
+        var model = tpl.modelAccessor(target);
+
+        if (typeof (model.then) === "function") {
+            model.then(resolve);
+        } else {
+            resolve(model, 0);
+        }
+    }
+
     public static executeAsync(tpl, context, observer: Observer, resolve: any) {
-        // const model = !!tpl.modelAccessor ? tpl.modelAccessor(context) : context,
         if (!!tpl.modelAccessor) {
             if (Array.isArray(context))
                 throw new Error("invalid argument array");
@@ -20,26 +33,10 @@ class Binding implements ISubsriber {
                 resolve(Xania.assign({}, context, result), idx);
             };
 
-            function update(target) {
-                var model = tpl.modelAccessor(target);
-
-                if (typeof (model.then) === "function") {
-                    model.then(data => Xania.map(merge, data));
-                } else {
-                    Xania.map(resolve, model);
-                }
-            }
-
             if (!!observer) {
-                var observable = observer.observe(context,
-                {
-                    notify() {
-                        update(context);
-                    }
-                });
-                update(observable);
+                observer.subscribe(context, Binding.update, tpl, merge);
             } else {
-                update(context);
+                Binding.update(context, tpl, merge);
             }
         } else {
             Xania.map(resolve, context);
@@ -47,65 +44,39 @@ class Binding implements ISubsriber {
 
     }
 
-    update() {
+    init(observer: Observer): Binding {
         throw new Error("Abstract method Binding.update");
     }
 
-    init(observer: Observer) {
+    addChild(child, idx) {
         throw new Error("Abstract method Binding.update");
     }
 
-    static create(tpl, context, observer: Observer) {
-        var results = [];
-        Binding.createAsync(tpl, context, observer).then(results.push.bind(results));
-        return results;
-    }
-
-    static createAsync(tpl: IDomTemplate, context, observer: Observer) {
-        return {
-            then(resolve) {
-                Binding.executeAsync(tpl, context, observer, (model, idx) => {
-                    if (typeof idx == "undefined")
-                        throw new Error("model idx is not defined");
-                    resolve(tpl.bind(model, idx).init(observer));
-                });
-            }
-        };
-    }
-
-    accept(visitor: Function) {
-        var stack = [this];
-        while (stack.length > 0) {
-            var cur = stack.pop();
-            visitor(cur);
-
-            if (cur instanceof TagBinding) {
-                let children = cur.children;
-                for (var i = 0; i < children.length; i++)
-                    stack.push(children[i]);
-            }
-        }
-    }
-
-    notify(object, property: string) {
-        this.dirty = true;
+    static createAsync(tpl: IDomTemplate, binding: IBinding, observer: Observer) {
+        Binding.executeAsync(tpl, binding.context, observer, (model, idx) => {
+            if (typeof idx == "undefined")
+                throw new Error("model idx is not defined");
+            var child = tpl.bind(model, idx).init(observer);
+            binding.addChild(child, idx);
+        });
     }
 }
 
 class Observer {
     private subscriptions = new Map<any, any>();
+    private dirty = new Set<ISubsriber>();
 
-    subscribe(object: any, property: string, binding: ISubsriber) {
+    add(object: any, property: string, subsriber: ISubsriber) {
         if (this.subscriptions.has(object)) {
             const deps = this.subscriptions.get(object);
 
             if (deps.hasOwnProperty(property))
-                deps[property].push(binding);
+                deps[property].push(subsriber);
             else
-                deps[property] = [binding];
+                deps[property] = [subsriber];
         } else {
             const deps = {};
-            deps[property] = [binding];
+            deps[property] = [subsriber];
             this.subscriptions.set(object, deps);
         }
 
@@ -117,7 +88,7 @@ class Observer {
             return [];
 
         const deps = this.subscriptions.get(object);
-        const result: Binding[] = [];
+        const result: ISubsriber[] = [];
 
         if (deps.hasOwnProperty(property) || deps.hasOwnProperty("*"))
             result.push.apply(result, deps[property]);
@@ -125,11 +96,28 @@ class Observer {
         return result;
     }
 
-    observe(context, binding: ISubsriber) {
+    subscribe(context, update, ...additionalArgs) {
+        var self = this;
+        var observable = Xania.observe(context, {
+            setRead(obj, property) {
+                self.add(obj, property, {
+                    notify() {
+                        update.apply(this, [context].concat(additionalArgs));
+                    }
+                });
+            },
+            setChange(obj, property: string) {
+                throw new Error("invalid change");
+            }
+        });
+        update.apply(this, [observable].concat(additionalArgs));
+    }
+
+    observe(context, subsriber: ISubsriber) {
         var self = this;
         return Xania.observe(context, {
             setRead(obj, property) {
-                self.subscribe(obj, property, binding);
+                self.add(obj, property, subsriber);
             },
             setChange(obj, property: string) {
                 throw new Error("invalid change");
@@ -145,12 +133,19 @@ class Observer {
                     // ignore
                 },
                 setChange(obj, property: string) {
-                    var bindings: ISubsriber[] = self.get(obj, property);
-                    for (var i = 0; i < bindings.length; i++) {
-                        bindings[i].notify(obj, property);
+                    const subscribers = self.get(obj, property);
+                    for (let i = 0; i < subscribers.length; i++) {
+                        self.dirty.add(subscribers[i]);
                     }
                 }
             });
+    }
+
+    update() {
+        this.dirty.forEach(subscriber => {
+            subscriber.notify();
+        });
+        this.dirty.clear();
     }
 }
 
@@ -161,19 +156,16 @@ class ContentBinding extends Binding {
         super(context, idx);
     }
 
-    update() {
-        if (this.dirty) {
-            this.dom.textContent = this.tpl.execute(this.context);
-            this.dirty = false;
-        }
-    }
-
     init(observer: Observer) {
-        var observable = observer.observe(this.context, this);
-
-        var text = this.tpl.execute(observable);
-        this.dom = document.createTextNode(text);
-
+        const update = context => {
+            const text = this.tpl.execute(context);
+            if (!!this.dom) {
+                this.dom.textContent = text;
+            } else {
+                this.dom = document.createTextNode(text);
+            }
+        };
+        observer.subscribe(this.context, update);
         return this;
     }
 }
@@ -187,53 +179,45 @@ class TagBinding extends Binding {
         super(context, idx);
     }
 
-    private renderTag(model = this.context) {
-        const elt = document.createElement(this.tpl.name);
-
-        var attributes = this.tpl.executeAttributes(model);
-        for (let attrName in attributes) {
-            if (attributes.hasOwnProperty(attrName)) {
-                const domAttr = document.createAttribute(attrName);
-                domAttr.value = attributes[attrName];
-                elt.setAttributeNode(domAttr);
+    init(observer: Observer = new Observer()) {
+        var updateTag = (context, tpl) => {
+            if (typeof this.dom === "undefined") {
+                this.dom = document.createElement(tpl.name);
             }
-        }
 
-        return elt;
-    }
-
-    update() {
-        if (this.dirty) {
             var elt = this.dom;
 
-            var attributes = this.tpl.executeAttributes(this.context);
+            var attributes = tpl.executeAttributes(context);
             for (let attrName in attributes) {
                 if (attributes.hasOwnProperty(attrName)) {
-                    const domAttr = elt.attributes[attrName];
+                    let domAttr = elt.attributes[attrName];
                     if (!!domAttr) {
+                        domAttr.value = attributes[attrName];
+                    } else {
+                        domAttr = document.createAttribute(attrName);
                         domAttr.value = attributes[attrName];
                         elt.setAttributeNode(domAttr);
                     }
                 }
             }
-            this.dirty = false;
-        }
-    }
-
-    init(observer: Observer = new Observer()) {
-        const observable = observer.observe(this.context, this);
-        this.dom = this.renderTag(observable);
+        };
+        observer.subscribe(this.context, updateTag, this.tpl);
 
         const children = this.tpl.children();
         for (var e = 0; e < children.length; e++) {
-            Binding.createAsync(children[e], this.context, observer)
-                .then(child => {
-                    child.parent = this;
-                    this.dom.appendChild(child.dom);
-                    this.children.push(child);
-                });
+            Binding.createAsync(children[e], this, observer);
         }
+
         return this;
+    }
+
+    addChild(child, idx) {
+        if (idx > 0)
+            debugger;
+        child.parent = this;
+        this.dom.appendChild(child.dom);
+        this.children.push(child);
+        // }
     }
 }
 
@@ -276,11 +260,13 @@ class Binder {
         var rootBindings: Binding[] = [];
         var observer = new Observer();
 
-        Binding.createAsync(tpl, model, observer)
-            .then((rootBinding: Binding) => {
+        Binding.createAsync(tpl, {
+            context: model,
+            addChild(rootBinding) {
                 rootBindings.push(rootBinding);
-                target.appendChild((<any>rootBinding).dom);
-            });
+                target.appendChild(rootBinding.dom);
+            }
+        }, observer);
 
 
         function find(bindings, path) {
@@ -318,7 +304,7 @@ class Binder {
                         if (!!handler) {
                             var observable = observer.track(b.context);
                             handler(observable);
-                            this.updateBindings(rootBindings);
+                            observer.update();
                         }
                     }
                 }
@@ -339,19 +325,12 @@ class Binder {
                         const update = new Function("context", "value",
                             `with (context) { ${prop} = value; }`);
                         update(proxy, evt.target.value);
-
-                        this.updateBindings(rootBindings);
+                        observer.update();
                     }
                 }
             }
         };
         target.addEventListener("keyup", onchange);
-    }
-
-    updateBindings(bindings: Binding[]) {
-        for (var i = 0; i < bindings.length; i++) {
-            bindings[i].accept(b => b.update());
-        }
     }
 
     parseDom(rootDom: HTMLElement): TagElement {

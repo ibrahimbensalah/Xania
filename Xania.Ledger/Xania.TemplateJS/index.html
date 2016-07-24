@@ -24,8 +24,8 @@
             <ul data-for="o in xn">
                 <li>@o.getName() @xn.count()</li>
                 <li data-for="emp in o.employees">
-                    <div style="border: 2px solid @emp.firstName; padding: 10px;">
-                        <input name="emp.firstName" value="@emp.firstName"/>
+                    <div style="border: 2px solid @emp.firstName; color: @emp.firstName; padding: 10px;">
+                        <input name="emp.firstName" style="color: inherit" value="@emp.firstName"/>
                         <input name="emp.color" value="red"/>
                         <input name="emp.lastName" value="@emp.lastName"/>
                         <button click="emp.sayHello('+')">+</button>
@@ -33,7 +33,7 @@
                         <div>fullName : @emp.fullName</div>
                         <div>getName : @emp.getName()</div>
                     </div>
-                    <div>@emp.fullName</div>
+                    <div>@emp.fullName @emp.random</div>
                 </li>
                 <li data-for="emp in o.employees">
                     @emp.fullName
