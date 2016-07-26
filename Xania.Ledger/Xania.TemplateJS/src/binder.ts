@@ -15,7 +15,9 @@ class Binding implements IBinding {
     }
 
     static update(target, tpl, resolve) {
-        var model = tpl.modelAccessor(target);
+        var model = !!tpl.modelAccessor
+            ? tpl.modelAccessor(target)
+            : target;
 
         if (typeof (model.then) === "function") {
             model.then(resolve);
@@ -24,24 +26,19 @@ class Binding implements IBinding {
         }
     }
 
-    public static executeAsync(tpl, context, observer: Observer, resolve: any) {
-        if (!!tpl.modelAccessor) {
-            if (Array.isArray(context))
-                throw new Error("invalid argument array");
+    public static executeAsync(tpl: IDomTemplate, context, observer: Observer, resolve: any) {
+        if (Array.isArray(context))
+            throw new Error("invalid argument array");
 
-            var merge = (result, idx) => {
-                resolve(Xania.assign({}, context, result), idx);
-            };
+        var merge = (result, idx) => {
+            resolve(Xania.assign({}, context, result), idx);
+        };
 
-            if (!!observer) {
-                observer.subscribe(context, Binding.update, tpl, merge);
-            } else {
-                Binding.update(context, tpl, merge);
-            }
+        if (!!observer) {
+            observer.subscribe(context, Binding.update, tpl, merge);
         } else {
-            Xania.map(resolve, context);
+            Binding.update(context, tpl, merge);
         }
-
     }
 
     init(observer: Observer): Binding {
@@ -152,7 +149,7 @@ class Observer {
 class ContentBinding extends Binding {
     private dom;
 
-    constructor(private tpl: TextContent, context, idx: number) {
+    constructor(private tpl: TextTemplate, context, idx: number) {
         super(context, idx);
     }
 
@@ -175,7 +172,7 @@ class TagBinding extends Binding {
     public children: Binding[] = [];
     protected dom: HTMLElement;
 
-    constructor(private tpl: TagElement, context, idx: number) {
+    constructor(private tpl: TagTemplate, context, idx: number) {
         super(context, idx);
     }
 
@@ -212,8 +209,6 @@ class TagBinding extends Binding {
     }
 
     addChild(child, idx) {
-        if (idx > 0)
-            debugger;
         child.parent = this;
         this.dom.appendChild(child.dom);
         this.children.push(child);
@@ -240,7 +235,7 @@ class Binder {
         }
     }
 
-    parseAttr(tagElement: TagElement, attr: Attr) {
+    parseAttr(tagElement: TagTemplate, attr: Attr) {
         const name = attr.name;
         if (name === "click") {
             const fn = new Function("m", `with(m) { return ${attr.value}; }`);
@@ -260,14 +255,18 @@ class Binder {
         var rootBindings: Binding[] = [];
         var observer = new Observer();
 
-        Binding.createAsync(tpl, {
-            context: model,
-            addChild(rootBinding) {
-                rootBindings.push(rootBinding);
-                target.appendChild(rootBinding.dom);
-            }
-        }, observer);
-
+        const arr = Array.isArray(model) ? model : [model];
+        for (let i = 0; i < arr.length; i++) {
+            Binding.createAsync(tpl,
+                {
+                    context: arr[i],
+                    addChild(rootBinding) {
+                        rootBindings.push(rootBinding);
+                        target.appendChild(rootBinding.dom);
+                    }
+                },
+                observer);
+        }
 
         function find(bindings, path) {
             const result = [];
@@ -333,7 +332,7 @@ class Binder {
         target.addEventListener("keyup", onchange);
     }
 
-    parseDom(rootDom: HTMLElement): TagElement {
+    parseDom(rootDom: HTMLElement): TagTemplate {
         const stack = [];
         let i: number;
         var rootTpl;
@@ -351,7 +350,7 @@ class Binder {
 
             if (node.nodeType === 1) {
                 const elt = <HTMLElement>node;
-                const template = new TagElement(elt.tagName);
+                const template = new TagTemplate(elt.tagName);
 
                 for (i = 0; !!elt.attributes && i < elt.attributes.length; i++) {
                     var attribute = elt.attributes[i];
@@ -364,7 +363,7 @@ class Binder {
                 push(template);
             } else if (node.nodeType === 3) {
                 const tpl = this.compile(node.textContent);
-                push(new TextContent(tpl || node.textContent));
+                push(new TextTemplate(tpl || node.textContent));
             }
         }
 

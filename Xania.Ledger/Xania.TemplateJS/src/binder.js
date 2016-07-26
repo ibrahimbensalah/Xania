@@ -10,7 +10,9 @@ var Binding = (function () {
         this.idx = idx;
     }
     Binding.update = function (target, tpl, resolve) {
-        var model = tpl.modelAccessor(target);
+        var model = !!tpl.modelAccessor
+            ? tpl.modelAccessor(target)
+            : target;
         if (typeof (model.then) === "function") {
             model.then(resolve);
         }
@@ -19,21 +21,16 @@ var Binding = (function () {
         }
     };
     Binding.executeAsync = function (tpl, context, observer, resolve) {
-        if (!!tpl.modelAccessor) {
-            if (Array.isArray(context))
-                throw new Error("invalid argument array");
-            var merge = function (result, idx) {
-                resolve(Xania.assign({}, context, result), idx);
-            };
-            if (!!observer) {
-                observer.subscribe(context, Binding.update, tpl, merge);
-            }
-            else {
-                Binding.update(context, tpl, merge);
-            }
+        if (Array.isArray(context))
+            throw new Error("invalid argument array");
+        var merge = function (result, idx) {
+            resolve(Xania.assign({}, context, result), idx);
+        };
+        if (!!observer) {
+            observer.subscribe(context, Binding.update, tpl, merge);
         }
         else {
-            Xania.map(resolve, context);
+            Binding.update(context, tpl, merge);
         }
     };
     Binding.prototype.init = function (observer) {
@@ -193,8 +190,6 @@ var TagBinding = (function (_super) {
         return this;
     };
     TagBinding.prototype.addChild = function (child, idx) {
-        if (idx > 0)
-            debugger;
         child.parent = this;
         this.dom.appendChild(child.dom);
         this.children.push(child);
@@ -237,13 +232,16 @@ var Binder = (function () {
         var tpl = this.parseDom(rootDom);
         var rootBindings = [];
         var observer = new Observer();
-        Binding.createAsync(tpl, {
-            context: model,
-            addChild: function (rootBinding) {
-                rootBindings.push(rootBinding);
-                target.appendChild(rootBinding.dom);
-            }
-        }, observer);
+        var arr = Array.isArray(model) ? model : [model];
+        for (var i = 0; i < arr.length; i++) {
+            Binding.createAsync(tpl, {
+                context: arr[i],
+                addChild: function (rootBinding) {
+                    rootBindings.push(rootBinding);
+                    target.appendChild(rootBinding.dom);
+                }
+            }, observer);
+        }
         function find(bindings, path) {
             var result = [];
             for (var i = path.length - 1; i >= 0; i--) {
@@ -315,7 +313,7 @@ var Binder = (function () {
             var push = cur.push;
             if (node.nodeType === 1) {
                 var elt = node;
-                var template = new TagElement(elt.tagName);
+                var template = new TagTemplate(elt.tagName);
                 for (i = 0; !!elt.attributes && i < elt.attributes.length; i++) {
                     var attribute = elt.attributes[i];
                     this.parseAttr(template, attribute);
@@ -327,7 +325,7 @@ var Binder = (function () {
             }
             else if (node.nodeType === 3) {
                 var tpl = this.compile(node.textContent);
-                push(new TextContent(tpl || node.textContent));
+                push(new TextTemplate(tpl || node.textContent));
             }
         }
         return rootTpl;

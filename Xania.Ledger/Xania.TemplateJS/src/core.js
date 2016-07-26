@@ -1,51 +1,51 @@
-var TextContent = (function () {
-    function TextContent(tpl) {
+var TextTemplate = (function () {
+    function TextTemplate(tpl) {
         this.tpl = tpl;
     }
-    TextContent.prototype.execute = function (context) {
+    TextTemplate.prototype.execute = function (context) {
         return typeof this.tpl == "function"
             ? this.tpl(context)
             : this.tpl;
     };
-    TextContent.prototype.bind = function (model, idx) {
+    TextTemplate.prototype.bind = function (model, idx) {
         return new ContentBinding(this, model, idx);
     };
-    TextContent.prototype.toString = function () {
+    TextTemplate.prototype.toString = function () {
         return this.tpl.toString();
     };
-    return TextContent;
+    return TextTemplate;
 })();
-var TagElement = (function () {
-    function TagElement(name) {
+var TagTemplate = (function () {
+    function TagTemplate(name) {
         this.name = name;
         this.attributes = new Map();
         this.events = new Map();
         this._children = [];
     }
-    TagElement.prototype.children = function () {
+    TagTemplate.prototype.children = function () {
         return this._children;
     };
-    TagElement.prototype.attr = function (name, value) {
+    TagTemplate.prototype.attr = function (name, value) {
         return this.addAttribute(name, value);
     };
-    TagElement.prototype.addAttribute = function (name, value) {
+    TagTemplate.prototype.addAttribute = function (name, value) {
         var tpl = typeof (value) === "function"
             ? value
             : function () { return value; };
         this.attributes.set(name, tpl);
         return this;
     };
-    TagElement.prototype.addEvent = function (name, callback) {
+    TagTemplate.prototype.addEvent = function (name, callback) {
         this.events.set(name, callback);
     };
-    TagElement.prototype.addChild = function (child) {
+    TagTemplate.prototype.addChild = function (child) {
         this._children.push(child);
         return this;
     };
-    TagElement.prototype.bind = function (model) {
+    TagTemplate.prototype.bind = function (model) {
         return new TagBinding(this, model, 0);
     };
-    TagElement.prototype.for = function (forExpression, loader) {
+    TagTemplate.prototype.for = function (forExpression, loader) {
         var selectManyExpr = SelectManyExpression.parse(forExpression, loader);
         this.modelIdentifier = selectManyExpr.collectionExpr;
         this.modelAccessor = function (model) { return ({
@@ -55,14 +55,14 @@ var TagElement = (function () {
         }); };
         return this;
     };
-    TagElement.prototype.executeAttributes = function (context) {
+    TagTemplate.prototype.executeAttributes = function (context) {
         var result = {};
         this.attributes.forEach(function (tpl, name) {
             result[name] = tpl(context);
         });
         return result;
     };
-    TagElement.prototype.executeEvents = function (context) {
+    TagTemplate.prototype.executeEvents = function (context) {
         var _this = this;
         var result = {};
         if (this.name.toUpperCase() === "INPUT") {
@@ -74,7 +74,7 @@ var TagElement = (function () {
         });
         return result;
     };
-    return TagElement;
+    return TagTemplate;
 })();
 var SelectManyExpression = (function () {
     function SelectManyExpression(varName, viewModel, collectionExpr, loader) {

@@ -1,8 +1,11 @@
 ﻿interface IDomTemplate {
     bind(model, idx): Binding;
+    modelAccessor;
 }
 
-class TextContent implements IDomTemplate {
+class TextTemplate implements IDomTemplate {
+    modelAccessor;
+
     constructor(private tpl) {
     }
 
@@ -21,11 +24,11 @@ class TextContent implements IDomTemplate {
     }
 }
 
-class TagElement implements IDomTemplate {
+class TagTemplate implements IDomTemplate {
     private attributes = new Map<string, any>();
     private events = new Map<string, any>();
     // ReSharper disable once InconsistentNaming
-    private _children: TagElement[] = [];
+    private _children: TagTemplate[] = [];
     public modelAccessor: Function;// = Xania.identity;
     public modelIdentifier: string;
 
@@ -55,7 +58,7 @@ class TagElement implements IDomTemplate {
         this.events.set(name, callback);
     }
 
-    public addChild(child: TagElement) {
+    public addChild(child: TagTemplate) {
         this._children.push(child);
         return this;
     }
