@@ -4,15 +4,27 @@ var __extends = (this && this.__extends) || function (d, b) {
     __.prototype = b.prototype;
     d.prototype = new __();
 };
+var BindingContext = (function () {
+    function BindingContext(parentBinding, tpl, observer) {
+        this.parentBinding = parentBinding;
+        this.tpl = tpl;
+        this.observer = observer;
+        this.modelAccessor = !!tpl.modelAccessor ? tpl.modelAccessor : Xania.identity;
+        this.context = parentBinding.context;
+    }
+    BindingContext.prototype.addChild = function (result, idx) {
+        var child = this.tpl.bind(result, idx).init(this.observer);
+        return this.parentBinding.addChild(child, idx);
+    };
+    return BindingContext;
+})();
 var Binding = (function () {
     function Binding(context, idx) {
         this.context = context;
         this.idx = idx;
     }
-    Binding.update = function (target, tpl, resolve) {
-        var model = !!tpl.modelAccessor
-            ? tpl.modelAccessor(target)
-            : target;
+    Binding.update = function (target, modelAccessor, resolve) {
+        var model = modelAccessor(target);
         if (typeof (model.then) === "function") {
             model.then(resolve);
         }
@@ -20,31 +32,19 @@ var Binding = (function () {
             resolve(model, 0);
         }
     };
-    Binding.executeAsync = function (tpl, context, observer, resolve) {
-        if (Array.isArray(context))
-            throw new Error("invalid argument array");
-        var merge = function (result, idx) {
-            resolve(Xania.assign({}, context, result), idx);
-        };
-        if (!!observer) {
-            observer.subscribe(context, Binding.update, tpl, merge);
-        }
-        else {
-            Binding.update(context, tpl, merge);
-        }
-    };
     Binding.prototype.init = function (observer) {
         throw new Error("Abstract method Binding.update");
     };
-    Binding.prototype.addChild = function (child, idx) {
+    Binding.prototype.addChild = function (child) {
         throw new Error("Abstract method Binding.update");
     };
     Binding.createAsync = function (tpl, binding, observer) {
-        Binding.executeAsync(tpl, binding.context, observer, function (model, idx) {
+        var modelAccessor = !!tpl.modelAccessor ? tpl.modelAccessor : Xania.identity;
+        observer.subscribe(binding.context, Binding.update, modelAccessor, function (model, idx) {
             if (typeof idx == "undefined")
                 throw new Error("model idx is not defined");
-            var child = tpl.bind(model, idx).init(observer);
-            binding.addChild(child, idx);
+            var result = Xania.assign({}, binding.context, model);
+            binding.addChild(result, idx);
         });
     };
     return Binding;
@@ -183,13 +183,16 @@ var TagBinding = (function (_super) {
             }
         };
         observer.subscribe(this.context, updateTag, this.tpl);
-        var children = this.tpl.children();
-        for (var e = 0; e < children.length; e++) {
-            Binding.createAsync(children[e], this, observer);
+        var parentBinding = this;
+        var childTemplates = this.tpl.children();
+        for (var e = 0; e < childTemplates.length; e++) {
+            var tpl = childTemplates[e];
+            var bindingContext = new BindingContext(this, tpl, observer);
+            Binding.createAsync(tpl, bindingContext, observer);
         }
         return this;
     };
-    TagBinding.prototype.addChild = function (child, idx) {
+    TagBinding.prototype.addChild = function (child) {
         child.parent = this;
         this.dom.appendChild(child.dom);
         this.children.push(child);
@@ -234,13 +237,14 @@ var Binder = (function () {
         var observer = new Observer();
         var arr = Array.isArray(model) ? model : [model];
         for (var i = 0; i < arr.length; i++) {
-            Binding.createAsync(tpl, {
+            var bindingContext = new BindingContext({
                 context: arr[i],
                 addChild: function (rootBinding) {
                     rootBindings.push(rootBinding);
                     target.appendChild(rootBinding.dom);
                 }
-            }, observer);
+            }, tpl, observer);
+            Binding.createAsync(tpl, bindingContext, observer);
         }
         function find(bindings, path) {
             var result = [];
