@@ -68,7 +68,7 @@ class Company extends A {
     }
 
     addEmployee() {
-        this.employees.push(new Employee('bla', 'di bla'));
+        this.employees.push(new Employee('bla ' + this.employees.length, 'di bla'));
     }
 
     clearFirstNames() {

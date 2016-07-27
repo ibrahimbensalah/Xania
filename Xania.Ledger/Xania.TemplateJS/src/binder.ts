@@ -2,31 +2,8 @@
     notify();
 }
 
-interface IBinding {
-    context;
-    addChild(child, idx);
-}
-
-class BindingContext implements IBinding {
-    constructor(private parentBinding: IBinding, private tpl, private observer: Observer) {
-        this.modelAccessor = !!tpl.modelAccessor ? tpl.modelAccessor : Xania.identity;
-        this.context = parentBinding.context;
-    }
-
-    addChild(result, idx) {
-        var child = this.tpl.bind(result, idx).init(this.observer);
-        return this.parentBinding.addChild(child, idx);
-    }
-
-    public context: any;
-    modelAccessor;
-}
-
-class Binding implements IBinding {
-    private data;
-    public parent: TagBinding;
-
-    constructor(public context, private idx: number) {
+class BindingContext {
+    constructor(private tpl, private context, private addChild) {
     }
 
     static update(target, modelAccessor: Function, resolve) {
@@ -38,23 +15,42 @@ class Binding implements IBinding {
         }
     }
 
+    execute(observer: Observer) {
+        var context = this.context;
+        var tpl = this.tpl;
+        var modelAccessor = !!tpl.modelAccessor ? tpl.modelAccessor : Xania.identity;
+
+        observer.subscribe(context, BindingContext.update, modelAccessor, (model, idx) => {
+            if (typeof idx == "undefined")
+                throw new Error("model idx is not defined");
+
+            if (idx >= this.bindings.length) {
+
+                var result = Xania.assign({}, context, model);
+
+                var child = tpl.bind(result, idx).init(observer);
+                this.bindings.push(child);
+                this.addChild(child, idx);
+            }
+        });
+    }
+
+    bindings: Binding[] = [];
+}
+
+class Binding {
+    private data;
+    public parent: TagBinding;
+
+    constructor(public context, private idx: number) {
+    }
+
     init(observer: Observer): Binding {
         throw new Error("Abstract method Binding.update");
     }
 
     addChild(child) {
         throw new Error("Abstract method Binding.update");
-    }
-
-    static createAsync(tpl: IDomTemplate, binding: IBinding, observer: Observer) {
-        const modelAccessor = !!tpl.modelAccessor ? tpl.modelAccessor : Xania.identity;
-        observer.subscribe(binding.context, Binding.update, modelAccessor, (model, idx) => {
-            if (typeof idx == "undefined")
-                throw new Error("model idx is not defined");
-
-            var result = Xania.assign({}, binding.context, model);
-            binding.addChild(result, idx);
-        });
     }
 }
 
@@ -199,12 +195,10 @@ class TagBinding extends Binding {
         };
         observer.subscribe(this.context, updateTag, this.tpl);
 
-        const parentBinding = this;
         const childTemplates = this.tpl.children();
         for (var e = 0; e < childTemplates.length; e++) {
-            let tpl = childTemplates[e];
-            var bindingContext = new BindingContext(this, tpl, observer);
-            Binding.createAsync(tpl, bindingContext, observer);
+            var bindingContext = new BindingContext(childTemplates[e], this.context, this.addChild.bind(this));
+            bindingContext.execute(observer);
         }
 
         return this;
@@ -259,14 +253,13 @@ class Binder {
 
         const arr = Array.isArray(model) ? model : [model];
         for (let i = 0; i < arr.length; i++) {
-            var bindingContext = new BindingContext({
-                context: arr[i],
-                addChild(rootBinding) {
+            var bindingContext = new BindingContext(tpl,
+                arr[i],
+                rootBinding => {
                     rootBindings.push(rootBinding);
                     target.appendChild(rootBinding.dom);
-                }
-            }, tpl, observer);
-            Binding.createAsync(tpl, bindingContext, observer);
+                });
+            bindingContext.execute(observer);
         }
 
         function find(bindings, path) {

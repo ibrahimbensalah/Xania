@@ -84,7 +84,7 @@ var Company = (function (_super) {
         return this.employees.length;
     };
     Company.prototype.addEmployee = function () {
-        this.employees.push(new Employee('bla', 'di bla'));
+        this.employees.push(new Employee('bla ' + this.employees.length, 'di bla'));
     };
     Company.prototype.clearFirstNames = function () {
         var employees = this.employees;
