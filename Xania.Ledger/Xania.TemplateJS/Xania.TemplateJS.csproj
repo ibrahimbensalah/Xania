@@ -33,6 +33,9 @@
     <Content Include="Scripts\jasmine\console.js" />
     <Content Include="Scripts\jasmine\jasmine-html.js" />
     <Content Include="Scripts\jasmine\jasmine.js" />
+    <Content Include="todomvc\css\base.css" />
+    <Content Include="todomvc\css\index.css" />
+    <Content Include="todomvc\index.html" />
     <Content Include="web.config" />
   </ItemGroup>
   <ItemGroup>
@@ -42,6 +45,7 @@
     <TypeScriptCompile Include="src\core.ts" />
     <Content Include="test\coretests.js" />
     <TypeScriptCompile Include="test\company.ts" />
+    <TypeScriptCompile Include="src\todomvc.ts" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="organisation.json" />

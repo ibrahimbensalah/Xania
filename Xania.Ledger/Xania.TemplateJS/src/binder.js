@@ -170,14 +170,20 @@ var TagBinding = (function (_super) {
             var attributes = tpl.executeAttributes(context);
             for (var attrName in attributes) {
                 if (attributes.hasOwnProperty(attrName)) {
-                    var domAttr = elt.attributes[attrName];
-                    if (!!domAttr) {
-                        domAttr.value = attributes[attrName];
+                    if (attrName === "value") {
+                        elt["value"] = attributes[attrName];
                     }
                     else {
-                        domAttr = document.createAttribute(attrName);
-                        domAttr.value = attributes[attrName];
-                        elt.setAttributeNode(domAttr);
+                        var domAttr = elt.attributes[attrName];
+                        if (!!domAttr) {
+                            domAttr.nodeValue = attributes[attrName];
+                            domAttr.value = attributes[attrName];
+                        }
+                        else {
+                            domAttr = document.createAttribute(attrName);
+                            domAttr.value = attributes[attrName];
+                            elt.setAttributeNode(domAttr);
+                        }
                     }
                 }
             }
@@ -226,9 +232,9 @@ var Binder = (function () {
     };
     Binder.prototype.parseAttr = function (tagElement, attr) {
         var name = attr.name;
-        if (name === "click") {
+        if (name === "click" || name.startsWith("keyup.")) {
             var fn = new Function("m", "with(m) { return " + attr.value + "; }");
-            tagElement.addEvent("click", fn);
+            tagElement.addEvent(name, fn);
         }
         else if (name === "data-for" || name === "data-from") {
             tagElement.for(attr.value, this.import);
@@ -270,14 +276,14 @@ var Binder = (function () {
             }
             return result;
         }
-        target.addEventListener("click", function (evt) {
-            var pathIdx = evt.path.indexOf(target);
+        var eventHandler = function (name, path) {
+            var pathIdx = path.indexOf(target);
             if (pathIdx > 0) {
-                var domPath = evt.path.splice(0, pathIdx);
+                var domPath = path.splice(0, pathIdx);
                 var bindingPath = find(rootBindings, domPath);
                 if (bindingPath.length > 0) {
                     var b = bindingPath.pop();
-                    var handler = b.tpl.events.get('click');
+                    var handler = b.tpl.events.get(name);
                     if (!!handler) {
                         var observable = observer.track(b.context);
                         handler(observable);
@@ -285,7 +291,8 @@ var Binder = (function () {
                     }
                 }
             }
-        });
+        };
+        target.addEventListener("click", function (evt) { return eventHandler(evt.type, evt.path); });
         var onchange = function (evt) {
             var pathIdx = evt.path.indexOf(target);
             if (pathIdx > 0) {
@@ -299,12 +306,19 @@ var Binder = (function () {
                         var prop = nameAttr.value;
                         var update = new Function("context", "value", "with (context) { " + prop + " = value; }");
                         update(proxy, evt.target.value);
-                        observer.update();
                     }
                 }
             }
         };
-        target.addEventListener("keyup", onchange);
+        target.addEventListener("keyup", function (evt) {
+            if (evt.keyCode === 13) {
+                eventHandler("keyup.enter", evt.path);
+            }
+            else {
+                onchange(evt);
+            }
+            observer.update();
+        });
     };
     Binder.prototype.parseDom = function (rootDom) {
         var stack = [];

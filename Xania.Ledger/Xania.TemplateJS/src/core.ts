@@ -294,7 +294,7 @@ class Xania {
     }
 
     static unwrap(obj) {
-        if (typeof (obj) !== "object")
+        if (obj === null || typeof (obj) !== "object")
             return obj;
 
         if (!!obj._unwrapping)
