@@ -82,6 +82,7 @@ var SelectManyExpression = (function () {
         this.viewModel = viewModel;
         this.collectionExpr = collectionExpr;
         this.loader = loader;
+        this.items = [];
     }
     SelectManyExpression.prototype.execute = function (context) {
         var result = [];
@@ -94,10 +95,13 @@ var SelectManyExpression = (function () {
         var itemHandler = function (item, idx) {
             var result = {};
             item = Xania.unwrap(item);
-            result[_this.varName] = typeof viewModel !== "undefined" && viewModel !== null
-                ? Xania.construct(viewModel, item)
-                : item;
-            resolve(result, idx);
+            if (_this.items[idx] !== item) {
+                _this.items[idx] = item;
+                result[_this.varName] = typeof viewModel !== "undefined" && viewModel !== null
+                    ? Xania.construct(viewModel, item)
+                    : item;
+                resolve(result, idx);
+            }
         };
         var collectionFunc = new Function("m", "with(m) { return " + this.collectionExpr + "; }");
         for (var i = 0; i < source.length; i++) {

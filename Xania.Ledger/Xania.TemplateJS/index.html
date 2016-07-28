@@ -29,6 +29,8 @@
     </div>-->
     <div id="content">
         <ul data-for="o in xn">
+            <li><button click="o.addEmployee()">add</button></li>
+            <li><button click="o.clearFirstNames()">clear first names</button></li>
             <li>@o.getName() @xn.count()</li>
             <li data-for="emp in o.employees">
                 <div style="border: 2px solid @emp.firstName; color: @emp.firstName; padding: 10px;">
@@ -40,13 +42,13 @@
                     <div>fullName : @emp.fullName</div>
                     <div>getName : @emp.getName()</div>
                 </div>
+                <div data-for="h in o.employees">[ @h.fullName ]</div>
                 <div>@emp.fullName @emp.random</div>
             </li>
             <li data-for="emp in o.employees">
                 @emp.fullName
             </li>
-            <li><button click="o.addEmployee()">add</button></li>
-            <li><button click="o.clearFirstNames()">clear first names</button></li>
+            <li data-for="h in o.employees">[ @h.fullName ]</li>
         </ul>
     </div>
     <script type="text/javascript">

@@ -15,7 +15,7 @@ class BindingContext {
         }
     }
 
-    execute(observer: Observer) {
+    execute(observer: Observer, offset: number) {
         var context = this.context;
         var tpl = this.tpl;
         var modelAccessor = !!tpl.modelAccessor ? tpl.modelAccessor : Xania.identity;
@@ -24,14 +24,11 @@ class BindingContext {
             if (typeof idx == "undefined")
                 throw new Error("model idx is not defined");
 
-            if (idx >= this.bindings.length) {
+            var result = Xania.assign({}, context, model);
 
-                var result = Xania.assign({}, context, model);
-
-                var child = tpl.bind(result, idx).init(observer);
-                this.bindings.push(child);
-                this.addChild(child, idx);
-            }
+            var child = tpl.bind(result, idx).init(observer);
+            this.bindings.push(child);
+            this.addChild(child, idx, offset);
         });
     }
 
@@ -49,7 +46,7 @@ class Binding {
         throw new Error("Abstract method Binding.update");
     }
 
-    addChild(child) {
+    addChild(child, idx) {
         throw new Error("Abstract method Binding.update");
     }
 }
@@ -195,20 +192,30 @@ class TagBinding extends Binding {
         };
         observer.subscribe(this.context, updateTag, this.tpl);
 
-        const childTemplates = this.tpl.children();
-        for (var e = 0; e < childTemplates.length; e++) {
-            var bindingContext = new BindingContext(childTemplates[e], this.context, this.addChild.bind(this));
-            bindingContext.execute(observer);
+        const bindingContexts = this.tpl.children().map(tpl => new BindingContext(tpl, this.context, (child, idx, bcIndex) => {
+            var offset = 0;
+            for (var i = 0; i < bcIndex; i++) {
+                offset += bindingContexts[i].bindings.length;
+            }
+            this.addChild(child, offset + idx);
+        }));
+
+        for (var e = 0; e < bindingContexts.length; e++) {
+            bindingContexts[e].execute(observer, e);
         }
 
         return this;
     }
 
-    addChild(child) {
+    addChild(child, idx) {
         child.parent = this;
-        this.dom.appendChild(child.dom);
         this.children.push(child);
-        // }
+
+        if (idx >= this.dom.childNodes.length) {
+            this.dom.appendChild(child.dom);
+        } else {
+            this.dom.insertBefore(child.dom, this.dom.childNodes[idx]);
+        }
     }
 }
 
@@ -259,7 +266,7 @@ class Binder {
                     rootBindings.push(rootBinding);
                     target.appendChild(rootBinding.dom);
                 });
-            bindingContext.execute(observer);
+            bindingContext.execute(observer, 0);
         }
 
         function find(bindings, path) {

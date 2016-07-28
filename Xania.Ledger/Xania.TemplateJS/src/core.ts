@@ -126,10 +126,15 @@ class SelectManyExpression {
         const itemHandler = (item, idx) => {
             var result = {};
             item = Xania.unwrap(item);
-            result[this.varName] = typeof viewModel !== "undefined" && viewModel !== null
-                ? Xania.construct(viewModel, item)
-                : item;
-            resolve(result, idx);
+
+            if (this.items[idx] !== item) {
+                this.items[idx] = item;
+
+                result[this.varName] = typeof viewModel !== "undefined" && viewModel !== null
+                    ? Xania.construct(viewModel, item)
+                    : item;
+                resolve(result, idx);
+            }
         };
 
         var collectionFunc = new Function("m", `with(m) { return ${this.collectionExpr}; }`);
@@ -157,6 +162,8 @@ class SelectManyExpression {
     private static ensureIsArray(obj) {
         return Array.isArray(obj) ? obj : [obj];
     }
+
+    items: any[] = [];
 }
 
 class Value {

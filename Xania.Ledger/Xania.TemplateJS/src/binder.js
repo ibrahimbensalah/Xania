@@ -20,7 +20,7 @@ var BindingContext = (function () {
             resolve(model, 0);
         }
     };
-    BindingContext.prototype.execute = function (observer) {
+    BindingContext.prototype.execute = function (observer, offset) {
         var _this = this;
         var context = this.context;
         var tpl = this.tpl;
@@ -28,12 +28,10 @@ var BindingContext = (function () {
         observer.subscribe(context, BindingContext.update, modelAccessor, function (model, idx) {
             if (typeof idx == "undefined")
                 throw new Error("model idx is not defined");
-            if (idx >= _this.bindings.length) {
-                var result = Xania.assign({}, context, model);
-                var child = tpl.bind(result, idx).init(observer);
-                _this.bindings.push(child);
-                _this.addChild(child, idx);
-            }
+            var result = Xania.assign({}, context, model);
+            var child = tpl.bind(result, idx).init(observer);
+            _this.bindings.push(child);
+            _this.addChild(child, idx, offset);
         });
     };
     return BindingContext;
@@ -46,7 +44,7 @@ var Binding = (function () {
     Binding.prototype.init = function (observer) {
         throw new Error("Abstract method Binding.update");
     };
-    Binding.prototype.addChild = function (child) {
+    Binding.prototype.addChild = function (child, idx) {
         throw new Error("Abstract method Binding.update");
     };
     return Binding;
@@ -185,17 +183,27 @@ var TagBinding = (function (_super) {
             }
         };
         observer.subscribe(this.context, updateTag, this.tpl);
-        var childTemplates = this.tpl.children();
-        for (var e = 0; e < childTemplates.length; e++) {
-            var bindingContext = new BindingContext(childTemplates[e], this.context, this.addChild.bind(this));
-            bindingContext.execute(observer);
+        var bindingContexts = this.tpl.children().map(function (tpl) { return new BindingContext(tpl, _this.context, function (child, idx, bcIndex) {
+            var offset = 0;
+            for (var i = 0; i < bcIndex; i++) {
+                offset += bindingContexts[i].bindings.length;
+            }
+            _this.addChild(child, offset + idx);
+        }); });
+        for (var e = 0; e < bindingContexts.length; e++) {
+            bindingContexts[e].execute(observer, e);
         }
         return this;
     };
-    TagBinding.prototype.addChild = function (child) {
+    TagBinding.prototype.addChild = function (child, idx) {
         child.parent = this;
-        this.dom.appendChild(child.dom);
         this.children.push(child);
+        if (idx >= this.dom.childNodes.length) {
+            this.dom.appendChild(child.dom);
+        }
+        else {
+            this.dom.insertBefore(child.dom, this.dom.childNodes[idx]);
+        }
     };
     return TagBinding;
 })(Binding);
@@ -241,7 +249,7 @@ var Binder = (function () {
                 rootBindings.push(rootBinding);
                 target.appendChild(rootBinding.dom);
             });
-            bindingContext.execute(observer);
+            bindingContext.execute(observer, 0);
         }
         function find(bindings, path) {
             var result = [];
