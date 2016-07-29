@@ -170,7 +170,11 @@ var TagBinding = (function (_super) {
             var attributes = tpl.executeAttributes(context);
             for (var attrName in attributes) {
                 if (attributes.hasOwnProperty(attrName)) {
-                    if (attrName === "value") {
+                    var attrValue = attributes[attrName];
+                    if (attrValue === null) {
+                        elt.removeAttribute(attrName);
+                    }
+                    else if (attrName === "value") {
                         elt["value"] = attributes[attrName];
                     }
                     else {
@@ -238,6 +242,10 @@ var Binder = (function () {
         }
         else if (name === "data-for" || name === "data-from") {
             tagElement.for(attr.value, this.import);
+        }
+        else if (name === "checked") {
+            var fn = this.compile(attr.value);
+            tagElement.attr(name, Xania.compose(function (ctx) { return !!ctx ? "checked" : null; }, fn));
         }
         else {
             var tpl = this.compile(attr.value);
@@ -363,15 +371,23 @@ var TemplateEngine = (function () {
             return null;
         }
         var template = input.replace(/\n/g, "\\\n");
-        var params = "";
+        var decl = [];
         var returnExpr = template.replace(/@([\w\(\)\.]+)/gim, function (a, b) {
-            var paramIdx = "arg" + params.length;
-            params += "var " + paramIdx + " = " + b + ";";
-            return "\" + " + paramIdx + " + \"";
+            var paramIdx = "arg" + decl.length;
+            decl.push(b);
+            return "\"+" + paramIdx + "+\"";
         });
-        if (params.length > 0) {
+        if (returnExpr === '"+arg0+"') {
             if (!TemplateEngine.cacheFn[input]) {
-                var functionBody = "with(m) {" + params + "return \"" + returnExpr + "\"}";
+                var functionBody = "with(m) {return " + decl[0] + ";}";
+                TemplateEngine.cacheFn[input] = new Function("m", functionBody);
+            }
+            return TemplateEngine.cacheFn[input];
+        }
+        else if (decl.length > 0) {
+            var params = decl.map(function (v, i) { return ("var arg" + i + " = " + v); }).join(";");
+            if (!TemplateEngine.cacheFn[input]) {
+                var functionBody = "with(m) {" + params + ";return \"" + returnExpr + "\"}";
                 TemplateEngine.cacheFn[input] = new Function("m", functionBody);
             }
             return TemplateEngine.cacheFn[input];

@@ -179,7 +179,10 @@ class TagBinding extends Binding {
             var attributes = tpl.executeAttributes(context);
             for (let attrName in attributes) {
                 if (attributes.hasOwnProperty(attrName)) {
-                    if (attrName === "value") {
+                    var attrValue = attributes[attrName];
+                    if (attrValue === null) {
+                        elt.removeAttribute(attrName);
+                    } else if (attrName === "value") {
                         elt["value"] = attributes[attrName];
                     } else {
                         let domAttr = elt.attributes[attrName];
@@ -250,6 +253,9 @@ class Binder {
             tagElement.addEvent(name, fn);
         } else if (name === "data-for" || name === "data-from") {
             tagElement.for(attr.value, this.import);
+        } else if (name === "checked") {
+            const fn = this.compile(attr.value);
+            tagElement.attr(name, Xania.compose(ctx => !!ctx ? "checked" : null, fn));
         } else {
             const tpl = this.compile(attr.value);
             tagElement.attr(name, tpl || attr.value);
@@ -395,16 +401,23 @@ class TemplateEngine {
         }
 
         var template = input.replace(/\n/g, "\\\n");
-        var params = "";
+        var decl = [];
         var returnExpr = template.replace(/@([\w\(\)\.]+)/gim, (a, b) => {
-            var paramIdx = `arg${params.length}`;
-            params += `var ${paramIdx} = ${b};`;
-            return `" + ${paramIdx} + "`;
+            var paramIdx = `arg${decl.length}`;
+            decl.push(b);
+            return `"+${paramIdx}+"`;
         });
 
-        if (params.length > 0) {
+        if (returnExpr === '"+arg0+"') {
             if (!TemplateEngine.cacheFn[input]) {
-                const functionBody = `with(m) {${params}return "${returnExpr}"}`;
+                const functionBody = `with(m) {return ${decl[0]};}`;
+                TemplateEngine.cacheFn[input] = new Function("m", functionBody);
+            }
+            return TemplateEngine.cacheFn[input];
+        } else if (decl.length > 0) {
+            var params = decl.map((v, i) => `var arg${i} = ${v}`).join(";");
+            if (!TemplateEngine.cacheFn[input]) {
+                const functionBody = `with(m) {${params};return "${returnExpr}"}`;
                 TemplateEngine.cacheFn[input] = new Function("m", functionBody);
             }
             return TemplateEngine.cacheFn[input];

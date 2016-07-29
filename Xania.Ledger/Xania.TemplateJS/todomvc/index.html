@@ -20,11 +20,11 @@
                 <input class="new-todo" placeholder="What needs to be done?" autofocus="" name="app.newTodoText" value="@app.newTodoText"keyup.enter="app.addTodo()">
             </header>
             <section class="main" display.if="app.todoStore.todos.length > 0">
-                <input class="toggle-all" type="checkbox" checked="@app.todoStore.allCompleted()" click="app.todoStore.setAllTo(toggleall.checked)">
+                <input class="toggle-all" type="checkbox" checked="@app.todoStore.allCompleted()" click="app.todoStore.toggleAll()">
                 <ul class="todo-list">
                     <li data-for="todo in app.todoStore.todos" class.completed="@todo.completed" class.editing="@todo.editing">
                         <div class="view">
-                            <input class="toggle" type="checkbox" click="toggleCompletion(todo)" checked="@todo.completed">
+                            <input class="toggle" type="checkbox" click="todo.toggleCompletion()" checked="@todo.completed">
                             <label dblclick="editTodo(todo)">@todo.title</label>
                             <button class="destroy" click="remove(todo)"></button>
                         </div>

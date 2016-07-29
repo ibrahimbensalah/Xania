@@ -39,11 +39,11 @@ class TagTemplate implements IDomTemplate {
         return this._children;
     }
 
-    public attr(name: string, value: string) {
+    public attr(name: string, value: string | Function) {
         return this.addAttribute(name, value);
     }
 
-    public addAttribute(name: string, value: string) {
+    public addAttribute(name: string, value: string | Function) {
 
         var tpl = typeof (value) === "function"
             ? value

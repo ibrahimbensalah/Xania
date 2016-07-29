@@ -1,5 +1,11 @@
 ﻿class Todo {
-    constructor(public title: string = "asdf") {
+    constructor(public title: string) {
+    }
+
+    public completed = false;
+
+    toggleCompletion() {
+        this.completed = !this.completed;
     }
 }
 
@@ -7,7 +13,16 @@ class TodoStore {
     public todos: Todo[] = [];
 
     allCompleted() {
-        return "checked";
+        for (var i = 0; i < this.todos.length; i++)
+            if (!this.todos[i].completed)
+                return false;
+        return true;
+    }
+
+    toggleAll() {
+        var allCompleted = this.allCompleted();
+        for (var i = 0; i < this.todos.length; i++)
+            this.todos[i].completed = !allCompleted;
     }
 
     getRemaining() {
