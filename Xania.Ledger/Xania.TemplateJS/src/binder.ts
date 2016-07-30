@@ -59,9 +59,10 @@ class Observer {
         if (this.subscriptions.has(object)) {
             const deps = this.subscriptions.get(object);
 
-            if (deps.hasOwnProperty(property))
-                deps[property].push(subsriber);
-            else
+            if (deps.hasOwnProperty(property)) {
+                if (deps[property].indexOf(subsriber) < 0)
+                    deps[property].push(subsriber);
+            } else
                 deps[property] = [subsriber];
         } else {
             const deps = {};
@@ -86,14 +87,16 @@ class Observer {
     }
 
     subscribe(context, update, ...additionalArgs) {
-        var self = this;
-        var observable = Xania.observe(context, {
+        var self = this, observable;
+        var subscription = {
+            notify() {
+                update.apply(this, [observable].concat(additionalArgs));
+            }
+        };
+        observable = Xania.observe(context, {
             setRead(obj, property) {
-                self.add(obj, property, {
-                    notify() {
-                        update.apply(this, [context].concat(additionalArgs));
-                    }
-                });
+                console.log("read", obj, property);
+                self.add(obj, property, subscription);
             },
             setChange(obj, property: string) {
                 throw new Error("invalid change");
@@ -102,17 +105,18 @@ class Observer {
         update.apply(this, [observable].concat(additionalArgs));
     }
 
-    observe(context, subsriber: ISubsriber) {
-        var self = this;
-        return Xania.observe(context, {
-            setRead(obj, property) {
-                self.add(obj, property, subsriber);
-            },
-            setChange(obj, property: string) {
-                throw new Error("invalid change");
-            }
-        });
-    }
+    //observe(context, subsriber: ISubsriber) {
+    //    var self = this;
+    //    return Xania.observe(context, {
+    //        setRead(obj, property) {
+    //            console.log("read", obj, property);
+    //            self.add(obj, property, subsriber);
+    //        },
+    //        setChange(obj, property: string) {
+    //            throw new Error("invalid change");
+    //        }
+    //    });
+    //}
 
     track(context) {
         var self = this;
@@ -122,6 +126,7 @@ class Observer {
                     // ignore
                 },
                 setChange(obj, property: string) {
+                    console.log("write", obj, property);
                     const subscribers = self.get(obj, property);
                     for (let i = 0; i < subscribers.length; i++) {
                         self.dirty.add(subscribers[i]);
@@ -179,19 +184,20 @@ class TagBinding extends Binding {
             var attributes = tpl.executeAttributes(context);
             for (let attrName in attributes) {
                 if (attributes.hasOwnProperty(attrName)) {
-                    var attrValue = attributes[attrName];
-                    if (attrValue === null) {
+                    var attrValue = Xania.join(" ", attributes[attrName]);
+                    elt[attrName] = attrValue;
+                    if (typeof attrValue === "undefined" || attrValue === null) {
                         elt.removeAttribute(attrName);
                     } else if (attrName === "value") {
-                        elt["value"] = attributes[attrName];
+                        elt["value"] = attrValue;
                     } else {
                         let domAttr = elt.attributes[attrName];
                         if (!!domAttr) {
-                            domAttr.nodeValue = attributes[attrName];
-                            domAttr.value = attributes[attrName];
+                            domAttr.nodeValue = attrValue;
+                            domAttr.value = attrValue;
                         } else {
                             domAttr = document.createAttribute(attrName);
-                            domAttr.value = attributes[attrName];
+                            domAttr.value = attrValue;
                             elt.setAttributeNode(domAttr);
                         }
                     }

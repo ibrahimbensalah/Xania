@@ -1,5 +1,6 @@
 ﻿/// <reference path="../src/core.js" />
 /// <reference path="../src/binder.js" />
+/// <reference path="../src/todomvc.js" />
 /// <reference path="company.js" />
 
 "use strict";
@@ -214,6 +215,17 @@ describe("Xania.observe", function () {
 
             expect(arr).toEqual([1, 2]);
             expect(observer.hasChange(arr, "length")).toEqual(true);
+        });
+
+    it("should track array filter",
+        function () {
+            var model = { app: new TodoApp() };
+            var observer = new ObserverHelper();
+            var proxy = Xania.observe(model, observer);
+            var result = proxy.app.todoStore.getCompleted().empty;
+
+            expect(true).toEqual(result);
+            expect(observer.hasRead(model.app.todoStore.todos, "length")).toEqual(true);
         });
 
     it("should be able to unwrap",

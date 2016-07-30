@@ -81,10 +81,23 @@ class TagTemplate implements IDomTemplate {
     }
 
     public executeAttributes(context) {
-        var result = {};
+        var result = {
+            "class": []
+        };
 
         this.attributes.forEach((tpl, name) => {
-            result[name] = tpl(context);
+            var value = tpl(context);
+            if (name.startsWith("class.")) {
+                if (!!value) {
+                    var className = name.substr(6);
+                    result["class"].push(className);
+                }
+            } else if (name === "class") {
+                var cls = value.split(" ");
+                result["class"].push.apply(result["class"], cls);
+            } else {
+                result[name] = value;
+            }
         });
 
         return result;
@@ -145,7 +158,7 @@ class SelectManyExpression {
     }
 
     static parse(expr, loader = t => <any>window[t]) {
-        const m = expr.match(/^(\w+)(\s*:\s*(\w+))?\s+in\s+((\w+)\s*:\s*)?(.*)$/i);
+        const m = expr.match(/^(\w+)(\s*:\s*(\w+))?\s+of\s+((\w+)\s*:\s*)?(.*)$/i);
         if (!!m) {
             // ReSharper disable once UnusedLocals
             const [, varName, , itemType, , directive, collectionExpr] = m;
@@ -266,13 +279,17 @@ class Xania {
 
     static observe(target, observer: IObserver) {
         // ReSharper disable once InconsistentNaming
-        if (!target || typeof target !== "object")
+        if (!target)
             return target;
 
-        if (Array.isArray(target))
-            return Xania.observeArray(target, observer);
-        else
-            return Xania.observeObject(target, observer);
+        if (typeof target === "object") {
+            if (Array.isArray(target))
+                return Xania.observeArray(target, observer);
+            else
+                return Xania.observeObject(target, observer);
+        } else {
+            return target;
+        }
     }
 
     static observeArray(target, observer: IObserver) {
@@ -280,15 +297,17 @@ class Xania {
         var ProxyConst = window["Proxy"];
         return new ProxyConst(target, {
             get(target, property) {
+                if (property === "empty") {
+                    observer.setRead(target, "length");
+                    return target.length === 0;
+                }
                 observer.setRead(target, property);
-                return Xania.observe(target[property], observer);
+                return Xania.observeProperty(target, property, observer);
             },
             set(target, property, value, receiver) {
                 target[property] = value;
                 observer.setChange(target, property);
                 return true;
-            },
-            apply(target, thisArg, argumentsList) {
             }
         });
     }
@@ -317,7 +336,7 @@ class Xania {
 
     static observeObject(target, observer: IObserver) {
         // ReSharper disable once InconsistentNaming
-        function Spy() {}
+        function Spy() { }
         if (target.constructor !== Object) {
             function __() { // ReSharper disable once SuspiciousThisUsage 
                 this.constructor = Spy;
@@ -336,7 +355,8 @@ class Xania {
                 {
                     get: Xania.partialApp((obj, name: string) => {
                         observer.setRead(obj, name);
-                        return Xania.observe(obj[name], observer);
+                        // ReSharper disable once SuspiciousThisUsage
+                        return Xania.observeProperty(obj, name, observer);
                     }, target, prop),
                     set: Xania.partialApp((obj, name: string, value: any) => {
                         observer.setChange(obj, name);
@@ -347,6 +367,24 @@ class Xania {
                 });
         }
         return new Spy;
+    }
+
+    static observeProperty(object, propertyName, observer: IObserver) {
+        var propertyValue = object[propertyName];
+        if (propertyValue === null || typeof propertyValue === "undefined")
+            return null;
+        // return Xania.observe(propertyValue, observer);
+        else if (typeof propertyValue === "function") {
+            return function () {
+                // ReSharper disable once SuspiciousThisUsage
+                var proxy = Xania.observe(object, observer);
+                var retval = propertyValue.apply(proxy, arguments);
+
+                return Xania.observe(retval, observer);
+            };
+        } else {
+            return Xania.observe(propertyValue, observer);
+        }
     }
 
     static construct(viewModel, data) {
@@ -376,8 +414,7 @@ class Xania {
                         get: Xania.partialApp((obj, name) => this[name], data, prop),
                         enumerable: false,
                         configurable: false
-                    }
-                );
+                    });
             }
         }
         Proxy.prototype.valueOf = () => Xania.construct(viewModel, data.valueOf());
@@ -399,7 +436,14 @@ class Xania {
                 }
             }
         }
-        return target;  
+        return target;
+    }
+
+    static join(separator: string, value) {
+        if (Array.isArray(value)) {
+            return value.length > 0 ? value.join(separator) : null;
+        }
+        return value;
     }
 }
 

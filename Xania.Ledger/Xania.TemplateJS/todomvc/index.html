@@ -22,7 +22,7 @@
             <section class="main" display.if="app.todoStore.todos.length > 0">
                 <input class="toggle-all" type="checkbox" checked="@app.todoStore.allCompleted()" click="app.todoStore.toggleAll()">
                 <ul class="todo-list">
-                    <li data-for="todo in app.todoStore.todos" class.completed="@todo.completed" class.editing="@todo.editing">
+                    <li data-for="todo of app.todoStore.todos" class.completed="@todo.completed" class.editing="@todo.editing">
                         <div class="view">
                             <input class="toggle" type="checkbox" click="todo.toggleCompletion()" checked="@todo.completed">
                             <label dblclick="editTodo(todo)">@todo.title</label>
@@ -32,9 +32,9 @@
                     </li>
                 </ul>
             </section>
-            <footer class="footer" display.if="app.todoStore.todos.length > 0">
+            <footer class="footer" class.hidden="@app.todoStore.todos.empty">
                 <span class="todo-count"><strong>@app.todoStore.getRemaining().length</strong> item(s) left</span>
-                <button class="clear-completed" display.if="app.todoStore.getCompleted().length > 0" click="removeCompleted()">Clear completed</button>
+                <button class="clear-completed" class.hidden="@app.todoStore.getCompleted().empty" click="removeCompleted()">Clear completed</button>
             </footer>
         </section>
     </div>
@@ -54,6 +54,19 @@
             var tpl = document.getElementById("todo-template");
             binder.bind(tpl.childNodes[1], { app: new TodoApp() });
         };
+
+        //var model = { app: new TodoApp() };
+        //var observer = new Observer();
+        //observer.subscribe(model, function (ctx) {
+        //    console.log("update", arguments);
+        //    var result = ctx.app.todoStore.getCompleted().empty;
+        //    console.log(result);
+        //});
+
+        //var tracker = observer.track(model);
+        //tracker.app.todoStore.todos.push(new Todo("xxxx"));
+
+        //observer.update();
     </script>
 </body>
 </html>

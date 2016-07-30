@@ -57,8 +57,10 @@ var Observer = (function () {
     Observer.prototype.add = function (object, property, subsriber) {
         if (this.subscriptions.has(object)) {
             var deps = this.subscriptions.get(object);
-            if (deps.hasOwnProperty(property))
-                deps[property].push(subsriber);
+            if (deps.hasOwnProperty(property)) {
+                if (deps[property].indexOf(subsriber) < 0)
+                    deps[property].push(subsriber);
+            }
             else
                 deps[property] = [subsriber];
         }
@@ -83,14 +85,16 @@ var Observer = (function () {
         for (var _i = 2; _i < arguments.length; _i++) {
             additionalArgs[_i - 2] = arguments[_i];
         }
-        var self = this;
-        var observable = Xania.observe(context, {
+        var self = this, observable;
+        var subscription = {
+            notify: function () {
+                update.apply(this, [observable].concat(additionalArgs));
+            }
+        };
+        observable = Xania.observe(context, {
             setRead: function (obj, property) {
-                self.add(obj, property, {
-                    notify: function () {
-                        update.apply(this, [context].concat(additionalArgs));
-                    }
-                });
+                console.log("read", obj, property);
+                self.add(obj, property, subscription);
             },
             setChange: function (obj, property) {
                 throw new Error("invalid change");
@@ -98,23 +102,13 @@ var Observer = (function () {
         });
         update.apply(this, [observable].concat(additionalArgs));
     };
-    Observer.prototype.observe = function (context, subsriber) {
-        var self = this;
-        return Xania.observe(context, {
-            setRead: function (obj, property) {
-                self.add(obj, property, subsriber);
-            },
-            setChange: function (obj, property) {
-                throw new Error("invalid change");
-            }
-        });
-    };
     Observer.prototype.track = function (context) {
         var self = this;
         return Xania.observe(context, {
             setRead: function () {
             },
             setChange: function (obj, property) {
+                console.log("write", obj, property);
                 var subscribers = self.get(obj, property);
                 for (var i = 0; i < subscribers.length; i++) {
                     self.dirty.add(subscribers[i]);
@@ -170,22 +164,23 @@ var TagBinding = (function (_super) {
             var attributes = tpl.executeAttributes(context);
             for (var attrName in attributes) {
                 if (attributes.hasOwnProperty(attrName)) {
-                    var attrValue = attributes[attrName];
-                    if (attrValue === null) {
+                    var attrValue = Xania.join(" ", attributes[attrName]);
+                    elt[attrName] = attrValue;
+                    if (typeof attrValue === "undefined" || attrValue === null) {
                         elt.removeAttribute(attrName);
                     }
                     else if (attrName === "value") {
-                        elt["value"] = attributes[attrName];
+                        elt["value"] = attrValue;
                     }
                     else {
                         var domAttr = elt.attributes[attrName];
                         if (!!domAttr) {
-                            domAttr.nodeValue = attributes[attrName];
-                            domAttr.value = attributes[attrName];
+                            domAttr.nodeValue = attrValue;
+                            domAttr.value = attrValue;
                         }
                         else {
                             domAttr = document.createAttribute(attrName);
-                            domAttr.value = attributes[attrName];
+                            domAttr.value = attrValue;
                             elt.setAttributeNode(domAttr);
                         }
                     }

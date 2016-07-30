@@ -28,6 +28,10 @@ class TodoStore {
     getRemaining() {
         return this.todos;
     }
+
+    getCompleted() {
+        return this.todos.filter(t => t.completed);
+    }
 }
 
 class TodoApp {
@@ -38,7 +42,9 @@ class TodoApp {
     }
 
     addTodo() {
-        this.todoStore.todos.push(new Todo(this.newTodoText));
-        this.newTodoText = "";
+        if (!!this.newTodoText && this.newTodoText.length > 0) {
+            this.todoStore.todos.push(new Todo(this.newTodoText));
+            this.newTodoText = "";
+        }
     }
 }

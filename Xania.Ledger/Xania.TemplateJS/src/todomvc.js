@@ -26,6 +26,9 @@ var TodoStore = (function () {
     TodoStore.prototype.getRemaining = function () {
         return this.todos;
     };
+    TodoStore.prototype.getCompleted = function () {
+        return this.todos.filter(function (t) { return t.completed; });
+    };
     return TodoStore;
 })();
 var TodoApp = (function () {
@@ -36,8 +39,10 @@ var TodoApp = (function () {
     TodoApp.prototype.start = function () {
     };
     TodoApp.prototype.addTodo = function () {
-        this.todoStore.todos.push(new Todo(this.newTodoText));
-        this.newTodoText = "";
+        if (!!this.newTodoText && this.newTodoText.length > 0) {
+            this.todoStore.todos.push(new Todo(this.newTodoText));
+            this.newTodoText = "";
+        }
     };
     return TodoApp;
 })();
