@@ -303,7 +303,8 @@ var Xania = (function () {
                 }, target, prop),
                 set: Xania.partialApp(function (obj, name, value) {
                     observer.setChange(obj, name);
-                    obj[name] = value;
+                    var unwrapped = Xania.unwrap(value);
+                    obj[name] = unwrapped;
                 }, target, prop),
                 enumerable: true,
                 configurable: true

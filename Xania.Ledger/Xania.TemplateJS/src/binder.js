@@ -85,10 +85,10 @@ var Observer = (function () {
         for (var _i = 2; _i < arguments.length; _i++) {
             additionalArgs[_i - 2] = arguments[_i];
         }
-        var self = this, observable;
+        var self = this, observable, updateArgs;
         var subscription = {
             notify: function () {
-                update.apply(this, [observable].concat(additionalArgs));
+                update.apply(this, updateArgs);
             }
         };
         observable = Xania.observe(context, {
@@ -100,6 +100,7 @@ var Observer = (function () {
                 throw new Error("invalid change");
             }
         });
+        updateArgs = [observable].concat(additionalArgs);
         update.apply(this, [observable].concat(additionalArgs));
     };
     Observer.prototype.track = function (context) {

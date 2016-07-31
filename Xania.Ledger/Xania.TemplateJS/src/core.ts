@@ -360,7 +360,14 @@ class Xania {
                     }, target, prop),
                     set: Xania.partialApp((obj, name: string, value: any) => {
                         observer.setChange(obj, name);
-                        obj[name] = value;
+                        var unwrapped = Xania.unwrap(value);
+                        //if (Array.isArray(obj[name])) {
+                        //    console.log(1);
+                        //    obj[name].splice(0, obj[name].length);
+                        //    obj[name].push.apply(obj[name], unwrapped);
+                        //}
+                        //else
+                        obj[name] = unwrapped;
                     }, target, prop),
                     enumerable: true,
                     configurable: true

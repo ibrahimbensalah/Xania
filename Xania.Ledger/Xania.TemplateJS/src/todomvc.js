@@ -24,10 +24,13 @@ var TodoStore = (function () {
             this.todos[i].completed = !allCompleted;
     };
     TodoStore.prototype.getRemaining = function () {
-        return this.todos;
+        return this.todos.filter(function (t) { return !t.completed; });
     };
     TodoStore.prototype.getCompleted = function () {
         return this.todos.filter(function (t) { return t.completed; });
+    };
+    TodoStore.prototype.removeCompleted = function () {
+        this.todos = this.getRemaining();
     };
     return TodoStore;
 })();

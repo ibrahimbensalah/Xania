@@ -14,13 +14,13 @@
 </head>
 <body>
     <div id="todo-template">
-        <section class="todoapp">
+        <section class="todoapp" data-for="store of app.todoStore">
             <header class="header">
                 <h1>todos</h1>
-                <input class="new-todo" placeholder="What needs to be done?" autofocus="" name="app.newTodoText" value="@app.newTodoText"keyup.enter="app.addTodo()">
+                <input class="new-todo" placeholder="What needs to be done?" autofocus="" name="app.newTodoText" value="@app.newTodoText" keyup.enter="app.addTodo()">
             </header>
-            <section class="main" display.if="app.todoStore.todos.length > 0">
-                <input class="toggle-all" type="checkbox" checked="@app.todoStore.allCompleted()" click="app.todoStore.toggleAll()">
+            <section class="main" class.hidden="@store.todos.empty">
+                <input class="toggle-all" type="checkbox" checked="@store.allCompleted()" click="store.toggleAll()">
                 <ul class="todo-list">
                     <li data-for="todo of app.todoStore.todos" class.completed="@todo.completed" class.editing="@todo.editing">
                         <div class="view">
@@ -32,9 +32,9 @@
                     </li>
                 </ul>
             </section>
-            <footer class="footer" class.hidden="@app.todoStore.todos.empty">
-                <span class="todo-count"><strong>@app.todoStore.getRemaining().length</strong> item(s) left</span>
-                <button class="clear-completed" class.hidden="@app.todoStore.getCompleted().empty" click="removeCompleted()">Clear completed</button>
+            <footer class="footer" class.hidden="@store.todos.empty">
+                <span class="todo-count"><strong>@store.getRemaining().length</strong> item(s) left</span>
+                <button class="clear-completed" class.hidden="@store.getCompleted().empty" click="store.removeCompleted()">Clear completed</button>
             </footer>
         </section>
     </div>

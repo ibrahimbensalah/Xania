@@ -87,10 +87,15 @@ class Observer {
     }
 
     subscribe(context, update, ...additionalArgs) {
-        var self = this, observable;
+        var self = this,
+            // ReSharper disable once JoinDeclarationAndInitializerJs
+            observable: Object | void,
+            // ReSharper disable once JoinDeclarationAndInitializerJs
+            updateArgs: (Object | void)[];
+
         var subscription = {
             notify() {
-                update.apply(this, [observable].concat(additionalArgs));
+                update.apply(this, updateArgs);
             }
         };
         observable = Xania.observe(context, {
@@ -102,6 +107,7 @@ class Observer {
                 throw new Error("invalid change");
             }
         });
+        updateArgs = [observable].concat(additionalArgs);
         update.apply(this, [observable].concat(additionalArgs));
     }
 

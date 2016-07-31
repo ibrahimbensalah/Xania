@@ -26,11 +26,15 @@ class TodoStore {
     }
 
     getRemaining() {
-        return this.todos;
+        return this.todos.filter(t => !t.completed);
     }
 
     getCompleted() {
         return this.todos.filter(t => t.completed);
+    }
+
+    removeCompleted() {
+        this.todos = this.getRemaining();
     }
 }
 
