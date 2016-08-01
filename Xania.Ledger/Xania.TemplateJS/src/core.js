@@ -7,8 +7,8 @@ var TextTemplate = (function () {
             ? this.tpl(context)
             : this.tpl;
     };
-    TextTemplate.prototype.bind = function (model, idx) {
-        return new ContentBinding(this, model, idx);
+    TextTemplate.prototype.bind = function (model) {
+        return new ContentBinding(this, model);
     };
     TextTemplate.prototype.toString = function () {
         return this.tpl.toString();
@@ -43,7 +43,7 @@ var TagTemplate = (function () {
         return this;
     };
     TagTemplate.prototype.bind = function (model) {
-        return new TagBinding(this, model, 0);
+        return new TagBinding(this, model);
     };
     TagTemplate.prototype.for = function (forExpression, loader) {
         var selectManyExpr = SelectManyExpression.parse(forExpression, loader);
@@ -107,22 +107,14 @@ var SelectManyExpression = (function () {
     SelectManyExpression.prototype.executeAsync = function (context, resolve) {
         var _this = this;
         var ensureIsArray = SelectManyExpression.ensureIsArray, source = ensureIsArray(context), viewModel = this.viewModel;
-        var itemHandler = function (item, idx) {
-            var result = {};
-            item = Xania.unwrap(item);
-            if (_this.items[idx] !== item) {
-                _this.items[idx] = item;
-                result[_this.varName] = typeof viewModel !== "undefined" && viewModel !== null
-                    ? Xania.construct(viewModel, item)
-                    : item;
-                resolve(result, idx);
-            }
-        };
+        if (Array.isArray(context))
+            throw new Error("context is Array");
         var collectionFunc = new Function("m", "with(m) { return " + this.collectionExpr + "; }");
-        for (var i = 0; i < source.length; i++) {
-            var col = collectionFunc(source[i]);
-            Xania.map(itemHandler, col);
-        }
+        var col = collectionFunc(context);
+        if (col.then)
+            col.then(function (data) { return resolve(data, _this.varName); });
+        else
+            resolve(col, this.varName);
     };
     SelectManyExpression.parse = function (expr, loader) {
         if (loader === void 0) { loader = function (t) { return window[t]; }; }
@@ -165,11 +157,11 @@ var Xania = (function () {
         }
         else if (Array.isArray(data)) {
             for (var i = 0; i < data.length; i++) {
-                fn.call(this, data[i], i);
+                fn.call(this, data[i], i, data);
             }
         }
         else {
-            fn.call(this, data, 0);
+            fn.call(this, data, 0, [data]);
         }
     };
     Xania.collect = function (fn, data) {
@@ -189,23 +181,6 @@ var Xania = (function () {
         if (data === null || typeof data === "undefined")
             return 0;
         return !!data.length ? data.length : 1;
-    };
-    Xania.uuid = function () {
-        if (!Xania.lut) {
-            Xania.lut = [];
-            for (var i = 0; i < 256; i++) {
-                Xania.lut[i] = (i < 16 ? '0' : '') + (i).toString(16);
-            }
-        }
-        var lut = Xania.lut;
-        var d0 = Math.random() * 0xffffffff | 0;
-        var d1 = Math.random() * 0xffffffff | 0;
-        var d2 = Math.random() * 0xffffffff | 0;
-        var d3 = Math.random() * 0xffffffff | 0;
-        return lut[d0 & 0xff] + lut[d0 >> 8 & 0xff] + lut[d0 >> 16 & 0xff] + lut[d0 >> 24 & 0xff] + '-' +
-            lut[d1 & 0xff] + lut[d1 >> 8 & 0xff] + '-' + lut[d1 >> 16 & 0x0f | 0x40] + lut[d1 >> 24 & 0xff] + '-' +
-            lut[d2 & 0x3f | 0x80] + lut[d2 >> 8 & 0xff] + '-' + lut[d2 >> 16 & 0xff] + lut[d2 >> 24 & 0xff] +
-            lut[d3 & 0xff] + lut[d3 >> 8 & 0xff] + lut[d3 >> 16 & 0xff] + lut[d3 >> 24 & 0xff];
     };
     Xania.compose = function () {
         var fns = [];
@@ -234,7 +209,7 @@ var Xania = (function () {
         };
     };
     Xania.observe = function (target, observer) {
-        if (!target)
+        if (!target || target.isSpy)
             return target;
         if (typeof target === "object") {
             if (Array.isArray(target))
@@ -250,16 +225,34 @@ var Xania = (function () {
         var ProxyConst = window["Proxy"];
         return new ProxyConst(target, {
             get: function (target, property) {
-                if (property === "empty") {
-                    observer.setRead(target, "length");
-                    return target.length === 0;
+                switch (property) {
+                    case "isSpy":
+                        return true;
+                    case "empty":
+                        observer.setRead(target, "length");
+                        return target.length === 0;
+                    case "indexOf":
+                        return function (searchElt, fromIndex) {
+                            if (fromIndex === void 0) { fromIndex = 0; }
+                            var elt = searchElt.valueOf();
+                            return target.indexOf(elt, fromIndex);
+                        };
+                    default:
+                        return Xania.observeProperty(target, property, observer);
                 }
-                observer.setRead(target, property);
-                return Xania.observeProperty(target, property, observer);
             },
             set: function (target, property, value, receiver) {
-                target[property] = value;
-                observer.setChange(target, property);
+                var unwrapped = Xania.unwrap(value);
+                debugger;
+                if (Array.isArray(target) && !target.hasOwnProperty(property)) {
+                    target[property] = unwrapped;
+                    observer.setChange(target, property);
+                    observer.setChange(target, "length");
+                }
+                else if (target[property] !== unwrapped) {
+                    target[property] = unwrapped;
+                    observer.setChange(target, property);
+                }
                 return true;
             }
         });
@@ -302,9 +295,13 @@ var Xania = (function () {
                     return Xania.observeProperty(obj, name, observer);
                 }, target, prop),
                 set: Xania.partialApp(function (obj, name, value) {
-                    observer.setChange(obj, name);
                     var unwrapped = Xania.unwrap(value);
-                    obj[name] = unwrapped;
+                    observer.setChange(obj, name);
+                    if (obj[name] !== unwrapped) {
+                        debugger;
+                        obj[name] = unwrapped;
+                        observer.setChange(obj, name);
+                    }
                 }, target, prop),
                 enumerable: true,
                 configurable: true
@@ -314,8 +311,10 @@ var Xania = (function () {
     };
     Xania.observeProperty = function (object, propertyName, observer) {
         var propertyValue = object[propertyName];
-        if (propertyValue === null || typeof propertyValue === "undefined")
+        if (propertyValue === null || typeof propertyValue === "undefined") {
+            observer.setRead(object, propertyName);
             return null;
+        }
         else if (typeof propertyValue === "function") {
             return function () {
                 var proxy = Xania.observe(object, observer);
@@ -324,6 +323,7 @@ var Xania = (function () {
             };
         }
         else {
+            observer.setRead(object, propertyName);
             return Xania.observe(propertyValue, observer);
         }
     };

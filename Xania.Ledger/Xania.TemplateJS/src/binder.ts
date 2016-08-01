@@ -20,15 +20,46 @@ class BindingContext {
         var tpl = this.tpl;
         var modelAccessor = !!tpl.modelAccessor ? tpl.modelAccessor : Xania.identity;
 
-        observer.subscribe(context, BindingContext.update, modelAccessor, (model, idx) => {
-            if (typeof idx == "undefined")
-                throw new Error("model idx is not defined");
+        //const itemHandler = (item, idx) => {
+        //    var result = {};
+        //    item = Xania.unwrap(item);
 
-            var result = Xania.assign({}, context, model);
+        //    if (this.items[idx] !== item) {
+        //        this.items[idx] = item;
 
-            var child = tpl.bind(result, idx).init(observer);
-            this.bindings.push(child);
-            this.addChild(child, idx, offset);
+        //        result[this.varName] = typeof viewModel !== "undefined" && viewModel !== null
+        //            ? Xania.construct(viewModel, item)
+        //            : item;
+        //        resolve(result, idx);
+        //    }
+        //};
+
+        var previous = [];
+        observer.subscribe(context, BindingContext.update, modelAccessor, (member, varName) => {
+            var arr = Array.isArray(member) ? member : [member];
+            var next = [];
+            debugger;
+            for (var i = 0; i < arr.length; i++) {
+                var model = {};
+                model[varName] = Xania.unwrap(arr[i]);
+
+                if (previous[i] !== model[varName]) {
+                    next.push(model[varName]);
+
+                    var result = Xania.assign({}, context, model);
+                    var child = tpl.bind(result).init(observer);
+
+                    //for (var i = this.bindings.length - 1; i > i; i--) {
+                    //    this.bindings[i + 1] = this.bindings[i];
+                    //}
+                    this.bindings[i] = child;
+
+                    this.addChild(child, i, offset);
+                }
+            }
+            this.bindings.splice(next.length);
+
+            previous = next;
         });
     }
 
@@ -39,7 +70,7 @@ class Binding {
     private data;
     public parent: TagBinding;
 
-    constructor(public context, private idx: number) {
+    constructor(public context) {
     }
 
     init(observer: Observer): Binding {
@@ -65,6 +96,7 @@ class Observer {
             } else
                 deps[property] = [subsriber];
         } else {
+            console.debug("observe object", object);
             const deps = {};
             deps[property] = [subsriber];
             this.subscriptions.set(object, deps);
@@ -100,7 +132,6 @@ class Observer {
         };
         observable = Xania.observe(context, {
             setRead(obj, property) {
-                console.log("read", obj, property);
                 self.add(obj, property, subscription);
             },
             setChange(obj, property: string) {
@@ -111,31 +142,18 @@ class Observer {
         update.apply(this, [observable].concat(additionalArgs));
     }
 
-    //observe(context, subsriber: ISubsriber) {
-    //    var self = this;
-    //    return Xania.observe(context, {
-    //        setRead(obj, property) {
-    //            console.log("read", obj, property);
-    //            self.add(obj, property, subsriber);
-    //        },
-    //        setChange(obj, property: string) {
-    //            throw new Error("invalid change");
-    //        }
-    //    });
-    //}
-
     track(context) {
-        var self = this;
+        var observer = this;
         return Xania.observe(context,
             {
                 setRead() {
                     // ignore
                 },
                 setChange(obj, property: string) {
-                    console.log("write", obj, property);
-                    const subscribers = self.get(obj, property);
+                    console.debug("write", obj, property);
+                    const subscribers = observer.get(obj, property);
                     for (let i = 0; i < subscribers.length; i++) {
-                        self.dirty.add(subscribers[i]);
+                        observer.dirty.add(subscribers[i]);
                     }
                 }
             });
@@ -152,8 +170,8 @@ class Observer {
 class ContentBinding extends Binding {
     private dom;
 
-    constructor(private tpl: TextTemplate, context, idx: number) {
-        super(context, idx);
+    constructor(private tpl: TextTemplate, context) {
+        super(context);
     }
 
     init(observer: Observer) {
@@ -175,8 +193,8 @@ class TagBinding extends Binding {
     public children: Binding[] = [];
     protected dom: HTMLElement;
 
-    constructor(private tpl: TagTemplate, context, idx: number) {
-        super(context, idx);
+    constructor(private tpl: TagTemplate, context) {
+        super(context);
     }
 
     init(observer: Observer = new Observer()) {

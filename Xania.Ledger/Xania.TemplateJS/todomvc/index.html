@@ -21,16 +21,14 @@
             </header>
             <section class="main" class.hidden="@store.todos.empty">
                 <input class="toggle-all" type="checkbox" checked="@store.allCompleted()" click="store.toggleAll()">
-                <ul class="todo-list">
-                    <li data-for="todo of app.todoStore.todos" class.completed="@todo.completed" class.editing="@todo.editing">
+                <ul class="todo-list"><li data-for="todo of app.todoStore.todos" class.completed="@todo.completed" class.editing="@todo.editing">
                         <div class="view">
                             <input class="toggle" type="checkbox" click="todo.toggleCompletion()" checked="@todo.completed">
                             <label dblclick="editTodo(todo)">@todo.title</label>
-                            <button class="destroy" click="remove(todo)"></button>
+                            <button class="destroy" click="store.remove(todo)"></button>
                         </div>
                         <input class="edit" name="todo.title" blur="stopEditing(todo,editedtodo.value)" keyup.enter="updateEditingTodo(todo, editedtodo.value)" keyup.escape="cancelEditingTodo(todo)">
-                    </li>
-                </ul>
+                    </li></ul>
             </section>
             <footer class="footer" class.hidden="@store.todos.empty">
                 <span class="todo-count"><strong>@store.getRemaining().length</strong> item(s) left</span>

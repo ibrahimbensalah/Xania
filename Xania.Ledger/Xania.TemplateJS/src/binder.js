@@ -25,21 +25,31 @@ var BindingContext = (function () {
         var context = this.context;
         var tpl = this.tpl;
         var modelAccessor = !!tpl.modelAccessor ? tpl.modelAccessor : Xania.identity;
-        observer.subscribe(context, BindingContext.update, modelAccessor, function (model, idx) {
-            if (typeof idx == "undefined")
-                throw new Error("model idx is not defined");
-            var result = Xania.assign({}, context, model);
-            var child = tpl.bind(result, idx).init(observer);
-            _this.bindings.push(child);
-            _this.addChild(child, idx, offset);
+        var previous = [];
+        observer.subscribe(context, BindingContext.update, modelAccessor, function (member, varName) {
+            var arr = Array.isArray(member) ? member : [member];
+            var next = [];
+            debugger;
+            for (var i = 0; i < arr.length; i++) {
+                var model = {};
+                model[varName] = Xania.unwrap(arr[i]);
+                if (previous[i] !== model[varName]) {
+                    next.push(model[varName]);
+                    var result = Xania.assign({}, context, model);
+                    var child = tpl.bind(result).init(observer);
+                    _this.bindings[i] = child;
+                    _this.addChild(child, i, offset);
+                }
+            }
+            _this.bindings.splice(next.length);
+            previous = next;
         });
     };
     return BindingContext;
 })();
 var Binding = (function () {
-    function Binding(context, idx) {
+    function Binding(context) {
         this.context = context;
-        this.idx = idx;
     }
     Binding.prototype.init = function (observer) {
         throw new Error("Abstract method Binding.update");
@@ -65,6 +75,7 @@ var Observer = (function () {
                 deps[property] = [subsriber];
         }
         else {
+            console.debug("observe object", object);
             var deps = {};
             deps[property] = [subsriber];
             this.subscriptions.set(object, deps);
@@ -93,7 +104,6 @@ var Observer = (function () {
         };
         observable = Xania.observe(context, {
             setRead: function (obj, property) {
-                console.log("read", obj, property);
                 self.add(obj, property, subscription);
             },
             setChange: function (obj, property) {
@@ -104,15 +114,15 @@ var Observer = (function () {
         update.apply(this, [observable].concat(additionalArgs));
     };
     Observer.prototype.track = function (context) {
-        var self = this;
+        var observer = this;
         return Xania.observe(context, {
             setRead: function () {
             },
             setChange: function (obj, property) {
-                console.log("write", obj, property);
-                var subscribers = self.get(obj, property);
+                console.debug("write", obj, property);
+                var subscribers = observer.get(obj, property);
                 for (var i = 0; i < subscribers.length; i++) {
-                    self.dirty.add(subscribers[i]);
+                    observer.dirty.add(subscribers[i]);
                 }
             }
         });
@@ -127,8 +137,8 @@ var Observer = (function () {
 })();
 var ContentBinding = (function (_super) {
     __extends(ContentBinding, _super);
-    function ContentBinding(tpl, context, idx) {
-        _super.call(this, context, idx);
+    function ContentBinding(tpl, context) {
+        _super.call(this, context);
         this.tpl = tpl;
     }
     ContentBinding.prototype.init = function (observer) {
@@ -149,8 +159,8 @@ var ContentBinding = (function (_super) {
 })(Binding);
 var TagBinding = (function (_super) {
     __extends(TagBinding, _super);
-    function TagBinding(tpl, context, idx) {
-        _super.call(this, context, idx);
+    function TagBinding(tpl, context) {
+        _super.call(this, context);
         this.tpl = tpl;
         this.children = [];
     }
