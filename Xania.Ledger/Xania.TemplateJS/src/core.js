@@ -47,12 +47,7 @@ var TagTemplate = (function () {
     };
     TagTemplate.prototype.for = function (forExpression, loader) {
         var selectManyExpr = SelectManyExpression.parse(forExpression, loader);
-        this.modelIdentifier = selectManyExpr.collectionExpr;
-        this.modelAccessor = function (model) { return ({
-            then: function (resolve) {
-                return selectManyExpr.executeAsync(model, resolve);
-            }
-        }); };
+        this.modelAccessor = selectManyExpr.executeAsync.bind(selectManyExpr);
         return this;
     };
     TagTemplate.prototype.executeAttributes = function (context) {
@@ -98,23 +93,25 @@ var SelectManyExpression = (function () {
         this.collectionExpr = collectionExpr;
         this.loader = loader;
         this.items = [];
+        if (collectionExpr === undefined || collectionExpr === null) {
+            throw new Error("null argument exception");
+        }
     }
-    SelectManyExpression.prototype.execute = function (context) {
-        var result = [];
-        this.executeAsync(context, result.push.bind(result));
-        return result;
-    };
-    SelectManyExpression.prototype.executeAsync = function (context, resolve) {
-        var _this = this;
-        var ensureIsArray = SelectManyExpression.ensureIsArray, source = ensureIsArray(context), viewModel = this.viewModel;
+    SelectManyExpression.prototype.executeAsync = function (context) {
+        var collectionFunc = new Function("m", "with(m) { return " + this.collectionExpr + "; }"), varName = this.varName;
         if (Array.isArray(context))
             throw new Error("context is Array");
-        var collectionFunc = new Function("m", "with(m) { return " + this.collectionExpr + "; }");
         var col = collectionFunc(context);
-        if (col.then)
-            col.then(function (data) { return resolve(data, _this.varName); });
-        else
-            resolve(col, this.varName);
+        return {
+            then: function (resolve) {
+                var assign = function (item) {
+                    var result = {};
+                    result[varName] = item;
+                    resolve(result);
+                };
+                Xania.ready(col, Xania.map, assign);
+            }
+        };
     };
     SelectManyExpression.parse = function (expr, loader) {
         if (loader === void 0) { loader = function (t) { return window[t]; }; }
@@ -145,6 +142,22 @@ var Xania = (function () {
     }
     Xania.identity = function (x) {
         return x;
+    };
+    Xania.ready = function (data, resolve) {
+        var _this = this;
+        var args = [];
+        for (var _i = 2; _i < arguments.length; _i++) {
+            args[_i - 2] = arguments[_i];
+        }
+        var notify = function (d) {
+            resolve.apply(_this, args.concat([d]));
+        };
+        if (typeof (data.then) === "function") {
+            data.then.call(this, notify);
+        }
+        else {
+            notify(data);
+        }
     };
     Xania.map = function (fn, data) {
         if (typeof data.then === "function") {
@@ -243,15 +256,12 @@ var Xania = (function () {
             },
             set: function (target, property, value, receiver) {
                 var unwrapped = Xania.unwrap(value);
-                debugger;
-                if (Array.isArray(target) && !target.hasOwnProperty(property)) {
+                if (target[property] !== unwrapped) {
+                    var length = target.length;
                     target[property] = unwrapped;
                     observer.setChange(target, property);
-                    observer.setChange(target, "length");
-                }
-                else if (target[property] !== unwrapped) {
-                    target[property] = unwrapped;
-                    observer.setChange(target, property);
+                    if (target.length !== length)
+                        observer.setChange(target, "length");
                 }
                 return true;
             }
@@ -296,9 +306,7 @@ var Xania = (function () {
                 }, target, prop),
                 set: Xania.partialApp(function (obj, name, value) {
                     var unwrapped = Xania.unwrap(value);
-                    observer.setChange(obj, name);
                     if (obj[name] !== unwrapped) {
-                        debugger;
                         obj[name] = unwrapped;
                         observer.setChange(obj, name);
                     }

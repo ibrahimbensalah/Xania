@@ -14,10 +14,10 @@ var BindingContext = (function () {
     BindingContext.update = function (target, modelAccessor, resolve) {
         var model = modelAccessor(target);
         if (typeof (model.then) === "function") {
-            model.then(resolve);
+            model.then.call(this, resolve);
         }
         else {
-            resolve(model, 0);
+            resolve.call(this, model);
         }
     };
     BindingContext.prototype.execute = function (observer, offset) {
@@ -25,24 +25,19 @@ var BindingContext = (function () {
         var context = this.context;
         var tpl = this.tpl;
         var modelAccessor = !!tpl.modelAccessor ? tpl.modelAccessor : Xania.identity;
-        var previous = [];
-        observer.subscribe(context, BindingContext.update, modelAccessor, function (member, varName) {
-            var arr = Array.isArray(member) ? member : [member];
-            var next = [];
-            debugger;
-            for (var i = 0; i < arr.length; i++) {
-                var model = {};
-                model[varName] = Xania.unwrap(arr[i]);
-                if (previous[i] !== model[varName]) {
-                    next.push(model[varName]);
-                    var result = Xania.assign({}, context, model);
+        observer.subscribe(context, function (ctx) {
+            Xania.ready(modelAccessor(ctx), function (model) {
+                model = Xania.unwrap(model);
+                var arr = Array.isArray(model) ? model : [model];
+                var children = [];
+                for (var i = 0; i < arr.length; i++) {
+                    var result = Xania.assign({}, context, arr[i]);
                     var child = tpl.bind(result).init(observer);
-                    _this.bindings[i] = child;
-                    _this.addChild(child, i, offset);
+                    children.push(child);
+                    _this.addChild(child, i);
                 }
-            }
-            _this.bindings.splice(next.length);
-            previous = next;
+                return children;
+            });
         });
     };
     return BindingContext;
@@ -50,6 +45,7 @@ var BindingContext = (function () {
 var Binding = (function () {
     function Binding(context) {
         this.context = context;
+        this.destroyed = false;
     }
     Binding.prototype.init = function (observer) {
         throw new Error("Abstract method Binding.update");
@@ -57,6 +53,7 @@ var Binding = (function () {
     Binding.prototype.addChild = function (child, idx) {
         throw new Error("Abstract method Binding.update");
     };
+    Binding.prototype.destroy = function () { throw new Error("Not implemented"); };
     return Binding;
 })();
 var Observer = (function () {
@@ -68,28 +65,40 @@ var Observer = (function () {
         if (this.subscriptions.has(object)) {
             var deps = this.subscriptions.get(object);
             if (deps.hasOwnProperty(property)) {
-                if (deps[property].indexOf(subsriber) < 0)
+                if (deps[property].indexOf(subsriber) < 0) {
                     deps[property].push(subsriber);
+                    return true;
+                }
             }
-            else
+            else {
                 deps[property] = [subsriber];
+                return true;
+            }
         }
         else {
             console.debug("observe object", object);
             var deps = {};
             deps[property] = [subsriber];
             this.subscriptions.set(object, deps);
+            return true;
         }
-        return this;
+        return false;
     };
     Observer.prototype.get = function (object, property) {
         if (!this.subscriptions.has(object))
             return [];
         var deps = this.subscriptions.get(object);
-        var result = [];
-        if (deps.hasOwnProperty(property) || deps.hasOwnProperty("*"))
-            result.push.apply(result, deps[property]);
-        return result;
+        if (deps.hasOwnProperty(property))
+            return deps[property];
+        return [];
+    };
+    Observer.prototype.remove = function (object, property, subscr) {
+        if (!this.subscriptions.has(object))
+            return false;
+        var deps = this.subscriptions.get(object);
+        if (deps.hasOwnProperty(property)) {
+            deps[property] = deps[property].filter(function (s) { return s !== subscr; });
+        }
     };
     Observer.prototype.subscribe = function (context, update) {
         var additionalArgs = [];
@@ -98,20 +107,29 @@ var Observer = (function () {
         }
         var self = this, observable, updateArgs;
         var subscription = {
+            state: null,
+            dependencies: [],
             notify: function () {
-                update.apply(this, updateArgs);
+                for (var i = 0; i < this.dependencies.length; i++) {
+                    var dep = this.dependencies[i];
+                    self.remove(dep.obj, dep.property, this);
+                }
+                this.dependencies = [];
+                this.state = update.apply(subscription, updateArgs);
             }
         };
         observable = Xania.observe(context, {
             setRead: function (obj, property) {
-                self.add(obj, property, subscription);
+                if (self.add(obj, property, subscription))
+                    subscription.dependencies.push({ obj: obj, property: property });
             },
             setChange: function (obj, property) {
                 throw new Error("invalid change");
             }
         });
         updateArgs = [observable].concat(additionalArgs);
-        update.apply(this, [observable].concat(additionalArgs));
+        subscription.state = update.apply(subscription, [observable].concat(additionalArgs));
+        return subscription;
     };
     Observer.prototype.track = function (context) {
         var observer = this;
@@ -119,7 +137,7 @@ var Observer = (function () {
             setRead: function () {
             },
             setChange: function (obj, property) {
-                console.debug("write", obj, property);
+                console.debug("write", obj, property, obj[property]);
                 var subscribers = observer.get(obj, property);
                 for (var i = 0; i < subscribers.length; i++) {
                     observer.dirty.add(subscribers[i]);
@@ -155,6 +173,12 @@ var ContentBinding = (function (_super) {
         observer.subscribe(this.context, update);
         return this;
     };
+    ContentBinding.prototype.destroy = function () {
+        if (!!this.dom) {
+            this.dom.remove();
+        }
+        this.destroyed = true;
+    };
     return ContentBinding;
 })(Binding);
 var TagBinding = (function (_super) {
@@ -164,62 +188,72 @@ var TagBinding = (function (_super) {
         this.tpl = tpl;
         this.children = [];
     }
-    TagBinding.prototype.init = function (observer) {
-        var _this = this;
-        if (observer === void 0) { observer = new Observer(); }
-        var updateTag = function (context, tpl) {
-            if (typeof _this.dom === "undefined") {
-                _this.dom = document.createElement(tpl.name);
-            }
-            var elt = _this.dom;
-            var attributes = tpl.executeAttributes(context);
-            for (var attrName in attributes) {
-                if (attributes.hasOwnProperty(attrName)) {
-                    var attrValue = Xania.join(" ", attributes[attrName]);
-                    elt[attrName] = attrValue;
-                    if (typeof attrValue === "undefined" || attrValue === null) {
-                        elt.removeAttribute(attrName);
-                    }
-                    else if (attrName === "value") {
-                        elt["value"] = attrValue;
+    TagBinding.prototype.updateTag = function (context) {
+        var tagBinding = this;
+        if (typeof tagBinding.dom === "undefined") {
+            tagBinding.dom = document.createElement(tagBinding.tpl.name);
+        }
+        var elt = tagBinding.dom;
+        var attributes = tagBinding.tpl.executeAttributes(context);
+        for (var attrName in attributes) {
+            if (attributes.hasOwnProperty(attrName)) {
+                var attrValue = Xania.join(" ", attributes[attrName]);
+                elt[attrName] = attrValue;
+                if (typeof attrValue === "undefined" || attrValue === null) {
+                    elt.removeAttribute(attrName);
+                }
+                else if (attrName === "value") {
+                    elt["value"] = attrValue;
+                }
+                else {
+                    var domAttr = elt.attributes[attrName];
+                    if (!!domAttr) {
+                        domAttr.nodeValue = attrValue;
+                        domAttr.value = attrValue;
                     }
                     else {
-                        var domAttr = elt.attributes[attrName];
-                        if (!!domAttr) {
-                            domAttr.nodeValue = attrValue;
-                            domAttr.value = attrValue;
-                        }
-                        else {
-                            domAttr = document.createAttribute(attrName);
-                            domAttr.value = attrValue;
-                            elt.setAttributeNode(domAttr);
-                        }
+                        domAttr = document.createAttribute(attrName);
+                        domAttr.value = attrValue;
+                        elt.setAttributeNode(domAttr);
                     }
                 }
             }
-        };
-        observer.subscribe(this.context, updateTag, this.tpl);
-        var bindingContexts = this.tpl.children().map(function (tpl) { return new BindingContext(tpl, _this.context, function (child, idx, bcIndex) {
-            var offset = 0;
-            for (var i = 0; i < bcIndex; i++) {
-                offset += bindingContexts[i].bindings.length;
-            }
-            _this.addChild(child, offset + idx);
-        }); });
-        for (var e = 0; e < bindingContexts.length; e++) {
-            bindingContexts[e].execute(observer, e);
         }
+    };
+    TagBinding.prototype.init = function (observer) {
+        var _this = this;
+        if (observer === void 0) { observer = new Observer(); }
+        var update = function (context, tagBinding) {
+            if (tagBinding.destroyed)
+                return;
+            if (!!tagBinding.dom)
+                console.debug("update tag", tagBinding.dom);
+            tagBinding.updateTag(context);
+            for (var i = 0; i < tagBinding.children.length; i++) {
+                tagBinding.children[i].destroy();
+            }
+            tagBinding.tpl.children().map(function (tpl) {
+                var bc = new BindingContext(tpl, _this.context, function (child) {
+                    tagBinding.children.push(child);
+                    tagBinding.dom.appendChild(child.dom);
+                });
+                bc.execute(observer, 0);
+            });
+            console.debug("update complete");
+        };
+        observer.subscribe(this.context, update, this);
         return this;
     };
-    TagBinding.prototype.addChild = function (child, idx) {
+    TagBinding.prototype.addChild = function (child) {
         child.parent = this;
         this.children.push(child);
-        if (idx >= this.dom.childNodes.length) {
-            this.dom.appendChild(child.dom);
+        this.dom.appendChild(child.dom);
+    };
+    TagBinding.prototype.destroy = function () {
+        if (!!this.dom) {
+            this.dom.remove();
         }
-        else {
-            this.dom.insertBefore(child.dom, this.dom.childNodes[idx]);
-        }
+        this.destroyed = true;
     };
     return TagBinding;
 })(Binding);

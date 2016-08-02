@@ -229,7 +229,7 @@ describe("Xania.observe", function () {
         });
 
     it("should be able to unwrap",
-        function() {
+        function () {
             var context = {
                 a: Company.xania()
             };
@@ -244,6 +244,21 @@ describe("Xania.observe", function () {
             expect(unwrapped.emp.isSpy).toEqual(undefined);
             expect(unwrapped.x.isSpy).toEqual(undefined);
             expect(unwrapped.x.y.isSpy).toEqual(undefined);
+        });
+
+    it("should be able to subscribe",
+        function () {
+            var context = {
+                numbers : [1, 2, 3]
+            }
+            var observer = new Observer();
+            observer.subscribe(context,
+                function (c) {
+                    console.log(c.numbers);
+                });
+
+            var observable = observer.track(context);
+            observable.numbers = [4, 5, 6];
         });
 });
 

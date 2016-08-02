@@ -30,7 +30,6 @@ class TagTemplate implements IDomTemplate {
     // ReSharper disable once InconsistentNaming
     private _children: TagTemplate[] = [];
     public modelAccessor: Function;// = Xania.identity;
-    public modelIdentifier: string;
 
     constructor(public name: string) {
     }
@@ -70,13 +69,8 @@ class TagTemplate implements IDomTemplate {
     public for(forExpression, loader) {
         var selectManyExpr = SelectManyExpression.parse(forExpression, loader);
 
-        this.modelIdentifier = selectManyExpr.collectionExpr;
+        this.modelAccessor = selectManyExpr.executeAsync.bind(selectManyExpr);
 
-        this.modelAccessor = model => ({
-            then(resolve) {
-                return selectManyExpr.executeAsync(model, resolve);
-            }
-        });
         return this;
     }
 
@@ -123,33 +117,32 @@ class TagTemplate implements IDomTemplate {
 class SelectManyExpression {
     constructor(public varName: string, private viewModel: string,
         public collectionExpr, private loader: any) {
+
+        if (collectionExpr === undefined || collectionExpr === null) {
+            throw new Error("null argument exception");
+        }
     }
 
-    execute(context) {
-        var result = [];
-        this.executeAsync(context, result.push.bind(result));
-        return result;
-    }
-
-    executeAsync(context, resolve) {
-        const ensureIsArray = SelectManyExpression.ensureIsArray,
-            source = ensureIsArray(context),
-            viewModel = this.viewModel;
-
+    executeAsync(context) {
+        var collectionFunc = new Function("m", `with(m) { return ${this.collectionExpr}; }`),
+            varName = this.varName;
         if (Array.isArray(context))
             throw new Error("context is Array");
 
-        var collectionFunc = new Function("m", `with(m) { return ${this.collectionExpr}; }`);
         var col = collectionFunc(context);
 
-        if (col.then)
-            col.then(data => resolve(data, this.varName));
-        else
-            resolve(col, this.varName);
-        // Xania.map(itemHandler.bind(this), col);
-        // var length = source.length;
-        // for (let i = 0; i < length; i++) {
-        // }
+        return {
+            then(resolve) {
+                const assign = item => {
+                    const result = {};
+                    result[varName] = item;
+
+                    resolve(result);
+                };
+
+                Xania.ready(col, Xania.map, assign);
+            }
+        };
     }
 
     static parse(expr, loader = t => <any>window[t]) {
@@ -196,6 +189,17 @@ class Xania {
 
     static identity(x) {
         return x;
+    }
+
+    static ready(data, resolve, ...args: any[]) {
+        var notify = d => {
+            resolve.apply(this, args.concat([d]));
+        };
+        if (typeof (data.then) === "function") {
+            data.then.call(this, notify);
+        } else {
+            notify(data);
+        }
     }
 
     static map(fn: Function, data: any) {
@@ -308,16 +312,18 @@ class Xania {
                 }
             },
             set(target, property, value, receiver) {
-                var unwrapped = Xania.unwrap(value);
-                debugger;
-                if (Array.isArray(target) && !target.hasOwnProperty(property)) {
+                const unwrapped = Xania.unwrap(value);
+                if (target[property] !== unwrapped) {
+                    var length = target.length;
+
                     target[property] = unwrapped;
+
                     observer.setChange(target, property);
-                    observer.setChange(target, "length");
-                } else if (target[property] !== unwrapped) {
-                    target[property] = unwrapped;
-                    observer.setChange(target, property);
+
+                    if (target.length !== length)
+                        observer.setChange(target, "length");
                 }
+
                 return true;
             }
         });
@@ -371,9 +377,7 @@ class Xania {
                     }, target, prop),
                     set: Xania.partialApp((obj, name: string, value: any) => {
                         var unwrapped = Xania.unwrap(value);
-                        observer.setChange(obj, name);
                         if (obj[name] !== unwrapped) {
-                            debugger;
                             obj[name] = unwrapped;
                             observer.setChange(obj, name);
                         }

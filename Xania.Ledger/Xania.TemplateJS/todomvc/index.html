@@ -9,7 +9,9 @@
     <script src="../src/binder.js"></script>
     <script src="../src/todomvc.js"></script>
     <style type="text/css">
-        #todo-template { display: none; }
+        #todo-template {
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -21,14 +23,16 @@
             </header>
             <section class="main" class.hidden="@store.todos.empty">
                 <input class="toggle-all" type="checkbox" checked="@store.allCompleted()" click="store.toggleAll()">
-                <ul class="todo-list"><li data-for="todo of app.todoStore.todos" class.completed="@todo.completed" class.editing="@todo.editing">
+                <ul class="todo-list">
+                    <li data-for="todo of app.todoStore.todos" class.completed="@todo.completed" class.editing="@todo.editing">
                         <div class="view">
                             <input class="toggle" type="checkbox" click="todo.toggleCompletion()" checked="@todo.completed">
                             <label dblclick="editTodo(todo)">@todo.title</label>
                             <button class="destroy" click="store.remove(todo)"></button>
                         </div>
                         <input class="edit" name="todo.title" blur="stopEditing(todo,editedtodo.value)" keyup.enter="updateEditingTodo(todo, editedtodo.value)" keyup.escape="cancelEditingTodo(todo)">
-                    </li></ul>
+                    </li>
+                </ul>
             </section>
             <footer class="footer" class.hidden="@store.todos.empty">
                 <span class="todo-count"><strong>@store.getRemaining().length</strong> item(s) left</span>
@@ -46,6 +50,8 @@
             Part of <a href="http://todomvc.com">TodoMVC</a>
         </p>
     </footer>
+
+    <!--<ul id="debugUL"></ul>-->
     <script>
         window.onload = function () {
             var binder = new Binder();
@@ -65,6 +71,51 @@
         //tracker.app.todoStore.todos.push(new Todo("xxxx"));
 
         //observer.update();
+
+        //var context = {
+        //    numbers: [1, 2, 3]
+        //}
+        //var observer = new Observer();
+        //var subscription = observer.subscribe(context,
+        //    function (c) {
+        //        console.log("this ", this.state);
+
+        //        var ul = document.getElementById('debugUL');
+        //        var offset = 0;
+        //        console.log("offset ", offset);
+        //        var numbers = c.numbers;
+        //        var length = numbers.length;
+
+        //        if (!!this.state) {
+        //            for (var e = 0; e < this.state.bindings.length; e++) {
+        //                ul.removeChild(this.state.bindings[e]);
+        //            }
+        //        }
+
+        //        var bindings = [];
+        //        for (var i = 0; i < length; i++) {
+        //            var li = document.createElement("li");
+        //            li.innerHTML = "item " + numbers[i];
+        //            ul.appendChild(li);
+        //            bindings.push(li);
+        //        }
+        //        return { bindings };
+        //    });
+
+        //var observable = observer.track(context);
+        //observable.numbers = [4, 5, 6];
+        //observer.update();
+
+        //for (var i = 0; i < 2; i++) {
+        //    var observable = observer.track(context);
+        //    observable.numbers.pop();
+        //    observer.update();
+        //}
+
+        //var observable = observer.track(context);
+        //observable.numbers.push(7);
+        //observer.update();
+
     </script>
 </body>
 </html>

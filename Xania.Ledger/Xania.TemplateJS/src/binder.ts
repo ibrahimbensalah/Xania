@@ -9,9 +9,9 @@ class BindingContext {
     static update(target, modelAccessor: Function, resolve) {
         const model = modelAccessor(target);
         if (typeof (model.then) === "function") {
-            model.then(resolve);
+            model.then.call(this, resolve);
         } else {
-            resolve(model, 0);
+            resolve.call(this, model);
         }
     }
 
@@ -34,33 +34,45 @@ class BindingContext {
         //    }
         //};
 
-        var previous = [];
-        observer.subscribe(context, BindingContext.update, modelAccessor, (member, varName) => {
-            var arr = Array.isArray(member) ? member : [member];
-            var next = [];
-            debugger;
-            for (var i = 0; i < arr.length; i++) {
-                var model = {};
-                model[varName] = Xania.unwrap(arr[i]);
+        observer.subscribe(context, ctx => {
+            Xania.ready(modelAccessor(ctx), model => {
+                model = Xania.unwrap(model);
+                var arr = Array.isArray(model) ? model : [model];
 
-                if (previous[i] !== model[varName]) {
-                    next.push(model[varName]);
+                var children = [];
 
-                    var result = Xania.assign({}, context, model);
-                    var child = tpl.bind(result).init(observer);
+                for (var i = 0; i < arr.length; i++) {
+                    const result = Xania.assign({}, context, arr[i]);
+                    const child = tpl.bind(result).init(observer);
 
-                    //for (var i = this.bindings.length - 1; i > i; i--) {
-                    //    this.bindings[i + 1] = this.bindings[i];
-                    //}
-                    this.bindings[i] = child;
-
-                    this.addChild(child, i, offset);
+                    children.push(child);
+                    this.addChild(child, i);
                 }
-            }
-            this.bindings.splice(next.length);
 
-            previous = next;
+                return children;
+            });
         });
+
+        //observer.subscribe(context, BindingContext.update, modelAccessor, (model) => {
+        //    var arr = Array.isArray(model) ? model : [model];
+        //    var bindings = [];
+        //    for (var i = 0; i < arr.length; i++) {
+        //        const model = Xania.unwrap(arr[i]);
+
+        //        const result = Xania.assign({}, context, model);
+        //        const child = tpl.bind(result).init(observer);
+        //        bindings.push(child);
+
+        //        //for (var i = this.bindings.length - 1; i > i; i--) {
+        //        //    this.bindings[i + 1] = this.bindings[i];
+        //        //}
+        //        // this.bindings[i] = child;
+        //        this.addChild(child, i, offset);
+        //        // }
+        //    }
+
+        //    return { bindings };
+        //});
     }
 
     bindings: Binding[] = [];
@@ -69,6 +81,7 @@ class BindingContext {
 class Binding {
     private data;
     public parent: TagBinding;
+    public destroyed = false;
 
     constructor(public context) {
     }
@@ -80,6 +93,8 @@ class Binding {
     addChild(child, idx) {
         throw new Error("Abstract method Binding.update");
     }
+
+    destroy() { throw new Error("Not implemented"); }
 }
 
 class Observer {
@@ -91,18 +106,23 @@ class Observer {
             const deps = this.subscriptions.get(object);
 
             if (deps.hasOwnProperty(property)) {
-                if (deps[property].indexOf(subsriber) < 0)
+                if (deps[property].indexOf(subsriber) < 0) {
                     deps[property].push(subsriber);
-            } else
+                    return true;
+                }
+            } else {
                 deps[property] = [subsriber];
+                return true;
+            }
         } else {
             console.debug("observe object", object);
             const deps = {};
             deps[property] = [subsriber];
             this.subscriptions.set(object, deps);
+            return true;
         }
 
-        return this;
+        return false;
     }
 
     get(object: any, property: string) {
@@ -110,12 +130,22 @@ class Observer {
             return [];
 
         const deps = this.subscriptions.get(object);
-        const result: ISubsriber[] = [];
 
-        if (deps.hasOwnProperty(property) || deps.hasOwnProperty("*"))
-            result.push.apply(result, deps[property]);
+        if (deps.hasOwnProperty(property))
+            return deps[property];
 
-        return result;
+        return [];
+    }
+
+    remove(object: any, property: string, subscr) {
+        if (!this.subscriptions.has(object))
+            return false;
+
+        const deps = this.subscriptions.get(object);
+
+        if (deps.hasOwnProperty(property)) {
+            deps[property] = deps[property].filter(s => s !== subscr);
+        }
     }
 
     subscribe(context, update, ...additionalArgs) {
@@ -126,20 +156,30 @@ class Observer {
             updateArgs: (Object | void)[];
 
         var subscription = {
+            state: null,
+            dependencies: [],
             notify() {
-                update.apply(this, updateArgs);
+                for (var i = 0; i < this.dependencies.length; i++) {
+                    var dep = this.dependencies[i];
+                    self.remove(dep.obj, dep.property, this);
+                }
+                this.dependencies = [];
+                this.state = update.apply(subscription, updateArgs);
             }
         };
         observable = Xania.observe(context, {
             setRead(obj, property) {
-                self.add(obj, property, subscription);
+                if (self.add(obj, property, subscription))
+                    subscription.dependencies.push({ obj, property });
             },
             setChange(obj, property: string) {
                 throw new Error("invalid change");
             }
         });
         updateArgs = [observable].concat(additionalArgs);
-        update.apply(this, [observable].concat(additionalArgs));
+        subscription.state = update.apply(subscription, [observable].concat(additionalArgs));
+
+        return subscription;
     }
 
     track(context) {
@@ -150,7 +190,7 @@ class Observer {
                     // ignore
                 },
                 setChange(obj, property: string) {
-                    console.debug("write", obj, property);
+                    console.debug("write", obj, property, obj[property]);
                     const subscribers = observer.get(obj, property);
                     for (let i = 0; i < subscribers.length; i++) {
                         observer.dirty.add(subscribers[i]);
@@ -186,6 +226,13 @@ class ContentBinding extends Binding {
         observer.subscribe(this.context, update);
         return this;
     }
+
+    destroy() {
+        if (!!this.dom) {
+            this.dom.remove();
+        }
+        this.destroyed = true;
+    }
 }
 
 class TagBinding extends Binding {
@@ -197,63 +244,120 @@ class TagBinding extends Binding {
         super(context);
     }
 
-    init(observer: Observer = new Observer()) {
-        var updateTag = (context, tpl) => {
-            if (typeof this.dom === "undefined") {
-                this.dom = document.createElement(tpl.name);
-            }
+    updateTag(context) {
+        const tagBinding = this;
 
-            var elt = this.dom;
+        if (typeof tagBinding.dom === "undefined") {
+            tagBinding.dom = document.createElement(tagBinding.tpl.name);
+        }
 
-            var attributes = tpl.executeAttributes(context);
-            for (let attrName in attributes) {
-                if (attributes.hasOwnProperty(attrName)) {
-                    var attrValue = Xania.join(" ", attributes[attrName]);
-                    elt[attrName] = attrValue;
-                    if (typeof attrValue === "undefined" || attrValue === null) {
-                        elt.removeAttribute(attrName);
-                    } else if (attrName === "value") {
-                        elt["value"] = attrValue;
+        var elt = tagBinding.dom;
+
+        var attributes = tagBinding.tpl.executeAttributes(context);
+        for (let attrName in attributes) {
+            if (attributes.hasOwnProperty(attrName)) {
+                var attrValue = Xania.join(" ", attributes[attrName]);
+                elt[attrName] = attrValue;
+                if (typeof attrValue === "undefined" || attrValue === null) {
+                    elt.removeAttribute(attrName);
+                } else if (attrName === "value") {
+                    elt["value"] = attrValue;
+                } else {
+                    let domAttr = elt.attributes[attrName];
+                    if (!!domAttr) {
+                        domAttr.nodeValue = attrValue;
+                        domAttr.value = attrValue;
                     } else {
-                        let domAttr = elt.attributes[attrName];
-                        if (!!domAttr) {
-                            domAttr.nodeValue = attrValue;
-                            domAttr.value = attrValue;
-                        } else {
-                            domAttr = document.createAttribute(attrName);
-                            domAttr.value = attrValue;
-                            elt.setAttributeNode(domAttr);
-                        }
+                        domAttr = document.createAttribute(attrName);
+                        domAttr.value = attrValue;
+                        elt.setAttributeNode(domAttr);
                     }
                 }
             }
-        };
-        observer.subscribe(this.context, updateTag, this.tpl);
-
-        const bindingContexts = this.tpl.children().map(tpl => new BindingContext(tpl, this.context, (child, idx, bcIndex) => {
-            var offset = 0;
-            for (var i = 0; i < bcIndex; i++) {
-                offset += bindingContexts[i].bindings.length;
-            }
-            this.addChild(child, offset + idx);
-        }));
-
-        for (var e = 0; e < bindingContexts.length; e++) {
-            bindingContexts[e].execute(observer, e);
         }
+    }
+
+    init(observer: Observer = new Observer()) {
+        const update = (context, tagBinding: TagBinding) => {
+
+            if (tagBinding.destroyed)
+                return;
+
+            if (!!tagBinding.dom)
+                console.debug("update tag", tagBinding.dom);
+
+            tagBinding.updateTag(context);
+
+            for (var i = 0; i < tagBinding.children.length; i++) {
+                tagBinding.children[i].destroy();
+            }
+
+            tagBinding.tpl.children().map(tpl => {
+                var bc = new BindingContext(tpl,
+                    this.context,
+                    (child) => {
+                        //var offset = 0;
+                        //for (var i = 0; i < bcIndex; i++) {
+                        //    offset += bindingContexts[i].bindings.length;
+                        //}
+                        tagBinding.children.push(child);
+                        tagBinding.dom.appendChild(child.dom);
+                        // this.addChild(child);
+                    });
+                bc.execute(observer, 0);
+            });
+
+            console.debug("update complete");
+        };
+        observer.subscribe(this.context, update, this);
+
+        //this.tpl.children().map(tpl => {
+        //    var context = this.context;
+        //    var modelAccessor = !!tpl.modelAccessor ? tpl.modelAccessor : Xania.identity;
+
+        //    observer.subscribe(context,
+        //        BindingContext.update,
+        //        modelAccessor,
+        //        (member) => {
+        //            var arr = Array.isArray(member) ? member : [member];
+        //            var bindings: HTMLElement[] = [];
+        //            for (let i = 0; i < arr.length; i++) {
+        //                const model = Xania.unwrap(arr[i]);
+
+        //                const result = Xania.assign({}, context, model);
+        //                const child = tpl.bind(result).init(observer);
+        //                bindings.push(child.dom);
+
+        //                this.addChild(child, 0);
+        //            }
+        //            return bindings;
+        //        });
+
+        //}); 
+
+        //for (var e = 0; e < bindingContexts.length; e++) {
+        //    bindingContexts[e].execute(observer, e);
+        //}
 
         return this;
     }
 
-    addChild(child, idx) {
+    addChild(child) {
         child.parent = this;
         this.children.push(child);
 
-        if (idx >= this.dom.childNodes.length) {
-            this.dom.appendChild(child.dom);
-        } else {
-            this.dom.insertBefore(child.dom, this.dom.childNodes[idx]);
+        // if (idx >= this.dom.childNodes.length) {
+        this.dom.appendChild(child.dom);
+        // } else {
+        //     this.dom.insertBefore(child.dom, this.dom.childNodes[idx]);
+        // }
+    }
+
+    destroy() {
+        if (!!this.dom) {
+            this.dom.remove();
         }
+        this.destroyed = true;
     }
 }
 
@@ -333,24 +437,23 @@ class Binder {
             return result;
         }
 
-        var eventHandler =
-            (name, path) => {
-                var pathIdx = path.indexOf(target);
-                if (pathIdx > 0) {
-                    var domPath = path.splice(0, pathIdx);
+        var eventHandler = (name, path) => {
+            var pathIdx = path.indexOf(target);
+            if (pathIdx > 0) {
+                var domPath = path.splice(0, pathIdx);
 
-                    var bindingPath = find(rootBindings, domPath);
-                    if (bindingPath.length > 0) {
-                        var b = bindingPath.pop();
-                        var handler = b.tpl.events.get(name);
-                        if (!!handler) {
-                            var observable = observer.track(b.context);
-                            handler(observable);
-                            observer.update();
-                        }
+                var bindingPath = find(rootBindings, domPath);
+                if (bindingPath.length > 0) {
+                    var b = bindingPath.pop();
+                    var handler = b.tpl.events.get(name);
+                    if (!!handler) {
+                        var observable = observer.track(b.context);
+                        handler(observable);
+                        observer.update();
                     }
                 }
-            };
+            }
+        };
 
         target.addEventListener("click", evt => eventHandler(evt.type, evt.path));
 
