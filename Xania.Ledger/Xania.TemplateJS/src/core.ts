@@ -140,7 +140,7 @@ class SelectManyExpression {
                     resolve(result);
                 };
 
-                Xania.ready(col, Xania.map, assign);
+                Xania.ready(col).then(Xania.map, assign);
             }
         };
     }
@@ -191,14 +191,21 @@ class Xania {
         return x;
     }
 
-    static ready(data, resolve, ...args: any[]) {
-        var notify = d => {
-            resolve.apply(this, args.concat([d]));
-        };
-        if (typeof (data.then) === "function") {
-            data.then.call(this, notify);
-        } else {
-            notify(data);
+    static ready(data) {
+        return {
+            then(resolve, ...args: any[]) {
+                const notify = d => {
+                    data = d;
+                    resolve.apply(this, args.concat([d]));
+                };
+                if (typeof (data.then) === "function") {
+                    data.then.call(this, notify);
+                } else {
+                    notify(data);
+                }
+
+                return this;
+            }
         }
     }
 

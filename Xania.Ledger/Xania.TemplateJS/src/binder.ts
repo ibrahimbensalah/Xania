@@ -35,7 +35,7 @@ class BindingContext {
         //};
 
         observer.subscribe(context, ctx => {
-            Xania.ready(modelAccessor(ctx), model => {
+            Xania.ready(modelAccessor(ctx)).then(model => {
                 model = Xania.unwrap(model);
                 var arr = Array.isArray(model) ? model : [model];
 
@@ -106,19 +106,19 @@ class Observer {
             const deps = this.subscriptions.get(object);
 
             if (deps.hasOwnProperty(property)) {
-                if (deps[property].indexOf(subsriber) < 0) {
-                    deps[property].push(subsriber);
+                if (!deps[property].has(subsriber)) {
+                    deps[property].add(subsriber);
                     return true;
                 }
             } else {
-                deps[property] = [subsriber];
+                deps[property] = new Set<ISubsriber>().add(subsriber);
                 return true;
             }
         } else {
             console.debug("observe object", object);
             const deps = {};
-            deps[property] = [subsriber];
             this.subscriptions.set(object, deps);
+            deps[property] = new Set<ISubsriber>().add(subsriber);
             return true;
         }
 
@@ -134,18 +134,32 @@ class Observer {
         if (deps.hasOwnProperty(property))
             return deps[property];
 
-        return [];
+        return null;
     }
 
-    remove(object: any, property: string, subscr) {
-        if (!this.subscriptions.has(object))
-            return false;
+    unsubscribe(subscription) {
+        var length = subscription.dependencies.length;
+        var init = this.size;
 
-        const deps = this.subscriptions.get(object);
+        while (subscription.dependencies.length > 0) {
+            var dep = subscription.dependencies.pop();
 
-        if (deps.hasOwnProperty(property)) {
-            deps[property] = deps[property].filter(s => s !== subscr);
+            if (!this.subscriptions.has(dep.obj))
+                debugger;
+
+            const deps = this.subscriptions.get(dep.obj);
+
+            if (!deps.hasOwnProperty(dep.property))
+                debugger;
+
+            if (!deps[dep.property].has(subscription))
+                debugger;
+
+            deps[dep.property].delete(subscription);
         }
+        var end = this.size;
+
+        console.debug("unsubscribe", init - end === length);
     }
 
     subscribe(context, update, ...additionalArgs) {
@@ -159,18 +173,20 @@ class Observer {
             state: null,
             dependencies: [],
             notify() {
-                for (var i = 0; i < this.dependencies.length; i++) {
-                    var dep = this.dependencies[i];
-                    self.remove(dep.obj, dep.property, this);
-                }
-                this.dependencies = [];
-                this.state = update.apply(subscription, updateArgs);
+                self.unsubscribe(this);
+                this.state = update.apply(subscription, updateArgs.concat([this.state]));
             }
         };
         observable = Xania.observe(context, {
             setRead(obj, property) {
-                if (self.add(obj, property, subscription))
+                var init = self.size;
+                if (self.add(obj, property, subscription)) {
+                    var end = self.size;
+                    if (end !== init + 1)
+                        debugger;
+
                     subscription.dependencies.push({ obj, property });
+                }
             },
             setChange(obj, property: string) {
                 throw new Error("invalid change");
@@ -192,8 +208,10 @@ class Observer {
                 setChange(obj, property: string) {
                     console.debug("write", obj, property, obj[property]);
                     const subscribers = observer.get(obj, property);
-                    for (let i = 0; i < subscribers.length; i++) {
-                        observer.dirty.add(subscribers[i]);
+                    if (!!subscribers) {
+                        subscribers.forEach(s => {
+                            observer.dirty.add(s);
+                        });
                     }
                 }
             });
@@ -204,6 +222,21 @@ class Observer {
             subscriber.notify();
         });
         this.dirty.clear();
+
+        console.debug("total subscriptions", this.size);
+    }
+
+    get size() {
+        var total = 0;
+        this.subscriptions.forEach(deps => {
+            for (let p in deps) {
+                if (deps.hasOwnProperty(p)) {
+                    total += deps[p].size;
+                }
+            }
+        });
+
+        return total;
     }
 }
 
@@ -212,16 +245,17 @@ class ContentBinding extends Binding {
 
     constructor(private tpl: TextTemplate, context) {
         super(context);
+
+        this.dom = document.createTextNode("");
+    }
+
+    update(context) {
+        this.dom.textContent = this.tpl.execute(context);
     }
 
     init(observer: Observer) {
         const update = context => {
-            const text = this.tpl.execute(context);
-            if (!!this.dom) {
-                this.dom.textContent = text;
-            } else {
-                this.dom = document.createTextNode(text);
-            }
+            this.update(context);
         };
         observer.subscribe(this.context, update);
         return this;
@@ -242,14 +276,12 @@ class TagBinding extends Binding {
 
     constructor(private tpl: TagTemplate, context) {
         super(context);
+
+        this.dom = document.createElement(tpl.name);
     }
 
-    updateTag(context) {
+    update(context) {
         const tagBinding = this;
-
-        if (typeof tagBinding.dom === "undefined") {
-            tagBinding.dom = document.createElement(tagBinding.tpl.name);
-        }
 
         var elt = tagBinding.dom;
 
@@ -279,38 +311,42 @@ class TagBinding extends Binding {
 
     init(observer: Observer = new Observer()) {
         const update = (context, tagBinding: TagBinding) => {
-
             if (tagBinding.destroyed)
                 return;
 
             if (!!tagBinding.dom)
                 console.debug("update tag", tagBinding.dom);
 
-            tagBinding.updateTag(context);
-
-            for (var i = 0; i < tagBinding.children.length; i++) {
-                tagBinding.children[i].destroy();
-            }
-
-            tagBinding.tpl.children().map(tpl => {
-                var bc = new BindingContext(tpl,
-                    this.context,
-                    (child) => {
-                        //var offset = 0;
-                        //for (var i = 0; i < bcIndex; i++) {
-                        //    offset += bindingContexts[i].bindings.length;
-                        //}
-                        tagBinding.children.push(child);
-                        tagBinding.dom.appendChild(child.dom);
-                        // this.addChild(child);
-                    });
-                bc.execute(observer, 0);
-            });
-
-            console.debug("update complete");
+            tagBinding.update(context);
         };
         observer.subscribe(this.context, update, this);
 
+        this.initChildren(observer);
+
+        return this;
+    }
+
+    initChildren(observer: Observer) {
+        const updateChild = (context, tagBinding: TagBinding, tpl, state) => {
+            const modelAccessor: any = !!tpl.modelAccessor ? tpl.modelAccessor : Xania.identity;
+            var r = modelAccessor(this.context);
+            Xania.ready(r).then(model => {
+                model = Xania.unwrap(model);
+                var arr = Array.isArray(model) ? model : [model];
+
+                for (var i = 0; i < arr.length; i++) {
+                    const result = Xania.assign({}, context, arr[i]);
+                    const child = tpl.bind(result);
+                    child.update(result);
+                    tagBinding.dom.appendChild(child.dom);
+                }
+            });
+        }
+        this.tpl.children().forEach(tpl => {
+            observer.subscribe(this.context, updateChild, this, tpl);
+        });
+
+        // observer.subscribe(this.context, updateChildren, this);
         //this.tpl.children().map(tpl => {
         //    var context = this.context;
         //    var modelAccessor = !!tpl.modelAccessor ? tpl.modelAccessor : Xania.identity;
@@ -338,8 +374,6 @@ class TagBinding extends Binding {
         //for (var e = 0; e < bindingContexts.length; e++) {
         //    bindingContexts[e].execute(observer, e);
         //}
-
-        return this;
     }
 
     addChild(child) {

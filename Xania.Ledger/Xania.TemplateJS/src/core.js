@@ -109,7 +109,7 @@ var SelectManyExpression = (function () {
                     result[varName] = item;
                     resolve(result);
                 };
-                Xania.ready(col, Xania.map, assign);
+                Xania.ready(col).then(Xania.map, assign);
             }
         };
     };
@@ -143,21 +143,27 @@ var Xania = (function () {
     Xania.identity = function (x) {
         return x;
     };
-    Xania.ready = function (data, resolve) {
-        var _this = this;
-        var args = [];
-        for (var _i = 2; _i < arguments.length; _i++) {
-            args[_i - 2] = arguments[_i];
-        }
-        var notify = function (d) {
-            resolve.apply(_this, args.concat([d]));
+    Xania.ready = function (data) {
+        return {
+            then: function (resolve) {
+                var _this = this;
+                var args = [];
+                for (var _i = 1; _i < arguments.length; _i++) {
+                    args[_i - 1] = arguments[_i];
+                }
+                var notify = function (d) {
+                    data = d;
+                    resolve.apply(_this, args.concat([d]));
+                };
+                if (typeof (data.then) === "function") {
+                    data.then.call(this, notify);
+                }
+                else {
+                    notify(data);
+                }
+                return this;
+            }
         };
-        if (typeof (data.then) === "function") {
-            data.then.call(this, notify);
-        }
-        else {
-            notify(data);
-        }
     };
     Xania.map = function (fn, data) {
         if (typeof data.then === "function") {
