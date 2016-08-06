@@ -54,6 +54,7 @@ var Binding = (function () {
         throw new Error("Abstract method Binding.update");
     };
     Binding.prototype.destroy = function () { throw new Error("Not implemented"); };
+    Binding.prototype.render = function (context) { throw new Error("Not implemented"); };
     return Binding;
 })();
 var Observer = (function () {
@@ -120,12 +121,17 @@ var Observer = (function () {
             dependencies: [],
             notify: function () {
                 self.unsubscribe(this);
+                console.debug("notify", updateArgs, this.state);
                 this.state = update.apply(subscription, updateArgs.concat([this.state]));
+            },
+            then: function (resolve) {
+                return Xania.ready(resolve(this.state));
             }
         };
         observable = Xania.observe(context, {
             setRead: function (obj, property) {
                 var init = self.size;
+                console.debug("read", { obj: obj, property: property });
                 if (self.add(obj, property, subscription)) {
                     var end = self.size;
                     if (end !== init + 1)
@@ -205,6 +211,9 @@ var ContentBinding = (function (_super) {
         }
         this.destroyed = true;
     };
+    ContentBinding.prototype.render = function (context) {
+        this.dom.textContent = this.tpl.execute(context);
+    };
     return ContentBinding;
 })(Binding);
 var TagBinding = (function (_super) {
@@ -214,6 +223,7 @@ var TagBinding = (function (_super) {
         this.tpl = tpl;
         this.children = [];
         this.dom = document.createElement(tpl.name);
+        this.dom.attributes["__binding"] = this;
     }
     TagBinding.prototype.update = function (context) {
         var tagBinding = this;
@@ -221,24 +231,59 @@ var TagBinding = (function (_super) {
         var attributes = tagBinding.tpl.executeAttributes(context);
         for (var attrName in attributes) {
             if (attributes.hasOwnProperty(attrName)) {
-                var attrValue = Xania.join(" ", attributes[attrName]);
-                elt[attrName] = attrValue;
-                if (typeof attrValue === "undefined" || attrValue === null) {
+                var newValue = Xania.join(" ", attributes[attrName]);
+                var oldValue = elt[attrName];
+                if (oldValue === newValue)
+                    continue;
+                elt[attrName] = newValue;
+                if (typeof newValue === "undefined" || newValue === null) {
                     elt.removeAttribute(attrName);
                 }
                 else if (attrName === "value") {
-                    elt["value"] = attrValue;
+                    elt["value"] = newValue;
                 }
                 else {
                     var domAttr = elt.attributes[attrName];
                     if (!!domAttr) {
-                        domAttr.nodeValue = attrValue;
-                        domAttr.value = attrValue;
+                        domAttr.nodeValue = newValue;
+                        domAttr.value = newValue;
                     }
                     else {
                         domAttr = document.createAttribute(attrName);
-                        domAttr.value = attrValue;
+                        domAttr.value = newValue;
                         elt.setAttributeNode(domAttr);
+                    }
+                }
+            }
+        }
+    };
+    TagBinding.prototype.render = function (context) {
+        var tpl = this.tpl;
+        var dom = this.dom;
+        var attributes = tpl.executeAttributes(context);
+        for (var attrName in attributes) {
+            if (attributes.hasOwnProperty(attrName)) {
+                var newValue = Xania.join(" ", attributes[attrName]);
+                var oldValue = dom[attrName];
+                if (oldValue === newValue)
+                    continue;
+                dom[attrName] = newValue;
+                if (typeof newValue === "undefined" || newValue === null) {
+                    dom.removeAttribute(attrName);
+                }
+                else if (attrName === "value") {
+                    dom["value"] = newValue;
+                }
+                else {
+                    var domAttr = dom.attributes[attrName];
+                    if (!!domAttr) {
+                        domAttr.nodeValue = newValue;
+                        domAttr.value = newValue;
+                    }
+                    else {
+                        domAttr = document.createAttribute(attrName);
+                        domAttr.value = newValue;
+                        dom.setAttributeNode(domAttr);
                     }
                 }
             }
@@ -253,8 +298,6 @@ var TagBinding = (function (_super) {
                 console.debug("update tag", tagBinding.dom);
             tagBinding.update(context);
         };
-        observer.subscribe(this.context, update, this);
-        this.initChildren(observer);
         return this;
     };
     TagBinding.prototype.initChildren = function (observer) {
@@ -262,16 +305,21 @@ var TagBinding = (function (_super) {
         var updateChild = function (context, tagBinding, tpl, state) {
             var modelAccessor = !!tpl.modelAccessor ? tpl.modelAccessor : Xania.identity;
             var r = modelAccessor(_this.context);
+            var elements = [];
+            if (!!state) {
+                elements = state.elements;
+            }
             Xania.ready(r).then(function (model) {
                 model = Xania.unwrap(model);
                 var arr = Array.isArray(model) ? model : [model];
                 for (var i = 0; i < arr.length; i++) {
-                    var result = Xania.assign({}, context, arr[i]);
-                    var child = tpl.bind(result);
-                    child.update(result);
+                    var result = Xania.assign({}, context.valueOf(), arr[i]);
+                    var child = tpl.bind(result).init(observer);
                     tagBinding.dom.appendChild(child.dom);
+                    tagBinding.children.push(child);
                 }
             });
+            return { elements: elements };
         };
         this.tpl.children().forEach(function (tpl) {
             observer.subscribe(_this.context, updateChild, _this, tpl);
@@ -294,6 +342,7 @@ var Binder = (function () {
     function Binder(compile) {
         if (compile === void 0) { compile = TemplateEngine.compile; }
         this.compile = compile;
+        this.observer = new Observer();
     }
     Binder.prototype.import = function (itemType) {
         if (typeof itemType == "undefined")
@@ -325,80 +374,82 @@ var Binder = (function () {
             tagElement.attr(name, tpl || attr.value);
         }
     };
+    Binder.execute = function (rootContext, rootTpl, rootTarget, observer) {
+        var visit = function (context, tpl, target, offset) {
+            var modelAccessor = !!tpl.modelAccessor ? tpl.modelAccessor : Xania.identity;
+            return observer.subscribe(context, function (observable) {
+                console.log("update", { context: context, tpl: tpl, target: target });
+                return Xania.ready(modelAccessor(observable))
+                    .then(function (model) {
+                    model = Xania.unwrap(model);
+                    return Array.isArray(model) ? model : [model];
+                })
+                    .then(function (arr) {
+                    for (var i = 0; i < arr.length; i++) {
+                        var result = Xania.assign({}, context, arr[i]);
+                        var binding = tpl.bind(result);
+                        if (offset + i !== target.childNodes.length)
+                            console.error("offset error");
+                        target.appendChild(binding.dom);
+                        observer.subscribe(result, binding.render.bind(binding));
+                        var visitChild = Xania.partialApp(function (data, target, prev, cur) {
+                            console.debug("visit child", { offset: prev.offset, cur: cur });
+                            return {
+                                data: Xania.ready(prev.data).then(function (prevData) {
+                                    console.debug("prevData", prev.offset, prevData);
+                                    var subscr = visit(data, cur, target, 0);
+                                    return subscr;
+                                }),
+                                offset: prev.offset + 1
+                            };
+                        }, result, binding.dom);
+                        tpl.children().reduce(visitChild, { offset: offset });
+                    }
+                });
+            });
+        };
+        visit(rootContext, rootTpl, rootTarget, 0);
+    };
     Binder.prototype.bind = function (rootDom, model, target) {
+        var _this = this;
         target = target || document.body;
         var tpl = this.parseDom(rootDom);
-        var rootBindings = [];
-        var observer = new Observer();
         var arr = Array.isArray(model) ? model : [model];
         for (var i = 0; i < arr.length; i++) {
-            var bindingContext = new BindingContext(tpl, arr[i], function (rootBinding) {
-                rootBindings.push(rootBinding);
-                target.appendChild(rootBinding.dom);
-            });
-            bindingContext.execute(observer, 0);
+            Binder.execute(arr[i], tpl, target, this.observer);
         }
-        function find(bindings, path) {
-            var result = [];
-            for (var i = path.length - 1; i >= 0; i--) {
-                var dom = path[i];
-                var domIdx = 0;
-                for (; domIdx < bindings.length; domIdx++) {
-                    var binding = bindings[domIdx];
-                    if (binding.dom === dom) {
-                        result.push(binding);
-                        break;
-                    }
-                }
-                if (domIdx === bindings.length) {
-                    return [];
-                }
-                bindings = bindings[domIdx].children;
-            }
-            return result;
-        }
-        var eventHandler = function (name, path) {
-            var pathIdx = path.indexOf(target);
-            if (pathIdx > 0) {
-                var domPath = path.splice(0, pathIdx);
-                var bindingPath = find(rootBindings, domPath);
-                if (bindingPath.length > 0) {
-                    var b = bindingPath.pop();
-                    var handler = b.tpl.events.get(name);
-                    if (!!handler) {
-                        var observable = observer.track(b.context);
-                        handler(observable);
-                        observer.update();
-                    }
+        var eventHandler = function (target, name, path) {
+            var binding = target.attributes["__binding"];
+            if (!!binding) {
+                var handler = binding.tpl.events.get(name);
+                if (!!handler) {
+                    var observable = _this.observer.track(binding.context);
+                    handler(observable);
+                    _this.observer.update();
                 }
             }
         };
-        target.addEventListener("click", function (evt) { return eventHandler(evt.type, evt.path); });
+        target.addEventListener("click", function (evt) { return eventHandler(evt.target, evt.type, evt.path); });
         var onchange = function (evt) {
-            var pathIdx = evt.path.indexOf(target);
-            if (pathIdx > 0) {
-                var elementPath = evt.path.splice(0, pathIdx);
-                var bindingPath = find(rootBindings, elementPath);
-                if (bindingPath.length > 0) {
-                    var b = bindingPath.pop();
-                    var nameAttr = evt.target.attributes["name"];
-                    if (!!nameAttr) {
-                        var proxy = observer.track(b.context);
-                        var prop = nameAttr.value;
-                        var update = new Function("context", "value", "with (context) { " + prop + " = value; }");
-                        update(proxy, evt.target.value);
-                    }
+            var binding = evt.target.attributes["__binding"];
+            if (binding != null) {
+                var nameAttr = evt.target.attributes["name"];
+                if (!!nameAttr) {
+                    var proxy = _this.observer.track(binding.context);
+                    var prop = nameAttr.value;
+                    var update = new Function("context", "value", "with (context) { " + prop + " = value; }");
+                    update(proxy, evt.target.value);
                 }
             }
         };
         target.addEventListener("keyup", function (evt) {
             if (evt.keyCode === 13) {
-                eventHandler("keyup.enter", evt.path);
+                eventHandler(evt.target, "keyup.enter", evt.path);
             }
             else {
                 onchange(evt);
             }
-            observer.update();
+            _this.observer.update();
         });
     };
     Binder.prototype.parseDom = function (rootDom) {

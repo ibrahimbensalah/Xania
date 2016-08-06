@@ -1,8 +1,4 @@
-﻿interface ISubsriber {
-    notify();
-}
-
-class BindingContext {
+﻿class BindingContext {
     constructor(private tpl, private context, private addChild) {
     }
 
@@ -95,6 +91,12 @@ class Binding {
     }
 
     destroy() { throw new Error("Not implemented"); }
+
+    render(context) { throw new Error("Not implemented"); }
+}
+
+interface ISubsriber {
+    notify();
 }
 
 class Observer {
@@ -174,12 +176,18 @@ class Observer {
             dependencies: [],
             notify() {
                 self.unsubscribe(this);
+                console.debug("notify", updateArgs, this.state);
                 this.state = update.apply(subscription, updateArgs.concat([this.state]));
+            },
+            then(resolve) {
+                // TODO implement async
+                return Xania.ready(resolve(this.state));
             }
         };
         observable = Xania.observe(context, {
             setRead(obj, property) {
                 var init = self.size;
+                console.debug("read", { obj, property });
                 if (self.add(obj, property, subscription)) {
                     var end = self.size;
                     if (end !== init + 1)
@@ -267,6 +275,10 @@ class ContentBinding extends Binding {
         }
         this.destroyed = true;
     }
+
+    render(context) {
+        this.dom.textContent = this.tpl.execute(context);
+    }
 }
 
 class TagBinding extends Binding {
@@ -278,6 +290,7 @@ class TagBinding extends Binding {
         super(context);
 
         this.dom = document.createElement(tpl.name);
+        this.dom.attributes["__binding"] = this;
     }
 
     update(context) {
@@ -288,21 +301,57 @@ class TagBinding extends Binding {
         var attributes = tagBinding.tpl.executeAttributes(context);
         for (let attrName in attributes) {
             if (attributes.hasOwnProperty(attrName)) {
-                var attrValue = Xania.join(" ", attributes[attrName]);
-                elt[attrName] = attrValue;
-                if (typeof attrValue === "undefined" || attrValue === null) {
+                var newValue = Xania.join(" ", attributes[attrName]);
+                var oldValue = elt[attrName];
+                if (oldValue === newValue)
+                    continue;
+
+                elt[attrName] = newValue;
+                if (typeof newValue === "undefined" || newValue === null) {
                     elt.removeAttribute(attrName);
                 } else if (attrName === "value") {
-                    elt["value"] = attrValue;
+                    elt["value"] = newValue;
                 } else {
                     let domAttr = elt.attributes[attrName];
                     if (!!domAttr) {
-                        domAttr.nodeValue = attrValue;
-                        domAttr.value = attrValue;
+                        domAttr.nodeValue = newValue;
+                        domAttr.value = newValue;
                     } else {
                         domAttr = document.createAttribute(attrName);
-                        domAttr.value = attrValue;
+                        domAttr.value = newValue;
                         elt.setAttributeNode(domAttr);
+                    }
+                }
+            }
+        }
+    }
+
+    render(context) {
+        const tpl = this.tpl;
+        const dom = this.dom;
+
+        const attributes = tpl.executeAttributes(context);
+        for (let attrName in attributes) {
+            if (attributes.hasOwnProperty(attrName)) {
+                const newValue = Xania.join(" ", attributes[attrName]);
+                const oldValue = dom[attrName];
+                if (oldValue === newValue)
+                    continue;
+
+                dom[attrName] = newValue;
+                if (typeof newValue === "undefined" || newValue === null) {
+                    dom.removeAttribute(attrName);
+                } else if (attrName === "value") {
+                    dom["value"] = newValue;
+                } else {
+                    let domAttr = dom.attributes[attrName];
+                    if (!!domAttr) {
+                        domAttr.nodeValue = newValue;
+                        domAttr.value = newValue;
+                    } else {
+                        domAttr = document.createAttribute(attrName);
+                        domAttr.value = newValue;
+                        dom.setAttributeNode(domAttr);
                     }
                 }
             }
@@ -319,9 +368,6 @@ class TagBinding extends Binding {
 
             tagBinding.update(context);
         };
-        observer.subscribe(this.context, update, this);
-
-        this.initChildren(observer);
 
         return this;
     }
@@ -330,18 +376,28 @@ class TagBinding extends Binding {
         const updateChild = (context, tagBinding: TagBinding, tpl, state) => {
             const modelAccessor: any = !!tpl.modelAccessor ? tpl.modelAccessor : Xania.identity;
             var r = modelAccessor(this.context);
+
+            var elements = [];
+            if (!!state) {
+                elements = state.elements;
+            }
+
             Xania.ready(r).then(model => {
                 model = Xania.unwrap(model);
                 var arr = Array.isArray(model) ? model : [model];
 
                 for (var i = 0; i < arr.length; i++) {
-                    const result = Xania.assign({}, context, arr[i]);
-                    const child = tpl.bind(result);
-                    child.update(result);
+                    const result = Xania.assign({}, context.valueOf(), arr[i]);
+                    const child = tpl.bind(result).init(observer);
+
                     tagBinding.dom.appendChild(child.dom);
+                    tagBinding.children.push(child);
                 }
             });
+
+            return { elements };
         }
+
         this.tpl.children().forEach(tpl => {
             observer.subscribe(this.context, updateChild, this, tpl);
         });
@@ -396,6 +452,7 @@ class TagBinding extends Binding {
 }
 
 class Binder {
+    private observer = new Observer();
 
     constructor(public compile: Function = TemplateEngine.compile) {
     }
@@ -430,93 +487,93 @@ class Binder {
         }
     }
 
+
+    static execute(rootContext, rootTpl, rootTarget, observer: Observer) {
+        var visit = (context, tpl, target, offset: number) => {
+            var modelAccessor = !!tpl.modelAccessor ? tpl.modelAccessor : Xania.identity;
+
+            return observer.subscribe(context, observable => {
+                console.log("update", { context, tpl, target });
+
+                return Xania.ready(modelAccessor(observable))
+                    .then(model => {
+                        model = Xania.unwrap(model);
+                        return Array.isArray(model) ? model : [model];
+                    })
+                    .then(arr => {
+                        for (var i = 0; i < arr.length; i++) {
+                            const result = Xania.assign({}, context, arr[i]);
+                            var binding = tpl.bind(result);
+
+                            if (offset + i !== target.childNodes.length)
+                                console.error("offset error");
+
+                            target.appendChild(binding.dom);
+
+                            observer.subscribe(result, binding.render.bind(binding));
+
+                            const visitChild = Xania.partialApp((data, target, prev, cur) => {
+                                console.debug("visit child", { offset: prev.offset, cur });
+                                return {
+                                    data: Xania.ready(prev.data).then(prevData => {
+                                        console.debug("prevData", prev.offset, prevData);
+                                        var subscr = visit(data, cur, target, 0);
+                                        return subscr;
+                                    }),
+                                    offset: prev.offset + 1
+                                };
+                            }, result, binding.dom);
+                            tpl.children().reduce(visitChild, { offset });
+                        }
+                    });
+            });
+        };
+        visit(rootContext, rootTpl, rootTarget, 0);
+    }
+
     bind(rootDom, model, target) {
         target = target || document.body;
         var tpl = this.parseDom(rootDom);
 
-        var rootBindings: Binding[] = [];
-        var observer = new Observer();
-
         const arr = Array.isArray(model) ? model : [model];
         for (let i = 0; i < arr.length; i++) {
-            var bindingContext = new BindingContext(tpl,
-                arr[i],
-                rootBinding => {
-                    rootBindings.push(rootBinding);
-                    target.appendChild(rootBinding.dom);
-                });
-            bindingContext.execute(observer, 0);
+            Binder.execute(arr[i], tpl, target, this.observer);
         }
 
-        function find(bindings, path) {
-            const result = [];
-
-            for (let i = path.length - 1; i >= 0; i--) {
-                const dom = path[i];
-                var domIdx = 0;
-                for (; domIdx < bindings.length; domIdx++) {
-                    var binding = bindings[domIdx];
-                    if (binding.dom === dom) {
-                        result.push(binding);
-                        break;
-                    }
-                }
-
-                if (domIdx === bindings.length) {
-                    return [];
-                }
-                bindings = bindings[domIdx].children;
-            }
-
-            return result;
-        }
-
-        var eventHandler = (name, path) => {
-            var pathIdx = path.indexOf(target);
-            if (pathIdx > 0) {
-                var domPath = path.splice(0, pathIdx);
-
-                var bindingPath = find(rootBindings, domPath);
-                if (bindingPath.length > 0) {
-                    var b = bindingPath.pop();
-                    var handler = b.tpl.events.get(name);
-                    if (!!handler) {
-                        var observable = observer.track(b.context);
-                        handler(observable);
-                        observer.update();
-                    }
+        var eventHandler = (target, name, path) => {
+            var binding = target.attributes["__binding"];
+            if (!!binding) {
+                var handler = binding.tpl.events.get(name);
+                if (!!handler) {
+                    const observable = this.observer.track(binding.context);
+                    handler(observable);
+                    this.observer.update();
                 }
             }
         };
 
-        target.addEventListener("click", evt => eventHandler(evt.type, evt.path));
+        target.addEventListener("click", evt => eventHandler(evt.target, evt.type, evt.path));
 
         const onchange = evt => {
-            var pathIdx = evt.path.indexOf(target);
-            if (pathIdx > 0) {
-                const elementPath = evt.path.splice(0, pathIdx);
-
-                var bindingPath = find(rootBindings, elementPath);
-                if (bindingPath.length > 0) {
-                    var b = bindingPath.pop();
-                    const nameAttr = evt.target.attributes["name"];
-                    if (!!nameAttr) {
-                        const proxy = observer.track(b.context);
-                        const prop = nameAttr.value;
-                        const update = new Function("context", "value",
-                            `with (context) { ${prop} = value; }`);
-                        update(proxy, evt.target.value);
-                    }
+            var binding = evt.target.attributes["__binding"];
+            if (binding != null) {
+                const nameAttr = evt.target.attributes["name"];
+                if (!!nameAttr) {
+                    const proxy = this.observer.track(binding.context);
+                    const prop = nameAttr.value;
+                    const update = new Function("context", "value",
+                        `with (context) { ${prop} = value; }`);
+                    update(proxy, evt.target.value);
                 }
             }
         };
         target.addEventListener("keyup", evt => {
             if (evt.keyCode === 13) {
-                eventHandler("keyup.enter", evt.path);
+                eventHandler(evt.target, "keyup.enter", evt.path);
             } else {
                 onchange(evt);
             }
-            observer.update();
+            this.observer.update();
         });
     }
 

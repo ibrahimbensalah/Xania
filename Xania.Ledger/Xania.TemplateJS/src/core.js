@@ -13,6 +13,9 @@ var TextTemplate = (function () {
     TextTemplate.prototype.toString = function () {
         return this.tpl.toString();
     };
+    TextTemplate.prototype.children = function () {
+        return [];
+    };
     return TextTemplate;
 })();
 var TagTemplate = (function () {
@@ -102,16 +105,16 @@ var SelectManyExpression = (function () {
         if (Array.isArray(context))
             throw new Error("context is Array");
         var col = collectionFunc(context);
-        return {
-            then: function (resolve) {
-                var assign = function (item) {
-                    var result = {};
-                    result[varName] = item;
-                    resolve(result);
-                };
-                Xania.ready(col).then(Xania.map, assign);
+        return Xania.ready(col).then(function (data) {
+            var arr = Array.isArray(data) ? data : [data];
+            var results = [];
+            for (var i = 0; i < arr.length; i++) {
+                var result = {};
+                result[varName] = arr[i];
+                results.push(result);
             }
-        };
+            return results;
+        });
     };
     SelectManyExpression.parse = function (expr, loader) {
         if (loader === void 0) { loader = function (t) { return window[t]; }; }
@@ -144,24 +147,17 @@ var Xania = (function () {
         return x;
     };
     Xania.ready = function (data) {
+        if (!!data && typeof (data.then) === "function") {
+            return data;
+        }
         return {
             then: function (resolve) {
-                var _this = this;
                 var args = [];
                 for (var _i = 1; _i < arguments.length; _i++) {
                     args[_i - 1] = arguments[_i];
                 }
-                var notify = function (d) {
-                    data = d;
-                    resolve.apply(_this, args.concat([d]));
-                };
-                if (typeof (data.then) === "function") {
-                    data.then.call(this, notify);
-                }
-                else {
-                    notify(data);
-                }
-                return this;
+                var result = resolve.apply(this, args.concat([data]));
+                return Xania.ready(result);
             }
         };
     };
@@ -228,8 +224,10 @@ var Xania = (function () {
         };
     };
     Xania.observe = function (target, observer) {
-        if (!target || target.isSpy)
+        if (!target)
             return target;
+        if (target.isSpy)
+            throw new Error("observe observable is not allowed");
         if (typeof target === "object") {
             if (Array.isArray(target))
                 return Xania.observeArray(target, observer);
@@ -250,12 +248,8 @@ var Xania = (function () {
                     case "empty":
                         observer.setRead(target, "length");
                         return target.length === 0;
-                    case "indexOf":
-                        return function (searchElt, fromIndex) {
-                            if (fromIndex === void 0) { fromIndex = 0; }
-                            var elt = searchElt.valueOf();
-                            return target.indexOf(elt, fromIndex);
-                        };
+                    case "valueOf":
+                        return function () { return target; };
                     default:
                         return Xania.observeProperty(target, property, observer);
                 }
@@ -325,11 +319,7 @@ var Xania = (function () {
     };
     Xania.observeProperty = function (object, propertyName, observer) {
         var propertyValue = object[propertyName];
-        if (propertyValue === null || typeof propertyValue === "undefined") {
-            observer.setRead(object, propertyName);
-            return null;
-        }
-        else if (typeof propertyValue === "function") {
+        if (typeof propertyValue === "function") {
             return function () {
                 var proxy = Xania.observe(object, observer);
                 var retval = propertyValue.apply(proxy, arguments);
@@ -338,7 +328,12 @@ var Xania = (function () {
         }
         else {
             observer.setRead(object, propertyName);
-            return Xania.observe(propertyValue, observer);
+            if (propertyValue === null || typeof propertyValue === "undefined") {
+                return null;
+            }
+            else {
+                return Xania.observe(propertyValue, observer);
+            }
         }
     };
     Xania.construct = function (viewModel, data) {
@@ -390,7 +385,7 @@ var Xania = (function () {
     };
     Xania.join = function (separator, value) {
         if (Array.isArray(value)) {
-            return value.length > 0 ? value.join(separator) : null;
+            return value.length > 0 ? value.sort().join(separator) : null;
         }
         return value;
     };

@@ -51,71 +51,12 @@
         </p>
     </footer>
 
-    <!--<ul id="debugUL"></ul>-->
     <script>
         window.onload = function () {
-            var binder = new Binder();
-            var tpl = document.getElementById("todo-template");
-            binder.bind(tpl.childNodes[1], { app: new TodoApp() });
+            var tpl = document.getElementById("todo-template").childNodes[1];
+            var model = { app: new TodoApp() };
+            new Binder().bind(tpl, model);
         };
-
-        //var model = { app: new TodoApp() };
-        //var observer = new Observer();
-        //observer.subscribe(model, function (ctx) {
-        //    console.log("update", arguments);
-        //    var result = ctx.app.todoStore.getCompleted().empty;
-        //    console.log(result);
-        //});
-
-        //var tracker = observer.track(model);
-        //tracker.app.todoStore.todos.push(new Todo("xxxx"));
-
-        //observer.update();
-
-        //var context = {
-        //    numbers: [1, 2, 3]
-        //}
-        //var observer = new Observer();
-        //var subscription = observer.subscribe(context,
-        //    function (c) {
-        //        console.log("this ", this.state);
-
-        //        var ul = document.getElementById('debugUL');
-        //        var offset = 0;
-        //        console.log("offset ", offset);
-        //        var numbers = c.numbers;
-        //        var length = numbers.length;
-
-        //        if (!!this.state) {
-        //            for (var e = 0; e < this.state.bindings.length; e++) {
-        //                ul.removeChild(this.state.bindings[e]);
-        //            }
-        //        }
-
-        //        var bindings = [];
-        //        for (var i = 0; i < length; i++) {
-        //            var li = document.createElement("li");
-        //            li.innerHTML = "item " + numbers[i];
-        //            ul.appendChild(li);
-        //            bindings.push(li);
-        //        }
-        //        return { bindings };
-        //    });
-
-        //var observable = observer.track(context);
-        //observable.numbers = [4, 5, 6];
-        //observer.update();
-
-        //for (var i = 0; i < 2; i++) {
-        //    var observable = observer.track(context);
-        //    observable.numbers.pop();
-        //    observer.update();
-        //}
-
-        //var observable = observer.track(context);
-        //observable.numbers.push(7);
-        //observer.update();
-
     </script>
 </body>
 </html>

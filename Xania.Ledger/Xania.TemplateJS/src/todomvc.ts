@@ -10,7 +10,7 @@
 }
 
 class TodoStore {
-    public todos: Todo[] = [];
+    public todos: Todo[] = [ new Todo("first"), new Todo("second") ];
 
     allCompleted() {
         for (var i = 0; i < this.todos.length; i++)

@@ -292,4 +292,27 @@ describe("dependency graph", function () {
         expect(graph.get(xania, "employees")).toEqual([b1, b2]);
     });
 });
+
+describe("ready", function() {
+    it("should cache result", function() {
+        var obj = {
+            then: function(resolve) {
+                resolve(Math.random());
+            }
+        };
+        var a, b;
+        Xania.ready(obj, 123)
+            .then(function (x) {
+                return { random: x };
+            })
+            .then(function(x, addition) {
+                a = { d: x, addition: addition };
+            })
+            .then(function (x, addition) {
+                b = { d: x, addition: addition };
+            });
+        console.log(a, b);
+        expect(b.d === a.d).toBe(false);
+    });
+});
 // ReSharper restore UndeclaredGlobalVariableUsing

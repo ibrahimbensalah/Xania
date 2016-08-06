@@ -1,6 +1,7 @@
 ﻿interface IDomTemplate {
     bind(model, idx): Binding;
     modelAccessor;
+    children();
 }
 
 class TextTemplate implements IDomTemplate {
@@ -22,13 +23,17 @@ class TextTemplate implements IDomTemplate {
     toString() {
         return this.tpl.toString();
     }
+
+    children() {
+        return [];
+    }
 }
 
 class TagTemplate implements IDomTemplate {
     private attributes = new Map<string, any>();
     private events = new Map<string, any>();
     // ReSharper disable once InconsistentNaming
-    private _children: TagTemplate[] = [];
+    private _children: IDomTemplate[] = [];
     public modelAccessor: Function;// = Xania.identity;
 
     constructor(public name: string) {
@@ -131,18 +136,19 @@ class SelectManyExpression {
 
         var col = collectionFunc(context);
 
-        return {
-            then(resolve) {
-                const assign = item => {
-                    const result = {};
-                    result[varName] = item;
+        return Xania.ready(col).then(data => {
+            var arr = Array.isArray(data) ? data : [data];
 
-                    resolve(result);
-                };
+            var results = [];
+            for (var i = 0; i < arr.length; i++) {
+                const result = {};
+                result[varName] = arr[i];
 
-                Xania.ready(col).then(Xania.map, assign);
+                results.push(result);
             }
-        };
+
+            return results;
+        });
     }
 
     static parse(expr, loader = t => <any>window[t]) {
@@ -192,21 +198,16 @@ class Xania {
     }
 
     static ready(data) {
+        if (!!data && typeof (data.then) === "function") {
+            return data;
+        }
+
         return {
             then(resolve, ...args: any[]) {
-                const notify = d => {
-                    data = d;
-                    resolve.apply(this, args.concat([d]));
-                };
-                if (typeof (data.then) === "function") {
-                    data.then.call(this, notify);
-                } else {
-                    notify(data);
-                }
-
-                return this;
+                const result = resolve.apply(this, args.concat([data]));
+                return Xania.ready(result);
             }
-        }
+        };
     }
 
     static map(fn: Function, data: any) {
@@ -285,8 +286,11 @@ class Xania {
 
     static observe(target, observer: IObserver) {
         // ReSharper disable once InconsistentNaming
-        if (!target || target.isSpy)
+        if (!target)
             return target;
+
+        if (target.isSpy)
+            throw new Error("observe observable is not allowed");
 
         if (typeof target === "object") {
             if (Array.isArray(target))
@@ -309,11 +313,8 @@ class Xania {
                     case "empty":
                         observer.setRead(target, "length");
                         return target.length === 0;
-                    case "indexOf":
-                        return (searchElt, fromIndex = 0) => {
-                            var elt = searchElt.valueOf();
-                            return target.indexOf(elt, fromIndex);
-                        };
+                    case "valueOf":
+                        return () => target;
                     default:
                         return Xania.observeProperty(target, property, observer);
                 }
@@ -398,13 +399,8 @@ class Xania {
 
     static observeProperty(object, propertyName, observer: IObserver) {
         var propertyValue = object[propertyName];
-        if (propertyValue === null || typeof propertyValue === "undefined") {
-            observer.setRead(object, propertyName);
-            return null;
-        }
-        // return Xania.observe(propertyValue, observer);
-        else if (typeof propertyValue === "function") {
-            return function() {
+        if (typeof propertyValue === "function") {
+            return function () {
                 var proxy = Xania.observe(object, observer);
                 var retval = propertyValue.apply(proxy, arguments);
 
@@ -412,7 +408,12 @@ class Xania {
             };
         } else {
             observer.setRead(object, propertyName);
-            return Xania.observe(propertyValue, observer);
+            if (propertyValue === null || typeof propertyValue === "undefined") {
+                return null;
+            }
+            else {
+                return Xania.observe(propertyValue, observer);
+            }
         }
     }
 
@@ -470,7 +471,7 @@ class Xania {
 
     static join(separator: string, value) {
         if (Array.isArray(value)) {
-            return value.length > 0 ? value.join(separator) : null;
+            return value.length > 0 ? value.sort().join(separator) : null;
         }
         return value;
     }
