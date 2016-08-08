@@ -147,7 +147,9 @@ var Xania = (function () {
         return x;
     };
     Xania.ready = function (data) {
-        if (!!data && typeof (data.then) === "function") {
+        if (typeof data === "undefined")
+            throw new Error("data is undefined");
+        if (data !== null && typeof (data.then) === "function") {
             return data;
         }
         return {
@@ -157,6 +159,8 @@ var Xania = (function () {
                     args[_i - 1] = arguments[_i];
                 }
                 var result = resolve.apply(this, args.concat([data]));
+                if (typeof result === "undefined")
+                    return this;
                 return Xania.ready(result);
             }
         };

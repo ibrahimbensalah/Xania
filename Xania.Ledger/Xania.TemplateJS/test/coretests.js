@@ -294,7 +294,7 @@ describe("dependency graph", function () {
 });
 
 describe("ready", function() {
-    it("should cache result", function() {
+    it("should chain result", function() {
         var obj = {
             then: function(resolve) {
                 resolve(Math.random());
@@ -314,5 +314,18 @@ describe("ready", function() {
         console.log(a, b);
         expect(b.d === a.d).toBe(false);
     });
+
+    it("should resolve",
+        function () {
+            var data = Xania.ready(123);
+
+            Xania.ready(data)
+                .then(function(d) {
+                    return d + 1;
+                })
+                .then(function(d) {
+                    expect(d).toBe(124);
+                });
+        });
 });
 // ReSharper restore UndeclaredGlobalVariableUsing

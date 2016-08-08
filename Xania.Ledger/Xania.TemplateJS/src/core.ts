@@ -198,13 +198,18 @@ class Xania {
     }
 
     static ready(data) {
-        if (!!data && typeof (data.then) === "function") {
+        if (typeof data === "undefined")
+            throw new Error("data is undefined");
+
+        if (data !== null && typeof (data.then) === "function") {
             return data;
         }
 
         return {
             then(resolve, ...args: any[]) {
                 const result = resolve.apply(this, args.concat([data]));
+                if (typeof result === "undefined")
+                    return this;
                 return Xania.ready(result);
             }
         };

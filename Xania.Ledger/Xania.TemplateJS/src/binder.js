@@ -4,44 +4,6 @@ var __extends = (this && this.__extends) || function (d, b) {
     __.prototype = b.prototype;
     d.prototype = new __();
 };
-var BindingContext = (function () {
-    function BindingContext(tpl, context, addChild) {
-        this.tpl = tpl;
-        this.context = context;
-        this.addChild = addChild;
-        this.bindings = [];
-    }
-    BindingContext.update = function (target, modelAccessor, resolve) {
-        var model = modelAccessor(target);
-        if (typeof (model.then) === "function") {
-            model.then.call(this, resolve);
-        }
-        else {
-            resolve.call(this, model);
-        }
-    };
-    BindingContext.prototype.execute = function (observer, offset) {
-        var _this = this;
-        var context = this.context;
-        var tpl = this.tpl;
-        var modelAccessor = !!tpl.modelAccessor ? tpl.modelAccessor : Xania.identity;
-        observer.subscribe(context, function (ctx) {
-            Xania.ready(modelAccessor(ctx)).then(function (model) {
-                model = Xania.unwrap(model);
-                var arr = Array.isArray(model) ? model : [model];
-                var children = [];
-                for (var i = 0; i < arr.length; i++) {
-                    var result = Xania.assign({}, context, arr[i]);
-                    var child = tpl.bind(result).init(observer);
-                    children.push(child);
-                    _this.addChild(child, i);
-                }
-                return children;
-            });
-        });
-    };
-    return BindingContext;
-})();
 var Binding = (function () {
     function Binding(context) {
         this.context = context;
@@ -125,7 +87,7 @@ var Observer = (function () {
                 this.state = update.apply(subscription, updateArgs.concat([this.state]));
             },
             then: function (resolve) {
-                return Xania.ready(resolve(this.state));
+                return Xania.ready(this.state).then(resolve);
             }
         };
         observable = Xania.observe(context, {
@@ -397,13 +359,13 @@ var Binder = (function () {
                             return {
                                 data: Xania.ready(prev.data).then(function (prevData) {
                                     console.debug("prevData", prev.offset, prevData);
-                                    var subscr = visit(data, cur, target, 0);
+                                    var subscr = visit(data, cur, target, prev.offset + Xania.count(prevData));
                                     return subscr;
                                 }),
-                                offset: prev.offset + 1
+                                offset: prev.offset
                             };
                         }, result, binding.dom);
-                        tpl.children().reduce(visitChild, { offset: offset });
+                        tpl.children().reduce(visitChild, { data: null, offset: offset });
                     }
                 });
             });

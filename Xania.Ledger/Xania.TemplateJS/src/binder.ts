@@ -1,80 +1,4 @@
-﻿class BindingContext {
-    constructor(private tpl, private context, private addChild) {
-    }
-
-    static update(target, modelAccessor: Function, resolve) {
-        const model = modelAccessor(target);
-        if (typeof (model.then) === "function") {
-            model.then.call(this, resolve);
-        } else {
-            resolve.call(this, model);
-        }
-    }
-
-    execute(observer: Observer, offset: number) {
-        var context = this.context;
-        var tpl = this.tpl;
-        var modelAccessor = !!tpl.modelAccessor ? tpl.modelAccessor : Xania.identity;
-
-        //const itemHandler = (item, idx) => {
-        //    var result = {};
-        //    item = Xania.unwrap(item);
-
-        //    if (this.items[idx] !== item) {
-        //        this.items[idx] = item;
-
-        //        result[this.varName] = typeof viewModel !== "undefined" && viewModel !== null
-        //            ? Xania.construct(viewModel, item)
-        //            : item;
-        //        resolve(result, idx);
-        //    }
-        //};
-
-        observer.subscribe(context, ctx => {
-            Xania.ready(modelAccessor(ctx)).then(model => {
-                model = Xania.unwrap(model);
-                var arr = Array.isArray(model) ? model : [model];
-
-                var children = [];
-
-                for (var i = 0; i < arr.length; i++) {
-                    const result = Xania.assign({}, context, arr[i]);
-                    const child = tpl.bind(result).init(observer);
-
-                    children.push(child);
-                    this.addChild(child, i);
-                }
-
-                return children;
-            });
-        });
-
-        //observer.subscribe(context, BindingContext.update, modelAccessor, (model) => {
-        //    var arr = Array.isArray(model) ? model : [model];
-        //    var bindings = [];
-        //    for (var i = 0; i < arr.length; i++) {
-        //        const model = Xania.unwrap(arr[i]);
-
-        //        const result = Xania.assign({}, context, model);
-        //        const child = tpl.bind(result).init(observer);
-        //        bindings.push(child);
-
-        //        //for (var i = this.bindings.length - 1; i > i; i--) {
-        //        //    this.bindings[i + 1] = this.bindings[i];
-        //        //}
-        //        // this.bindings[i] = child;
-        //        this.addChild(child, i, offset);
-        //        // }
-        //    }
-
-        //    return { bindings };
-        //});
-    }
-
-    bindings: Binding[] = [];
-}
-
-class Binding {
+﻿class Binding {
     private data;
     public parent: TagBinding;
     public destroyed = false;
@@ -181,7 +105,7 @@ class Observer {
             },
             then(resolve) {
                 // TODO implement async
-                return Xania.ready(resolve(this.state));
+                return Xania.ready(this.state).then(resolve);
             }
         };
         observable = Xania.observe(context, {
@@ -401,35 +325,6 @@ class TagBinding extends Binding {
         this.tpl.children().forEach(tpl => {
             observer.subscribe(this.context, updateChild, this, tpl);
         });
-
-        // observer.subscribe(this.context, updateChildren, this);
-        //this.tpl.children().map(tpl => {
-        //    var context = this.context;
-        //    var modelAccessor = !!tpl.modelAccessor ? tpl.modelAccessor : Xania.identity;
-
-        //    observer.subscribe(context,
-        //        BindingContext.update,
-        //        modelAccessor,
-        //        (member) => {
-        //            var arr = Array.isArray(member) ? member : [member];
-        //            var bindings: HTMLElement[] = [];
-        //            for (let i = 0; i < arr.length; i++) {
-        //                const model = Xania.unwrap(arr[i]);
-
-        //                const result = Xania.assign({}, context, model);
-        //                const child = tpl.bind(result).init(observer);
-        //                bindings.push(child.dom);
-
-        //                this.addChild(child, 0);
-        //            }
-        //            return bindings;
-        //        });
-
-        //}); 
-
-        //for (var e = 0; e < bindingContexts.length; e++) {
-        //    bindingContexts[e].execute(observer, e);
-        //}
     }
 
     addChild(child) {
@@ -517,13 +412,13 @@ class Binder {
                                 return {
                                     data: Xania.ready(prev.data).then(prevData => {
                                         console.debug("prevData", prev.offset, prevData);
-                                        var subscr = visit(data, cur, target, 0);
+                                        var subscr = visit(data, cur, target, prev.offset + Xania.count(prevData));
                                         return subscr;
                                     }),
-                                    offset: prev.offset + 1
+                                    offset: prev.offset
                                 };
                             }, result, binding.dom);
-                            tpl.children().reduce(visitChild, { offset });
+                            tpl.children().reduce(visitChild, { data: null, offset });
                         }
                     });
             });
