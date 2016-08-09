@@ -82,9 +82,10 @@ var Observer = (function () {
             state: null,
             dependencies: [],
             notify: function () {
+                var _this = this;
                 self.unsubscribe(this);
-                console.debug("notify", updateArgs, this.state);
-                this.state = update.apply(subscription, updateArgs.concat([this.state]));
+                Xania.ready(this.state || null)
+                    .then(function (s) { return _this.state = update.apply(subscription, updateArgs.concat([s])); });
             },
             then: function (resolve) {
                 return Xania.ready(this.state).then(resolve);
@@ -106,7 +107,7 @@ var Observer = (function () {
             }
         });
         updateArgs = [observable].concat(additionalArgs);
-        subscription.state = update.apply(subscription, [observable].concat(additionalArgs));
+        subscription.notify();
         return subscription;
     };
     Observer.prototype.track = function (context) {
@@ -126,10 +127,13 @@ var Observer = (function () {
         });
     };
     Observer.prototype.update = function () {
-        this.dirty.forEach(function (subscriber) {
-            subscriber.notify();
+        var _this = this;
+        window.requestAnimationFrame(function () {
+            _this.dirty.forEach(function (subscriber) {
+                subscriber.notify();
+            });
+            _this.dirty.clear();
         });
-        this.dirty.clear();
         console.debug("total subscriptions", this.size);
     };
     Object.defineProperty(Observer.prototype, "size", {
@@ -334,33 +338,35 @@ var Binder = (function () {
     Binder.execute = function (rootContext, rootTpl, rootTarget, observer) {
         var visit = function (context, tpl, target, offset) {
             var modelAccessor = !!tpl.modelAccessor ? tpl.modelAccessor : Xania.identity;
-            return observer.subscribe(context, function (observable) {
-                console.log("update", { context: context, tpl: tpl, target: target });
+            return observer.subscribe(context, function (observable, state) {
+                console.log("update", { context: context, tpl: tpl, target: target, state: state });
                 return Xania.ready(modelAccessor(observable))
                     .then(function (model) {
                     model = Xania.unwrap(model);
                     return Array.isArray(model) ? model : [model];
                 })
                     .then(function (arr) {
-                    for (var i = 0; i < arr.length; i++) {
+                    for (var i = state || 0; i < arr.length; i++) {
                         var result = Xania.assign({}, context, arr[i]);
                         var binding = tpl.bind(result);
-                        if (offset + i !== target.childNodes.length)
-                            console.error("offset error");
-                        target.appendChild(binding.dom);
+                        var idx = offset + i;
+                        if (idx < target.childNodes.length)
+                            target.insertBefore(binding.dom, target.childNodes[idx]);
+                        else
+                            target.appendChild(binding.dom);
                         observer.subscribe(result, binding.render.bind(binding));
                         var visitChild = Xania.partialApp(function (data, target, prev, cur) {
                             return Xania.ready(prev)
                                 .then(function (p) {
                                 return visit(data, cur, target, p)
-                                    .then(function (arr) {
-                                    var next = p + arr.length;
-                                    return next;
-                                });
+                                    .then(function (length) { return p + length; });
                             });
                         }, result, binding.dom);
                         tpl.children().reduce(visitChild, 0);
                     }
+                    for (var e = arr.length; e < state || 0; e++) {
+                    }
+                    return arr.length;
                 });
             });
         };

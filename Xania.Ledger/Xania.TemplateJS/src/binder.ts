@@ -100,8 +100,8 @@ class Observer {
             dependencies: [],
             notify() {
                 self.unsubscribe(this);
-                console.debug("notify", updateArgs, this.state);
-                this.state = update.apply(subscription, updateArgs.concat([this.state]));
+                Xania.ready(this.state || null)
+                    .then(s => this.state = update.apply(subscription, updateArgs.concat([s])));
             },
             then(resolve) {
                 // TODO implement async
@@ -125,7 +125,7 @@ class Observer {
             }
         });
         updateArgs = [observable].concat(additionalArgs);
-        subscription.state = update.apply(subscription, [observable].concat(additionalArgs));
+        subscription.notify();
 
         return subscription;
     }
@@ -150,10 +150,12 @@ class Observer {
     }
 
     update() {
-        this.dirty.forEach(subscriber => {
-            subscriber.notify();
+        window.requestAnimationFrame(() => {
+            this.dirty.forEach(subscriber => {
+                subscriber.notify();
+            });
+            this.dirty.clear();
         });
-        this.dirty.clear();
 
         console.debug("total subscriptions", this.size);
     }
@@ -376,8 +378,8 @@ class Binder {
         var visit = (context, tpl, target, offset: number) => {
             var modelAccessor = !!tpl.modelAccessor ? tpl.modelAccessor : Xania.identity;
 
-            return observer.subscribe(context, observable => {
-                console.log("update", { context, tpl, target });
+            return observer.subscribe(context, (observable, state) => {
+                console.log("update", { context, tpl, target, state });
 
                 return Xania.ready(modelAccessor(observable))
                     .then(model => {
@@ -385,14 +387,15 @@ class Binder {
                         return Array.isArray(model) ? model : [model];
                     })
                     .then(arr => {
-                        for (var i = 0; i < arr.length; i++) {
+                        for (let i = state || 0; i < arr.length; i++) {
                             const result = Xania.assign({}, context, arr[i]);
                             var binding = tpl.bind(result);
 
-                            if (offset + i !== target.childNodes.length)
-                                console.error("offset error");
-
-                            target.appendChild(binding.dom);
+                            const idx = offset + i;
+                            if (idx < target.childNodes.length)
+                                target.insertBefore(binding.dom, target.childNodes[idx]);
+                            else
+                                target.appendChild(binding.dom);
 
                             observer.subscribe(result, binding.render.bind(binding));
 
@@ -401,10 +404,7 @@ class Binder {
                                     return Xania.ready(prev)
                                         .then(p => {
                                             return visit(data, cur, target, p)
-                                                .then(arr => {
-                                                    var next = p + arr.length;
-                                                    return next;
-                                                });
+                                                .then(length => p + length);
                                         });
                                 },
                                 result,
@@ -412,6 +412,11 @@ class Binder {
 
                             tpl.children().reduce(visitChild, 0);
                         }
+
+                        for (let e = arr.length; e < state || 0; e++) {
+                            
+                        }
+                        return arr.length;
                     });
             });
         };

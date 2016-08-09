@@ -10,7 +10,9 @@ var Todo = (function () {
 })();
 var TodoStore = (function () {
     function TodoStore() {
-        this.todos = [new Todo("first"), new Todo("second")];
+        this.todos = [];
+        for (var i = 0; i < 2; i++)
+            this.todos.push(new Todo("todo " + i));
     }
     TodoStore.prototype.allCompleted = function () {
         for (var i = 0; i < this.todos.length; i++)
