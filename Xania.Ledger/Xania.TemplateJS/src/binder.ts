@@ -327,17 +327,6 @@ class TagBinding extends Binding {
         });
     }
 
-    addChild(child) {
-        child.parent = this;
-        this.children.push(child);
-
-        // if (idx >= this.dom.childNodes.length) {
-        this.dom.appendChild(child.dom);
-        // } else {
-        //     this.dom.insertBefore(child.dom, this.dom.childNodes[idx]);
-        // }
-    }
-
     destroy() {
         if (!!this.dom) {
             this.dom.remove();
@@ -408,17 +397,20 @@ class Binder {
                             observer.subscribe(result, binding.render.bind(binding));
 
                             const visitChild = Xania.partialApp((data, target, prev, cur) => {
-                                console.debug("visit child", { offset: prev.offset, cur });
-                                return {
-                                    data: Xania.ready(prev.data).then(prevData => {
-                                        console.debug("prevData", prev.offset, prevData);
-                                        var subscr = visit(data, cur, target, prev.offset + Xania.count(prevData));
-                                        return subscr;
-                                    }),
-                                    offset: prev.offset
-                                };
-                            }, result, binding.dom);
-                            tpl.children().reduce(visitChild, { data: null, offset });
+                                    // console.debug("visit child", { offset: prev.offset, cur });
+                                    return Xania.ready(prev)
+                                        .then(p => {
+                                            return visit(data, cur, target, p)
+                                                .then(arr => {
+                                                    var next = p + arr.length;
+                                                    return next;
+                                                });
+                                        });
+                                },
+                                result,
+                                binding.dom);
+
+                            tpl.children().reduce(visitChild, 0);
                         }
                     });
             });

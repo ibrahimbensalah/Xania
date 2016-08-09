@@ -287,11 +287,6 @@ var TagBinding = (function (_super) {
             observer.subscribe(_this.context, updateChild, _this, tpl);
         });
     };
-    TagBinding.prototype.addChild = function (child) {
-        child.parent = this;
-        this.children.push(child);
-        this.dom.appendChild(child.dom);
-    };
     TagBinding.prototype.destroy = function () {
         if (!!this.dom) {
             this.dom.remove();
@@ -355,17 +350,16 @@ var Binder = (function () {
                         target.appendChild(binding.dom);
                         observer.subscribe(result, binding.render.bind(binding));
                         var visitChild = Xania.partialApp(function (data, target, prev, cur) {
-                            console.debug("visit child", { offset: prev.offset, cur: cur });
-                            return {
-                                data: Xania.ready(prev.data).then(function (prevData) {
-                                    console.debug("prevData", prev.offset, prevData);
-                                    var subscr = visit(data, cur, target, prev.offset + Xania.count(prevData));
-                                    return subscr;
-                                }),
-                                offset: prev.offset
-                            };
+                            return Xania.ready(prev)
+                                .then(function (p) {
+                                return visit(data, cur, target, p)
+                                    .then(function (arr) {
+                                    var next = p + arr.length;
+                                    return next;
+                                });
+                            });
                         }, result, binding.dom);
-                        tpl.children().reduce(visitChild, { data: null, offset: offset });
+                        tpl.children().reduce(visitChild, 0);
                     }
                 });
             });
