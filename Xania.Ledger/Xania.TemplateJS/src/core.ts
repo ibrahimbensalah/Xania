@@ -320,6 +320,8 @@ class Xania {
                         return target.length === 0;
                     case "valueOf":
                         return () => target;
+                    case "indexOf":
+                        return target.indexOf.bind(target);
                     default:
                         return Xania.observeProperty(target, property, observer);
                 }

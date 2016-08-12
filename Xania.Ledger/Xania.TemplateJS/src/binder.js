@@ -39,7 +39,6 @@ var Observer = (function () {
             }
         }
         else {
-            console.debug("observe object", object);
             var deps = {};
             this.subscriptions.set(object, deps);
             deps[property] = new Set().add(subsriber);
@@ -56,8 +55,6 @@ var Observer = (function () {
         return null;
     };
     Observer.prototype.unsubscribe = function (subscription) {
-        var length = subscription.dependencies.length;
-        var init = this.size;
         while (subscription.dependencies.length > 0) {
             var dep = subscription.dependencies.pop();
             if (!this.subscriptions.has(dep.obj))
@@ -69,8 +66,6 @@ var Observer = (function () {
                 debugger;
             deps[dep.property].delete(subscription);
         }
-        var end = this.size;
-        console.debug("unsubscribe", init - end === length);
     };
     Observer.prototype.subscribe = function (context, update) {
         var additionalArgs = [];
@@ -346,9 +341,17 @@ var Binder = (function () {
                     return Array.isArray(model) ? model : [model];
                 })
                     .then(function (arr) {
-                    for (var i = state || 0; i < arr.length; i++) {
+                    var nextBindings = [];
+                    var prevLength = !!state && state.length || 0;
+                    var prevBindings = !!state && state.bindings || [];
+                    for (var n = 0; n < arr.length; n++) {
+                        var key = arr[n];
+                        console.debug("bind key", key);
+                    }
+                    for (var i = prevLength; i < arr.length; i++) {
                         var result = Xania.assign({}, context, arr[i]);
                         var binding = tpl.bind(result);
+                        nextBindings.push(binding);
                         var idx = offset + i;
                         if (idx < target.childNodes.length)
                             target.insertBefore(binding.dom, target.childNodes[idx]);
@@ -359,14 +362,16 @@ var Binder = (function () {
                             return Xania.ready(prev)
                                 .then(function (p) {
                                 return visit(data, cur, target, p)
-                                    .then(function (length) { return p + length; });
+                                    .then(function (x) { return p + x.length; });
                             });
                         }, result, binding.dom);
                         tpl.children().reduce(visitChild, 0);
                     }
-                    for (var e = arr.length; e < state || 0; e++) {
+                    for (var e = prevLength - 1; e >= arr.length; e--) {
+                        var idx = offset + e;
+                        target.removeChild(target.childNodes[idx]);
                     }
-                    return arr.length;
+                    return { length: arr.length, bindings: nextBindings };
                 });
             });
         };

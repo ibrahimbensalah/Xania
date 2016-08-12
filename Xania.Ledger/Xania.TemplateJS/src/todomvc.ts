@@ -49,6 +49,8 @@ class TodoStore {
         console.debug("remove todo ", idx);
         if (idx >= 0)
             this.todos.splice(idx, 1);
+        else
+            console.error("todo not found", todo);
     }
 }
 

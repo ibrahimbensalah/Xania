@@ -41,7 +41,6 @@ class Observer {
                 return true;
             }
         } else {
-            console.debug("observe object", object);
             const deps = {};
             this.subscriptions.set(object, deps);
             deps[property] = new Set<ISubsriber>().add(subsriber);
@@ -64,9 +63,6 @@ class Observer {
     }
 
     unsubscribe(subscription) {
-        var length = subscription.dependencies.length;
-        var init = this.size;
-
         while (subscription.dependencies.length > 0) {
             var dep = subscription.dependencies.pop();
 
@@ -83,9 +79,6 @@ class Observer {
 
             deps[dep.property].delete(subscription);
         }
-        var end = this.size;
-
-        console.debug("unsubscribe", init - end === length);
     }
 
     subscribe(context, update, ...additionalArgs) {
@@ -387,9 +380,20 @@ class Binder {
                         return Array.isArray(model) ? model : [model];
                     })
                     .then(arr => {
-                        for (let i = state || 0; i < arr.length; i++) {
+                        var nextBindings = [];
+                        var prevLength = !!state && state.length || 0;
+                        var prevBindings = !!state && state.bindings || [];
+
+                        for (let n = 0; n < arr.length; n++) {
+                            var key = arr[n];
+                            console.debug("bind key", key);
+                        }
+
+                        for (let i = prevLength; i < arr.length; i++) {
                             const result = Xania.assign({}, context, arr[i]);
                             var binding = tpl.bind(result);
+
+                            nextBindings.push(binding);
 
                             const idx = offset + i;
                             if (idx < target.childNodes.length)
@@ -400,11 +404,10 @@ class Binder {
                             observer.subscribe(result, binding.render.bind(binding));
 
                             const visitChild = Xania.partialApp((data, target, prev, cur) => {
-                                    // console.debug("visit child", { offset: prev.offset, cur });
                                     return Xania.ready(prev)
                                         .then(p => {
                                             return visit(data, cur, target, p)
-                                                .then(length => p + length);
+                                                .then(x => p + x.length);
                                         });
                                 },
                                 result,
@@ -413,10 +416,12 @@ class Binder {
                             tpl.children().reduce(visitChild, 0);
                         }
 
-                        for (let e = arr.length; e < state || 0; e++) {
-                            
+                        for (let e = prevLength - 1; e >= arr.length; e--) {
+                            const idx = offset + e;
+                            target.removeChild(target.childNodes[idx]);
                         }
-                        return arr.length;
+
+                        return { length: arr.length, bindings: nextBindings };
                     });
             });
         };
