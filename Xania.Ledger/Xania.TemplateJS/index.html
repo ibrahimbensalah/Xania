@@ -1,73 +1,74 @@
-﻿<!DOCTYPE html>
-
-<html lang="en">
+﻿<!doctype html>
+<html lang="en" data-framework="xaniajs">
 <head>
-    <meta charset="utf-8" />
-    <title>TypeScript HTML App</title>
-    <link rel="stylesheet" href="app.css" type="text/css" />
+    <meta charset="utf-8">
+    <title>Xania JS • TodoMVC</title>
+    <link rel="stylesheet" href="Content/css/base.css">
+    <link rel="stylesheet" href="Content/css/index.css">
+    <script src="src/core.js"></script>
+    <script src="src/binder.js"></script>
+    <script src="src/todomvc.js"></script>
     <style type="text/css">
-        [data-for] {
+        #todo-template {
             display: none;
         }
     </style>
-
-    <script src="app.js"></script>
-    <script src="src/core.js"></script>
-    <script src="src/binder.js"></script>
-    <script src="test/company.js"></script>
 </head>
 <body>
-    <h1>TypeScript HTML App</h1>
-
-    <!--<div>
-        <ul id="employees">
-            <li data-for="emp in xn.employees">
-                @emp.fullName @emp.lastName
-            </li>
-            <li><button click="xn.addEmployee()">+</button></li>
-        </ul>
-    </div>-->
-    <div id="content">
-        <ul data-for="o in xn">
-            <li><button click="o.addEmployee()">add</button></li>
-            <li><button click="o.clearFirstNames()">clear first names</button></li>
-            <li>@o.getName() @xn.count()</li>
-            <li data-for="emp in o.employees">
-                <div style="border: 2px solid @emp.firstName; color: @emp.firstName; padding: 10px;">
-                    <input name="emp.firstName" style="color: inherit" value="@emp.firstName" />
-                    <input name="emp.color" value="red" />
-                    <input name="emp.lastName" value="@emp.lastName" />
-                    <button click="emp.sayHello('+')">+</button>
-                    <span data-for="r in emp.roles">@r.name </span>
-                    <div>fullName : @emp.fullName</div>
-                    <div>getName : @emp.getName()</div>
-                </div>
-                <div data-for="h in o.employees">[ @h.fullName ]</div>
-                <div>@emp.fullName @emp.random</div>
-            </li>
-            <li data-for="emp in o.employees">
-                @emp.fullName
-            </li>
-            <li data-for="h in o.employees">[ @h.fullName ]</li>
-        </ul>
+    <div id="todo-template">
+        <section class="todoapp" data-for="store of app.todoStore">
+            <header class="header">
+                <h1>todos</h1>
+                <input class="new-todo" placeholder="What needs to be done?" autofocus="" name="app.newTodoText" value="@app.newTodoText" keyup.enter="@app.addTodo()">
+            </header>
+            <section class="main" class.hidden="@store.todos.empty">
+                <input class="toggle-all" type="checkbox" checked="@store.allCompleted()" click="@store.toggleAll()">
+                <ul class="todo-list">
+                    <li data-for="todo of app.todoStore.all()" class.completed="@todo.completed" class.editing="@todo.editing">
+                        <div class="view">
+                            <input class="toggle" type="checkbox" click="@todo.toggleCompletion()" checked="@todo.completed">
+                            <label dblclick="editTodo(todo)">@todo.title</label>
+                            <button class="destroy" click="@store.remove(todo)"></button>
+                        </div>
+                        <input class="edit" name="todo.title" blur="stopEditing(todo,editedtodo.value)" keyup.enter="updateEditingTodo(todo, editedtodo.value)" keyup.escape="cancelEditingTodo(todo)">
+                    </li>
+                </ul>
+            </section>
+            <footer class="footer" class.hidden="@store.todos.empty">
+                <span class="todo-count"><strong>@store.getRemaining().length</strong> item(s) left</span>
+                <ul class="filters">
+                    <li><a href="" class.selected="@store.showAll" click="@store.filter()">All</a></li>
+                    <li><a href="" class.selected="@store.showActive" click="@store.filter(false)" class="">Active</a></li>
+                    <li><a href="" class.selected="@store.showCompleted" click="@store.filter(true)" class="">Completed</a></li>
+                </ul>
+                <button class="clear-completed" class.hidden="@store.getCompleted().empty" click="@store.removeCompleted()">Clear completed</button>
+            </footer>
+        </section>
     </div>
-    <script type="text/javascript">
-        var binder = new Binder();
+    <footer class="info">
+        <p>Double-click to edit a todo</p>
+        <p>
+            Created by <a href="http://github.com/ibrahimbensalah">Ibrahim ben Salah</a>
+            using <a href="http://xania.io">Xania JS</a>
+        </p>
+        <p>
+            Part of <a href="http://todomvc.com">TodoMVC</a>
+        </p>
+    </footer>
 
-        var contentDiv = document.getElementById("content");
+    <script>
+        window.onload = function () {
+            var tpl = document.getElementById("todo-template").childNodes[1];
+            var model = { app: new TodoApp(), router: new Router() };
+            new Binder().bind(tpl, model);
+        };
+        window.onunload = function () {
+            return false;
+        }
 
-        var model = [];
-        for (var i = 0; i < 1; i++)
-            model.push({ xn: Company.xania() });
-
-        binder.bind(contentDiv, model);
-
-        //var employeesElt = document.getElementById("employees");
-        //binder.bind(employeesElt, { xn: Company.xania() });
-
-        var compile = TemplateEngine.compile;
-        var xania = Company.xania();
-
+        function fraude(x, y, z) {
+            
+        }
     </script>
 </body>
 </html>

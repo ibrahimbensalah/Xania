@@ -228,7 +228,7 @@ var Xania = (function () {
         };
     };
     Xania.observe = function (target, observer) {
-        if (!target)
+        if (!target || target.isSpy)
             return target;
         if (target.isSpy)
             throw new Error("observe observable is not allowed");
@@ -242,44 +242,44 @@ var Xania = (function () {
             return target;
         }
     };
-    Xania.observeArray = function (target, observer) {
+    Xania.observeArray = function (arr, observer) {
         var ProxyConst = window["Proxy"];
-        return new ProxyConst(target, {
+        return new ProxyConst(arr, {
             get: function (target, property) {
                 switch (property) {
                     case "isSpy":
                         return true;
                     case "empty":
-                        observer.setRead(target, "length");
-                        return target.length === 0;
+                        observer.setRead(arr, "length");
+                        return arr.length === 0;
                     case "valueOf":
-                        return function () { return target; };
+                        return arr.valueOf.bind(arr);
                     case "indexOf":
-                        return target.indexOf.bind(target);
+                        return arr.indexOf.bind(arr);
                     default:
-                        return Xania.observeProperty(target, property, observer);
+                        return Xania.observeProperty(arr, property, observer);
                 }
             },
             set: function (target, property, value, receiver) {
                 var unwrapped = Xania.unwrap(value);
-                if (target[property] !== unwrapped) {
-                    var length = target.length;
-                    target[property] = unwrapped;
-                    observer.setChange(target, property);
-                    if (target.length !== length)
-                        observer.setChange(target, "length");
+                if (arr[property] !== unwrapped) {
+                    var length = arr.length;
+                    arr[property] = unwrapped;
+                    observer.setChange(arr, property);
+                    if (arr.length !== length)
+                        observer.setChange(arr, "length");
                 }
                 return true;
             }
         });
     };
     Xania.unwrap = function (obj) {
-        if (obj === null || typeof (obj) !== "object")
+        if (obj === "undefined" || obj === null || typeof (obj) !== "object")
             return obj;
         if (!!obj._unwrapping)
             return obj;
         if (!!obj.isSpy) {
-            return obj.valueOf();
+            return Xania.unwrap(obj.valueOf());
         }
         obj._unwrapping = true;
         for (var prop in obj) {
@@ -396,5 +396,16 @@ var Xania = (function () {
         return value;
     };
     return Xania;
+})();
+var Router = (function () {
+    function Router() {
+        this.currentAction = null;
+    }
+    Router.prototype.action = function (name) {
+        if (name === null || typeof name === "undefined")
+            return this.currentAction;
+        return this.currentAction = name;
+    };
+    return Router;
 })();
 //# sourceMappingURL=core.js.map

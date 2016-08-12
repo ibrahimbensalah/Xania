@@ -212,39 +212,6 @@ class TagBinding extends Binding {
         this.dom.attributes["__binding"] = this;
     }
 
-    update(context) {
-        const tagBinding = this;
-
-        var elt = tagBinding.dom;
-
-        var attributes = tagBinding.tpl.executeAttributes(context);
-        for (let attrName in attributes) {
-            if (attributes.hasOwnProperty(attrName)) {
-                var newValue = Xania.join(" ", attributes[attrName]);
-                var oldValue = elt[attrName];
-                if (oldValue === newValue)
-                    continue;
-
-                elt[attrName] = newValue;
-                if (typeof newValue === "undefined" || newValue === null) {
-                    elt.removeAttribute(attrName);
-                } else if (attrName === "value") {
-                    elt["value"] = newValue;
-                } else {
-                    let domAttr = elt.attributes[attrName];
-                    if (!!domAttr) {
-                        domAttr.nodeValue = newValue;
-                        domAttr.value = newValue;
-                    } else {
-                        domAttr = document.createAttribute(attrName);
-                        domAttr.value = newValue;
-                        elt.setAttributeNode(domAttr);
-                    }
-                }
-            }
-        }
-    }
-
     render(context) {
         const tpl = this.tpl;
         const dom = this.dom;
@@ -275,51 +242,6 @@ class TagBinding extends Binding {
                 }
             }
         }
-    }
-
-    init(observer: Observer = new Observer()) {
-        const update = (context, tagBinding: TagBinding) => {
-            if (tagBinding.destroyed)
-                return;
-
-            if (!!tagBinding.dom)
-                console.debug("update tag", tagBinding.dom);
-
-            tagBinding.update(context);
-        };
-
-        return this;
-    }
-
-    initChildren(observer: Observer) {
-        const updateChild = (context, tagBinding: TagBinding, tpl, state) => {
-            const modelAccessor: any = !!tpl.modelAccessor ? tpl.modelAccessor : Xania.identity;
-            var r = modelAccessor(this.context);
-
-            var elements = [];
-            if (!!state) {
-                elements = state.elements;
-            }
-
-            Xania.ready(r).then(model => {
-                model = Xania.unwrap(model);
-                var arr = Array.isArray(model) ? model : [model];
-
-                for (var i = 0; i < arr.length; i++) {
-                    const result = Xania.assign({}, context.valueOf(), arr[i]);
-                    const child = tpl.bind(result).init(observer);
-
-                    tagBinding.dom.appendChild(child.dom);
-                    tagBinding.children.push(child);
-                }
-            });
-
-            return { elements };
-        }
-
-        this.tpl.children().forEach(tpl => {
-            observer.subscribe(this.context, updateChild, this, tpl);
-        });
     }
 
     destroy() {
@@ -353,7 +275,7 @@ class Binder {
     parseAttr(tagElement: TagTemplate, attr: Attr) {
         const name = attr.name;
         if (name === "click" || name.startsWith("keyup.")) {
-            const fn = new Function("m", `with(m) { return ${attr.value}; }`);
+            const fn = this.compile(attr.value);
             tagElement.addEvent(name, fn);
         } else if (name === "data-for" || name === "data-from") {
             tagElement.for(attr.value, this.import);
@@ -380,24 +302,19 @@ class Binder {
                         return Array.isArray(model) ? model : [model];
                     })
                     .then(arr => {
-                        var nextBindings = [];
                         var prevLength = !!state && state.length || 0;
-                        var prevBindings = !!state && state.bindings || [];
 
-                        for (let n = 0; n < arr.length; n++) {
-                            var key = arr[n];
-                            console.debug("bind key", key);
+                        for (let e = prevLength - 1; e >= 0; e--) {
+                            const idx = offset + e;
+                            target.removeChild(target.childNodes[idx]);
                         }
 
-                        for (let i = prevLength; i < arr.length; i++) {
-                            const result = Xania.assign({}, context, arr[i]);
+                        for (let idx = 0; idx < arr.length; idx++) {
+                            const result = Xania.assign({}, context, arr[idx]);
                             var binding = tpl.bind(result);
 
-                            nextBindings.push(binding);
-
-                            const idx = offset + i;
-                            if (idx < target.childNodes.length)
-                                target.insertBefore(binding.dom, target.childNodes[idx]);
+                            if (offset + idx < target.childNodes.length)
+                                target.insertBefore(binding.dom, target.childNodes[offset + idx]);
                             else
                                 target.appendChild(binding.dom);
 
@@ -416,12 +333,12 @@ class Binder {
                             tpl.children().reduce(visitChild, 0);
                         }
 
-                        for (let e = prevLength - 1; e >= arr.length; e--) {
-                            const idx = offset + e;
-                            target.removeChild(target.childNodes[idx]);
-                        }
+                        //for (let e = prevLength - 1; e >= arr.length; e--) {
+                        //    const idx = offset + e;
+                        //    target.removeChild(target.childNodes[idx]);
+                        //}
 
-                        return { length: arr.length, bindings: nextBindings };
+                        return { length: arr.length };
                     });
             });
         };
@@ -523,7 +440,7 @@ class TemplateEngine {
 
         var template = input.replace(/\n/g, "\\\n");
         var decl = [];
-        var returnExpr = template.replace(/@([\w\(\)\.]+)/gim, (a, b) => {
+        var returnExpr = template.replace(/@([\w\(\)\.']+)/gim, (a, b) => {
             var paramIdx = `arg${decl.length}`;
             decl.push(b);
             return `"+${paramIdx}+"`;

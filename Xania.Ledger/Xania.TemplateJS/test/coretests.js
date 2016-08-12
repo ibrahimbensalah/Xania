@@ -107,6 +107,27 @@ describe("Template Engine", function () {
             });
             expect(result).toEqual("hallo 1-hi 2");
         });
+    it("should compile method call with string arguments",
+        function () {
+            var tpl = compile("@x.fn('string')");
+
+            var result = tpl({
+                x: { fn: function (s) { return s; } }
+            });
+            expect(result).toEqual("string");
+        });
+    it("should compile supports filter expression",
+        function () {
+            var tpl = compile("@items |> contains x");
+
+            var result = tpl({
+                items: [1, 2, 3, 4, 5],
+                contains: function(a, arr) {
+                    
+                }
+            });
+            expect(result).toEqual("string");
+        });
 });
 
 describe("Select Many Expression", function () {

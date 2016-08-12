@@ -137,6 +137,7 @@ class SelectManyExpression {
         var col = collectionFunc(context);
 
         return Xania.ready(col).then(data => {
+            // var unwrapped = Xania.unwrap(data);
             var arr = Array.isArray(data) ? data : [data];
 
             var results = [];
@@ -291,7 +292,7 @@ class Xania {
 
     static observe(target, observer: IObserver) {
         // ReSharper disable once InconsistentNaming
-        if (!target)
+        if (!target || target.isSpy)
             return target;
 
         if (target.isSpy)
@@ -307,36 +308,36 @@ class Xania {
         }
     }
 
-    static observeArray(target, observer: IObserver) {
+    static observeArray(arr, observer: IObserver) {
         // ReSharper disable once InconsistentNaming
         var ProxyConst = window["Proxy"];
-        return new ProxyConst(target, {
+        return new ProxyConst(arr, {
             get(target, property) {
                 switch (property) {
                     case "isSpy":
                         return true;
                     case "empty":
-                        observer.setRead(target, "length");
-                        return target.length === 0;
+                        observer.setRead(arr, "length");
+                        return arr.length === 0;
                     case "valueOf":
-                        return () => target;
+                        return arr.valueOf.bind(arr);
                     case "indexOf":
-                        return target.indexOf.bind(target);
+                        return arr.indexOf.bind(arr);
                     default:
-                        return Xania.observeProperty(target, property, observer);
+                        return Xania.observeProperty(arr, property, observer);
                 }
             },
             set(target, property, value, receiver) {
                 const unwrapped = Xania.unwrap(value);
-                if (target[property] !== unwrapped) {
-                    var length = target.length;
+                if (arr[property] !== unwrapped) {
+                    var length = arr.length;
 
-                    target[property] = unwrapped;
+                    arr[property] = unwrapped;
 
-                    observer.setChange(target, property);
+                    observer.setChange(arr, property);
 
-                    if (target.length !== length)
-                        observer.setChange(target, "length");
+                    if (arr.length !== length)
+                        observer.setChange(arr, "length");
                 }
 
                 return true;
@@ -345,14 +346,15 @@ class Xania {
     }
 
     static unwrap(obj) {
-        if (obj === null || typeof (obj) !== "object")
+        if (obj === "undefined" || obj === null || typeof (obj) !== "object")
             return obj;
 
+        // ReSharper disable once QualifiedExpressionMaybeNull
         if (!!obj._unwrapping)
             return obj;
 
         if (!!obj.isSpy) {
-            return obj.valueOf();
+            return Xania.unwrap(obj.valueOf());
         }
 
         obj._unwrapping = true;
@@ -481,6 +483,18 @@ class Xania {
             return value.length > 0 ? value.sort().join(separator) : null;
         }
         return value;
+    }
+}
+
+class Router {
+
+    private currentAction = null;
+
+    action(name: string) {
+        if (name === null || typeof name === "undefined")
+            return this.currentAction;
+
+        return this.currentAction = name;
     }
 }
 
