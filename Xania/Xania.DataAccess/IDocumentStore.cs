@@ -5,18 +5,18 @@ using System.Linq;
 
 namespace Xania.DataAccess
 {
-    public interface IStreamRepository
+    public interface IDocumentStore
     {
-        void Add(string folder, Guid resourceId, Action<Stream> writer);
-        void Read(string folder, Guid resourceId, Action<Stream> reader);
-        IEnumerable<Guid> List(string folder);
+        void Add(string folder, string resourceId, Action<Stream> writer);
+        T Read<T>(string folder, string resourceId, Func<Stream, T> reader);
+        IEnumerable<string> List(string folder);
     }
 
-    public class MemoryStreamRepository : IStreamRepository
+    public class MemoryDocumentStore : IDocumentStore
     {
         private readonly IDictionary<ListKey, MemoryStream> _streams = new Dictionary<ListKey, MemoryStream>();
 
-        public void Add(string folder, Guid resourceId, Action<Stream> writer)
+        public void Add(string folder, string resourceId, Action<Stream> writer)
         {
             var key = new ListKey(folder, resourceId);
             var mem = new MemoryStream();
@@ -24,14 +24,14 @@ namespace Xania.DataAccess
             _streams[key] = mem;
         }
 
-        public void Read(string folder, Guid resourceId, Action<Stream> reader)
+        public T Read<T>(string folder, string resourceId, Func<Stream, T> reader)
         {
             var key = new ListKey(folder, resourceId);
             MemoryStream mem;
             if (_streams.TryGetValue(key, out mem))
             {
                 mem.Seek(0, SeekOrigin.Begin);
-                reader(mem);
+                return reader(mem);
             }
             else
             {
@@ -39,9 +39,9 @@ namespace Xania.DataAccess
             }
         }
 
-        public IEnumerable<Guid> List(string folder)
+        public IEnumerable<string> List(string folder)
         {
-            return _streams.Keys.Where(k => object.Equals(k[0], folder)).Select(k => (Guid)k[1]);
+            return _streams.Keys.Where(k => object.Equals(k[0], folder)).Select(k => (string)k[1]);
         }
 
         private class ListKey

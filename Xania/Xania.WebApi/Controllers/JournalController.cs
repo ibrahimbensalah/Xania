@@ -6,17 +6,17 @@ using System.Web.Http;
 using Xania.DataAccess;
 using Xania.Ledger.Domain.Models;
 
-namespace Xania.Ledger.Web
+namespace Xania.WebApi.Controllers
 {
     [RoutePrefix("ledger/journal")]
     public class JournalController : ApiController
     {
         private readonly IObjectStore<JournalEntry> _journalRepository;
-        private readonly IObjectStore<Domain.Models.Ledger> _ledgerRepository;
+        private readonly IObjectStore<Ledger.Domain.Models.Ledger> _ledgerRepository;
 
         public JournalController(
             IObjectStore<JournalEntry> journalRepository,
-            IObjectStore<Domain.Models.Ledger> ledgerRepository)
+            IObjectStore<Ledger.Domain.Models.Ledger> ledgerRepository)
         {
             _journalRepository = journalRepository;
             _ledgerRepository = ledgerRepository;

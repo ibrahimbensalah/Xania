@@ -7,11 +7,11 @@ using System.Reflection;
 
 namespace Xania.DataAccess
 {
-    public static class RepositoryExtensions
+    public static class ObjectStoreExtensions
     {
-        public static Page<TModel> Page<TModel>(this IRepository<TModel> repository, IPageRequest request)
+        public static Page<TModel> Page<TModel>(this IObjectStore<TModel> store, IPageRequest request)
         {
-            return repository.ToPageResult(request);
+            return store.ToPageResult(request);
         }
 
         public static Page<TModel> ToPageResult<TModel>(this IEnumerable<TModel> enumerable, IPageRequest request)

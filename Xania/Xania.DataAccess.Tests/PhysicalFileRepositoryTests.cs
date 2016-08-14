@@ -7,7 +7,7 @@ namespace Xania.DataAccess.Tests
 {
     public class PhysicalFileServiceTests
     {
-        private DiskStreamRepository _repository;
+        private DiskDocumentStore _repository;
 
         [SetUp]
         public void SetupService()
@@ -16,7 +16,7 @@ namespace Xania.DataAccess.Tests
             Directory.CreateDirectory(dir);
             Directory.Delete(dir, true);
 
-            _repository = new DiskStreamRepository(dir);
+            _repository = new DiskDocumentStore(dir);
         }
 
         [TestCase("some content 1")]

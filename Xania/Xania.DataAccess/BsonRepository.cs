@@ -8,17 +8,17 @@ namespace Xania.DataAccess
 {
     public class BsonRepository<TModel>: IEnumerable<TModel>
     {
-        private readonly IStreamRepository _streamRepository;
+        private readonly IDocumentStore _documentStore;
 
-        public BsonRepository(IStreamRepository streamRepository)
+        public BsonRepository(IDocumentStore documentStore)
         {
-            _streamRepository = streamRepository;
+            _documentStore = documentStore;
         }
 
         public virtual void Add(TModel model)
         {
-            var resourceId = Guid.NewGuid();
-            _streamRepository.Add(typeof(TModel).Name, resourceId, stream =>
+            var resourceId = Guid.NewGuid().ToString();
+            _documentStore.Add(typeof(TModel).Name, resourceId, stream =>
             {
                 using (var bsonWriter = new BsonBinaryWriter(stream))
                 {
@@ -29,9 +29,9 @@ namespace Xania.DataAccess
 
         public IEnumerator<TModel> GetEnumerator()
         {
-            foreach (var id in _streamRepository.List(typeof(TModel).Name))
+            foreach (var id in _documentStore.List(typeof(TModel).Name))
             {
-                yield return _streamRepository.Read(typeof(TModel).Name, id, stream =>
+                yield return _documentStore.Read(typeof(TModel).Name, id, stream =>
                 {
                     using (var bsonReader = new BsonBinaryReader(stream))
                     {

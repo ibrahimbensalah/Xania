@@ -5,19 +5,19 @@ using System.Linq;
 
 namespace Xania.DataAccess
 {
-    public class DiskStreamRepository : IStreamRepository
+    public class DiskDocumentStore : IDocumentStore
     {
         private readonly string _rootDirectory;
-        private static object _syncObject = new object();
+        private static readonly object SyncObject = new object();
 
-        public DiskStreamRepository(string rootDirectory)
+        public DiskDocumentStore(string rootDirectory)
         {
             _rootDirectory = rootDirectory;
         }
 
-        public void Add(string folder, Guid resourceId, Action<Stream> writer)
+        public void Add(string folder, string resourceId, Action<Stream> writer)
         {
-            lock (_syncObject)
+            lock (SyncObject)
             {
                 Directory.CreateDirectory(_rootDirectory);
                 var filePath = GetFilePath(folder, resourceId);
@@ -30,19 +30,25 @@ namespace Xania.DataAccess
             }
         }
 
-        public void Read(string folder, Guid resourceId, Action<Stream> reader)
+        public T Read<T>(string folder, string resourceId, Func<Stream, T> reader)
         {
-            lock (_syncObject)
+            lock (SyncObject)
             {
                 using (var stream = File.OpenRead(GetFilePath(folder, resourceId)))
                 {
-                    reader(stream);
-                    stream.Close();
+                    try
+                    {
+                        return reader(stream);
+                    }
+                    finally
+                    {
+                        stream.Close();
+                    }
                 }
             }
         }
 
-        private string GetFilePath(string folder, Guid resourceId)
+        private string GetFilePath(string folder, string resourceId)
         {
             var dir = Path.Combine(_rootDirectory, folder);
             Directory.CreateDirectory(dir);
@@ -50,20 +56,19 @@ namespace Xania.DataAccess
             return filePath;
         }
 
-        public IEnumerable<Guid> List(string folder)
+        public IEnumerable<string> List(string folder)
         {
             var dir = string.IsNullOrEmpty(folder)
                 ? _rootDirectory
                 : Path.Combine(_rootDirectory, folder);
 
-            if (!Directory.Exists(dir)) 
-                return Enumerable.Empty<Guid>();
+            if (!Directory.Exists(dir))
+                return Enumerable.Empty<string>();
 
             return
                 Directory.GetFiles(dir, "*.xn")
                     .Select(fileName => new FileInfo(fileName))
-                    .Select(file => file.Name.Substring(0, file.Name.Length - ".xn".Length))
-                    .Select(Guid.Parse);
+                    .Select(file => file.Name.Substring(0, file.Name.Length - ".xn".Length));
         }
 
         //internal class FileReadStream : Stream

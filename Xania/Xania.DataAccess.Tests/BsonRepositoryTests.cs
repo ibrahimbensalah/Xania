@@ -10,7 +10,7 @@ namespace Xania.DataAccess.Tests
         public void AddModelTest()
         {
             // arrange
-            var repo = new BsonRepository<Person>(new MemoryStreamRepository())
+            var repo = new BsonRepository<Person>(new MemoryDocumentStore())
             {
                 new Person {FirstName = "1"},
                 new Person {FirstName = "2"}

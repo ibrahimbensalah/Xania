@@ -37,6 +37,7 @@
       <Private>True</Private>
     </Reference>
     <Reference Include="System" />
+    <Reference Include="System.ComponentModel.DataAnnotations" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
@@ -45,15 +46,17 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="BsonObjectStore.cs" />
     <Compile Include="BsonRepository.cs" />
     <Compile Include="IFileRepository.cs" />
-    <Compile Include="IRepository.cs" />
-    <Compile Include="IStreamRepository.cs" />
-    <Compile Include="DiskStreamRepository.cs" />
+    <Compile Include="IObjectStore.cs" />
+    <Compile Include="IDocumentStore.cs" />
+    <Compile Include="DiskDocumentStore.cs" />
+    <Compile Include="ObjectStore.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="RepositoryExtensions.cs" />
+    <Compile Include="ObjectStoreExtensions.cs" />
     <Compile Include="StreamRepositoryExtensions.cs" />
-    <Compile Include="TransientRepository.cs" />
+    <Compile Include="TransientObjectStore.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

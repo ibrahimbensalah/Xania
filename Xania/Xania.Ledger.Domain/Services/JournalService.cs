@@ -1,5 +1,4 @@
-﻿using System;
-using System.IO;
+﻿using System.IO;
 using System.Linq;
 using Xania.DataAccess;
 using Xania.Ledger.Domain.Models;
@@ -8,13 +7,13 @@ namespace Xania.Ledger.Domain.Services
 {
     public class JournalService
     {
-        private readonly IRepository<JournalEntry> _journalRepository;
-        private readonly IStreamRepository _streamRepository;
+        private readonly IObjectStore<JournalEntry> _journalRepository;
+        private readonly IDocumentStore _documentStore;
 
-        public JournalService(IRepository<JournalEntry> journalRepository, IStreamRepository streamRepository )
+        public JournalService(IObjectStore<JournalEntry> journalRepository, IDocumentStore documentStore)
         {
             _journalRepository = journalRepository;
-            _streamRepository = streamRepository;
+            _documentStore = documentStore;
         }
 
         public void AddJournal(JournalEntry entry)
@@ -29,12 +28,10 @@ namespace Xania.Ledger.Domain.Services
 
         public Attachment CreateAttachment(string name, Stream contentStream)
         {
-            Guid resourceId = Guid.NewGuid();
-            _streamRepository.Add("attachments", resourceId, contentStream);
             return new Attachment
             {
-                ResourceId = resourceId,
-                Name = name,
+                ResourceId = _documentStore.Add("attachments", contentStream),
+                Name = name
             };
         }
     }

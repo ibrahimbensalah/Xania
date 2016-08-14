@@ -8,7 +8,7 @@ namespace Xania.DataAccess
     public interface IFileRepository
     {
         void Add(IFile file);
-        IFile Get(Guid resourceId);
+        IFile Get(string resourceId);
         IEnumerable<IFile> List(string folder);
     }
 
@@ -16,7 +16,7 @@ namespace Xania.DataAccess
     {
         string Name { get; }
         string ContentType { get; }
-        Guid ResourceId { get; }
+        string ResourceId { get; }
         string Folder { get; }
         void CopyTo(Stream output);
     }
@@ -25,7 +25,7 @@ namespace Xania.DataAccess
     {
         public string Name { get; set; }
         public string ContentType { get; set; }
-        public Guid ResourceId { get; set; }
+        public string ResourceId { get; set; }
         public string Folder { get; set; }
         public abstract void CopyTo(Stream output);
     }
@@ -38,18 +38,18 @@ namespace Xania.DataAccess
         void Read(Action<Stream> reader);
     }
 
-    public class RepositoryFile: FileBase
+    public class Document: FileBase
     {
-        private readonly IStreamRepository _streamRepository;
+        private readonly IDocumentStore _documentStore;
 
-        public RepositoryFile(IStreamRepository streamRepository)
+        public Document(IDocumentStore documentStore)
         {
-            _streamRepository = streamRepository;
+            _documentStore = documentStore;
         }
 
         public override void CopyTo(Stream output)
         {
-            _streamRepository.Read(Folder, ResourceId, s => s.CopyTo(output));
+            _documentStore.Read(Folder, ResourceId, s => s.CopyTo(output));
         }
     }
 
@@ -75,24 +75,24 @@ namespace Xania.DataAccess
 
     public class FileRepository : IFileRepository
     {
-        private readonly IRepository<FileMetadata> _metadataRepository;
-        private readonly IStreamRepository _streamRepository;
+        private readonly IObjectStore<FileMetadata> _metadataRepository;
+        private readonly IDocumentStore _documentStore;
 
-        public FileRepository(IRepository<FileMetadata> metadataRepository,
-            IStreamRepository streamRepository)
+        public FileRepository(IObjectStore<FileMetadata> metadataRepository,
+            IDocumentStore documentStore)
         {
             _metadataRepository = metadataRepository;
-            _streamRepository = streamRepository;
+            _documentStore = documentStore;
         }
 
         public void Add(IFile file)
         {
             var metadata = FileMetadata.FromFile(file);
-            _streamRepository.Add(file.Folder, metadata.ResourceId, file.CopyTo);
+            _documentStore.Add(file.Folder, metadata.ResourceId, file.CopyTo);
             _metadataRepository.Add(metadata);
         }
 
-        public IFile Get(Guid resourceId)
+        public IFile Get(string resourceId)
         {
             var qu =
                 from f in _metadataRepository
@@ -103,7 +103,7 @@ namespace Xania.DataAccess
             if (metadata == null)
                 return null;
 
-            return new RepositoryFile(_streamRepository)
+            return new Document(_documentStore)
             {
                 ResourceId = metadata.ResourceId,
                 Name = metadata.Name,
@@ -115,10 +115,10 @@ namespace Xania.DataAccess
         public IEnumerable<IFile> List(string folder)
         {
             return
-                from resourceId in _streamRepository.List(folder)
+                from resourceId in _documentStore.List(folder)
                 from metadata in _metadataRepository
                 where metadata.ResourceId == resourceId
-                select new RepositoryFile(_streamRepository)
+                select new Document(_documentStore)
                 {
                     ResourceId = metadata.ResourceId,
                     Name = metadata.Name,
@@ -132,7 +132,7 @@ namespace Xania.DataAccess
     {
         public string Name { get; set; }
         public string ContentType { get; set; }
-        public Guid ResourceId { get; set; }
+        public string ResourceId { get; set; }
         public string Folder { get; set; }
 
         public static FileMetadata FromFile(IFile file)

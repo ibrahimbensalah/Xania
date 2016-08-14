@@ -4,12 +4,12 @@ using System.Collections.Generic;
 
 namespace Xania.DataAccess
 {
-    public class TransientRepository<TModel> : IRepository<TModel>
+    public class TransientObjectStore<TModel> : IObjectStore<TModel>
         where TModel : new()
     {
         private static readonly List<TModel> Items;
 
-        static TransientRepository()
+        static TransientObjectStore()
         {
             Items = new List<TModel>();
         }
