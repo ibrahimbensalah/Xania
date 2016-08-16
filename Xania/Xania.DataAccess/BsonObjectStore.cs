@@ -16,7 +16,7 @@ namespace Xania.DataAccess
         public BsonObjectStore(IDocumentStore documentStore, string baseFolder)
         {
             _documentStore = documentStore;
-            _baseFolder = baseFolder;
+            _baseFolder = Path.Combine(baseFolder, typeof(TModel).Name);
         }
 
         public IEnumerator<TModel> GetEnumerator()
@@ -41,7 +41,7 @@ namespace Xania.DataAccess
         public void Add(TModel model)
         {
             var resourceId = string.Join("-", model.Keys().Select(k => k.ToString()));
-            _documentStore.Add(typeof(TModel).Name, resourceId, stream =>
+            _documentStore.Add(_baseFolder, resourceId, stream =>
             {
                 using (var bsonWriter = new BsonBinaryWriter(stream))
                 {

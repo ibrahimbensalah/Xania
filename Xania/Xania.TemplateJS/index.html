@@ -8,14 +8,9 @@
     <script src="src/core.js"></script>
     <script src="src/binder.js"></script>
     <script src="src/todomvc.js"></script>
-    <style type="text/css">
-        #todo-template {
-            display: none;
-        }
-    </style>
 </head>
 <body>
-    <div id="todo-template">
+    <template id="todo-template">
         <section class="todoapp" data-for="store of app.todoStore">
             <header class="header">
                 <h1>todos</h1>
@@ -44,7 +39,7 @@
                 <button class="clear-completed" class.hidden="@store.getCompleted().empty" click="@store.removeCompleted()">Clear completed</button>
             </footer>
         </section>
-    </div>
+    </template>
     <footer class="info">
         <p>Double-click to edit a todo</p>
         <p>
@@ -58,16 +53,16 @@
 
     <script>
         window.onload = function () {
-            var tpl = document.getElementById("todo-template").childNodes[1];
+            var content = document.getElementById("todo-template").content;
             var model = { app: new TodoApp(), router: new Router() };
-            new Binder().bind(tpl, model);
+            new Binder().bind(content, model);
         };
         window.onunload = function () {
             return false;
         }
 
         function fraude(x, y, z) {
-            
+
         }
     </script>
 </body>

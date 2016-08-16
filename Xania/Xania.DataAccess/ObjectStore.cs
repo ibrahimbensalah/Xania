@@ -9,11 +9,11 @@ namespace Xania.DataAccess
 {
     internal static class ModelDescriptor
     {
-        public static IEnumerable<PropertyInfo> KeyProperties(this Type modelType)
+        public static IEnumerable<PropertyDescriptor> KeyProperties(this Type modelType)
         {
-            var allProperties = TypeDescriptor.GetProperties(modelType).OfType<PropertyInfo>().ToArray();
+            var allProperties = TypeDescriptor.GetProperties(modelType).OfType<PropertyDescriptor>().ToArray();
             var keyProperties =
-                allProperties.Where(prop => prop.GetCustomAttribute<KeyAttribute>() != null).ToArray();
+                allProperties.Where(prop => prop.Attributes.OfType<KeyAttribute>().Any()).ToArray();
 
             if (keyProperties.Any())
                 return keyProperties;
@@ -28,7 +28,7 @@ namespace Xania.DataAccess
             if (modelIdProperty != null)
                 return new[] { modelIdProperty };
 
-            return Enumerable.Empty<PropertyInfo>();
+            return Enumerable.Empty<PropertyDescriptor>();
         }
 
         public static IEnumerable<object> Keys<TModel>(this TModel model)

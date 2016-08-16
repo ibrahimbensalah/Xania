@@ -25,7 +25,6 @@
     <Content Include="app.css" />
     <Content Include="Content\jasmine\jasmine.css" />
     <Content Include="Content\jasmine\jasmine_favicon.png" />
-    <Content Include="asdfasdf.html" />
     <Content Include="Scripts\require-config.js" />
     <Content Include="Scripts\r.js" />
     <Content Include="Scripts\require.js" />

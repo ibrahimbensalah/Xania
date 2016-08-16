@@ -23,16 +23,7 @@ namespace Xania.WebApi
                 defaults: new { id = RouteParameter.Optional }
             );
 
-            var dummy = new RegistryResolver()
-                .Register(new XaniaConfiguration
-                {
-                    UploadDir = GetUploadDir()
-                })
-                .Register(new DiskDocumentStore(GetUploadDir()))
-                .Register(typeof(BsonObjectStore<>), new ConstructorArgs(null, "bson"))
-                .Register<FileRepository>();
-
-            GlobalConfiguration.Configuration.DependencyResolver = new XaniaDependencyResolver
+            var resolver = new XaniaDependencyResolver
             {
                 new ConventionBasedResolver(typeof(WebApiApplication).Assembly),
                 new IdentityResolver().For<ApiController>(),
@@ -45,6 +36,8 @@ namespace Xania.WebApi
                     .Register(typeof(BsonObjectStore<>), new ConstructorArgs(null, "bson"))
                     .Register<FileRepository>()
             };
+
+            GlobalConfiguration.Configuration.DependencyResolver = resolver;
         }
         private static string GetUploadDir()
         {

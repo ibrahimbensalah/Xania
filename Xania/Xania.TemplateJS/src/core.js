@@ -147,9 +147,7 @@ var Xania = (function () {
         return x;
     };
     Xania.ready = function (data) {
-        if (typeof data === "undefined")
-            throw new Error("data is undefined");
-        if (data !== null && typeof (data.then) === "function") {
+        if (data !== null && data !== undefined && typeof (data.then) === "function") {
             return data;
         }
         return {

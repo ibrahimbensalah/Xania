@@ -58,8 +58,8 @@
     <Reference Include="System.Configuration" />
     <Reference Include="System.Web.Services" />
     <Reference Include="System.EnterpriseServices" />
-    <Reference Include="Xania.IoC, Version=1.0.78.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\Xania.IoC.1.0.78.0\lib\net45\Xania.IoC.dll</HintPath>
+    <Reference Include="Xania.IoC, Version=1.0.81.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\Xania.IoC.1.0.81.0\lib\net45\Xania.IoC.dll</HintPath>
       <Private>True</Private>
     </Reference>
   </ItemGroup>

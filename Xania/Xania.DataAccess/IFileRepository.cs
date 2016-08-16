@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.IO;
 using System.Linq;
 
@@ -130,9 +131,10 @@ namespace Xania.DataAccess
 
     public class FileMetadata
     {
+        [Key]
+        public string ResourceId { get; set; }
         public string Name { get; set; }
         public string ContentType { get; set; }
-        public string ResourceId { get; set; }
         public string Folder { get; set; }
 
         public static FileMetadata FromFile(IFile file)
