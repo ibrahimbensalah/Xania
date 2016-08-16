@@ -233,8 +233,9 @@ _Pvt_Extensions
 
 # FAKE - F# Make
 .fake/
-/Xania.Ledger/Xania.Ledger.WebApi/App_Data
-/Xania.Ledger/Xania.Web/App_Data
-/Xania.Ledger/Xania.WebApi/App_Data
-/Xania.Ledger/Unify-v1.9.4
-/Xania.Ledger/products-WB0412697.zip
+/Xania/Xania.Web
+/Xania/Xania.Ledger.WebApi/App_Data
+/Xania/Xania.Web/App_Data
+/Xania/Xania.WebApi/App_Data
+/Xania/Unify-v1.9.4
+/Xania/products-WB0412697.zip

@@ -49,7 +49,6 @@
   <ItemGroup>
     <Content Include="organisation.json" />
     <Content Include="packages.config" />
-    <None Include="TemplateJS.pubxml" />
     <None Include="web.Debug.config">
       <DependentUpon>web.config</DependentUpon>
     </None>

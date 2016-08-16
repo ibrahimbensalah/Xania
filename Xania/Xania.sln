@@ -20,8 +20,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".nuget", ".nuget", "{97A670
 		.nuget\NuGet.targets = .nuget\NuGet.targets
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Xania.Web", "Xania.Web\Xania.Web.csproj", "{D4A5A4F5-1B73-4A3A-949B-5EF325856249}"
-EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ledger", "ledger", "{524C7643-81BB-4850-B713-826C0B3A6A5F}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{33219F05-B5E9-43C2-ABC9-36F226E95761}"
@@ -62,10 +60,6 @@ Global
 		{BA3B6BB4-97F8-4F6D-839E-9547B05D2090}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{BA3B6BB4-97F8-4F6D-839E-9547B05D2090}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{BA3B6BB4-97F8-4F6D-839E-9547B05D2090}.Release|Any CPU.Build.0 = Release|Any CPU
-		{D4A5A4F5-1B73-4A3A-949B-5EF325856249}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{D4A5A4F5-1B73-4A3A-949B-5EF325856249}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{D4A5A4F5-1B73-4A3A-949B-5EF325856249}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{D4A5A4F5-1B73-4A3A-949B-5EF325856249}.Release|Any CPU.Build.0 = Release|Any CPU
 		{F8FD76BB-FAB8-4A12-BBCA-F772B92C57EB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{F8FD76BB-FAB8-4A12-BBCA-F772B92C57EB}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F8FD76BB-FAB8-4A12-BBCA-F772B92C57EB}.Release|Any CPU.ActiveCfg = Release|Any CPU
