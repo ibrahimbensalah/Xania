@@ -136,7 +136,7 @@ class SelectManyExpression {
 
         var col = collectionFunc(context);
 
-        return Xania.ready(col).then(data => {
+        return Xania.composable(col).then(data => {
             // var unwrapped = Xania.unwrap(data);
             var arr = Array.isArray(data) ? data : [data];
 
@@ -198,7 +198,7 @@ class Xania {
         return x;
     }
 
-    static ready(data) {
+    static composable(data) {
         if (data !== null && data !== undefined && typeof (data.then) === "function") {
             return data;
         }
@@ -208,7 +208,7 @@ class Xania {
                 const result = resolve.apply(this, args.concat([data]));
                 if (typeof result === "undefined")
                     return this;
-                return Xania.ready(result);
+                return Xania.composable(result);
             }
         };
     }

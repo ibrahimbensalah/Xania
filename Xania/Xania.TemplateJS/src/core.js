@@ -105,7 +105,7 @@ var SelectManyExpression = (function () {
         if (Array.isArray(context))
             throw new Error("context is Array");
         var col = collectionFunc(context);
-        return Xania.ready(col).then(function (data) {
+        return Xania.composable(col).then(function (data) {
             var arr = Array.isArray(data) ? data : [data];
             var results = [];
             for (var i = 0; i < arr.length; i++) {
@@ -146,7 +146,7 @@ var Xania = (function () {
     Xania.identity = function (x) {
         return x;
     };
-    Xania.ready = function (data) {
+    Xania.composable = function (data) {
         if (data !== null && data !== undefined && typeof (data.then) === "function") {
             return data;
         }
@@ -159,7 +159,7 @@ var Xania = (function () {
                 var result = resolve.apply(this, args.concat([data]));
                 if (typeof result === "undefined")
                     return this;
-                return Xania.ready(result);
+                return Xania.composable(result);
             }
         };
     };
@@ -406,4 +406,3 @@ var Router = (function () {
     };
     return Router;
 })();
-//# sourceMappingURL=core.js.map

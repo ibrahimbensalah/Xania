@@ -12,7 +12,7 @@ var TodoStore = (function () {
     function TodoStore() {
         this.showOnlyCompleted = null;
         this.todos = [];
-        for (var i = 0; i < 2; i++)
+        for (var i = 0; i < 10; i++)
             this.todos.push(new Todo("todo " + i));
     }
     TodoStore.prototype.all = function () {
@@ -91,4 +91,3 @@ var TodoApp = (function () {
     };
     return TodoApp;
 })();
-//# sourceMappingURL=todomvc.js.map

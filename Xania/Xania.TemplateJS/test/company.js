@@ -180,4 +180,3 @@ var ObserverHelper = (function () {
     };
     return ObserverHelper;
 })();
-//# sourceMappingURL=company.js.map

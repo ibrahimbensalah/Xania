@@ -33,6 +33,12 @@
       <DependentUpon>web.config</DependentUpon>
     </None>
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Xania.TemplateJS\Xania.TemplateJS.csproj">
+      <Project>{6dc40429-e2ca-4bef-b7cb-3c1663932583}</Project>
+      <Name>Xania.TemplateJS</Name>
+    </ProjectReference>
+  </ItemGroup>
   <PropertyGroup>
     <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">12.0</VisualStudioVersion>
   </PropertyGroup>

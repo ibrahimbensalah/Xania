@@ -48,7 +48,7 @@ var Observer = (function () {
     };
     Observer.prototype.get = function (object, property) {
         if (!this.subscriptions.has(object))
-            return [];
+            return null;
         var deps = this.subscriptions.get(object);
         if (deps.hasOwnProperty(property))
             return deps[property];
@@ -58,18 +58,13 @@ var Observer = (function () {
         var _this = this;
         while (subscription.dependencies.length > 0) {
             var dep = subscription.dependencies.pop();
-            if (!this.subscriptions.has(dep.obj))
-                debugger;
             var deps = this.subscriptions.get(dep.obj);
-            if (!deps.hasOwnProperty(dep.property))
-                debugger;
-            if (!deps[dep.property].has(subscription))
-                debugger;
             deps[dep.property].delete(subscription);
         }
         subscription.children.forEach(function (child) {
             _this.unsubscribe(child);
         });
+        this.dirty.delete(subscription);
     };
     Observer.prototype.subscribe = function (context, update) {
         var additionalArgs = [];
@@ -85,11 +80,11 @@ var Observer = (function () {
             notify: function () {
                 var _this = this;
                 self.unsubscribe(this);
-                Xania.ready(this.state)
+                Xania.composable(this.state)
                     .then(function (s) { return _this.state = update.apply(self, updateArgs.concat([s])); });
             },
             then: function (resolve) {
-                return Xania.ready(this.state).then(resolve);
+                return Xania.composable(this.state).then(resolve);
             },
             subscribe: function () {
                 var args = [];
@@ -110,12 +105,7 @@ var Observer = (function () {
         };
         observable = Xania.observe(context, {
             setRead: function (obj, property) {
-                var init = self.size;
-                console.debug("read", { obj: obj, property: property });
                 if (self.add(obj, property, subscription)) {
-                    var end = self.size;
-                    if (end !== init + 1)
-                        debugger;
                     subscription.dependencies.push({ obj: obj, property: property });
                 }
             },
@@ -133,7 +123,6 @@ var Observer = (function () {
             setRead: function () {
             },
             setChange: function (obj, property) {
-                console.debug("write", obj, property, obj[property]);
                 var subscribers = observer.get(obj, property);
                 if (!!subscribers) {
                     subscribers.forEach(function (s) {
@@ -144,14 +133,10 @@ var Observer = (function () {
         });
     };
     Observer.prototype.update = function () {
-        var _this = this;
-        window.requestAnimationFrame(function () {
-            _this.dirty.forEach(function (subscriber) {
-                subscriber.notify();
-            });
-            _this.dirty.clear();
+        this.dirty.forEach(function (subscriber) {
+            subscriber.notify();
         });
-        console.debug("total subscriptions", this.size);
+        this.dirty.clear();
     };
     Object.defineProperty(Observer.prototype, "size", {
         get: function () {
@@ -290,7 +275,7 @@ var Binder = (function () {
             return observer.subscribe(context, function (observable, subscription, state) {
                 if (state === void 0) { state = { length: 0 }; }
                 subscription.attach(parent);
-                return Xania.ready(modelAccessor(observable))
+                return Xania.composable(modelAccessor(observable))
                     .then(function (model) {
                     model = Xania.unwrap(model);
                     return Array.isArray(model) ? model : [model];
@@ -306,7 +291,7 @@ var Binder = (function () {
                         var binding = tpl.bind(result);
                         observer.subscribe(result, binding.render.bind(binding)).attach(subscription);
                         var visitChild = Xania.partialApp(function (data, parent, prev, cur) {
-                            return Xania.ready(prev)
+                            return Xania.composable(prev)
                                 .then(function (p) {
                                 return visit(subscription, data, cur, parent, p).then(function (x) { return p + x.length; });
                             });

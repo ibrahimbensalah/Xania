@@ -52,7 +52,7 @@ class Observer {
 
     get(object: any, property: string) {
         if (!this.subscriptions.has(object))
-            return [];
+            return null;
 
         const deps = this.subscriptions.get(object);
 
@@ -66,22 +66,14 @@ class Observer {
         while (subscription.dependencies.length > 0) {
             var dep = subscription.dependencies.pop();
 
-            if (!this.subscriptions.has(dep.obj))
-                debugger;
-
             const deps = this.subscriptions.get(dep.obj);
-
-            if (!deps.hasOwnProperty(dep.property))
-                debugger;
-
-            if (!deps[dep.property].has(subscription))
-                debugger;
 
             deps[dep.property].delete(subscription);
         }
         subscription.children.forEach(child => {
             this.unsubscribe(child);
         });
+        this.dirty.delete(subscription);
     }
 
     subscribe(context, update, ...additionalArgs) {
@@ -98,12 +90,11 @@ class Observer {
             dependencies: [],
             notify() {
                 self.unsubscribe(this);
-                Xania.ready(this.state)
+                Xania.composable(this.state)
                     .then(s => this.state = update.apply(self, updateArgs.concat([s])));
             },
             then(resolve) {
-                // TODO implement async
-                return Xania.ready(this.state).then(resolve);
+                return Xania.composable(this.state).then(resolve);
             },
             subscribe(...args) {
                 return self.subscribe.apply(self, args);
@@ -120,13 +111,7 @@ class Observer {
         };
         observable = Xania.observe(context, {
             setRead(obj, property) {
-                var init = self.size;
-                console.debug("read", { obj, property });
                 if (self.add(obj, property, subscription)) {
-                    var end = self.size;
-                    if (end !== init + 1)
-                        debugger;
-
                     subscription.dependencies.push({ obj, property });
                 }
             },
@@ -148,7 +133,6 @@ class Observer {
                     // ignore
                 },
                 setChange(obj, property: string) {
-                    console.debug("write", obj, property, obj[property]);
                     const subscribers = observer.get(obj, property);
                     if (!!subscribers) {
                         subscribers.forEach(s => {
@@ -160,14 +144,10 @@ class Observer {
     }
 
     update() {
-        window.requestAnimationFrame(() => {
-            this.dirty.forEach(subscriber => {
-                subscriber.notify();
-            });
-            this.dirty.clear();
+        this.dirty.forEach(subscriber => {
+            subscriber.notify();
         });
-
-        console.debug("total subscriptions", this.size);
+        this.dirty.clear();
     }
 
     get size() {
@@ -313,7 +293,7 @@ class Binder {
 
             return observer.subscribe(context, (observable, subscription, state = { length: 0 }) => {
                 subscription.attach(parent);
-                return Xania.ready(modelAccessor(observable))
+                return Xania.composable(modelAccessor(observable))
                     .then(model => {
                         model = Xania.unwrap(model);
                         return Array.isArray(model) ? model : [model];
@@ -333,7 +313,7 @@ class Binder {
                             observer.subscribe(result, binding.render.bind(binding)).attach(subscription);
 
                             const visitChild = Xania.partialApp((data, parent, prev, cur) => {
-                                    return Xania.ready(prev)
+                                    return Xania.composable(prev)
                                         .then(p => {
                                             return visit(subscription, data, cur, parent, p).then(x => p + x.length);
                                         });
