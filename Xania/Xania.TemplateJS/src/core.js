@@ -105,7 +105,7 @@ var SelectManyExpression = (function () {
         if (Array.isArray(context))
             throw new Error("context is Array");
         var col = collectionFunc(context);
-        return Xania.composable(col).then(function (data) {
+        return Xania.promise(col).then(function (data) {
             var arr = Array.isArray(data) ? data : [data];
             var results = [];
             for (var i = 0; i < arr.length; i++) {
@@ -147,6 +147,9 @@ var Xania = (function () {
         return x;
     };
     Xania.composable = function (data) {
+        return data !== null && data !== undefined && typeof (data.then) === "function";
+    };
+    Xania.promise = function (data) {
         if (data !== null && data !== undefined && typeof (data.then) === "function") {
             return data;
         }
@@ -159,7 +162,7 @@ var Xania = (function () {
                 var result = resolve.apply(this, args.concat([data]));
                 if (typeof result === "undefined")
                     return this;
-                return Xania.composable(result);
+                return Xania.promise(result);
             }
         };
     };
@@ -271,21 +274,23 @@ var Xania = (function () {
             }
         });
     };
-    Xania.unwrap = function (obj) {
-        if (obj === "undefined" || obj === null || typeof (obj) !== "object")
+    Xania.unwrap = function (obj, cache) {
+        if (cache === void 0) { cache = null; }
+        if (obj === undefined || obj === null || typeof (obj) !== "object")
             return obj;
-        if (!!obj._unwrapping)
+        if (!!cache && cache.has(obj))
             return obj;
         if (!!obj.isSpy) {
-            return Xania.unwrap(obj.valueOf());
+            return Xania.unwrap(obj.valueOf(), cache);
         }
-        obj._unwrapping = true;
+        if (!cache)
+            cache = new Set();
+        cache.add(obj);
         for (var prop in obj) {
             if (obj.hasOwnProperty(prop)) {
                 obj[prop] = Xania.unwrap(obj[prop]);
             }
         }
-        delete obj._unwrapping;
         return obj;
     };
     Xania.observeObject = function (target, observer) {
@@ -406,3 +411,4 @@ var Router = (function () {
     };
     return Router;
 })();
+//# sourceMappingURL=core.js.map

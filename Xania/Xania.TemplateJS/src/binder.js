@@ -64,6 +64,7 @@ var Observer = (function () {
         subscription.children.forEach(function (child) {
             _this.unsubscribe(child);
         });
+        subscription.children.clear();
         this.dirty.delete(subscription);
     };
     Observer.prototype.subscribe = function (context, update) {
@@ -80,11 +81,11 @@ var Observer = (function () {
             notify: function () {
                 var _this = this;
                 self.unsubscribe(this);
-                Xania.composable(this.state)
+                return Xania.promise(this.state)
                     .then(function (s) { return _this.state = update.apply(self, updateArgs.concat([s])); });
             },
             then: function (resolve) {
-                return Xania.composable(this.state).then(resolve);
+                return Xania.promise(this.state).then(resolve);
             },
             subscribe: function () {
                 var args = [];
@@ -133,6 +134,7 @@ var Observer = (function () {
         });
     };
     Observer.prototype.update = function () {
+        console.debug("dirty size", this.dirty.size);
         this.dirty.forEach(function (subscriber) {
             subscriber.notify();
         });
@@ -271,56 +273,57 @@ var Binder = (function () {
     };
     Binder.execute = function (rootContext, rootTpl, rootTarget, observer) {
         var visit = function (parent, context, tpl, target, offset) {
-            var modelAccessor = !!tpl.modelAccessor ? tpl.modelAccessor : Xania.identity;
             return observer.subscribe(context, function (observable, subscription, state) {
                 if (state === void 0) { state = { length: 0 }; }
-                subscription.attach(parent);
-                return Xania.composable(modelAccessor(observable))
-                    .then(function (model) {
-                    model = Xania.unwrap(model);
-                    return Array.isArray(model) ? model : [model];
-                })
-                    .then(function (arr) {
+                var visitArray = function (arr) {
                     var prevLength = state.length;
                     for (var e = prevLength - 1; e >= 0; e--) {
                         var idx = offset + e;
                         target.removeChild(target.childNodes[idx]);
                     }
+                    var docfrag = document.createDocumentFragment();
                     for (var idx = 0; idx < arr.length; idx++) {
                         var result = Xania.assign({}, context, arr[idx]);
                         var binding = tpl.bind(result);
                         observer.subscribe(result, binding.render.bind(binding)).attach(subscription);
                         var visitChild = Xania.partialApp(function (data, parent, prev, cur) {
-                            return Xania.composable(prev)
+                            return Xania.promise(prev)
                                 .then(function (p) {
                                 return visit(subscription, data, cur, parent, p).then(function (x) { return p + x.length; });
                             });
                         }, result, binding.dom);
                         tpl.children().reduce(visitChild, 0);
-                        if (offset + idx < target.childNodes.length)
-                            target.insertBefore(binding.dom, target.childNodes[offset + idx]);
-                        else
-                            target.appendChild(binding.dom);
+                        docfrag.appendChild(binding.dom);
                     }
+                    if (offset < target.childNodes.length)
+                        target.insertBefore(docfrag, target.childNodes[offset]);
+                    else
+                        target.appendChild(docfrag);
                     return { length: arr.length };
-                });
+                };
+                subscription.attach(parent);
+                if (!!tpl.modelAccessor) {
+                    return Xania.promise(tpl.modelAccessor(observable))
+                        .then(function (model) {
+                        model = Xania.unwrap(model);
+                        return visitArray(Array.isArray(model) ? model : [model]);
+                    });
+                }
+                else {
+                    return visitArray([null]);
+                }
             });
         };
         visit(null, rootContext, rootTpl, rootTarget, 0);
     };
     Binder.prototype.bind = function (content, model, target) {
+        var _this = this;
+        target = target || document.body;
         for (var i = content.childNodes.length - 1; i >= 0; i--) {
             var tpl = this.parseDom(content.childNodes[i]);
-            this.bindTemplate(tpl, model, target || document.body);
+            this.bindTemplate(tpl, model, target);
         }
-    };
-    Binder.prototype.bindTemplate = function (tpl, model, target) {
-        var _this = this;
-        var arr = Array.isArray(model) ? model : [model];
-        for (var i = 0; i < arr.length; i++) {
-            Binder.execute(arr[i], tpl, target, this.observer);
-        }
-        var eventHandler = function (target, name, path) {
+        var eventHandler = function (target, name) {
             var binding = target.attributes["__binding"];
             if (!!binding) {
                 var handler = binding.tpl.events.get(name);
@@ -331,7 +334,7 @@ var Binder = (function () {
                 }
             }
         };
-        target.addEventListener("click", function (evt) { return eventHandler(evt.target, evt.type, evt.path); });
+        target.addEventListener("click", function (evt) { return eventHandler(evt.target, evt.type); });
         var onchange = function (evt) {
             var binding = evt.target.attributes["__binding"];
             if (binding != null) {
@@ -346,13 +349,19 @@ var Binder = (function () {
         };
         target.addEventListener("keyup", function (evt) {
             if (evt.keyCode === 13) {
-                eventHandler(evt.target, "keyup.enter", evt.path);
+                eventHandler(evt.target, "keyup.enter");
             }
             else {
                 onchange(evt);
             }
             _this.observer.update();
         });
+    };
+    Binder.prototype.bindTemplate = function (tpl, model, target) {
+        var arr = Array.isArray(model) ? model : [model];
+        for (var i = 0; i < arr.length; i++) {
+            Binder.execute(arr[i], tpl, target, this.observer);
+        }
     };
     Binder.prototype.parseDom = function (rootDom) {
         var stack = [];

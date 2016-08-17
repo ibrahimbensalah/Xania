@@ -136,7 +136,7 @@ class SelectManyExpression {
 
         var col = collectionFunc(context);
 
-        return Xania.composable(col).then(data => {
+        return Xania.promise(col).then(data => {
             // var unwrapped = Xania.unwrap(data);
             var arr = Array.isArray(data) ? data : [data];
 
@@ -199,6 +199,10 @@ class Xania {
     }
 
     static composable(data) {
+        return data !== null && data !== undefined && typeof (data.then) === "function";
+    }
+
+    static promise(data) {
         if (data !== null && data !== undefined && typeof (data.then) === "function") {
             return data;
         }
@@ -208,7 +212,7 @@ class Xania {
                 const result = resolve.apply(this, args.concat([data]));
                 if (typeof result === "undefined")
                     return this;
-                return Xania.composable(result);
+                return Xania.promise(result);
             }
         };
     }
@@ -342,25 +346,26 @@ class Xania {
         });
     }
 
-    static unwrap(obj) {
-        if (obj === "undefined" || obj === null || typeof (obj) !== "object")
+    static unwrap(obj, cache:Set<any> = null) {
+        if (obj === undefined || obj === null || typeof (obj) !== "object")
             return obj;
 
-        // ReSharper disable once QualifiedExpressionMaybeNull
-        if (!!obj._unwrapping)
+        if (!!cache && cache.has(obj))
             return obj;
 
         if (!!obj.isSpy) {
-            return Xania.unwrap(obj.valueOf());
+            return Xania.unwrap(obj.valueOf(), cache);
         }
 
-        obj._unwrapping = true;
+        if (!cache)
+            cache = new Set();
+        cache.add(obj);
+
         for (let prop in obj) {
             if (obj.hasOwnProperty(prop)) {
                 obj[prop] = Xania.unwrap(obj[prop]);
             }
         }
-        delete obj._unwrapping;
 
         return obj;
     }
