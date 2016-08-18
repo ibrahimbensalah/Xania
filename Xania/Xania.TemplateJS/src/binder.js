@@ -9,9 +9,6 @@ var Binding = (function () {
         this.context = context;
         this.destroyed = false;
     }
-    Binding.prototype.init = function (observer) {
-        throw new Error("Abstract method Binding.update");
-    };
     Binding.prototype.addChild = function (child, idx) {
         throw new Error("Abstract method Binding.update");
     };
@@ -167,14 +164,6 @@ var ContentBinding = (function (_super) {
     ContentBinding.prototype.update = function (context) {
         this.dom.textContent = this.tpl.execute(context);
     };
-    ContentBinding.prototype.init = function (observer) {
-        var _this = this;
-        var update = function (context) {
-            _this.update(context);
-        };
-        observer.subscribe(this.context, update);
-        return this;
-    };
     ContentBinding.prototype.destroy = function () {
         if (!!this.dom) {
             this.dom.remove();
@@ -226,6 +215,7 @@ var TagBinding = (function (_super) {
                 }
             }
         }
+        return dom;
     };
     TagBinding.prototype.destroy = function () {
         if (!!this.dom) {
@@ -271,9 +261,10 @@ var Binder = (function () {
             tagElement.attr(name, tpl || attr.value);
         }
     };
-    Binder.execute = function (rootContext, rootTpl, rootTarget, observer) {
+    Binder.prototype.execute = function (rootContext, rootTpl, rootTarget) {
+        var _this = this;
         var visit = function (parent, context, tpl, target, offset) {
-            return observer.subscribe(context, function (observable, subscription, state) {
+            return _this.observer.subscribe(context, function (observable, subscription, state) {
                 if (state === void 0) { state = { length: 0 }; }
                 var visitArray = function (arr) {
                     var prevLength = state.length;
@@ -285,7 +276,7 @@ var Binder = (function () {
                     for (var idx = 0; idx < arr.length; idx++) {
                         var result = Xania.assign({}, context, arr[idx]);
                         var binding = tpl.bind(result);
-                        observer.subscribe(result, binding.render.bind(binding)).attach(subscription);
+                        _this.observer.subscribe(result, binding.render.bind(binding)).attach(subscription);
                         var visitChild = Xania.partialApp(function (data, parent, prev, cur) {
                             return Xania.promise(prev)
                                 .then(function (p) {
@@ -360,7 +351,7 @@ var Binder = (function () {
     Binder.prototype.bindTemplate = function (tpl, model, target) {
         var arr = Array.isArray(model) ? model : [model];
         for (var i = 0; i < arr.length; i++) {
-            Binder.execute(arr[i], tpl, target, this.observer);
+            this.execute(arr[i], tpl, target);
         }
     };
     Binder.prototype.parseDom = function (rootDom) {

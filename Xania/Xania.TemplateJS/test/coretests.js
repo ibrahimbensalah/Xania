@@ -10,14 +10,27 @@
 var compile = TemplateEngine.compile;
 var xania = Company.xania();
 
+function debug() {
+    // arrange
+    var elt = new TagTemplate("div");
+    elt.for("x of url('Xania')");
+    elt.attr("title", compile("@x"));
+    var url = function (href) { return { then: function (res) { res(href); } } };
+    // act
+    var target = document.createElement("div");
+    new Binder().execute({ url: url }, elt, target);
+    // assert
+    console.log(target.childNodes[0].attributes['title'].value);
+}
+
 describe("Binding", function () {
     it("should be able to init attributes",
         function () {
             // arrange
-            var elt = new TagElement("div").attr("title", compile("@name"));
+            var elt = new TagTemplate("div").attr("title", compile("@name"));
             var binding = new TagBinding(elt, xania);
             // act
-            var dom = binding.renderTag();
+            var dom = binding.render(xania);
             // assert
             expect(dom.attributes['title'].value).toEqual("Xania");
             expect(dom.tagName).toEqual("DIV");
@@ -25,69 +38,73 @@ describe("Binding", function () {
     it("should be able to render hierarchical dom",
         function () {
             // arrange
-            var elt = new TagElement("div");
-            var childEl = new TagElement("span");
+            var elt = new TagTemplate("div");
+            var childEl = new TagTemplate("span");
             elt.addChild(childEl);
             childEl.attr("title", compile("t:@name"));
-            var binding = new TagBinding(elt, xania);
             // act
-            var dom = binding.init().dom;
+            var target = document.createElement("div");
+            new Binder().execute(xania, elt, target);
             // assert
-            expect(dom.childNodes.length).toEqual(1);
-            expect(dom.childNodes[0].attributes['title'].value).toEqual("t:Xania");
+            expect(target.childNodes.length).toEqual(1);
+            expect(target.childNodes[0].childNodes.length).toEqual(1);
+            expect(target.childNodes[0].childNodes[0].attributes['title'].value).toEqual("t:Xania");
         });
     it("should be able to render parent context",
         function () {
-            var elt = new TagElement("div");
-            elt.for("b in ctx : org");
-            var childEl = new TagElement("span");
+            var elt = new TagTemplate("div");
+            elt.for("b of ctx : org");
+            var childEl = new TagTemplate("span");
             elt.addChild(childEl);
             childEl.attr("title", compile("C:@emp.firstName-B:@b.name-A:@org.name"));
-            childEl.for("emp in b.employees");
+            childEl.for("emp of b.employees");
+            var target = document.createElement("div");
             // act
-            var bindings = Binding.create(elt, { "org": Company.xania() });
+            new Binder().execute({ "org": Company.xania() }, elt, target);
             // assert
-            expect(bindings.length).toEqual(1);
-            expect(bindings[0].dom.childNodes.length).toEqual(3);
-            expect(bindings[0].dom.childNodes[0].attributes['title'].value).toEqual("C:Ibrahim-B:Xania-A:Xania");
+            expect(target.childNodes.length).toEqual(1);
+            expect(target.childNodes[0].childNodes.length).toEqual(3);
+            expect(target.childNodes[0].childNodes[0].attributes['title'].value).toEqual("C:Ibrahim-B:Xania-A:Xania");
         });
     it("should support promises",
         function () {
             // arrange
-            var elt = new TagElement("div");
-            elt.for("x in url('Xania')");
+            var elt = new TagTemplate("div");
+            elt.for("x of url('Xania')");
             elt.attr("title", compile("@x"));
-            var url = function (href) { return { then: function (res) { res(href); } } };
+            var url = function (href) { return Xania.promise(href); }
             // act
-            var bindings = Binding.create(elt, { url: url });
-            var dom = bindings[0].dom;
+            var target = document.createElement("div");
+            new Binder().execute({ url: url }, elt, target);
             // assert
-            expect(dom.attributes['title'].value).toEqual("Xania");
+            expect(target.childNodes[0].attributes['title'].value).toEqual("Xania");
         });
     it('should support typed from expression',
         function () {
             // arrange
-            var elt = new TagElement("div");
+            var elt = new TagTemplate("div");
             var loader = function (type) { return Company; };
-            elt.for("x:Company in [{name: 'Xania'}]", loader);
+            elt.for("x of [ new Company('Xania') ]", loader);
             elt.attr("title", compile("@x.getName()"));
             // act
-            var bindings = Binding.create(elt, { loader: loader });
-            var dom = bindings[0].dom;
+            var target = document.createElement("div");
+            new Binder().execute({ loader: loader }, elt, target);
+            var dom = target.childNodes[0];
             // assert
             expect(dom.attributes['title'].value).toEqual("Xania");
         });
     it("should support map",
         function () {
             // arrange
-            var elt = new TagElement("div")
-                .for("x in arr.map(bracket)")
+            var elt = new TagTemplate("div")
+                .for("x of arr.map(bracket)")
                 .attr("title", compile("@x"));
             var model = { arr: ["Xania"], bracket: function (x) { return "[" + x + "]" } };
             // act
-            var bindings = Binding.create(elt, model);
+            var target = document.createElement("div");
+            new Binder().execute(model, elt, target);
             // assert
-            expect(bindings[0].dom.attributes["title"].value).toEqual("[Xania]");
+            expect(target.childNodes[0].attributes["title"].value).toEqual("[Xania]");
         });
 });
 
@@ -116,37 +133,39 @@ describe("Template Engine", function () {
             });
             expect(result).toEqual("string");
         });
-    it("should compile supports filter expression",
-        function () {
-            var tpl = compile("@items |> contains x");
+    //it("should compile supports filter expression",
+    //    function () {
+    //        var tpl = compile("@items |> contains x");
 
-            var result = tpl({
-                items: [1, 2, 3, 4, 5],
-                contains: function(a, arr) {
-                    
-                }
-            });
-            expect(result).toEqual("string");
-        });
+    //        var result = tpl({
+    //            items: [1, 2, 3, 4, 5],
+    //            contains: function (a, arr) {
+
+    //            }
+    //        });
+    //        expect(result).toEqual("string");
+    //    });
 });
 
 describe("Select Many Expression", function () {
     it("should collect result objects",
         function () {
-            var expr = SelectManyExpression.parse("emp in org.employees");
-            var result = expr.execute({ org: xania });
-            expect(result.length).toEqual(3);
-            expect(result[0].emp.firstName).toEqual("Ibrahim");
-            expect(result[0].emp.lastName).toEqual("ben Salah");
-            expect(result[1].emp.firstName).toEqual("Ramy");
-            expect(result[1].emp.lastName).toEqual("ben Salah");
+            var expr = SelectManyExpression.parse("emp of org.employees");
+            expr.execute({ org: xania }).then(function (result) {
+                expect(result.length).toEqual(3);
+                expect(result[0].emp.firstName).toEqual("Ibrahim");
+                expect(result[0].emp.lastName).toEqual("ben Salah");
+                expect(result[1].emp.firstName).toEqual("Ramy");
+                expect(result[1].emp.lastName).toEqual("ben Salah");
+            });
         });
     it("should support any source expression",
         function () {
-            var expr = SelectManyExpression.parse("emp in {n: org.name}");
-            var result = expr.execute({ org: xania });
-            expect(result.length).toEqual(1);
-            expect(result[0].emp.n).toEqual(xania.name);
+            var expr = SelectManyExpression.parse("emp of {n: org.name}");
+            expr.execute({ org: xania }).then(function(result) {
+                expect(result.length).toEqual(1);
+                expect(result[0].emp.n).toEqual(xania.name);
+            });
         });
 });
 
@@ -255,7 +274,7 @@ describe("Xania.observe", function () {
                 a: Company.xania()
             };
             var observer = new Observer();
-            var observable = observer.observe(context);
+            var observable = observer.track(context);
 
             var result = {
                 emp: observable.a.employees[0],
@@ -270,7 +289,7 @@ describe("Xania.observe", function () {
     it("should be able to subscribe",
         function () {
             var context = {
-                numbers : [1, 2, 3]
+                numbers: [1, 2, 3]
             }
             var observer = new Observer();
             observer.subscribe(context,
@@ -305,46 +324,38 @@ describe("dependency graph", function () {
         var b1 = new Binding();
         var b2 = new Binding();
 
-        graph.subscribe(xania, "employees", b1);
-        graph.subscribe(xania, "employees", b2);
+        graph.add(xania, "employees", b1);
+        graph.add(xania, "employees", b2);
 
         console.log(graph);
 
-        expect(graph.get(xania, "employees")).toEqual([b1, b2]);
+        expect(graph.get(xania, "employees").has(b1)).toBe(true);
+        expect(graph.get(xania, "employees").has(b2)).toBe(true);
     });
 });
 
-describe("ready", function() {
-    it("should chain result", function() {
-        var obj = {
-            then: function(resolve) {
-                resolve(Math.random());
-            }
-        };
+describe("ready", function () {
+    it("should chain result", function () {
         var a, b;
-        Xania.ready(obj, 123)
+        Xania.promise(Math.random())
             .then(function (x) {
-                return { random: x };
+                a = { d: x };
             })
-            .then(function(x, addition) {
-                a = { d: x, addition: addition };
-            })
-            .then(function (x, addition) {
-                b = { d: x, addition: addition };
+            .then(function (x) {
+                b = { d: x };
             });
-        console.log(a, b);
-        expect(b.d === a.d).toBe(false);
+        expect(b.d === a.d).toBe(true);
     });
 
     it("should resolve",
         function () {
-            var data = Xania.ready(123);
+            var data = Xania.promise(123);
 
-            Xania.ready(data)
-                .then(function(d) {
+            Xania.promise(data)
+                .then(function (d) {
                     return d + 1;
                 })
-                .then(function(d) {
+                .then(function (d) {
                     expect(d).toBe(124);
                 });
         });

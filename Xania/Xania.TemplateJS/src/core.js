@@ -50,7 +50,7 @@ var TagTemplate = (function () {
     };
     TagTemplate.prototype.for = function (forExpression, loader) {
         var selectManyExpr = SelectManyExpression.parse(forExpression, loader);
-        this.modelAccessor = selectManyExpr.executeAsync.bind(selectManyExpr);
+        this.modelAccessor = selectManyExpr.execute.bind(selectManyExpr);
         return this;
     };
     TagTemplate.prototype.executeAttributes = function (context) {
@@ -100,7 +100,7 @@ var SelectManyExpression = (function () {
             throw new Error("null argument exception");
         }
     }
-    SelectManyExpression.prototype.executeAsync = function (context) {
+    SelectManyExpression.prototype.execute = function (context) {
         var collectionFunc = new Function("m", "with(m) { return " + this.collectionExpr + "; }"), varName = this.varName;
         if (Array.isArray(context))
             throw new Error("context is Array");
@@ -160,7 +160,7 @@ var Xania = (function () {
                     args[_i - 1] = arguments[_i];
                 }
                 var result = resolve.apply(this, args.concat([data]));
-                if (typeof result === "undefined")
+                if (result === undefined)
                     return this;
                 return Xania.promise(result);
             }
@@ -288,7 +288,7 @@ var Xania = (function () {
         cache.add(obj);
         for (var prop in obj) {
             if (obj.hasOwnProperty(prop)) {
-                obj[prop] = Xania.unwrap(obj[prop]);
+                obj[prop] = Xania.unwrap(obj[prop], cache);
             }
         }
         return obj;

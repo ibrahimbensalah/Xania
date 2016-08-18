@@ -8,6 +8,7 @@
     <script src="src/core.js"></script>
     <script src="src/binder.js"></script>
     <script src="src/todomvc.js"></script>
+    <script src="test/company.js"></script>
 </head>
 <body>
     <template id="todo-template">
@@ -61,8 +62,18 @@
             return false;
         }
 
-        function fraude(x, y, z) {
+        function debug() {
+            var context = {
+                a: Company.xania()
+            };
+            var observer = new Observer();
+            var observable = observer.track(context);
 
+            var result = {
+                emp: observable.a.employees[0],
+                x: { y: observable.a.employees[0] }
+            };
+            var unwrapped = Xania.unwrap(result);
         }
     </script>
 </body>

@@ -6,10 +6,6 @@
     constructor(public context) {
     }
 
-    init(observer: Observer): Binding {
-        throw new Error("Abstract method Binding.update");
-    }
-
     addChild(child, idx) {
         throw new Error("Abstract method Binding.update");
     }
@@ -179,14 +175,6 @@ class ContentBinding extends Binding {
         this.dom.textContent = this.tpl.execute(context);
     }
 
-    init(observer: Observer) {
-        const update = context => {
-            this.update(context);
-        };
-        observer.subscribe(this.context, update);
-        return this;
-    }
-
     destroy() {
         if (!!this.dom) {
             this.dom.remove();
@@ -241,6 +229,8 @@ class TagBinding extends Binding {
                 }
             }
         }
+
+        return dom;
     }
 
     destroy() {
@@ -288,10 +278,10 @@ class Binder {
     }
 
 
-    static execute(rootContext, rootTpl, rootTarget, observer: Observer) {
+    execute(rootContext, rootTpl, rootTarget) {
 
         var visit = (parent, context, tpl, target, offset: number) => {
-            return observer.subscribe(context, (observable, subscription, state = { length: 0 }) => {
+            return this.observer.subscribe(context, (observable, subscription, state = { length: 0 }) => {
                 var visitArray = arr => {
                     var prevLength = state.length;
 
@@ -306,7 +296,7 @@ class Binder {
                         const result = Xania.assign({}, context, arr[idx]);
                         var binding = tpl.bind(result);
 
-                        observer.subscribe(result, binding.render.bind(binding)).attach(subscription);
+                        this.observer.subscribe(result, binding.render.bind(binding)).attach(subscription);
 
                         const visitChild = Xania.partialApp((data, parent, prev, cur) => {
                             return Xania.promise(prev)
@@ -392,7 +382,7 @@ class Binder {
     bindTemplate(tpl, model, target) {
         const arr = Array.isArray(model) ? model : [model];
         for (let i = 0; i < arr.length; i++) {
-            Binder.execute(arr[i], tpl, target, this.observer);
+            this.execute(arr[i], tpl, target);
         }
     }
 

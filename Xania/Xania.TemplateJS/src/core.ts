@@ -74,7 +74,7 @@ class TagTemplate implements IDomTemplate {
     public for(forExpression, loader) {
         var selectManyExpr = SelectManyExpression.parse(forExpression, loader);
 
-        this.modelAccessor = selectManyExpr.executeAsync.bind(selectManyExpr);
+        this.modelAccessor = selectManyExpr.execute.bind(selectManyExpr);
 
         return this;
     }
@@ -128,7 +128,7 @@ class SelectManyExpression {
         }
     }
 
-    executeAsync(context) {
+    execute(context) {
         var collectionFunc = new Function("m", `with(m) { return ${this.collectionExpr}; }`),
             varName = this.varName;
         if (Array.isArray(context))
@@ -137,7 +137,6 @@ class SelectManyExpression {
         var col = collectionFunc(context);
 
         return Xania.promise(col).then(data => {
-            // var unwrapped = Xania.unwrap(data);
             var arr = Array.isArray(data) ? data : [data];
 
             var results = [];
@@ -210,7 +209,7 @@ class Xania {
         return {
             then(resolve, ...args: any[]) {
                 const result = resolve.apply(this, args.concat([data]));
-                if (typeof result === "undefined")
+                if (result === undefined)
                     return this;
                 return Xania.promise(result);
             }
@@ -334,7 +333,6 @@ class Xania {
                     var length = arr.length;
 
                     arr[property] = unwrapped;
-
                     observer.setChange(arr, property);
 
                     if (arr.length !== length)
@@ -346,7 +344,7 @@ class Xania {
         });
     }
 
-    static unwrap(obj, cache:Set<any> = null) {
+    static unwrap(obj, cache: Set<any> = null) {
         if (obj === undefined || obj === null || typeof (obj) !== "object")
             return obj;
 
@@ -363,7 +361,7 @@ class Xania {
 
         for (let prop in obj) {
             if (obj.hasOwnProperty(prop)) {
-                obj[prop] = Xania.unwrap(obj[prop]);
+                obj[prop] = Xania.unwrap(obj[prop], cache);
             }
         }
 
