@@ -20,7 +20,7 @@
             <section class="main" class.hidden="@store.todos.empty">
                 <input class="toggle-all" type="checkbox" checked="@store.allCompleted()" click="@store.toggleAll()">
                 <ul class="todo-list">
-                    <li data-for="todo of app.todoStore.all()" class.completed="@todo.completed" class.editing="@todo.editing">
+                    <li data-for="todo of app.todoStore.all(state('cat'))" class.completed="@todo.completed" class.editing="@todo.editing">
                         <div class="view">
                             <input class="toggle" type="checkbox" click="@todo.toggleCompletion()" checked="@todo.completed">
                             <label dblclick="editTodo(todo)">@todo.title</label>
@@ -33,9 +33,9 @@
             <footer class="footer" class.hidden="@store.todos.empty">
                 <span class="todo-count"><strong>@store.getRemaining().length</strong> item(s) left</span>
                 <ul class="filters">
-                    <li><a href="#" class.selected="@store.showAll" click="@store.filter()">All</a></li>
-                    <li><a href="#" class.selected="@store.showActive" click="@store.filter(false)" class="">Active</a></li>
-                    <li><a href="#" class.selected="@store.showCompleted" click="@store.filter(true)" class="">Completed</a></li>
+                    <li><a href="#" class.selected="@!state('cat')" click="@state('cat',null)">All</a></li>
+                    <li><a href="#" class.selected="@state('cat')==='active'" click="@state('cat','active')" class="">Active</a></li>
+                    <li><a href="#" class.selected="@state('cat')==='completed'" click="@state('cat','completed')" class="">Completed</a></li>
                 </ul>
                 <button class="clear-completed" class.hidden="@store.getCompleted().empty" click="@store.removeCompleted()">Clear completed</button>
             </footer>
@@ -55,7 +55,9 @@
     <script>
         window.onload = function () {
             var content = document.getElementById("todo-template").content;
-            var model = { app: new TodoApp(), router: new Router() };
+            var model = {
+                app: new TodoApp()
+            };
             new Binder().bind(content, model);
         };
         window.onunload = function () {
@@ -63,17 +65,10 @@
         }
 
         function debug() {
-            var context = {
-                a: Company.xania()
-            };
-            var observer = new Observer();
-            var observable = observer.track(context);
-
-            var result = {
-                emp: observable.a.employees[0],
-                x: { y: observable.a.employees[0] }
-            };
-            var unwrapped = Xania.unwrap(result);
+            var model = {};
+            var observable = new Observer().track(model);
+            observable.prop("a", 1);
+            console.debug("value of a", model["a"]);
         }
     </script>
 </body>

@@ -22,6 +22,7 @@ interface ISubsriber {
 class Observer {
     private subscriptions = new Map<any, any>();
     private dirty = new Set<ISubsriber>();
+    private state = {};
 
     add(object: any, property: string, subsriber: ISubsriber) {
         if (this.subscriptions.has(object)) {
@@ -38,8 +39,8 @@ class Observer {
             }
         } else {
             const deps = {};
-            this.subscriptions.set(object, deps);
             deps[property] = new Set<ISubsriber>().add(subsriber);
+            this.subscriptions.set(object, deps);
             return true;
         }
 
@@ -74,7 +75,7 @@ class Observer {
     }
 
     subscribe(context, update, ...additionalArgs) {
-        var self = this,
+        var observer = this,
             // ReSharper disable once JoinDeclarationAndInitializerJs
             observable: Object | void,
             // ReSharper disable once JoinDeclarationAndInitializerJs
@@ -86,15 +87,15 @@ class Observer {
             state: undefined,
             dependencies: [],
             notify() {
-                self.unsubscribe(this);
+                observer.unsubscribe(this);
                 return Xania.promise(this.state)
-                    .then(s => this.state = update.apply(self, updateArgs.concat([s])));
+                    .then(s => this.state = update.apply(observer, updateArgs.concat([s])));
             },
             then(resolve) {
                 return Xania.promise(this.state).then(resolve);
             },
             subscribe(...args) {
-                return self.subscribe.apply(self, args);
+                return observer.subscribe.apply(observer, args);
             },
             attach(parent) {
                 if (this.parent === parent)
@@ -107,8 +108,16 @@ class Observer {
             }
         };
         observable = Xania.observe(context, {
+            state(name, value) {
+                this.setRead(observer.state, name);
+                if (value === undefined) {
+                    return observer.state[name];
+                } else {
+                    return observer.state[name] === value;
+                }
+            },
             setRead(obj, property) {
-                if (self.add(obj, property, subscription)) {
+                if (observer.add(obj, property, subscription)) {
                     subscription.dependencies.push({ obj, property });
                 }
             },
@@ -126,6 +135,12 @@ class Observer {
         var observer = this;
         return Xania.observe(context,
             {
+                state(name, value) {
+                    if (value !== undefined) {
+                        this.setChange(observer.state, name);
+                        observer.state[name] = value;
+                    }
+                },
                 setRead() {
                     // ignore
                 },
@@ -293,7 +308,8 @@ class Binder {
                     var docfrag = document.createDocumentFragment();
 
                     for (let idx = 0; idx < arr.length; idx++) {
-                        const result = Xania.assign({}, context, arr[idx]);
+                        
+                        const result = !!arr[idx] ? Xania.assign({}, context, arr[idx]) : context;
                         var binding = tpl.bind(result);
 
                         this.observer.subscribe(result, binding.render.bind(binding)).attach(subscription);
@@ -435,7 +451,7 @@ class TemplateEngine {
 
         var template = input.replace(/\n/g, "\\\n");
         var decl = [];
-        var returnExpr = template.replace(/@([\w\(\)\.']+)/gim, (a, b) => {
+        var returnExpr = template.replace(/@([\w\(\)\.,=!']+)/gim, (a, b) => {
             var paramIdx = `arg${decl.length}`;
             decl.push(b);
             return `"+${paramIdx}+"`;

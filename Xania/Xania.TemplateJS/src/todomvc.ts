@@ -11,36 +11,19 @@
 
 class TodoStore {
     public todos: Todo[];
-    private showOnlyCompleted = null;
 
     constructor() {
         this.todos = [];
 
         for (var i = 0; i < 10; i++)
-            this.todos.push(new Todo("todo " + i));
+            this.todos.push(new Todo(`todo ${i}`));
     }
 
-    all(): Array<Todo> {
-        if (this.showAll)
-            return this.todos;
+    all(cat): Array<Todo> {
+        if (!!cat)
+            return this.todos.filter(x => x.completed === (cat === "completed"));
         else
-            return this.todos.filter(x => x.completed === this.showOnlyCompleted);
-    }
-
-    filter(b) {
-        this.showOnlyCompleted = b;
-    }
-
-    get showAll() {
-        return typeof this.showOnlyCompleted !== "boolean";
-    }
-
-    get showActive() {
-        return this.showOnlyCompleted === false;
-    }
-
-    get showCompleted() {
-        return this.showOnlyCompleted === true;
+            return this.todos;
     }
 
     allCompleted() {

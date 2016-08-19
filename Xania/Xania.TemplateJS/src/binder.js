@@ -20,6 +20,7 @@ var Observer = (function () {
     function Observer() {
         this.subscriptions = new Map();
         this.dirty = new Set();
+        this.state = {};
     }
     Observer.prototype.add = function (object, property, subsriber) {
         if (this.subscriptions.has(object)) {
@@ -37,8 +38,8 @@ var Observer = (function () {
         }
         else {
             var deps = {};
-            this.subscriptions.set(object, deps);
             deps[property] = new Set().add(subsriber);
+            this.subscriptions.set(object, deps);
             return true;
         }
         return false;
@@ -69,7 +70,7 @@ var Observer = (function () {
         for (var _i = 2; _i < arguments.length; _i++) {
             additionalArgs[_i - 2] = arguments[_i];
         }
-        var self = this, observable, updateArgs;
+        var observer = this, observable, updateArgs;
         var subscription = {
             parent: undefined,
             children: new Set(),
@@ -77,9 +78,9 @@ var Observer = (function () {
             dependencies: [],
             notify: function () {
                 var _this = this;
-                self.unsubscribe(this);
+                observer.unsubscribe(this);
                 return Xania.promise(this.state)
-                    .then(function (s) { return _this.state = update.apply(self, updateArgs.concat([s])); });
+                    .then(function (s) { return _this.state = update.apply(observer, updateArgs.concat([s])); });
             },
             then: function (resolve) {
                 return Xania.promise(this.state).then(resolve);
@@ -89,7 +90,7 @@ var Observer = (function () {
                 for (var _i = 0; _i < arguments.length; _i++) {
                     args[_i - 0] = arguments[_i];
                 }
-                return self.subscribe.apply(self, args);
+                return observer.subscribe.apply(observer, args);
             },
             attach: function (parent) {
                 if (this.parent === parent)
@@ -102,8 +103,17 @@ var Observer = (function () {
             }
         };
         observable = Xania.observe(context, {
+            state: function (name, value) {
+                this.setRead(observer.state, name);
+                if (value === undefined) {
+                    return observer.state[name];
+                }
+                else {
+                    return observer.state[name] === value;
+                }
+            },
             setRead: function (obj, property) {
-                if (self.add(obj, property, subscription)) {
+                if (observer.add(obj, property, subscription)) {
                     subscription.dependencies.push({ obj: obj, property: property });
                 }
             },
@@ -118,6 +128,12 @@ var Observer = (function () {
     Observer.prototype.track = function (context) {
         var observer = this;
         return Xania.observe(context, {
+            state: function (name, value) {
+                if (value !== undefined) {
+                    this.setChange(observer.state, name);
+                    observer.state[name] = value;
+                }
+            },
             setRead: function () {
             },
             setChange: function (obj, property) {
@@ -274,7 +290,7 @@ var Binder = (function () {
                     }
                     var docfrag = document.createDocumentFragment();
                     for (var idx = 0; idx < arr.length; idx++) {
-                        var result = Xania.assign({}, context, arr[idx]);
+                        var result = !!arr[idx] ? Xania.assign({}, context, arr[idx]) : context;
                         var binding = tpl.bind(result);
                         _this.observer.subscribe(result, binding.render.bind(binding)).attach(subscription);
                         var visitChild = Xania.partialApp(function (data, parent, prev, cur) {
@@ -398,7 +414,7 @@ var TemplateEngine = (function () {
         }
         var template = input.replace(/\n/g, "\\\n");
         var decl = [];
-        var returnExpr = template.replace(/@([\w\(\)\.']+)/gim, function (a, b) {
+        var returnExpr = template.replace(/@([\w\(\)\.,=!']+)/gim, function (a, b) {
             var paramIdx = "arg" + decl.length;
             decl.push(b);
             return "\"+" + paramIdx + "+\"";

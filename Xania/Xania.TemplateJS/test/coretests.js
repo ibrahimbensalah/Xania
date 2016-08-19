@@ -11,16 +11,10 @@ var compile = TemplateEngine.compile;
 var xania = Company.xania();
 
 function debug() {
-    // arrange
-    var elt = new TagTemplate("div");
-    elt.for("x of url('Xania')");
-    elt.attr("title", compile("@x"));
-    var url = function (href) { return { then: function (res) { res(href); } } };
-    // act
-    var target = document.createElement("div");
-    new Binder().execute({ url: url }, elt, target);
-    // assert
-    console.log(target.childNodes[0].attributes['title'].value);
+    var model = {};
+    var observable = new Observer().track(model);
+    observable.prop("a", 1);
+    console.debug("value of a", model["a"]);
 }
 
 describe("Binding", function () {
@@ -162,7 +156,7 @@ describe("Select Many Expression", function () {
     it("should support any source expression",
         function () {
             var expr = SelectManyExpression.parse("emp of {n: org.name}");
-            expr.execute({ org: xania }).then(function(result) {
+            expr.execute({ org: xania }).then(function (result) {
                 expect(result.length).toEqual(1);
                 expect(result[0].emp.n).toEqual(xania.name);
             });
@@ -360,4 +354,26 @@ describe("ready", function () {
                 });
         });
 });
+
+describe("state", function () {
+    it("should track state",
+        function () {
+            var model = {
+                state: function (k, v) {
+                    console.debug(this);
+                    if (v === undefined)
+                        return this[k];
+                    return this[k] = v;
+                }
+            }
+
+            var observer = new Observer();
+            observer.track(model,
+                function (observable) {
+                    var unwrapped = Xania.unwrap(observable);
+                    observable.state("a", 1);
+                    expect(observable.state("a")).toBe(1);
+                });
+        });
+})
 // ReSharper restore UndeclaredGlobalVariableUsing

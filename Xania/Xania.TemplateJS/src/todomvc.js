@@ -10,42 +10,16 @@ var Todo = (function () {
 })();
 var TodoStore = (function () {
     function TodoStore() {
-        this.showOnlyCompleted = null;
         this.todos = [];
         for (var i = 0; i < 10; i++)
             this.todos.push(new Todo("todo " + i));
     }
-    TodoStore.prototype.all = function () {
-        var _this = this;
-        if (this.showAll)
-            return this.todos;
+    TodoStore.prototype.all = function (cat) {
+        if (!!cat)
+            return this.todos.filter(function (x) { return x.completed === (cat === "completed"); });
         else
-            return this.todos.filter(function (x) { return x.completed === _this.showOnlyCompleted; });
+            return this.todos;
     };
-    TodoStore.prototype.filter = function (b) {
-        this.showOnlyCompleted = b;
-    };
-    Object.defineProperty(TodoStore.prototype, "showAll", {
-        get: function () {
-            return typeof this.showOnlyCompleted !== "boolean";
-        },
-        enumerable: true,
-        configurable: true
-    });
-    Object.defineProperty(TodoStore.prototype, "showActive", {
-        get: function () {
-            return this.showOnlyCompleted === false;
-        },
-        enumerable: true,
-        configurable: true
-    });
-    Object.defineProperty(TodoStore.prototype, "showCompleted", {
-        get: function () {
-            return this.showOnlyCompleted === true;
-        },
-        enumerable: true,
-        configurable: true
-    });
     TodoStore.prototype.allCompleted = function () {
         for (var i = 0; i < this.todos.length; i++)
             if (!this.todos[i].completed)

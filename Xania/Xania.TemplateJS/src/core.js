@@ -304,6 +304,7 @@ var Xania = (function () {
             Spy.prototype = new __();
         }
         Spy.prototype.valueOf = function () { return target; };
+        Spy.prototype.state = observer.state.bind(observer);
         Object.defineProperty(Spy.prototype, "isSpy", { get: function () { return true; }, enumerable: false });
         var props = Object.getOwnPropertyNames(target);
         for (var i = 0; i < props.length; i++) {

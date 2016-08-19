@@ -185,6 +185,7 @@ class Value {
 }
 
 interface IObserver {
+    state(name: string, value?: any);
     setRead(obj: any, prop: string);
     setChange(obj: any, prop: any);
 }
@@ -379,6 +380,8 @@ class Xania {
             Spy.prototype = new __();
         }
         Spy.prototype.valueOf = () => target;
+        Spy.prototype.state = observer.state.bind(observer);
+
         Object.defineProperty(Spy.prototype, "isSpy", { get() { return true; }, enumerable: false });
 
         const props = Object.getOwnPropertyNames(target);
