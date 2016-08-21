@@ -1,5 +1,5 @@
-﻿/// <reference path="../src/core.js" />
-/// <reference path="../src/binder.js" />
+﻿/// <reference path="../src/fun.js" />
+/// <reference path="../src/core.js" />
 /// <reference path="../src/todomvc.js" />
 /// <reference path="company.js" />
 

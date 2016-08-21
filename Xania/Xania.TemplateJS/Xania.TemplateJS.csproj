@@ -23,6 +23,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Content Include="app.css" />
+    <Content Include="config.js" />
     <Content Include="Content\jasmine\jasmine.css" />
     <Content Include="Content\jasmine\jasmine_favicon.png" />
     <Content Include="Scripts\require-config.js" />
@@ -35,12 +36,13 @@
     <Content Include="Content\css\base.css" />
     <Content Include="Content\css\index.css" />
     <Content Include="index.html" />
+    <Content Include="spec\funSpec.js" />
     <Content Include="web.config" />
   </ItemGroup>
   <ItemGroup>
     <TypeScriptCompile Include="app.ts" />
     <TypeScriptCompile Include="Scripts\typings\es6-shim\es6-shim.d.ts" />
-    <TypeScriptCompile Include="src\binder.ts" />
+    <TypeScriptCompile Include="src\fun.ts" />
     <TypeScriptCompile Include="src\core.ts" />
     <Content Include="test\coretests.js" />
     <TypeScriptCompile Include="test\company.ts" />
@@ -49,6 +51,8 @@
   <ItemGroup>
     <Content Include="organisation.json" />
     <Content Include="packages.config" />
+    <Content Include="spec\support\jasmine.json" />
+    <Content Include="package.json" />
     <None Include="web.Debug.config">
       <DependentUpon>web.config</DependentUpon>
     </None>

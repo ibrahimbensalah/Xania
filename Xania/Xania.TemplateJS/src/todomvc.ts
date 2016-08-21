@@ -62,16 +62,44 @@ class TodoStore {
 }
 
 class TodoApp {
-    public todoStore = new TodoStore();
+    public store = new TodoStore();
     public newTodoText: string = "";
+    public show = new State(null);
 
     start() {
     }
 
     addTodo() {
         if (!!this.newTodoText && this.newTodoText.length > 0) {
-            this.todoStore.todos.push(new Todo(this.newTodoText));
+            this.store.todos.push(new Todo(this.newTodoText));
             this.newTodoText = "";
         }
+    }
+
+    filterTodos (list) {
+        var value = this.show.get();
+        if (value === null)
+            return list;
+        else if (typeof value === "boolean")
+            return list.filter(x => x.completed === value);
+        else
+            throw new Error("show state value is expected a null or a boolean, but found " + value);
+    }
+}
+
+class State {
+    constructor(public value: any) {
+    }
+
+    set(value) {
+        this.value = value;
+    }
+
+    has(value) {
+        return this.value === value;
+    }
+    
+    get() {
+        return this.value;
     }
 }

@@ -52,17 +52,42 @@ var TodoStore = (function () {
 })();
 var TodoApp = (function () {
     function TodoApp() {
-        this.todoStore = new TodoStore();
+        this.store = new TodoStore();
         this.newTodoText = "";
+        this.show = new State(null);
     }
     TodoApp.prototype.start = function () {
     };
     TodoApp.prototype.addTodo = function () {
         if (!!this.newTodoText && this.newTodoText.length > 0) {
-            this.todoStore.todos.push(new Todo(this.newTodoText));
+            this.store.todos.push(new Todo(this.newTodoText));
             this.newTodoText = "";
         }
     };
+    TodoApp.prototype.filterTodos = function (list) {
+        var value = this.show.get();
+        if (value === null)
+            return list;
+        else if (typeof value === "boolean")
+            return list.filter(function (x) { return x.completed === value; });
+        else
+            throw new Error("show state value is expected a null or a boolean, but found " + value);
+    };
     return TodoApp;
+})();
+var State = (function () {
+    function State(value) {
+        this.value = value;
+    }
+    State.prototype.set = function (value) {
+        this.value = value;
+    };
+    State.prototype.has = function (value) {
+        return this.value === value;
+    };
+    State.prototype.get = function () {
+        return this.value;
+    };
+    return State;
 })();
 //# sourceMappingURL=todomvc.js.map
