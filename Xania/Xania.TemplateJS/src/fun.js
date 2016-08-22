@@ -1,37 +1,5 @@
-var TemplateEngine = (function () {
-    function TemplateEngine() {
-    }
-    TemplateEngine.compile = function (input) {
-        if (!input || !input.trim()) {
-            return null;
-        }
-        var template = input.replace(/\n/g, "\\\n");
-        var decl = [];
-        var returnExpr = template.replace(/@([\w\(\)\.,=!']+)/gim, function (a, b) {
-            var paramIdx = "arg" + decl.length;
-            decl.push(b);
-            return "\"+" + paramIdx + "+\"";
-        });
-        if (returnExpr === '"+arg0+"') {
-            if (!TemplateEngine.cacheFn[input]) {
-                var functionBody = "with(m) {return " + decl[0] + ";}";
-                TemplateEngine.cacheFn[input] = new Function("m", functionBody);
-            }
-            return TemplateEngine.cacheFn[input];
-        }
-        else if (decl.length > 0) {
-            var params = decl.map(function (v, i) { return ("var arg" + i + " = " + v); }).join(";");
-            if (!TemplateEngine.cacheFn[input]) {
-                var functionBody = "with(m) {" + params + ";return \"" + returnExpr + "\"}";
-                TemplateEngine.cacheFn[input] = new Function("m", functionBody);
-            }
-            return TemplateEngine.cacheFn[input];
-        }
-        return function () { return returnExpr; };
-    };
-    TemplateEngine.cacheFn = {};
-    return TemplateEngine;
-})();
+//class TemplateEngine {
+//    private static cacheFn: any = {};
 var Ast;
 (function (Ast) {
     var Const = (function () {
@@ -103,6 +71,18 @@ var Ast;
         Unit.instance = new Unit();
         return Unit;
     })();
+    var Not = (function () {
+        function Not(expr) {
+            this.expr = expr;
+        }
+        Not.prototype.execute = function (context) {
+            return !this.expr.execute(context);
+        };
+        Not.prototype.app = function (args) {
+            return new Not(this.expr.app(args));
+        };
+        return Not;
+    })();
     var Query = (function () {
         function Query(varName, sourceExpr, selectorExpr) {
             this.varName = varName;
@@ -157,8 +137,12 @@ var Ast;
         Template.prototype.executePart = function (context, part) {
             if (typeof part === "string")
                 return part;
-            else
-                return part.execute(context);
+            else {
+                var result = part.execute(context);
+                if (typeof result === "function")
+                    return result.call(this);
+                return result;
+            }
         };
         return Template;
     })();
@@ -170,6 +154,7 @@ var Ast;
                 whitespace: /^\s+/g,
                 ident: /^[a-zA-Z_\$][a-zA-Z_\$0-9]*\b/g,
                 number: /^\d+(?:\.\d+)?(?:e[+-]?\d+)?/g,
+                boolean: /^(?:true|false)/g,
                 lparen: /^\s*\(\s*/g,
                 rparen: /^\s*\)\s*/g,
                 lbrack: /^\s*\[\s*/g,
@@ -177,7 +162,8 @@ var Ast;
                 navigate: /^\s*\.\s*/g,
                 pipe1: /^\|>/g,
                 pipe2: /^\|\|>/g,
-                select: /^->/g
+                select: /^->/g,
+                compose: /^compose\b/g
             };
         }
         Compiler.prototype.parsePattern = function (type, stream) {
@@ -198,25 +184,39 @@ var Ast;
             }
             return null;
         };
-        Compiler.prototype.skipWhitespaces = function (stream) {
+        Compiler.prototype.ws = function (stream) {
             return !!this.parsePattern("whitespace", stream);
         };
         Compiler.prototype.parseConst = function (stream) {
             var token = this.parsePattern("string1", stream) ||
                 this.parsePattern("string2", stream) ||
-                this.parsePattern("number", stream);
+                this.parsePattern("number", stream) ||
+                this.parseRegex(/^(?:true|false|null)/g, stream);
             if (!token)
                 return null;
             return new Const(eval(token));
+        };
+        Compiler.prototype.parseBoolean = function (stream) {
+            var token = this.parseRegex(/^(?:true|false)/g, stream);
+            if (!token)
+                return null;
+            return new Const(token === "true");
         };
         Compiler.prototype.parseIdent = function (stream) {
             var token = this.parsePattern("ident", stream);
             if (!token)
                 return null;
+            if (token === "not") {
+                this.ws(stream);
+                var expr = this.parseBoolean(stream) || this.parseIdent(stream);
+                if (expr === null)
+                    throw new SyntaxError("Expected boolean expression at " + stream);
+                return new Not(expr);
+            }
             var ident = new Ident(token);
-            this.skipWhitespaces(stream);
+            this.ws(stream);
             while (this.parsePattern("navigate", stream)) {
-                this.skipWhitespaces(stream);
+                this.ws(stream);
                 var member = this.parsePattern("ident", stream);
                 if (!!member)
                     ident = new Member(ident, member);
@@ -231,9 +231,9 @@ var Ast;
         };
         Compiler.prototype.parseParens = function (stream) {
             if (this.parsePattern("lparen", stream)) {
-                this.skipWhitespaces(stream);
+                this.ws(stream);
                 var arg = this.parseExpr(stream);
-                this.skipWhitespaces(stream);
+                this.ws(stream);
                 if (!this.parsePattern("rparen", stream))
                     throw new SyntaxError("expected ')' at: '" + stream + "'");
                 return arg || Unit.instance;
@@ -242,18 +242,18 @@ var Ast;
         };
         Compiler.prototype.parseQuery = function (stream) {
             if (this.parseRegex(/^for\b/g, stream) !== null) {
-                this.skipWhitespaces(stream);
+                this.ws(stream);
                 var varName = this.parsePattern("ident", stream);
                 if (varName === null)
                     throw new SyntaxError("expected variable at: " + stream);
                 if (this.parseRegex(/^\s*in\b/g, stream) === null)
                     throw new SyntaxError("expected 'in' keyword at: '" + stream + "'");
-                this.skipWhitespaces(stream);
+                this.ws(stream);
                 var sourceExpr = this.parseExpr(stream);
                 var selectorExpr = null;
-                this.skipWhitespaces(stream);
+                this.ws(stream);
                 if (this.parsePattern("select", stream)) {
-                    this.skipWhitespaces(stream);
+                    this.ws(stream);
                     selectorExpr = this.parseExpr(stream);
                     if (selectorExpr === null)
                         throw new SyntaxError("expected select expression at: '" + stream + "'");
@@ -266,7 +266,7 @@ var Ast;
             var args = [];
             var arg;
             do {
-                this.skipWhitespaces(stream);
+                this.ws(stream);
                 arg = this.parseConst(stream) || this.parseIdent(stream) || this.parseParens(stream);
                 if (arg === null)
                     break;
@@ -277,7 +277,7 @@ var Ast;
             return null;
         };
         Compiler.prototype.parseExpr = function (stream) {
-            this.skipWhitespaces(stream);
+            this.ws(stream);
             var expr = this.parseConst(stream) ||
                 this.parseParens(stream) ||
                 this.parseQuery(stream) ||
@@ -285,7 +285,7 @@ var Ast;
             if (!expr) {
                 return null;
             }
-            this.skipWhitespaces(stream);
+            this.ws(stream);
             if (!!this.parsePattern("pipe1", stream)) {
                 var filter = this.parseExpr(stream);
                 if (!filter)

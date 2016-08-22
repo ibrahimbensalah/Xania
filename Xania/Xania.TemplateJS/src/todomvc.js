@@ -31,14 +31,11 @@ var TodoStore = (function () {
         for (var i = 0; i < this.todos.length; i++)
             this.todos[i].completed = !allCompleted;
     };
-    TodoStore.prototype.getRemaining = function () {
-        return this.todos.filter(function (t) { return !t.completed; });
-    };
     TodoStore.prototype.getCompleted = function () {
         return this.todos.filter(function (t) { return t.completed; });
     };
     TodoStore.prototype.removeCompleted = function () {
-        this.todos = this.getRemaining();
+        this.todos = this.todos.filter(function (t) { return !t.completed; });
     };
     TodoStore.prototype.remove = function (todo) {
         var idx = this.todos.indexOf(todo.valueOf());
@@ -63,15 +60,6 @@ var TodoApp = (function () {
             this.store.todos.push(new Todo(this.newTodoText));
             this.newTodoText = "";
         }
-    };
-    TodoApp.prototype.filterTodos = function (list) {
-        var value = this.show.get();
-        if (value === null)
-            return list;
-        else if (typeof value === "boolean")
-            return list.filter(function (x) { return x.completed === value; });
-        else
-            throw new Error("show state value is expected a null or a boolean, but found " + value);
     };
     return TodoApp;
 })();

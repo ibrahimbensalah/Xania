@@ -15,29 +15,29 @@
         <section class="todoapp">
             <header class="header">
                 <h1>todos</h1>
-                <input class="new-todo" placeholder="What needs to be done?" autofocus="" name="app.newTodoText" value="{{ app.newTodoText }}" keyup.enter="{{ app.addTodo() }}">
+                <input class="new-todo" placeholder="What needs to be done?" autofocus="" name="app.newTodoText" value="{{ app.newTodoText }}" keyup.enter="{{ app.addTodo }}">
             </header>
             <section class="main" class.hidden="{{ app.store.todos |> empty }}">
-                <input class="toggle-all" type="checkbox" checked="{{ app.store.allCompleted() }}" click="{{ app.store.toggleAll() }}">
+                <input class="toggle-all" type="checkbox" checked="{{ app.store.allCompleted }}" click="{{ app.store.toggleAll }}">
                 <ul class="todo-list">
-                    <li data-select="{{ for todo in app.store.todos |> app.filterTodos }}" class.completed="{{ todo.completed }}" class.editing="{{ todo.editing }}">
+                    <li data-select="{{ for todo in app.store.todos |> filter todoFilter }}" class.completed="{{ todo.completed }}" class.editing="{{ todo.editing }}">
                         <div class="view">
-                            <input class="toggle" type="checkbox" click="{{ todo.toggleCompletion() }}" checked="{{ todo.completed }}">
+                            <input class="toggle" type="checkbox" click="{{ todo.toggleCompletion }}" checked="{{ todo.completed }}">
                             <label dblclick="editTodo(todo)">{{ todo.title }}</label>
-                            <button class="destroy" click="{{ app.store.remove(todo) }}"></button>
+                            <button class="destroy" click="{{ app.store.remove todo }}"></button>
                         </div>
                         <!--<input class="edit" name="todo.title" blur="stopEditing(todo,editedtodo.value)" keyup.enter="updateEditingTodo(todo, editedtodo.value)" keyup.escape="cancelEditingTodo(todo)">-->
                     </li>
                 </ul>
             </section>
             <footer class="footer" class.hidden="{{ app.store.todos |> empty }}">
-                <span class="todo-count"><strong>{{ app.store.getRemaining().length }}</strong> item(s) left</span>
+                <span class="todo-count"><strong>{{ app.store.todos |> count active }}</strong> item(s) left</span>
                 <ul class="filters">
-                    <li><a href="#" class.selected="{{ app.show.has(null) }}" click="{{ app.show.set(null) }}">>All</a></li>
-                    <li><a href="#" class.selected="{{ app.show.has(false) }}" click="{{ app.show.set(false) }}">Active</a></li>
-                    <li><a href="#" class.selected="{{ app.show.has(true) }}" click="{{ app.show.set(true) }}">Completed</a></li>
+                    <li><a href="#" class.selected="{{ show.has null }}" click="{{ show.set null }}">All</a></li>
+                    <li><a href="#" class.selected="{{ show.has false }}" click="{{ show.set false }}">Active</a></li>
+                    <li><a href="#" class.selected="{{ show.has true }}" click="{{ show.set true }}">Completed</a></li>
                 </ul>
-                <button class="clear-completed" class.hidden="{{ app.store.getCompleted () |> empty }}" click="{{ app.store.removeCompleted() }}">Clear completed</button>
+                <button class="clear-completed" class.hidden="{{ app.store.todos |> not contains completed }}" click="{{ app.store.removeCompleted }}">Clear completed</button>
             </footer>
         </section>
     </template>
@@ -56,7 +56,37 @@
             var content = document.getElementById("todo-template").content;
             new Binder().bind(content, {
                 app: new TodoApp(),
-                empty: function (list) { return !list || list.length === 0; }
+                empty: function (list) { return !list || list.length === 0; },
+                show: new State(null),
+                active: function (todo) {
+                    return todo.completed === false;
+                },
+                completed: function (todo) {
+                    return todo.completed === true;
+                },
+                count: function (fn, list) {
+                    if (!list)
+                        return 0;
+                    var result = 0;
+                    for (var i = 0 ; i < list.length ; i++)
+                        if (fn(list[i]))
+                            result++;
+
+                    return result;
+                },
+                contains: function (fn, list) {
+                    return this.count(fn, list) > 0;
+                },
+                filter: function (fn, list) {
+                    if (!list)
+                        return [];
+
+                    return list.filter(fn);
+                },
+                todoFilter: function(todo) {
+                    var value = this.show.get();
+                    return value === null || todo.completed === value;
+                }
             });
         };
         function debug() {

@@ -1,41 +1,41 @@
-﻿class TemplateEngine {
-    private static cacheFn: any = {};
+﻿//class TemplateEngine {
+//    private static cacheFn: any = {};
 
-    static compile(input) {
-        if (!input || !input.trim()) {
-            return null;
-        }
+//    static compile(input) {
+//        if (!input || !input.trim()) {
+//            return null;
+//        }
 
-        var template = input.replace(/\n/g, "\\\n");
-        var decl = [];
-        var returnExpr = template.replace(/@([\w\(\)\.,=!']+)/gim, (a, b) => {
-            var paramIdx = `arg${decl.length}`;
-            decl.push(b);
-            return `"+${paramIdx}+"`;
-        });
+//        var template = input.replace(/\n/g, "\\\n");
+//        var decl = [];
+//        var returnExpr = template.replace(/@([\w\(\)\.,=!']+)/gim, (a, b) => {
+//            var paramIdx = `arg${decl.length}`;
+//            decl.push(b);
+//            return `"+${paramIdx}+"`;
+//        });
 
-        if (returnExpr === '"+arg0+"') {
-            if (!TemplateEngine.cacheFn[input]) {
-                const functionBody = `with(m) {return ${decl[0]};}`;
-                TemplateEngine.cacheFn[input] = new Function("m", functionBody);
-            }
-            return TemplateEngine.cacheFn[input];
-        } else if (decl.length > 0) {
-            var params = decl.map((v, i) => `var arg${i} = ${v}`).join(";");
-            if (!TemplateEngine.cacheFn[input]) {
-                const functionBody = `with(m) {${params};return "${returnExpr}"}`;
-                TemplateEngine.cacheFn[input] = new Function("m", functionBody);
-            }
-            return TemplateEngine.cacheFn[input];
-        }
-        return () => returnExpr;
-    }
-}
+//        if (returnExpr === '"+arg0+"') {
+//            if (!TemplateEngine.cacheFn[input]) {
+//                const functionBody = `with(m) {return ${decl[0]};}`;
+//                TemplateEngine.cacheFn[input] = new Function("m", functionBody);
+//            }
+//            return TemplateEngine.cacheFn[input];
+//        } else if (decl.length > 0) {
+//            var params = decl.map((v, i) => `var arg${i} = ${v}`).join(";");
+//            if (!TemplateEngine.cacheFn[input]) {
+//                const functionBody = `with(m) {${params};return "${returnExpr}"}`;
+//                TemplateEngine.cacheFn[input] = new Function("m", functionBody);
+//            }
+//            return TemplateEngine.cacheFn[input];
+//        }
+//        return () => returnExpr;
+//    }
+//}
 
 module Ast {
     interface IExpr {
         execute(...args: any[]);
-        app(args: IExpr[]): App;
+        app(args: IExpr[]): IExpr;
     }
     class Const implements IExpr {
         constructor(public value: any) { }
@@ -101,6 +101,16 @@ module Ast {
         app(): App { throw new Error("app on unit is not supported"); }
     }
 
+    class Not implements IExpr {
+        constructor(public expr) { }
+        execute(context) {
+            return !this.expr.execute(context);
+        }
+        app(args: IExpr[]): IExpr {
+            return new Not(this.expr.app(args));
+        }
+    }
+
     class Query implements IExpr {
         constructor(public varName: string, public sourceExpr: IExpr, public selectorExpr: IExpr) { }
         execute(context) {
@@ -154,8 +164,12 @@ module Ast {
         executePart(context, part) {
             if (typeof part === "string")
                 return part;
-            else
-                return part.execute(context);
+            else {
+                var result = part.execute(context);
+                if (typeof result === "function")
+                    return result.call(this);
+                return result;
+            }
         }
     }
 
@@ -170,6 +184,7 @@ module Ast {
         // , regexp: /^\/(?:(?:\\\/|[^\n\/]))*?\//g
             , ident: /^[a-zA-Z_\$][a-zA-Z_\$0-9]*\b/g
             , number: /^\d+(?:\.\d+)?(?:e[+-]?\d+)?/g
+            , boolean: /^(?:true|false)/g
         // , parens: /^[\(\)]/g
             , lparen: /^\s*\(\s*/g
             , rparen: /^\s*\)\s*/g
@@ -182,6 +197,7 @@ module Ast {
             , pipe1: /^\|>/g
             , pipe2: /^\|\|>/g
             , select: /^->/g
+            , compose: /^compose\b/g
         };
 
         parsePattern(type, stream): string {
@@ -207,14 +223,15 @@ module Ast {
             return null;
         }
 
-        skipWhitespaces(stream): boolean {
+        ws(stream): boolean {
             return !!this.parsePattern("whitespace", stream);
         }
 
         parseConst(stream): IExpr {
-            var token = this.parsePattern("string1", stream) ||
+            const token = this.parsePattern("string1", stream) ||
                 this.parsePattern("string2", stream) ||
-                this.parsePattern("number", stream);
+                this.parsePattern("number", stream) ||
+                this.parseRegex(/^(?:true|false|null)/g, stream);
 
             if (!token)
                 return null;
@@ -222,16 +239,33 @@ module Ast {
             return new Const(eval(token));
         }
 
+        parseBoolean(stream): IExpr {
+            const token = this.parseRegex(/^(?:true|false)/g, stream);
+
+            if (!token)
+                return null;
+
+            return new Const(token === "true");
+        }
+
         parseIdent(stream): IExpr {
             const token = this.parsePattern("ident", stream);
             if (!token)
                 return null;
 
+            if (token === "not") {
+                this.ws(stream);
+                const expr = this.parseBoolean(stream) || this.parseIdent(stream);
+                if (expr === null)
+                    throw new SyntaxError(`Expected boolean expression at ${stream}`);
+                return new Not(expr);
+            }
+
             var ident: IExpr = new Ident(token);
 
-            this.skipWhitespaces(stream);
+            this.ws(stream);
             while (this.parsePattern("navigate", stream)) {
-                this.skipWhitespaces(stream);
+                this.ws(stream);
                 const member = this.parsePattern("ident", stream);
                 // const member = this.parseMember(stream);
 
@@ -251,10 +285,10 @@ module Ast {
 
         parseParens(stream): IExpr {
             if (this.parsePattern("lparen", stream)) {
-                this.skipWhitespaces(stream);
+                this.ws(stream);
                 const arg = this.parseExpr(stream);
 
-                this.skipWhitespaces(stream);
+                this.ws(stream);
                 if (!this.parsePattern("rparen", stream))
                     throw new SyntaxError(`expected ')' at: '${stream}'`);
                 return arg || Unit.instance;
@@ -264,7 +298,7 @@ module Ast {
 
         parseQuery(stream): IExpr {
             if (this.parseRegex(/^for\b/g, stream) !== null) {
-                this.skipWhitespaces(stream);
+                this.ws(stream);
                 const varName = this.parsePattern("ident", stream);
                 if (varName === null)
                     throw new SyntaxError(`expected variable at: ${stream}`);
@@ -272,13 +306,13 @@ module Ast {
                 if (this.parseRegex(/^\s*in\b/g, stream) === null)
                     throw new SyntaxError(`expected 'in' keyword at: '${stream}'`);
 
-                this.skipWhitespaces(stream);
+                this.ws(stream);
                 var sourceExpr = this.parseExpr(stream);
 
                 var selectorExpr = null;
-                this.skipWhitespaces(stream);
+                this.ws(stream);
                 if (this.parsePattern("select", stream)) {
-                    this.skipWhitespaces(stream);
+                    this.ws(stream);
                     selectorExpr = this.parseExpr(stream);
                     if (selectorExpr === null)
                         throw new SyntaxError(`expected select expression at: '${stream}'`);
@@ -293,7 +327,7 @@ module Ast {
             let arg;
 
             do {
-                this.skipWhitespaces(stream);
+                this.ws(stream);
                 arg = this.parseConst(stream) || this.parseIdent(stream) || this.parseParens(stream);
                 if (arg === null)
                     break;
@@ -307,7 +341,7 @@ module Ast {
         }
 
         parseExpr(stream): any {
-            this.skipWhitespaces(stream);
+            this.ws(stream);
 
             const expr =
                 this.parseConst(stream) ||
@@ -319,7 +353,7 @@ module Ast {
                 return null;
             }
 
-            this.skipWhitespaces(stream);
+            this.ws(stream);
             if (!!this.parsePattern("pipe1", stream)) {
                 var filter = this.parseExpr(stream);
                 if (!filter)
@@ -361,7 +395,7 @@ module Ast {
                         parts.push(text.substring(offset, begin));
 
                     offset = begin + 2;
-                    var end = text.indexOf("}}", offset);
+                    const end = text.indexOf("}}", offset);
                     if (end >= 0) {
                         parts.push(this.expr(text.substring(offset, end)));
                         offset = end + 2;
@@ -374,7 +408,7 @@ module Ast {
                 }
             }
 
-            var tpl = new Template(parts);
+            const tpl = new Template(parts);
             return tpl.execute.bind(tpl);
         }
 

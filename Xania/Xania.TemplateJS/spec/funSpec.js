@@ -1,6 +1,7 @@
-﻿"use strict";
+﻿/// <reference path="../src/fun.js" />
+"use strict";
 
-require("../src/fun");
+// require("../src/fun");
 
 var compiler = new Ast.Compiler();
 
@@ -21,13 +22,13 @@ describe("compiler", function () {
             expect(fn.execute(context)).toBe(123);
         });
 
-    it("should support method call expression",
+    it("should support nested method call expression",
         function () {
-            var fn = compiler.expr("fn ()");
+            var ast = compiler.expr("add ()");
             var context = {
                 fn: function () { return 123; }
             };
-            expect(fn.execute(context)).toBe(123);
+            expect(ast.execute(context)).toBe(123);
         });
 
     it("should support property expression",
@@ -95,7 +96,13 @@ describe("compiler", function () {
             var tpl = compiler.template("hello {{ list |> empty }}!");
             expect(tpl({ list: ["world"], empty: function (l) { return l.length === 0; } })).toBe("hello false!");
         });
-})
+
+    it("should support not expression",
+        function () {
+            var ast = compiler.expr("not true");
+            expect(ast.execute({})).toBe(false);
+        });
+});
 
 var Test = (function () {
     function Test(value) {

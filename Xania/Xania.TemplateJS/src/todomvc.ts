@@ -39,16 +39,12 @@ class TodoStore {
             this.todos[i].completed = !allCompleted;
     }
 
-    getRemaining() {
-        return this.todos.filter(t => !t.completed);
-    }
-
     getCompleted() {
         return this.todos.filter(t => t.completed);
     }
 
     removeCompleted() {
-        this.todos = this.getRemaining();
+        this.todos = this.todos.filter(t => !t.completed);
     }
 
     remove(todo) {
@@ -74,16 +70,6 @@ class TodoApp {
             this.store.todos.push(new Todo(this.newTodoText));
             this.newTodoText = "";
         }
-    }
-
-    filterTodos (list) {
-        var value = this.show.get();
-        if (value === null)
-            return list;
-        else if (typeof value === "boolean")
-            return list.filter(x => x.completed === value);
-        else
-            throw new Error("show state value is expected a null or a boolean, but found " + value);
     }
 }
 
