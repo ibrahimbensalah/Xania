@@ -702,17 +702,22 @@ var Binder = (function () {
         this.target = target || document.body;
         this.init();
     }
-    Binder.prototype.import = function (itemType) {
-        if (typeof itemType == "undefined")
-            return null;
-        switch (typeof (itemType)) {
-            case "string":
-                return window[itemType];
-            case "function":
-                return itemType;
-            default:
-                return null;
-        }
+    Binder.prototype.import = function (templateUrl) {
+        var binder = this;
+        return {
+            then: function (resolve) {
+                var link = document.createElement('link');
+                link.rel = 'import';
+                link.href = templateUrl;
+                link.setAttribute('async', '');
+                link.onload = function (e) {
+                    var link = e.target;
+                    var tpl = link.import.querySelector("template");
+                    resolve.call(binder, tpl);
+                };
+                document.head.appendChild(link);
+            }
+        };
     };
     Binder.prototype.parseAttr = function (tagElement, attr) {
         var name = attr.name;

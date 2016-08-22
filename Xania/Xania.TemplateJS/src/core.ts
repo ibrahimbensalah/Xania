@@ -814,18 +814,23 @@ class Binder {
         this.init();
     }
 
-    public import(itemType) {
-        if (typeof itemType == "undefined")
-            return null;
-
-        switch (typeof (itemType)) {
-            case "string":
-                return window[itemType];
-            case "function":
-                return itemType;
-            default:
-                return null;
-        }
+    public import(templateUrl) {
+        var binder = this;
+        return {
+            then(resolve) {
+                var link = document.createElement('link');
+                link.rel = 'import';
+                link.href = templateUrl;
+                link.setAttribute('async', ''); // make it async!
+                link.onload = e => {
+                    var link = (<any>e.target);
+                    var tpl = link.import.querySelector("template");
+                    resolve.call(binder, tpl);
+                }
+                // link.onerror = function(e) {...};
+                document.head.appendChild(link);
+            }
+        };
     }
 
     parseAttr(tagElement: TagTemplate, attr: Attr) {

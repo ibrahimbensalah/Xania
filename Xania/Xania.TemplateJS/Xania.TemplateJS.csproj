@@ -40,6 +40,7 @@
     <Content Include="src\core.js" />
     <Content Include="src\fun.js" />
     <Content Include="src\todomvc.js" />
+    <Content Include="todoapp.html" />
     <Content Include="web.config" />
   </ItemGroup>
   <ItemGroup>
@@ -56,6 +57,9 @@
     <Content Include="packages.config" />
     <Content Include="spec\support\jasmine.json" />
     <Content Include="package.json" />
+    <Content Include="src\core.js.map" />
+    <Content Include="src\fun.js.map" />
+    <Content Include="src\todomvc.js.map" />
     <None Include="web.Debug.config">
       <DependentUpon>web.config</DependentUpon>
     </None>
@@ -83,9 +87,7 @@
     <Reference Include="System.Xml" />
     <Reference Include="System.Xml.Linq" />
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="todomvc\" />
-  </ItemGroup>
+  <ItemGroup />
   <PropertyGroup>
     <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">12.0</VisualStudioVersion>
   </PropertyGroup>

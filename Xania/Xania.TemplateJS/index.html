@@ -5,41 +5,13 @@
     <title>Xania JS • TodoMVC</title>
     <link rel="stylesheet" href="Content/css/base.css">
     <link rel="stylesheet" href="Content/css/index.css">
+
     <script src="src/fun.js"></script>
     <script src="src/core.js"></script>
     <script src="src/todomvc.js"></script>
     <script src="test/company.js"></script>
 </head>
 <body>
-    <template id="todo-template">
-        <section class="todoapp">
-            <header class="header">
-                <h1>todos</h1>
-                <input class="new-todo" placeholder="What needs to be done?" autofocus="" name="app.newTodoText" value="{{ app.newTodoText }}" keyup.enter="{{ app.addTodo }}">
-            </header>
-            <section class="main" class.hidden="{{ app.store.todos |> empty }}">
-                <input class="toggle-all" type="checkbox" checked="{{ app.store.allCompleted }}" click="{{ app.store.toggleAll }}">
-                <ul class="todo-list">
-                    <li data-select="{{ for todo in app.store.todos |> filter todoPredicate }}" class.completed="{{ todo.completed }}" class.editing="{{ todo.editing }}">
-                        <div class="view">
-                            <input class="toggle" type="checkbox" click="{{ todo.toggleCompletion }}" checked="{{ todo.completed }}">
-                            <label dblclick="editTodo(todo)">{{ todo.title }}</label>
-                            <button class="destroy" click="{{ app.store.remove todo }}"></button>
-                        </div>
-                        <!--<input class="edit" name="todo.title" blur="stopEditing(todo,editedtodo.value)" keyup.enter="updateEditingTodo(todo, editedtodo.value)" keyup.escape="cancelEditingTodo(todo)">-->
-                    </li>
-                </ul>
-            </section>
-            <footer class="footer" class.hidden="{{ app.store.todos |> empty }}">
-                <span class="todo-count"><strong>{{ app.store.todos |> count active }}</strong> item(s) left</span>
-                <ul class="filters">
-                    <li><a href="#" class.selected="{{ show.has 'all' }}" click="{{ show 'all' }}">All</a></li>
-                    <li><a href="#" class.selected="{{ show.has 'active' }}" click="{{ show 'active' }}">Active</a></li>
-                    <li><a href="#" class.selected="{{ show.has 'completed'}}" click="{{ show 'completed'}}">Completed</a></li>
-                </ul>
-                <button class="clear-completed" class.hidden="{{ app.store.todos |> not exists completed }}" click="{{ app.store.removeCompleted }}">Clear completed</button></footer>
-        </section>
-    </template>
     <div style="display: block; clear: both; overflow: hidden; width: 100%;">
         <div style="float: left; width: 33%;" id="panel1"></div>
         <div style="float: left; width: 33%;" id="panel2"></div>
@@ -56,38 +28,32 @@
     </footer>
 
     <script>
-        window.onload = function () {
-            var binder = new Binder({
-                app: new TodoApp(),
-                show: new State('all'),
-                active: function (todo) {
-                    return todo.completed === false;
-                },
-                completed: function (todo) {
-                    return todo.completed === true;
-                },
-                todoPredicate: function (todo) {
-                    var value = this.show.get();
-                    switch (value) {
-                        case 'all':
-                            return true;
-                        default:
-                            return todo.completed === (value === 'completed');
-                    }
+        var binder = new Binder({
+            app: new TodoApp(),
+            show: new State('all'),
+            active: function (todo) {
+                return todo.completed === false;
+            },
+            completed: function (todo) {
+                return todo.completed === true;
+            },
+            todoPredicate: function (todo) {
+                var value = this.show.get();
+                switch (value) {
+                    case 'all':
+                        return true;
+                    default:
+                        return todo.completed === (value === 'completed');
                 }
-            });
+            }
+        });
 
-            binder
-                .bind("#todo-template", "#panel1")
-                .bind("#todo-template", "#panel2")
-                .bind("#todo-template", "#panel3");
-        };
-        function debug() {
-            var model = {};
-            var observable = new Observer().track(model);
-            observable.prop("a", 1);
-            console.debug("value of a", model["a"]);
-        }
+        binder.import('todoapp.html')
+            .then(function(tpl) {
+                this.bind(tpl, "#panel1")
+                    .bind(tpl, "#panel2")
+                    .bind(tpl, "#panel3");
+            });
     </script>
 </body>
 </html>
