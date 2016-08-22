@@ -15,7 +15,7 @@ class TodoStore {
     constructor() {
         this.todos = [];
 
-        for (var i = 0; i < 10; i++)
+        for (var i = 0; i < 50; i++)
             this.todos.push(new Todo(`todo ${i}`));
     }
 
@@ -77,8 +77,8 @@ class State {
     constructor(public value: any) {
     }
 
-    set(value) {
-        this.value = value;
+    apply(_, args) {
+        this.value = args[0];
     }
 
     has(value) {

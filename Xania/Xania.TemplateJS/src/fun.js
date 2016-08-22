@@ -50,11 +50,13 @@ var Ast;
             this.args = args;
         }
         App.prototype.execute = function (context, addArgs) {
-            var args = this.args.map(function (x) { return x.execute(context); }).concat(addArgs);
+            var args = this.args.map(function (x) { return x.execute(context); });
+            if (!!addArgs)
+                args = args.concat(addArgs);
             var target = this.targetExpr.execute(context);
-            if (typeof target !== "function")
-                throw new Error(this.targetExpr.toString() + " is not a function");
-            return target.apply(this, args);
+            if (!!target && typeof target.apply === "function")
+                return target.apply(this, args);
+            throw new Error(this.targetExpr.toString() + " is not a function");
         };
         App.prototype.app = function (args) {
             return new App(this.targetExpr, this.args.concat(args));
@@ -342,17 +344,40 @@ var Ast;
     })();
     Ast.Compiler = Compiler;
 })(Ast || (Ast = {}));
-var Test = (function () {
-    function Test(value) {
-        this.value = value;
-    }
-    Object.defineProperty(Test.prototype, "seed", {
-        get: function () {
-            return this.value;
-        },
-        enumerable: true,
-        configurable: true
-    });
-    return Test;
-})();
-//# sourceMappingURL=fun.js.map
+var Fun;
+(function (Fun) {
+    var List = (function () {
+        function List() {
+        }
+        List.count = function (fn, list) {
+            if (!list)
+                return 0;
+            var result = 0;
+            for (var i = 0; i < list.length; i++)
+                if (fn(list[i]))
+                    result++;
+            return result;
+        };
+        List.exists = function (fn, list) {
+            return List.count(fn, list) > 0;
+        };
+        List.filter = function (fn, list) {
+            if (!list)
+                return [];
+            return list.filter(fn);
+        };
+        List.map = function (fn, list) {
+            if (!list)
+                return [];
+            return list.map(fn);
+        };
+        List.empty = function (list) {
+            return !list || list.length === 0;
+        };
+        List.reduce = function (fn, initialValue, list) {
+            return !list && list.reduce(fn, initialValue);
+        };
+        return List;
+    })();
+    Fun.List = List;
+})(Fun || (Fun = {}));

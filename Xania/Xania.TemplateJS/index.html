@@ -20,7 +20,7 @@
             <section class="main" class.hidden="{{ app.store.todos |> empty }}">
                 <input class="toggle-all" type="checkbox" checked="{{ app.store.allCompleted }}" click="{{ app.store.toggleAll }}">
                 <ul class="todo-list">
-                    <li data-select="{{ for todo in app.store.todos |> filter todoFilter }}" class.completed="{{ todo.completed }}" class.editing="{{ todo.editing }}">
+                    <li data-select="{{ for todo in app.store.todos |> filter todoPredicate }}" class.completed="{{ todo.completed }}" class.editing="{{ todo.editing }}">
                         <div class="view">
                             <input class="toggle" type="checkbox" click="{{ todo.toggleCompletion }}" checked="{{ todo.completed }}">
                             <label dblclick="editTodo(todo)">{{ todo.title }}</label>
@@ -33,14 +33,18 @@
             <footer class="footer" class.hidden="{{ app.store.todos |> empty }}">
                 <span class="todo-count"><strong>{{ app.store.todos |> count active }}</strong> item(s) left</span>
                 <ul class="filters">
-                    <li><a href="#" class.selected="{{ show.has null }}" click="{{ show.set null }}">All</a></li>
-                    <li><a href="#" class.selected="{{ show.has false }}" click="{{ show.set false }}">Active</a></li>
-                    <li><a href="#" class.selected="{{ show.has true }}" click="{{ show.set true }}">Completed</a></li>
+                    <li><a href="#" class.selected="{{ show.has 'all' }}" click="{{ show 'all' }}">All</a></li>
+                    <li><a href="#" class.selected="{{ show.has 'active' }}" click="{{ show 'active' }}">Active</a></li>
+                    <li><a href="#" class.selected="{{ show.has 'completed'}}" click="{{ show 'completed'}}">Completed</a></li>
                 </ul>
-                <button class="clear-completed" class.hidden="{{ app.store.todos |> not contains completed }}" click="{{ app.store.removeCompleted }}">Clear completed</button>
-            </footer>
+                <button class="clear-completed" class.hidden="{{ app.store.todos |> not exists completed }}" click="{{ app.store.removeCompleted }}">Clear completed</button></footer>
         </section>
     </template>
+    <div style="display: block; clear: both; overflow: hidden; width: 100%;">
+        <div style="float: left; width: 33%;" id="panel1"></div>
+        <div style="float: left; width: 33%;" id="panel2"></div>
+        <div style="float: left; width: 33%;" id="panel3"></div>
+    </div>
     <footer class="info">
         <p>Double-click to edit a todo</p>
         <p>
@@ -53,41 +57,30 @@
 
     <script>
         window.onload = function () {
-            var content = document.getElementById("todo-template").content;
-            new Binder().bind(content, {
+            var binder = new Binder({
                 app: new TodoApp(),
-                empty: function (list) { return !list || list.length === 0; },
-                show: new State(null),
+                show: new State('all'),
                 active: function (todo) {
                     return todo.completed === false;
                 },
                 completed: function (todo) {
                     return todo.completed === true;
                 },
-                count: function (fn, list) {
-                    if (!list)
-                        return 0;
-                    var result = 0;
-                    for (var i = 0 ; i < list.length ; i++)
-                        if (fn(list[i]))
-                            result++;
-
-                    return result;
-                },
-                contains: function (fn, list) {
-                    return this.count(fn, list) > 0;
-                },
-                filter: function (fn, list) {
-                    if (!list)
-                        return [];
-
-                    return list.filter(fn);
-                },
-                todoFilter: function(todo) {
+                todoPredicate: function (todo) {
                     var value = this.show.get();
-                    return value === null || todo.completed === value;
+                    switch (value) {
+                        case 'all':
+                            return true;
+                        default:
+                            return todo.completed === (value === 'completed');
+                    }
                 }
             });
+
+            binder
+                .bind("#todo-template", "#panel1")
+                .bind("#todo-template", "#panel2")
+                .bind("#todo-template", "#panel3");
         };
         function debug() {
             var model = {};

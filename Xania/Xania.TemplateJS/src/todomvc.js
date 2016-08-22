@@ -11,7 +11,7 @@ var Todo = (function () {
 var TodoStore = (function () {
     function TodoStore() {
         this.todos = [];
-        for (var i = 0; i < 10; i++)
+        for (var i = 0; i < 50; i++)
             this.todos.push(new Todo("todo " + i));
     }
     TodoStore.prototype.all = function (cat) {
@@ -67,8 +67,8 @@ var State = (function () {
     function State(value) {
         this.value = value;
     }
-    State.prototype.set = function (value) {
-        this.value = value;
+    State.prototype.apply = function (_, args) {
+        this.value = args[0];
     };
     State.prototype.has = function (value) {
         return this.value === value;
@@ -78,4 +78,3 @@ var State = (function () {
     };
     return State;
 })();
-//# sourceMappingURL=todomvc.js.map

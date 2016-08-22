@@ -14,7 +14,7 @@ var TextTemplate = (function () {
             : this.tpl;
     };
     TextTemplate.prototype.bind = function (model) {
-        return new ContentBinding(this, model);
+        return new TextBinding(this, model);
     };
     TextTemplate.prototype.toString = function () {
         return this.tpl.toString();
@@ -23,6 +23,22 @@ var TextTemplate = (function () {
         return [];
     };
     return TextTemplate;
+})();
+var ContentTemplate = (function () {
+    function ContentTemplate() {
+        this._children = [];
+    }
+    ContentTemplate.prototype.bind = function (model, idx) {
+        return new ContentBinding(this, model);
+    };
+    ContentTemplate.prototype.children = function () {
+        return this._children;
+    };
+    ContentTemplate.prototype.addChild = function (child) {
+        this._children.push(child);
+        return this;
+    };
+    return ContentTemplate;
 })();
 var TagTemplate = (function () {
     function TagTemplate(name) {
@@ -452,6 +468,7 @@ var Observer = (function () {
         else {
             var deps = {};
             deps[property] = new Set().add(subsriber);
+            console.debug("subscribe to object", object);
             this.subscriptions.set(object, deps);
             return true;
         }
@@ -471,6 +488,12 @@ var Observer = (function () {
             var dep = subscription.dependencies.pop();
             var deps = this.subscriptions.get(dep.obj);
             deps[dep.property].delete(subscription);
+            if (deps[dep.property].size === 0) {
+                delete deps[dep.property];
+                if (Object.keys(deps).length === 0) {
+                    this.subscriptions.delete(dep.obj);
+                }
+            }
         }
         subscription.children.forEach(function (child) {
             _this.unsubscribe(child);
@@ -560,11 +583,13 @@ var Observer = (function () {
         });
     };
     Observer.prototype.update = function () {
-        console.debug("dirty size", this.dirty.size);
-        this.dirty.forEach(function (subscriber) {
-            subscriber.notify();
-        });
-        this.dirty.clear();
+        if (this.dirty.size > 0) {
+            this.dirty.forEach(function (subscriber) {
+                subscriber.notify();
+            });
+            console.debug("stats", { dirty: this.dirty.size, subscriptions: this.subscriptions.size });
+            this.dirty.clear();
+        }
     };
     Object.defineProperty(Observer.prototype, "size", {
         get: function () {
@@ -588,21 +613,33 @@ var ContentBinding = (function (_super) {
     function ContentBinding(tpl, context) {
         _super.call(this, context);
         this.tpl = tpl;
+        this.dom = document.createDocumentFragment();
+    }
+    ContentBinding.prototype.render = function (context) {
+        return this.dom;
+    };
+    return ContentBinding;
+})(Binding);
+var TextBinding = (function (_super) {
+    __extends(TextBinding, _super);
+    function TextBinding(tpl, context) {
+        _super.call(this, context);
+        this.tpl = tpl;
         this.dom = document.createTextNode("");
     }
-    ContentBinding.prototype.update = function (context) {
+    TextBinding.prototype.update = function (context) {
         this.dom.textContent = this.tpl.execute(context);
     };
-    ContentBinding.prototype.destroy = function () {
+    TextBinding.prototype.destroy = function () {
         if (!!this.dom) {
             this.dom.remove();
         }
         this.destroyed = true;
     };
-    ContentBinding.prototype.render = function (context) {
+    TextBinding.prototype.render = function (context) {
         this.dom.textContent = this.tpl.execute(context);
     };
-    return ContentBinding;
+    return TextBinding;
 })(Binding);
 var TagBinding = (function (_super) {
     __extends(TagBinding, _super);
@@ -655,14 +692,15 @@ var TagBinding = (function (_super) {
     return TagBinding;
 })(Binding);
 var Binder = (function () {
-    function Binder(compile) {
-        if (compile === void 0) { compile = null; }
-        this.compile = compile;
+    function Binder(model, target) {
+        if (target === void 0) { target = null; }
+        this.model = model;
         this.observer = new Observer();
-        if (!this.compile) {
-            var compiler = new Ast.Compiler();
-            this.compile = compiler.template.bind(compiler);
-        }
+        Xania.assign(model, Fun.List);
+        var compiler = new Ast.Compiler();
+        this.compile = compiler.template.bind(compiler);
+        this.target = target || document.body;
+        this.init();
     }
     Binder.prototype.import = function (itemType) {
         if (typeof itemType == "undefined")
@@ -741,13 +779,67 @@ var Binder = (function () {
         };
         visit(null, rootContext, rootTpl, rootTarget, 0);
     };
-    Binder.prototype.bind = function (content, model, target) {
-        var _this = this;
-        target = target || document.body;
-        for (var i = content.childNodes.length - 1; i >= 0; i--) {
-            var tpl = this.parseDom(content.childNodes[i]);
-            this.bindTemplate(tpl, model, target);
+    Binder.find = function (selector) {
+        if (typeof selector === "string")
+            return document.querySelector(selector);
+        return selector;
+    };
+    Binder.prototype.bind = function (templateSelector, targetSelector) {
+        var target = Binder.find(targetSelector) || document.body;
+        var template = this.parseDom(Binder.find(templateSelector));
+        this.bindTemplate(template, target);
+        return this;
+    };
+    Binder.prototype.bindTemplate = function (tpl, target) {
+        var arr = Array.isArray(this.model) ? this.model : [this.model];
+        for (var i = 0; i < arr.length; i++) {
+            this.execute(arr[i], tpl, target);
         }
+    };
+    Binder.prototype.parseDom = function (rootDom) {
+        var stack = [];
+        var i;
+        var rootTpl;
+        stack.push({
+            node: rootDom,
+            push: function (e) {
+                rootTpl = e;
+            }
+        });
+        while (stack.length > 0) {
+            var cur = stack.pop();
+            var node = cur.node;
+            var push = cur.push;
+            if (!!node["content"]) {
+                var content = node["content"];
+                var template = new ContentTemplate();
+                for (i = content.childNodes.length - 1; i >= 0; i--) {
+                    stack.push({ node: content.childNodes[i], push: template.addChild.bind(template) });
+                }
+                push(template);
+            }
+            else if (node.nodeType === 1) {
+                var elt = node;
+                var template_1 = new TagTemplate(elt.tagName);
+                for (i = 0; !!elt.attributes && i < elt.attributes.length; i++) {
+                    var attribute = elt.attributes[i];
+                    this.parseAttr(template_1, attribute);
+                }
+                for (i = elt.childNodes.length - 1; i >= 0; i--) {
+                    stack.push({ node: elt.childNodes[i], push: template_1.addChild.bind(template_1) });
+                }
+                push(template_1);
+            }
+            else if (node.nodeType === 3) {
+                var tpl = this.compile(node.textContent);
+                push(new TextTemplate(tpl || node.textContent));
+            }
+        }
+        return rootTpl;
+    };
+    Binder.prototype.init = function () {
+        var _this = this;
+        var target = this.target;
         var eventHandler = function (target, name) {
             var binding = target.attributes["__binding"];
             if (!!binding) {
@@ -782,45 +874,5 @@ var Binder = (function () {
             _this.observer.update();
         });
     };
-    Binder.prototype.bindTemplate = function (tpl, model, target) {
-        var arr = Array.isArray(model) ? model : [model];
-        for (var i = 0; i < arr.length; i++) {
-            this.execute(arr[i], tpl, target);
-        }
-    };
-    Binder.prototype.parseDom = function (rootDom) {
-        var stack = [];
-        var i;
-        var rootTpl;
-        stack.push({
-            node: rootDom,
-            push: function (e) {
-                rootTpl = e;
-            }
-        });
-        while (stack.length > 0) {
-            var cur = stack.pop();
-            var node = cur.node;
-            var push = cur.push;
-            if (node.nodeType === 1) {
-                var elt = node;
-                var template = new TagTemplate(elt.tagName);
-                for (i = 0; !!elt.attributes && i < elt.attributes.length; i++) {
-                    var attribute = elt.attributes[i];
-                    this.parseAttr(template, attribute);
-                }
-                for (i = elt.childNodes.length - 1; i >= 0; i--) {
-                    stack.push({ node: elt.childNodes[i], push: template.addChild.bind(template) });
-                }
-                push(template);
-            }
-            else if (node.nodeType === 3) {
-                var tpl = this.compile(node.textContent);
-                push(new TextTemplate(tpl || node.textContent));
-            }
-        }
-        return rootTpl;
-    };
     return Binder;
 })();
-//# sourceMappingURL=core.js.map

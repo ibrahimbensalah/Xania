@@ -82,11 +82,15 @@ module Ast {
         }
 
         execute(context, addArgs: any[]) {
-            const args = this.args.map(x => x.execute(context)).concat(addArgs);
+            let args = this.args.map(x => x.execute(context));
+            if (!!addArgs)
+                args = args.concat(addArgs);
+
             const target = this.targetExpr.execute(context);
-            if (typeof target !== "function")
-                throw new Error(`${this.targetExpr.toString() } is not a function`);
-            return target.apply(this, args);
+            if (!!target && typeof target.apply === "function")
+                return target.apply(this, args);
+
+            throw new Error(`${this.targetExpr.toString() } is not a function`);
         }
         app(args: IExpr[]): App {
             return new App(this.targetExpr, this.args.concat(args));
@@ -416,10 +420,38 @@ module Ast {
     }
 }
 
-class Test {
-    constructor(public value) {
-    }
-    get seed() {
-        return this.value;
+module Fun {
+    export class List {
+        static count (fn, list) {
+            if (!list)
+                return 0;
+            var result = 0;
+            for (var i = 0; i < list.length; i++)
+                if (fn(list[i]))
+                    result++;
+
+            return result;
+        }
+        static exists (fn, list) {
+            return List.count(fn, list) > 0;
+        }
+        static filter(fn, list) {
+            if (!list)
+                return [];
+
+            return list.filter(fn);
+        }
+        static map(fn, list) {
+            if (!list)
+                return [];
+
+            return list.map(fn);
+        }
+        static empty(list) {
+            return !list || list.length === 0;
+        }
+        static reduce(fn, initialValue, list) {
+            return !list && list.reduce(fn, initialValue);
+        }
     }
 }

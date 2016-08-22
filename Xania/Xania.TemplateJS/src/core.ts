@@ -17,7 +17,7 @@ class TextTemplate implements IDomTemplate {
     }
 
     bind(model) {
-        return new ContentBinding(this, model);
+        return new TextBinding(this, model);
     }
 
     toString() {
@@ -26,6 +26,26 @@ class TextTemplate implements IDomTemplate {
 
     children() {
         return [];
+    }
+}
+
+class ContentTemplate implements IDomTemplate {
+
+    // ReSharper disable once InconsistentNaming
+    private _children: IDomTemplate[] = [];
+    public modelAccessor: Function;// = Xania.identity;
+
+    bind(model, idx): Binding {
+        return new ContentBinding(this, model);
+    }
+
+    public children() {
+        return this._children;
+    }
+
+    public addChild(child: TagTemplate) {
+        this._children.push(child);
+        return this;
     }
 }
 
@@ -540,6 +560,7 @@ class Observer {
         } else {
             const deps = {};
             deps[property] = new Set<ISubsriber>().add(subsriber);
+            console.debug("subscribe to object", object);
             this.subscriptions.set(object, deps);
             return true;
         }
@@ -566,6 +587,13 @@ class Observer {
             const deps = this.subscriptions.get(dep.obj);
 
             deps[dep.property].delete(subscription);
+            if (deps[dep.property].size === 0) {
+                delete deps[dep.property];
+
+                if (Object.keys(deps).length === 0) {
+                    this.subscriptions.delete(dep.obj);
+                }
+            }
         }
         subscription.children.forEach(child => {
             this.unsubscribe(child);
@@ -656,11 +684,13 @@ class Observer {
     }
 
     update() {
-        console.debug("dirty size", this.dirty.size);
-        this.dirty.forEach(subscriber => {
-            subscriber.notify();
-        });
-        this.dirty.clear();
+        if (this.dirty.size > 0) {
+            this.dirty.forEach(subscriber => {
+                subscriber.notify();
+            });
+            console.debug("stats", { dirty: this.dirty.size, subscriptions: this.subscriptions.size });
+            this.dirty.clear();
+        }
     }
 
     get size() {
@@ -678,6 +708,20 @@ class Observer {
 }
 
 class ContentBinding extends Binding {
+    private dom;
+
+    constructor(private tpl: ContentTemplate, context) {
+        super(context);
+
+        this.dom = document.createDocumentFragment();
+    }
+
+    render(context) {
+        return this.dom;
+    }
+}
+
+class TextBinding extends Binding {
     private dom;
 
     constructor(private tpl: TextTemplate, context) {
@@ -758,12 +802,16 @@ class TagBinding extends Binding {
 
 class Binder {
     private observer = new Observer();
+    private compile: Function;
+    private target: HTMLElement;
 
-    constructor(public compile: Function = null) {
-        if (!this.compile) {
-            var compiler = new Ast.Compiler();
-            this.compile = compiler.template.bind(compiler);
-        }
+    constructor(public model, target = null) {
+        Xania.assign(model, Fun.List);
+        var compiler = new Ast.Compiler();
+        this.compile = compiler.template.bind(compiler);
+        this.target = target || document.body;
+
+        this.init();
     }
 
     public import(itemType) {
@@ -856,12 +904,75 @@ class Binder {
         visit(null, rootContext, rootTpl, rootTarget, 0);
     }
 
-    bind(content, model, target) {
-        target = target || document.body;
-        for (var i = content.childNodes.length - 1; i >= 0; i--) {
-            var tpl = this.parseDom(content.childNodes[i]);
-            this.bindTemplate(tpl, model, target);
+    static find(selector) {
+        if (typeof selector === "string")
+            return document.querySelector(selector);
+        return selector;
+    }
+
+    bind(templateSelector, targetSelector) {
+        const target = Binder.find(targetSelector) || document.body;
+        const template = this.parseDom(Binder.find(templateSelector));
+        this.bindTemplate(template, target);
+
+        return this;
+    }
+
+    bindTemplate(tpl, target) {
+        const arr = Array.isArray(this.model) ? this.model : [this.model];
+        for (let i = 0; i < arr.length; i++) {
+            this.execute(arr[i], tpl, target);
         }
+    }
+
+    parseDom(rootDom: HTMLElement): TagTemplate {
+        const stack = [];
+        let i: number;
+        var rootTpl;
+        stack.push({
+            node: rootDom,
+            push(e) {
+                rootTpl = e;
+            }
+        });
+
+        while (stack.length > 0) {
+            const cur = stack.pop();
+            const node: Node = cur.node;
+            const push = cur.push;
+
+            if (!!node["content"]) {
+                const content = <HTMLElement>node["content"];
+                var template = new ContentTemplate();
+                for (i = content.childNodes.length - 1; i >= 0; i--) {
+                    stack.push({ node: content.childNodes[i], push: template.addChild.bind(template) });
+                }
+                push(template);
+            }
+            else if (node.nodeType === 1) {
+                const elt = <HTMLElement>node;
+                const template = new TagTemplate(elt.tagName);
+
+                for (i = 0; !!elt.attributes && i < elt.attributes.length; i++) {
+                    var attribute = elt.attributes[i];
+                    this.parseAttr(template, attribute);
+                }
+
+                for (i = elt.childNodes.length - 1; i >= 0; i--) {
+                    stack.push({ node: elt.childNodes[i], push: template.addChild.bind(template) });
+                }
+                push(template);
+            } else if (node.nodeType === 3) {
+                const tpl = this.compile(node.textContent);
+                push(new TextTemplate(tpl || node.textContent));
+            }
+        }
+
+        return rootTpl;
+    }
+
+    private init() {
+        var target = this.target;
 
         var eventHandler = (target, name) => {
             var binding = target.attributes["__binding"];
@@ -898,51 +1009,6 @@ class Binder {
             }
             this.observer.update();
         });
-    }
-
-    bindTemplate(tpl, model, target) {
-        const arr = Array.isArray(model) ? model : [model];
-        for (let i = 0; i < arr.length; i++) {
-            this.execute(arr[i], tpl, target);
-        }
-    }
-
-    parseDom(rootDom: HTMLElement): TagTemplate {
-        const stack = [];
-        let i: number;
-        var rootTpl;
-        stack.push({
-            node: rootDom,
-            push(e) {
-                rootTpl = e;
-            }
-        });
-
-        while (stack.length > 0) {
-            const cur = stack.pop();
-            const node: Node = cur.node;
-            const push = cur.push;
-
-            if (node.nodeType === 1) {
-                const elt = <HTMLElement>node;
-                const template = new TagTemplate(elt.tagName);
-
-                for (i = 0; !!elt.attributes && i < elt.attributes.length; i++) {
-                    var attribute = elt.attributes[i];
-                    this.parseAttr(template, attribute);
-                }
-
-                for (i = elt.childNodes.length - 1; i >= 0; i--) {
-                    stack.push({ node: elt.childNodes[i], push: template.addChild.bind(template) });
-                }
-                push(template);
-            } else if (node.nodeType === 3) {
-                const tpl = this.compile(node.textContent);
-                push(new TextTemplate(tpl || node.textContent));
-            }
-        }
-
-        return rootTpl;
     }
 }
 // ReSharper restore InconsistentNaming
