@@ -34,14 +34,13 @@
     <Content Include="Scripts\jasmine\console.js" />
     <Content Include="Scripts\jasmine\jasmine-html.js" />
     <Content Include="Scripts\jasmine\jasmine.js" />
-    <Content Include="Content\css\base.css" />
-    <Content Include="Content\css\index.css" />
-    <Content Include="index.html" />
+    <Content Include="src\sample\css\base.css" />
+    <Content Include="src\sample\css\index.css" />
+    <Content Include="src\sample\index.html" />
     <Content Include="spec\funSpec.js" />
     <Content Include="src\core.js" />
     <Content Include="src\fun.js" />
-    <Content Include="src\todomvc.js" />
-    <Content Include="todoapp.html" />
+    <Content Include="src\sample\todoapp.html" />
     <Content Include="web.config" />
   </ItemGroup>
   <ItemGroup>
@@ -51,7 +50,7 @@
     <TypeScriptCompile Include="src\core.ts" />
     <Content Include="test\coretests.js" />
     <TypeScriptCompile Include="test\company.ts" />
-    <TypeScriptCompile Include="src\todomvc.ts" />
+    <TypeScriptCompile Include="src\sample\todomvc.ts" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="organisation.json" />
@@ -60,7 +59,6 @@
     <Content Include="package.json" />
     <Content Include="src\core.js.map" />
     <Content Include="src\fun.js.map" />
-    <Content Include="src\todomvc.js.map" />
     <None Include="web.Debug.config">
       <DependentUpon>web.config</DependentUpon>
     </None>

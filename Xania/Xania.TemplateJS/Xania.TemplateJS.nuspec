@@ -10,7 +10,6 @@
     <licenseUrl>https://github.com/ibrahimbensalah/Xania/blob/master/LICENSE</licenseUrl>
   </metadata>
   <files>
-    <file src="src\core.*" target="" />
-    <file src="src\fun.*" target="" />
+    <file src="src\**\*.*" target="content\xania" />
   </files>
 </package>
