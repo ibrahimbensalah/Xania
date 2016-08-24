@@ -11,28 +11,13 @@ var Todo = (function () {
 var TodoStore = (function () {
     function TodoStore() {
         this.todos = [];
-        for (var i = 0; i < 50; i++)
+        for (var i = 0; i < 100; i++)
             this.todos.push(new Todo("todo " + i));
     }
-    TodoStore.prototype.all = function (cat) {
-        if (!!cat)
-            return this.todos.filter(function (x) { return x.completed === (cat === "completed"); });
-        else
-            return this.todos;
-    };
-    TodoStore.prototype.allCompleted = function () {
-        for (var i = 0; i < this.todos.length; i++)
-            if (!this.todos[i].completed)
-                return false;
-        return true;
-    };
     TodoStore.prototype.toggleAll = function () {
-        var allCompleted = this.allCompleted();
+        var allCompleted = this.todos.every(function (e) { return e.completed; });
         for (var i = 0; i < this.todos.length; i++)
             this.todos[i].completed = !allCompleted;
-    };
-    TodoStore.prototype.getCompleted = function () {
-        return this.todos.filter(function (t) { return t.completed; });
     };
     TodoStore.prototype.removeCompleted = function () {
         this.todos = this.todos.filter(function (t) { return !t.completed; });

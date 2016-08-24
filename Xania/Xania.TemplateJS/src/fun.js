@@ -352,14 +352,19 @@ var Fun;
         List.count = function (fn, list) {
             if (!list)
                 return 0;
+            if (!!list.count)
+                return list.count(fn);
             var result = 0;
             for (var i = 0; i < list.length; i++)
                 if (fn(list[i]))
                     result++;
             return result;
         };
-        List.exists = function (fn, list) {
+        List.any = function (fn, list) {
             return List.count(fn, list) > 0;
+        };
+        List.all = function (fn, list) {
+            return List.count(fn, list) === list.length;
         };
         List.filter = function (fn, list) {
             if (!list)

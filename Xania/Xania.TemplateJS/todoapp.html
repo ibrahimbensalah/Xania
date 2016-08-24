@@ -5,7 +5,7 @@
             <input class="new-todo" placeholder="What needs to be done?" autofocus="" name="app.newTodoText" value="{{ app.newTodoText }}" keyup.enter="{{ app.addTodo }}">
         </header>
         <section class="main" class.hidden="{{ app.store.todos |> empty }}">
-            <input class="toggle-all" type="checkbox" checked="{{ app.store.allCompleted }}" click="{{ app.store.toggleAll }}">
+            <input class="toggle-all" type="checkbox" checked="{{ app.store.todos |> not any completed }}" click="{{ app.store.toggleAll }}">
             <ul class="todo-list">
                 <li data-select="{{ for todo in app.store.todos |> filter todoPredicate }}" class.completed="{{ todo.completed }}" class.editing="{{ todo.editing }}">
                     <div class="view">
@@ -24,7 +24,7 @@
                 <li><a href="#" class.selected="{{ show.has 'active' }}" click="{{ show 'active' }}">Active</a></li>
                 <li><a href="#" class.selected="{{ show.has 'completed'}}" click="{{ show 'completed'}}">Completed</a></li>
             </ul>
-            <button class="clear-completed" class.hidden="{{ app.store.todos |> not exists completed }}" click="{{ app.store.removeCompleted }}">Clear completed</button>
+            <button class="clear-completed" class.hidden="{{ app.store.todos |> not any completed }}" click="{{ app.store.removeCompleted }}">Clear completed</button>
         </footer>
     </section>
 </template>

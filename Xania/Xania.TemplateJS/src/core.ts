@@ -6,31 +6,25 @@
 
 class TextTemplate implements IDomTemplate {
     modelAccessor;
-
     constructor(private tpl) {
     }
-
     execute(context) {
         return typeof this.tpl == "function"
             ? this.tpl(context)
             : this.tpl;
     }
-
     bind(model) {
         return new TextBinding(this, model);
     }
-
     toString() {
         return this.tpl.toString();
     }
-
     children() {
         return [];
     }
 }
 
 class ContentTemplate implements IDomTemplate {
-
     // ReSharper disable once InconsistentNaming
     private _children: IDomTemplate[] = [];
     public modelAccessor: Function;// = Xania.identity;
@@ -270,25 +264,6 @@ class Xania {
         return !!data.length ? data.length : 1;
     }
 
-    //static uuid() {
-    //    if (!Xania.lut) {
-    //        Xania.lut = [];
-    //        for (var i = 0; i < 256; i++) {
-    //            Xania.lut[i] = (i < 16 ? '0' : '') + (i).toString(16);
-    //        }
-    //    }
-    //    const lut = Xania.lut;
-
-    //    var d0 = Math.random() * 0xffffffff | 0;
-    //    var d1 = Math.random() * 0xffffffff | 0;
-    //    var d2 = Math.random() * 0xffffffff | 0;
-    //    var d3 = Math.random() * 0xffffffff | 0;
-    //    return lut[d0 & 0xff] + lut[d0 >> 8 & 0xff] + lut[d0 >> 16 & 0xff] + lut[d0 >> 24 & 0xff] + '-' +
-    //        lut[d1 & 0xff] + lut[d1 >> 8 & 0xff] + '-' + lut[d1 >> 16 & 0x0f | 0x40] + lut[d1 >> 24 & 0xff] + '-' +
-    //        lut[d2 & 0x3f | 0x80] + lut[d2 >> 8 & 0xff] + '-' + lut[d2 >> 16 & 0xff] + lut[d2 >> 24 & 0xff] +
-    //        lut[d3 & 0xff] + lut[d3 >> 8 & 0xff] + lut[d3 >> 16 & 0xff] + lut[d3 >> 24 & 0xff];
-    //}
-
     static compose(...fns: any[]): Function {
         return function (result) {
             for (var i = fns.length - 1; i > -1; i--) {
@@ -299,13 +274,19 @@ class Xania {
         };
     }
 
-    static partialApp(fn, ...partialArgs: any[]) {
-        return function (...additionalArgs: any[]) {
-            var args = [].concat(partialArgs, additionalArgs);
-
-            // ReSharper disable once SuspiciousThisUsage
-            return fn.apply(this, args);
+    static partialFunc() {
+        const self = (<any>this);
+        var args = new Array(self.baseArgs.length + arguments.length);
+        for (var i = 0; i < self.baseArgs.length; i++)
+            args[i] = self.baseArgs[i];
+        for (var n = 0; n < arguments.length; n++) {
+            args[n + self.baseArgs.length] = arguments[n];
         }
+        return self.func.apply(self.context, args);
+    }
+
+    static partialApp(func, ...baseArgs: any[]) {
+        return Xania.partialFunc.bind({ context: this, func, baseArgs });
     }
 
     static observe(target, observer: IObserver) {
@@ -317,10 +298,9 @@ class Xania {
             throw new Error("observe observable is not allowed");
 
         if (typeof target === "object") {
-            if (Array.isArray(target))
-                return Xania.observeArray(target, observer);
-            else
-                return Xania.observeObject(target, observer);
+            return Array.isArray(target)
+                ? Xania.observeArray(target, observer)
+                : Xania.observeObject(target, observer);
         } else {
             return target;
         }
@@ -328,21 +308,33 @@ class Xania {
 
     static observeArray(arr, observer: IObserver) {
         // ReSharper disable once InconsistentNaming
-        var ProxyConst = window["Proxy"];
-        return new ProxyConst(arr, {
+        return Xania.proxy(arr, {
             get(target, property) {
                 switch (property) {
                     case "isSpy":
                         return true;
-                    case "empty":
-                        observer.setRead(arr, "length");
-                        return arr.length === 0;
                     case "valueOf":
                         return arr.valueOf.bind(arr);
                     case "indexOf":
+                        observer.setRead(arr, "length");
                         return arr.indexOf.bind(arr);
-                    default:
+                    case "length":
+                        observer.setRead(arr, "length");
+                        return arr.length;
+                    case "constructor":
+                        return Array;
+                    case "splice":
+                    case "some":
+                    case "every":
+                    case "slice":
+                    case "filter":
+                    case "map":
+                    case "push":
                         return Xania.observeProperty(arr, property, observer);
+                    default:
+                        if (arr.hasOwnProperty(property))
+                            return Xania.observeProperty(arr, property, observer);
+                        return undefined;
                 }
             },
             set(target, property, value, receiver) {
@@ -386,7 +378,34 @@ class Xania {
         return obj;
     }
 
-    static observeObject(target, observer: IObserver) {
+    static observeObject(object, observer: IObserver) {
+        return Xania.proxy(object, {
+            get(target, property) {
+                switch (property) {
+                    case "isSpy":
+                        return true;
+                    case "valueOf":
+                        return () => object;
+                    case "constructor":
+                        return object.constructor;
+                    default:
+                        // ReSharper disable once SuspiciousThisUsage
+                        return Xania.observeProperty(object, property, observer);
+                }
+            },
+            set(target, property, value, receiver) {
+                var unwrapped = Xania.unwrap(value);
+                if (object[property] !== unwrapped) {
+                    object[property] = unwrapped;
+                    observer.setChange(object, property);
+                }
+
+                return true;
+            }
+        });
+    }
+
+    static observeObject2(target, observer: IObserver) {
         // ReSharper disable once InconsistentNaming
         function Spy() { }
         if (target.constructor !== Object) {
@@ -397,7 +416,6 @@ class Xania {
             Spy.prototype = new __();
         }
         Spy.prototype.valueOf = () => target;
-        Spy.prototype.state = observer.state.bind(observer);
 
         Object.defineProperty(Spy.prototype, "isSpy", { get() { return true; }, enumerable: false });
 
@@ -426,15 +444,18 @@ class Xania {
         return new Spy;
     }
 
+    static observeFunction() {
+        var self = (<any>this);
+        var retval = self.func.apply(self.object, arguments);
+
+        return Xania.observe(retval, self.observer);
+    }
+
     static observeProperty(object, propertyName, observer: IObserver) {
         var propertyValue = object[propertyName];
         if (typeof propertyValue === "function") {
-            return function () {
-                var proxy = Xania.observe(object, observer);
-                var retval = propertyValue.apply(proxy, arguments);
-
-                return Xania.observe(retval, observer);
-            };
+            var proxy = Xania.observe(object, observer);
+            return this.observeFunction.bind({ object: proxy, func: propertyValue, observer });
         } else {
             observer.setRead(object, propertyName);
             if (propertyValue === null || typeof propertyValue === "undefined") {
@@ -496,6 +517,10 @@ class Xania {
             }
         }
         return target;
+    }
+
+    static proxy(target, config) {
+        return new (window["Proxy"])(target, config);
     }
 
     static join(separator: string, value) {
@@ -560,7 +585,6 @@ class Observer {
         } else {
             const deps = {};
             deps[property] = new Set<ISubsriber>().add(subsriber);
-            console.debug("subscribe to object", object);
             this.subscriptions.set(object, deps);
             return true;
         }
@@ -661,35 +685,36 @@ class Observer {
 
     track(context) {
         var observer = this;
-        return Xania.observe(context,
-            {
-                state(name, value) {
-                    if (value !== undefined) {
-                        this.setChange(observer.state, name);
-                        observer.state[name] = value;
-                    }
-                },
-                setRead() {
-                    // ignore
-                },
-                setChange(obj, property: string) {
-                    const subscribers = observer.get(obj, property);
-                    if (!!subscribers) {
-                        subscribers.forEach(s => {
-                            observer.dirty.add(s);
-                        });
-                    }
+        return Xania.observe(context, {
+            state(name, value) {
+                if (value !== undefined) {
+                    this.setChange(observer.state, name);
+                    observer.state[name] = value;
                 }
-            });
+            },
+            setRead() {
+                // ignore
+            },
+            setChange(obj, property: string) {
+                const subscribers = observer.get(obj, property);
+                if (!!subscribers) {
+                    subscribers.forEach(s => {
+                        observer.dirty.add(s);
+                    });
+                }
+            }
+        });
     }
 
     update() {
         if (this.dirty.size > 0) {
-            this.dirty.forEach(subscriber => {
-                subscriber.notify();
+            var observer = this;
+            window.requestAnimationFrame(function () {
+                observer.dirty.forEach(subscriber => {
+                    subscriber.notify();
+                });
+                observer.dirty.clear();
             });
-            console.debug("stats", { dirty: this.dirty.size, subscriptions: this.subscriptions.size });
-            this.dirty.clear();
         }
     }
 
@@ -877,9 +902,7 @@ class Binder {
                                 .then(p => {
                                     return visit(subscription, data, cur, parent, p).then(x => p + x.length);
                                 });
-                        },
-                            result,
-                            binding.dom);
+                        }, result, binding.dom);
 
                         tpl.children().reduce(visitChild, 0);
                         docfrag.appendChild(binding.dom);
@@ -898,6 +921,9 @@ class Binder {
                 if (!!tpl.modelAccessor) {
                     return Xania.promise(tpl.modelAccessor(observable))
                         .then(model => {
+                            if (model === null || model === undefined)
+                                return [];
+
                             model = Xania.unwrap(model);
                             return visitArray(Array.isArray(model) ? model : [model]);
                         });

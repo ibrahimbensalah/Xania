@@ -235,19 +235,22 @@ var Xania = (function () {
             return result;
         };
     };
-    Xania.partialApp = function (fn) {
-        var partialArgs = [];
-        for (var _i = 1; _i < arguments.length; _i++) {
-            partialArgs[_i - 1] = arguments[_i];
+    Xania.partialFunc = function () {
+        var self = this;
+        var args = new Array(self.baseArgs.length + arguments.length);
+        for (var i = 0; i < self.baseArgs.length; i++)
+            args[i] = self.baseArgs[i];
+        for (var n = 0; n < arguments.length; n++) {
+            args[n + self.baseArgs.length] = arguments[n];
         }
-        return function () {
-            var additionalArgs = [];
-            for (var _i = 0; _i < arguments.length; _i++) {
-                additionalArgs[_i - 0] = arguments[_i];
-            }
-            var args = [].concat(partialArgs, additionalArgs);
-            return fn.apply(this, args);
-        };
+        return self.func.apply(self.context, args);
+    };
+    Xania.partialApp = function (func) {
+        var baseArgs = [];
+        for (var _i = 1; _i < arguments.length; _i++) {
+            baseArgs[_i - 1] = arguments[_i];
+        }
+        return Xania.partialFunc.bind({ context: this, func: func, baseArgs: baseArgs });
     };
     Xania.observe = function (target, observer) {
         if (!target || target.isSpy)
@@ -255,31 +258,42 @@ var Xania = (function () {
         if (target.isSpy)
             throw new Error("observe observable is not allowed");
         if (typeof target === "object") {
-            if (Array.isArray(target))
-                return Xania.observeArray(target, observer);
-            else
-                return Xania.observeObject(target, observer);
+            return Array.isArray(target)
+                ? Xania.observeArray(target, observer)
+                : Xania.observeObject(target, observer);
         }
         else {
             return target;
         }
     };
     Xania.observeArray = function (arr, observer) {
-        var ProxyConst = window["Proxy"];
-        return new ProxyConst(arr, {
+        return Xania.proxy(arr, {
             get: function (target, property) {
                 switch (property) {
                     case "isSpy":
                         return true;
-                    case "empty":
-                        observer.setRead(arr, "length");
-                        return arr.length === 0;
                     case "valueOf":
                         return arr.valueOf.bind(arr);
                     case "indexOf":
+                        observer.setRead(arr, "length");
                         return arr.indexOf.bind(arr);
-                    default:
+                    case "length":
+                        observer.setRead(arr, "length");
+                        return arr.length;
+                    case "constructor":
+                        return Array;
+                    case "splice":
+                    case "some":
+                    case "every":
+                    case "slice":
+                    case "filter":
+                    case "map":
+                    case "push":
                         return Xania.observeProperty(arr, property, observer);
+                    default:
+                        if (arr.hasOwnProperty(property))
+                            return Xania.observeProperty(arr, property, observer);
+                        return undefined;
                 }
             },
             set: function (target, property, value, receiver) {
@@ -314,7 +328,31 @@ var Xania = (function () {
         }
         return obj;
     };
-    Xania.observeObject = function (target, observer) {
+    Xania.observeObject = function (object, observer) {
+        return Xania.proxy(object, {
+            get: function (target, property) {
+                switch (property) {
+                    case "isSpy":
+                        return true;
+                    case "valueOf":
+                        return function () { return object; };
+                    case "constructor":
+                        return object.constructor;
+                    default:
+                        return Xania.observeProperty(object, property, observer);
+                }
+            },
+            set: function (target, property, value, receiver) {
+                var unwrapped = Xania.unwrap(value);
+                if (object[property] !== unwrapped) {
+                    object[property] = unwrapped;
+                    observer.setChange(object, property);
+                }
+                return true;
+            }
+        });
+    };
+    Xania.observeObject2 = function (target, observer) {
         function Spy() { }
         if (target.constructor !== Object) {
             function __() {
@@ -325,7 +363,6 @@ var Xania = (function () {
             Spy.prototype = new __();
         }
         Spy.prototype.valueOf = function () { return target; };
-        Spy.prototype.state = observer.state.bind(observer);
         Object.defineProperty(Spy.prototype, "isSpy", { get: function () { return true; }, enumerable: false });
         var props = Object.getOwnPropertyNames(target);
         for (var i = 0; i < props.length; i++) {
@@ -348,14 +385,16 @@ var Xania = (function () {
         }
         return new Spy;
     };
+    Xania.observeFunction = function () {
+        var self = this;
+        var retval = self.func.apply(self.object, arguments);
+        return Xania.observe(retval, self.observer);
+    };
     Xania.observeProperty = function (object, propertyName, observer) {
         var propertyValue = object[propertyName];
         if (typeof propertyValue === "function") {
-            return function () {
-                var proxy = Xania.observe(object, observer);
-                var retval = propertyValue.apply(proxy, arguments);
-                return Xania.observe(retval, observer);
-            };
+            var proxy = Xania.observe(object, observer);
+            return this.observeFunction.bind({ object: proxy, func: propertyValue, observer: observer });
         }
         else {
             observer.setRead(object, propertyName);
@@ -414,6 +453,9 @@ var Xania = (function () {
         }
         return target;
     };
+    Xania.proxy = function (target, config) {
+        return new (window["Proxy"])(target, config);
+    };
     Xania.join = function (separator, value) {
         if (Array.isArray(value)) {
             return value.length > 0 ? value.sort().join(separator) : null;
@@ -468,7 +510,6 @@ var Observer = (function () {
         else {
             var deps = {};
             deps[property] = new Set().add(subsriber);
-            console.debug("subscribe to object", object);
             this.subscriptions.set(object, deps);
             return true;
         }
@@ -584,11 +625,13 @@ var Observer = (function () {
     };
     Observer.prototype.update = function () {
         if (this.dirty.size > 0) {
-            this.dirty.forEach(function (subscriber) {
-                subscriber.notify();
+            var observer = this;
+            window.requestAnimationFrame(function () {
+                observer.dirty.forEach(function (subscriber) {
+                    subscriber.notify();
+                });
+                observer.dirty.clear();
             });
-            console.debug("stats", { dirty: this.dirty.size, subscriptions: this.subscriptions.size });
-            this.dirty.clear();
         }
     };
     Object.defineProperty(Observer.prototype, "size", {
@@ -773,6 +816,8 @@ var Binder = (function () {
                 if (!!tpl.modelAccessor) {
                     return Xania.promise(tpl.modelAccessor(observable))
                         .then(function (model) {
+                        if (model === null || model === undefined)
+                            return [];
                         model = Xania.unwrap(model);
                         return visitArray(Array.isArray(model) ? model : [model]);
                     });

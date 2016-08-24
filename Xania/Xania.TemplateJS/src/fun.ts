@@ -425,6 +425,8 @@ module Fun {
         static count (fn, list) {
             if (!list)
                 return 0;
+            if (!!list.count)
+                return list.count(fn);
             var result = 0;
             for (var i = 0; i < list.length; i++)
                 if (fn(list[i]))
@@ -432,8 +434,11 @@ module Fun {
 
             return result;
         }
-        static exists (fn, list) {
+        static any(fn, list) {
             return List.count(fn, list) > 0;
+        }
+        static all(fn, list) {
+            return List.count(fn, list) === list.length;
         }
         static filter(fn, list) {
             if (!list)
