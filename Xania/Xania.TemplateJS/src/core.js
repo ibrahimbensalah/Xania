@@ -57,8 +57,12 @@ var TagTemplate = (function () {
         var tpl = typeof (value) === "function"
             ? value
             : function () { return value; };
-        this.attributes.set(name, tpl);
+        this.attributes.set(name.toLowerCase(), tpl);
         return this;
+    };
+    TagTemplate.prototype.hasAttribute = function (name) {
+        var key = name.toLowerCase();
+        return this.attributes.has(key);
     };
     TagTemplate.prototype.addEvent = function (name, callback) {
         this.events.set(name, callback);
@@ -681,8 +685,8 @@ var Binder = (function () {
         this.model = model;
         this.observer = new Observer();
         Xania.assign(model, Fun.List);
-        var compiler = new Ast.Compiler();
-        this.compile = compiler.template.bind(compiler);
+        this.compiler = new Ast.Compiler();
+        this.compile = this.compiler.template.bind(this.compiler);
         this.target = target || document.body;
         this.init();
     }
@@ -722,6 +726,10 @@ var Binder = (function () {
         else {
             var tpl = this.compile(attr.value);
             tagElement.attr(name, tpl || attr.value);
+            if (tagElement.name.match(/^input$/i) && !tagElement.hasAttribute("value")) {
+                var valueAccessor = this.compile("{{ " + attr.value + " }}");
+                tagElement.attr("value", valueAccessor);
+            }
         }
     };
     Binder.prototype.execute = function (rootContext, rootTpl, rootTarget) {

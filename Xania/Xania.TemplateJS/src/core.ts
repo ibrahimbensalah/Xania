@@ -67,9 +67,13 @@ class TagTemplate implements IDomTemplate {
             ? value
             : () => value;
 
-        this.attributes.set(name, tpl);
-
+        this.attributes.set(name.toLowerCase(), tpl);
         return this;
+    }
+
+    public hasAttribute(name: string) {
+        var key = name.toLowerCase();
+        return this.attributes.has(key);
     }
 
     public addEvent(name, callback) {
@@ -761,11 +765,12 @@ class Binder {
     private observer = new Observer();
     private compile: Function;
     private target: HTMLElement;
+    private compiler: Ast.Compiler;
 
     constructor(public model, target = null) {
         Xania.assign(model, Fun.List);
-        var compiler = new Ast.Compiler();
-        this.compile = compiler.template.bind(compiler);
+        this.compiler = new Ast.Compiler();
+        this.compile = this.compiler.template.bind(this.compiler);
         this.target = target || document.body;
 
         this.init();
@@ -808,6 +813,12 @@ class Binder {
         } else {
             const tpl = this.compile(attr.value);
             tagElement.attr(name, tpl || attr.value);
+
+            // conventions
+            if (tagElement.name.match(/^input$/i) && !tagElement.hasAttribute("value")) {
+                const valueAccessor = this.compile(`{{ ${attr.value} }}`);
+                tagElement.attr("value", valueAccessor);
+            }
         }
     }
 

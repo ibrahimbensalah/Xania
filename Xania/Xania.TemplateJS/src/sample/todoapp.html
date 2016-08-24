@@ -2,7 +2,7 @@
     <section class="todoapp">
         <header class="header">
             <h1>todos</h1>
-            <input class="new-todo" placeholder="What needs to be done?" autofocus="" name="app.newTodoText" value="{{ app.newTodoText }}" keyup.enter="{{ app.addTodo }}">
+            <input class="new-todo" placeholder="What needs to be done?" autofocus="" name="app.newTodoText" keyup.enter="{{ app.addTodo }}">
         </header>
         <section class="main" class.hidden="{{ app.store.todos |> empty }}">
             <input class="toggle-all" type="checkbox" checked="{{ app.store.todos |> all completed }}" click="{{ app.store.toggleAll }}">
