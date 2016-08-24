@@ -1,12 +1,16 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
   <metadata>
-    <id>sample</id>
-    <version>1.2.3</version>
-    <authors>Kim Abercrombie, Franck Halmaert</authors>
-    <description>Sample exists only to show a sample .nuspec file.</description>
+    <id>TemplateJS</id>
+    <version>$version$</version>
+    <authors>Ibrahim ben Salah, Xania</authors>
+    <description>Uni directional html5 templating library with fsharp-like syntax</description>
     <language>en-US</language>
-    <projectUrl>http://xunit.codeplex.com/</projectUrl>
-    <licenseUrl>http://xunit.codeplex.com/license</licenseUrl>
+    <projectUrl>https://github.com/ibrahimbensalah/Xania</projectUrl>
+    <licenseUrl>https://github.com/ibrahimbensalah/Xania/blob/master/LICENSE</licenseUrl>
   </metadata>
+  <files>
+    <file src="src\core.*" target="" />
+    <file src="src\fun.*" target="" />
+  </files>
 </package>
