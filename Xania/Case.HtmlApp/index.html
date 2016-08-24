@@ -5,11 +5,46 @@
     <meta charset="utf-8" />
     <title>TypeScript HTML App</title>
     <link rel="stylesheet" href="app.css" type="text/css" />
-    <script src="app.js"></script>
 </head>
 <body>
-    <h1>Case manager</h1>
+    <div id="case-manager"></div>
+    <template>
+        <h1>Case manager</h1>
+        <div data-select="{{ for caes in app.cases }}">
+            <h3>Dossier gegevens:</h3>
+            <div>
+                <label>Referentie nummer</label>
+                <input type="text" name="caes.ref" />
+            </div>
+            <div>
+                <label>Beschrijving</label>
+                <input type="text" name="caes.title" />
+            </div>
+            <h3>Contact gegevens:</h3>
+            <div>
+                <label>Naam</label>
+                <input type="text" name="caes.contact.name" />
+            </div>
+            <div>
+                <label>Adres</label>
+                <input type="text" name="caes.contact.address" />
+            </div>
+            <h3>Bestanden:</h3>
+            <ul>
+                <li data-select="{{ for file in caes.files }}">
+                    {{ file.name }}
+                </li>
+            </ul>
+        </div>
+    </template>
 
-    <div id="content"></div>
+    <script src="src/app.js"></script>
+    <script src="xania/fun.js"></script>
+    <script src="xania/core.js"></script>
+    <script>
+        var viewModel = { app: new App.CaseManager() };
+        var binder = new Binder(viewModel);
+        binder.bind("template", "#case-manager");
+    </script>
 </body>
 </html>

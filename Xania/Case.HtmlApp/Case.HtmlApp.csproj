@@ -16,6 +16,8 @@
     <IISExpressAnonymousAuthentication />
     <IISExpressWindowsAuthentication />
     <IISExpressUseClassicPipelineMode />
+    <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\</SolutionDir>
+    <RestorePackages>true</RestorePackages>
   </PropertyGroup>
   <ItemGroup>
     <Content Include="app.css" />
@@ -23,15 +25,31 @@
     <Content Include="web.config" />
   </ItemGroup>
   <ItemGroup>
-    <TypeScriptCompile Include="app.ts" />
+    <TypeScriptCompile Include="src\app.ts" />
+    <TypeScriptCompile Include="Scripts\typings\es6-shim\es6-shim.d.ts" />
+    <TypeScriptCompile Include="xania\core.ts" />
+    <TypeScriptCompile Include="xania\fun.ts" />
+    <TypeScriptCompile Include="xania\sample\todomvc.ts" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="packages.config" />
+    <None Include="Caes.pubxml" />
     <None Include="web.Debug.config">
       <DependentUpon>web.config</DependentUpon>
     </None>
     <None Include="web.Release.config">
       <DependentUpon>web.config</DependentUpon>
     </None>
+    <Content Include="xania\core.js" />
+    <Content Include="xania\fun.js" />
+    <Content Include="xania\sample\css\base.css" />
+    <Content Include="xania\sample\css\index.css" />
+    <Content Include="xania\sample\index.html" />
+    <Content Include="xania\sample\todoapp.html" />
+    <Content Include="xania\sample\todomvc.js" />
+    <Content Include="xania\sample\todomvc.js.map" />
+    <Content Include="xania\fun.js.map" />
+    <Content Include="xania\core.js.map" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Xania.TemplateJS\Xania.TemplateJS.csproj">
@@ -55,7 +73,7 @@
           <AutoAssignPort>True</AutoAssignPort>
           <DevelopmentServerPort>61798</DevelopmentServerPort>
           <DevelopmentServerVPath>/</DevelopmentServerVPath>
-          <IISUrl>http://localhost:61798/</IISUrl>
+          <IISUrl>http://localhost:6179/</IISUrl>
           <NTLMAuthentication>False</NTLMAuthentication>
           <UseCustomServer>False</UseCustomServer>
           <CustomServerUrl>
@@ -74,4 +92,11 @@
     <TypeScriptSourceMap>false</TypeScriptSourceMap>
   </PropertyGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\TypeScript\Microsoft.TypeScript.targets" Condition="Exists('$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\TypeScript\Microsoft.TypeScript.targets')" />
+  <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
+  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
+    <PropertyGroup>
+      <ErrorText>This project references NuGet package(s) that are missing on this computer. Enable NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
+    </PropertyGroup>
+    <Error Condition="!Exists('$(SolutionDir)\.nuget\NuGet.targets')" Text="$([System.String]::Format('$(ErrorText)', '$(SolutionDir)\.nuget\NuGet.targets'))" />
+  </Target>
 </Project>

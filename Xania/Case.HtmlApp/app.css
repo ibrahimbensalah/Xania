@@ -5,3 +5,8 @@
 span {
     font-style: italic;
 }
+
+div {
+    padding: 10px;
+    border: 1px solid red;
+}
