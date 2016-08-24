@@ -288,6 +288,7 @@ var Xania = (function () {
                     case "slice":
                     case "filter":
                     case "map":
+                    case "pop":
                     case "push":
                         return Xania.observeProperty(arr, property, observer);
                     default:
@@ -352,39 +353,6 @@ var Xania = (function () {
             }
         });
     };
-    Xania.observeObject2 = function (target, observer) {
-        function Spy() { }
-        if (target.constructor !== Object) {
-            function __() {
-                this.constructor = Spy;
-            }
-            ;
-            __.prototype = target.constructor.prototype;
-            Spy.prototype = new __();
-        }
-        Spy.prototype.valueOf = function () { return target; };
-        Object.defineProperty(Spy.prototype, "isSpy", { get: function () { return true; }, enumerable: false });
-        var props = Object.getOwnPropertyNames(target);
-        for (var i = 0; i < props.length; i++) {
-            var prop = props[i];
-            Object.defineProperty(Spy.prototype, prop, {
-                get: Xania.partialApp(function (obj, name) {
-                    observer.setRead(obj, name);
-                    return Xania.observeProperty(obj, name, observer);
-                }, target, prop),
-                set: Xania.partialApp(function (obj, name, value) {
-                    var unwrapped = Xania.unwrap(value);
-                    if (obj[name] !== unwrapped) {
-                        obj[name] = unwrapped;
-                        observer.setChange(obj, name);
-                    }
-                }, target, prop),
-                enumerable: true,
-                configurable: true
-            });
-        }
-        return new Spy;
-    };
     Xania.observeFunction = function () {
         var self = this;
         var retval = self.func.apply(self.object, arguments);
@@ -406,35 +374,6 @@ var Xania = (function () {
             }
         }
     };
-    Xania.construct = function (viewModel, data) {
-        //return Xania.assign(new viewModel, data);
-        var _this = this;
-        function Proxy() {
-        }
-        function __() {
-            this.constructor = Proxy;
-        }
-        ;
-        __.prototype = data.constructor.prototype;
-        Proxy.prototype = new __();
-        for (var fn in viewModel.prototype) {
-            if (viewModel.prototype.hasOwnProperty(fn)) {
-                console.log(fn);
-                Proxy.prototype[fn] = viewModel.prototype[fn];
-            }
-        }
-        for (var prop in data) {
-            if (data.hasOwnProperty(prop)) {
-                Object.defineProperty(Proxy.prototype, prop, {
-                    get: Xania.partialApp(function (obj, name) { return _this[name]; }, data, prop),
-                    enumerable: false,
-                    configurable: false
-                });
-            }
-        }
-        Proxy.prototype.valueOf = function () { return Xania.construct(viewModel, data.valueOf()); };
-        return new Proxy();
-    };
     Xania.shallow = function (obj) {
         return Xania.assign({}, obj);
     };
@@ -454,6 +393,8 @@ var Xania = (function () {
         return target;
     };
     Xania.proxy = function (target, config) {
+        if (typeof window["Proxy"] === "undefined")
+            throw new Error("Browser is not supported");
         return new (window["Proxy"])(target, config);
     };
     Xania.join = function (separator, value) {
@@ -747,6 +688,9 @@ var Binder = (function () {
     }
     Binder.prototype.import = function (templateUrl) {
         var binder = this;
+        if (!("import" in document.createElement("link"))) {
+            throw new Error("HTML import is not supported in this browser");
+        }
         return {
             then: function (resolve) {
                 var link = document.createElement('link');
@@ -755,8 +699,7 @@ var Binder = (function () {
                 link.setAttribute('async', '');
                 link.onload = function (e) {
                     var link = e.target;
-                    var tpl = link.import.querySelector("template");
-                    resolve.call(binder, tpl);
+                    resolve.call(binder, link.import);
                 };
                 document.head.appendChild(link);
             }

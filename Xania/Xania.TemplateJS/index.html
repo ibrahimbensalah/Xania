@@ -26,9 +26,8 @@
             Powered by <a href="http://github.com/ibrahimbensalah/xania">Xania JS</a>
         </p>
     </footer>
-
     <script>
-        var binder = new Binder({
+        var viewModel = {
             app: new TodoApp(),
             show: new State('all'),
             active: function (todo) {
@@ -46,14 +45,16 @@
                         return todo.completed === (value === 'completed');
                 }
             }
-        });
+        };
 
-        binder.import('todoapp.html')
-            .then(function(tpl) {
+        new Binder(viewModel).import("todoapp.html")
+            .then(function(doc) {
+                var tpl = doc.querySelector("template");
                 this.bind(tpl, "#panel1")
                     .bind(tpl, "#panel2")
                     .bind(tpl, "#panel3");
             });
+            
     </script>
 </body>
 </html>

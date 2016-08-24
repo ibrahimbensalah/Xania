@@ -329,6 +329,7 @@ class Xania {
                     case "slice":
                     case "filter":
                     case "map":
+                    case "pop":
                     case "push":
                         return Xania.observeProperty(arr, property, observer);
                     default:
@@ -405,45 +406,6 @@ class Xania {
         });
     }
 
-    static observeObject2(target, observer: IObserver) {
-        // ReSharper disable once InconsistentNaming
-        function Spy() { }
-        if (target.constructor !== Object) {
-            function __() { // ReSharper disable once SuspiciousThisUsage 
-                this.constructor = Spy;
-            };
-            __.prototype = target.constructor.prototype;
-            Spy.prototype = new __();
-        }
-        Spy.prototype.valueOf = () => target;
-
-        Object.defineProperty(Spy.prototype, "isSpy", { get() { return true; }, enumerable: false });
-
-        const props = Object.getOwnPropertyNames(target);
-        for (let i = 0; i < props.length; i++) {
-            var prop = props[i];
-            Object.defineProperty(Spy.prototype,
-                prop,
-                {
-                    get: Xania.partialApp((obj, name: string) => {
-                        observer.setRead(obj, name);
-                        // ReSharper disable once SuspiciousThisUsage
-                        return Xania.observeProperty(obj, name, observer);
-                    }, target, prop),
-                    set: Xania.partialApp((obj, name: string, value: any) => {
-                        var unwrapped = Xania.unwrap(value);
-                        if (obj[name] !== unwrapped) {
-                            obj[name] = unwrapped;
-                            observer.setChange(obj, name);
-                        }
-                    }, target, prop),
-                    enumerable: true,
-                    configurable: true
-                });
-        }
-        return new Spy;
-    }
-
     static observeFunction() {
         var self = (<any>this);
         var retval = self.func.apply(self.object, arguments);
@@ -467,40 +429,7 @@ class Xania {
         }
     }
 
-    static construct(viewModel, data) {
-        //return Xania.assign(new viewModel, data);
 
-        function Proxy() {
-        }
-        function __() {
-            // ReSharper disable once SuspiciousThisUsage
-            this.constructor = Proxy;
-        };
-        __.prototype = data.constructor.prototype;
-        Proxy.prototype = new __();
-
-        for (let fn in viewModel.prototype) {
-            if (viewModel.prototype.hasOwnProperty(fn)) {
-                console.log(fn);
-                Proxy.prototype[fn] = viewModel.prototype[fn];
-            }
-        }
-
-        for (let prop in data) {
-            if (data.hasOwnProperty(prop)) {
-                Object.defineProperty(Proxy.prototype,
-                    prop,
-                    {
-                        get: Xania.partialApp((obj, name) => this[name], data, prop),
-                        enumerable: false,
-                        configurable: false
-                    });
-            }
-        }
-        Proxy.prototype.valueOf = () => Xania.construct(viewModel, data.valueOf());
-
-        return new Proxy();
-    }
 
     static shallow(obj) {
         return Xania.assign({}, obj);
@@ -520,6 +449,9 @@ class Xania {
     }
 
     static proxy(target, config) {
+        if (typeof window["Proxy"] === "undefined")
+            throw new Error("Browser is not supported");
+
         return new (window["Proxy"])(target, config);
     }
 
@@ -841,6 +773,11 @@ class Binder {
 
     public import(templateUrl) {
         var binder = this;
+
+        if (!("import" in document.createElement("link"))) {
+            throw new Error("HTML import is not supported in this browser");
+        }
+
         return {
             then(resolve) {
                 var link = document.createElement('link');
@@ -849,8 +786,7 @@ class Binder {
                 link.setAttribute('async', ''); // make it async!
                 link.onload = e => {
                     var link = (<any>e.target);
-                    var tpl = link.import.querySelector("template");
-                    resolve.call(binder, tpl);
+                    resolve.call(binder, link.import);
                 }
                 // link.onerror = function(e) {...};
                 document.head.appendChild(link);
