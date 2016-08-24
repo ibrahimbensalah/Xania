@@ -8,6 +8,9 @@
     <language>en-US</language>
     <projectUrl>https://github.com/ibrahimbensalah/Xania</projectUrl>
     <licenseUrl>https://github.com/ibrahimbensalah/Xania/blob/master/LICENSE</licenseUrl>
+    <dependencies>
+      <dependency id="es6-shim.TypeScript.DefinitelyTyped" version="[0.8.1,)" />
+    </dependencies>
   </metadata>
   <files>
     <file src="src\**\*.*" target="content\xania" />
