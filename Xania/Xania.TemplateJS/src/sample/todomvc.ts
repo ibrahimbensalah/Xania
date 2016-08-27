@@ -15,7 +15,7 @@ class TodoStore {
     constructor() {
         this.todos = [];
 
-        for (var i = 0; i < 100; i++)
+        for (var i = 0; i < 500; i++)
             this.todos.push(new Todo(`todo ${i}`));
     }
 

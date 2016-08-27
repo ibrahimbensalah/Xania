@@ -21,6 +21,8 @@
   </PropertyGroup>
   <ItemGroup>
     <Content Include="app.css" />
+    <Content Include="css\logo.png" />
+    <Content Include="css\office.jpg" />
     <Content Include="index.html" />
     <Content Include="web.config" />
   </ItemGroup>
@@ -44,6 +46,12 @@
     <Content Include="xania\fun.js" />
     <Content Include="xania\sample\css\base.css" />
     <Content Include="xania\sample\css\index.css" />
+    <Content Include="xania\sample\dbmon\app.js" />
+    <Content Include="xania\sample\dbmon\ENV.js" />
+    <Content Include="xania\sample\dbmon\index.html" />
+    <Content Include="xania\sample\dbmon\memory-stats.js" />
+    <Content Include="xania\sample\dbmon\monitor.js" />
+    <Content Include="xania\sample\dbmon\styles.css" />
     <Content Include="xania\sample\index.html" />
     <Content Include="xania\sample\todoapp.html" />
     <Content Include="xania\sample\todomvc.js" />

@@ -200,7 +200,6 @@ class Value {
 }
 
 interface IObserver {
-    state(name: string, value?: any);
     setRead(obj: any, prop: string);
     setChange(obj: any, prop: any);
 }
@@ -295,11 +294,14 @@ class Xania {
 
     static observe(target, observer: IObserver) {
         // ReSharper disable once InconsistentNaming
-        if (!target || target.isSpy)
+        if (!target)
             return target;
 
-        if (target.isSpy)
-            throw new Error("observe observable is not allowed");
+        if (target.isSpy) {
+            if (target.$observer === observer)
+                return target;
+            target = target.valueOf();
+        }
 
         if (typeof target === "object") {
             return Array.isArray(target)
@@ -315,13 +317,23 @@ class Xania {
         return Xania.proxy(arr, {
             get(target, property) {
                 switch (property) {
+                    case "$id":
+                        return arr;
+                    case "$observer":
+                        return observer;
                     case "isSpy":
                         return true;
                     case "valueOf":
                         return arr.valueOf.bind(arr);
                     case "indexOf":
                         observer.setRead(arr, "length");
-                        return arr.indexOf.bind(arr);
+                        return (item) => {
+                            for (var i = 0; i < arr.length; i++) {
+                                if (Xania.id(item) === Xania.id(arr[i]))
+                                    return i;
+                            }
+                            return -1;
+                        }
                     case "length":
                         observer.setRead(arr, "length");
                         return arr.length;
@@ -335,6 +347,7 @@ class Xania {
                     case "map":
                     case "pop":
                     case "push":
+                        observer.setRead(arr, "length");
                         return Xania.observeProperty(arr, property, observer);
                     default:
                         if (arr.hasOwnProperty(property))
@@ -343,15 +356,14 @@ class Xania {
                 }
             },
             set(target, property, value, receiver) {
-                const unwrapped = Xania.unwrap(value);
-                if (arr[property] !== unwrapped) {
+                if (Xania.id(arr[property]) !== Xania.id(value)) {
                     var length = arr.length;
 
-                    arr[property] = unwrapped;
-                    observer.setChange(arr, property);
+                    arr[property] = value;
+                    observer.setChange(Xania.id(arr), property);
 
                     if (arr.length !== length)
-                        observer.setChange(arr, "length");
+                        observer.setChange(Xania.id(arr), "length");
                 }
 
                 return true;
@@ -387,6 +399,10 @@ class Xania {
         return Xania.proxy(object, {
             get(target, property) {
                 switch (property) {
+                    case "$id":
+                        return object;
+                    case "$observer":
+                        return observer;
                     case "isSpy":
                         return true;
                     case "valueOf":
@@ -399,10 +415,9 @@ class Xania {
                 }
             },
             set(target, property, value, receiver) {
-                var unwrapped = Xania.unwrap(value);
-                if (object[property] !== unwrapped) {
-                    object[property] = unwrapped;
-                    observer.setChange(object, property);
+                if (Xania.id(object[property]) !== Xania.id(value)) {
+                    object[property] = value;
+                    observer.setChange(Xania.id(object), property);
                 }
 
                 return true;
@@ -423,7 +438,7 @@ class Xania {
             var proxy = Xania.observe(object, observer);
             return this.observeFunction.bind({ object: proxy, func: propertyValue, observer });
         } else {
-            observer.setRead(object, propertyName);
+            observer.setRead(Xania.id(object), propertyName);
             if (propertyValue === null || typeof propertyValue === "undefined") {
                 return null;
             }
@@ -464,6 +479,21 @@ class Xania {
             return value.length > 0 ? value.sort().join(separator) : null;
         }
         return value;
+    }
+
+    static id(object) {
+        if (object === null || object === undefined)
+            return object;
+
+        const id = object.$id;
+        if (id === undefined)
+            return object;
+
+        if (typeof id === "function")
+            return id();
+        else
+            return id;
+
     }
 }
 
@@ -596,14 +626,6 @@ class Observer {
             }
         };
         observable = Xania.observe(context, {
-            state(name, value) {
-                this.setRead(observer.state, name);
-                if (value === undefined) {
-                    return observer.state[name];
-                } else {
-                    return observer.state[name] === value;
-                }
-            },
             setRead(obj, property) {
                 if (observer.add(obj, property, subscription)) {
                     subscription.dependencies.push({ obj, property });
@@ -619,38 +641,31 @@ class Observer {
         return subscription;
     }
 
+    setRead(obj, property) {
+        // ignore
+    }
+
+    setChange(obj, property: string) {
+        const subscribers = this.get(obj, property);
+        if (!!subscribers) {
+            subscribers.forEach(s => {
+                this.dirty.add(s);
+            });
+        }
+    }
+
     track(context) {
-        var observer = this;
-        return Xania.observe(context, {
-            state(name, value) {
-                if (value !== undefined) {
-                    this.setChange(observer.state, name);
-                    observer.state[name] = value;
-                }
-            },
-            setRead() {
-                // ignore
-            },
-            setChange(obj, property: string) {
-                const subscribers = observer.get(obj, property);
-                if (!!subscribers) {
-                    subscribers.forEach(s => {
-                        observer.dirty.add(s);
-                    });
-                }
-            }
-        });
+        return Xania.observe(context, this);
     }
 
     update() {
         if (this.dirty.size > 0) {
-            var observer = this;
-            window.requestAnimationFrame(function () {
-                observer.dirty.forEach(subscriber => {
+            // window.requestAnimationFrame(() => {
+                this.dirty.forEach(subscriber => {
                     subscriber.notify();
                 });
-                observer.dirty.clear();
-            });
+                this.dirty.clear();
+            // });
         }
     }
 
@@ -727,8 +742,7 @@ class TagBinding extends Binding {
         for (let attrName in attributes) {
             if (attributes.hasOwnProperty(attrName)) {
                 const newValue = Xania.join(" ", attributes[attrName]);
-                const oldValue = dom[attrName];
-                if (oldValue === newValue)
+                if (dom.attributes.hasOwnProperty(attrName) && dom[attrName] === newValue)
                     continue;
 
                 dom[attrName] = newValue;
@@ -871,7 +885,7 @@ class Binder {
                             if (model === null || model === undefined)
                                 return [];
 
-                            model = Xania.unwrap(model);
+                            // model = Xania.unwrap(model);
                             return visitArray(Array.isArray(model) ? model : [model]);
                         });
                 } else {
@@ -891,16 +905,9 @@ class Binder {
     bind(templateSelector, targetSelector) {
         const target = Binder.find(targetSelector) || document.body;
         const template = this.parseDom(Binder.find(templateSelector));
-        this.bindTemplate(template, target);
+        this.execute(this.model, template, target);
 
         return this;
-    }
-
-    bindTemplate(tpl, target) {
-        const arr = Array.isArray(this.model) ? this.model : [this.model];
-        for (let i = 0; i < arr.length; i++) {
-            this.execute(arr[i], tpl, target);
-        }
     }
 
     parseDom(rootDom: HTMLElement): TagTemplate {

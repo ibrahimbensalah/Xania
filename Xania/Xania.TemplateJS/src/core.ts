@@ -742,8 +742,8 @@ class TagBinding extends Binding {
         for (let attrName in attributes) {
             if (attributes.hasOwnProperty(attrName)) {
                 const newValue = Xania.join(" ", attributes[attrName]);
-                const oldValue = dom[attrName];
-                if (oldValue === newValue)
+
+                if (dom.attributes.hasOwnProperty(attrName) && dom[attrName] === newValue)
                     continue;
 
                 dom[attrName] = newValue;

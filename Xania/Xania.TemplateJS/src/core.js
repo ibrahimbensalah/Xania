@@ -653,8 +653,7 @@ var TagBinding = (function (_super) {
         for (var attrName in attributes) {
             if (attributes.hasOwnProperty(attrName)) {
                 var newValue = Xania.join(" ", attributes[attrName]);
-                var oldValue = dom[attrName];
-                if (oldValue === newValue)
+                if (dom.attributes.hasOwnProperty(attrName) && dom[attrName] === newValue)
                     continue;
                 dom[attrName] = newValue;
                 if (typeof newValue === "undefined" || newValue === null) {
