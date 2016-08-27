@@ -35,7 +35,13 @@
     <Content Include="Scripts\jasmine\jasmine-html.js" />
     <Content Include="Scripts\jasmine\jasmine.js" />
     <Content Include="src\sample\css\base.css" />
+    <Content Include="src\sample\dbmon\app.js" />
+    <Content Include="src\sample\dbmon\ENV.js" />
+    <Content Include="src\sample\dbmon\memory-stats.js" />
+    <Content Include="src\sample\dbmon\monitor.js" />
+    <Content Include="src\sample\dbmon\styles.css" />
     <Content Include="src\sample\css\index.css" />
+    <Content Include="src\sample\dbmon\index.html" />
     <Content Include="src\sample\index.html" />
     <Content Include="spec\funSpec.js" />
     <Content Include="src\core.js" />
