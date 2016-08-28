@@ -96,7 +96,7 @@ var Ast;
             var collection = this.sourceExpr.execute(context).map(function (x) {
                 var item = {};
                 item[_this.varName] = x;
-                var result = _this.assign({}, context, item);
+                var result = Query.assign({}, context, item);
                 if (_this.selectorExpr != null)
                     return _this.selectorExpr.execute(result);
                 return result;
@@ -104,21 +104,7 @@ var Ast;
             return collection;
         };
         Query.prototype.app = function () { throw new Error("app on query is not supported"); };
-        Query.prototype.assign = function (target) {
-            var args = [];
-            for (var _i = 1; _i < arguments.length; _i++) {
-                args[_i - 1] = arguments[_i];
-            }
-            for (var i = 0; i < args.length; i++) {
-                var object = args[i];
-                for (var prop in object) {
-                    if (object.hasOwnProperty(prop)) {
-                        target[prop] = object[prop];
-                    }
-                }
-            }
-            return target;
-        };
+        Query.assign = Object.assign;
         return Query;
     })();
     var Template = (function () {

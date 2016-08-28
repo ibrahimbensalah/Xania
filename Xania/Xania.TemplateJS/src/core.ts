@@ -454,18 +454,18 @@ class Xania {
         return Xania.assign({}, obj);
     }
 
-    // static assign = (<any>Object).assign;
-    static assign(target, ...args) {
-        for (var i = 0; i < args.length; i++) {
-            const object = args[i];
-            for (let prop in object) {
-                if (object.hasOwnProperty(prop)) {
-                    target[prop] = object[prop];
-                }
-            }
-        }
-        return target;
-    }
+    static assign = (<any>Object).assign;
+    //static assign(target, ...args) {
+    //    for (var i = 0; i < args.length; i++) {
+    //        const object = args[i];
+    //        for (let prop in object) {
+    //            if (object.hasOwnProperty(prop)) {
+    //                target[prop] = object[prop];
+    //            }
+    //        }
+    //    }
+    //    return target;
+    //}
 
     static proxy(target, config) {
         if (typeof window["Proxy"] === "undefined")
@@ -512,7 +512,8 @@ class Router {
 class Binding {
     private data;
     public parent: TagBinding;
-    public destroyed = false;
+    private subscriptions = [];
+
 
     constructor(public context) {
     }
@@ -521,9 +522,9 @@ class Binding {
         throw new Error("Abstract method Binding.update");
     }
 
-    destroy() { throw new Error("Not implemented"); }
-
     render(context) { throw new Error("Not implemented"); }
+
+    update(context) { throw new Error("Not implemented"); }
 }
 
 interface ISubsriber {
@@ -539,18 +540,19 @@ class Observer {
         if (this.subscriptions.has(object)) {
             const deps = this.subscriptions.get(object);
 
-            if (deps.hasOwnProperty(property)) {
-                if (!deps[property].has(subsriber)) {
-                    deps[property].add(subsriber);
+            if (deps.has(property)) {
+                var subset = deps.get(property);
+                if (!subset.has(subsriber)) {
+                    subset.add(subsriber);
                     return true;
                 }
             } else {
-                deps[property] = new Set<ISubsriber>().add(subsriber);
+                deps.set(property, new Set<ISubsriber>().add(subsriber));
                 return true;
             }
         } else {
-            const deps = {};
-            deps[property] = new Set<ISubsriber>().add(subsriber);
+            const deps = new Map();
+            deps.set(property, new Set<ISubsriber>().add(subsriber));
             this.subscriptions.set(object, deps);
             return true;
         }
@@ -564,78 +566,70 @@ class Observer {
 
         const deps = this.subscriptions.get(object);
 
-        if (deps.hasOwnProperty(property))
-            return deps[property];
+        // if (deps.has(property))
+        return deps.get(property);
 
-        return null;
+        // return null;
     }
 
     unsubscribe(subscription) {
-        while (subscription.dependencies.length > 0) {
+        while(subscription.dependencies.length > 0) {
             var dep = subscription.dependencies.pop();
 
             const deps = this.subscriptions.get(dep.obj);
+            if (!!deps) {
+                var subset: Set<any> = deps.get(dep.property);
+                if (!!subset) {
+                    subset.delete(subscription);
+                    if (subset.size === 0) {
+                        deps.delete(dep.property);
 
-            deps[dep.property].delete(subscription);
-            if (deps[dep.property].size === 0) {
-                delete deps[dep.property];
-
-                if (Object.keys(deps).length === 0) {
-                    this.subscriptions.delete(dep.obj);
+                        if (deps.size === 0) {
+                            this.subscriptions.delete(dep.obj);
+                        }
+                    }
                 }
             }
         }
-        subscription.children.forEach(child => {
-            this.unsubscribe(child);
-        });
-        subscription.children.clear();
         this.dirty.delete(subscription);
     }
 
-    subscribe(context, update, ...additionalArgs) {
-        var observer = this,
-            // ReSharper disable once JoinDeclarationAndInitializerJs
-            observable: Object | void,
-            // ReSharper disable once JoinDeclarationAndInitializerJs
-            updateArgs: (Object | void)[];
+    subscribe(initial, update: Function, ...additionalArgs) {
+        var observer = this;
 
         var subscription = {
+            context: initial,
             parent: undefined,
-            children: new Set<any>(),
             state: undefined,
             dependencies: [],
+            setRead(obj, property) {
+                if (observer.add(obj, property, this)) {
+                    this.dependencies.push({ obj, property });
+                }
+            },
+            setChange(obj, property: string) {
+                throw new Error("invalid change");
+            },
+            update(context) {
+                // if (Xania.id(context) !== Xania.id(this.context)) {
+                // if (subscription !== this)
+                this.context = context;
+                this.notify();
+                // }
+            },
             notify() {
                 observer.unsubscribe(this);
+                var observable = Xania.observe(this.context, this);
                 return Xania.promise(this.state)
-                    .then(s => this.state = update.apply(observer, updateArgs.concat([s])));
+                    .then(s => this.state = update.apply(observer, [observable, this].concat(additionalArgs.concat([s]))));
             },
             then(resolve) {
                 return Xania.promise(this.state).then(resolve);
             },
             subscribe(...args) {
                 return observer.subscribe.apply(observer, args);
-            },
-            attach(parent) {
-                if (this.parent === parent)
-                    return;
-                if (!!this.parent)
-                    this.parent.children.delete(this);
-                this.parent = parent;
-                if (!!parent)
-                    parent.children.add(this);
             }
         };
-        observable = Xania.observe(context, {
-            setRead(obj, property) {
-                if (observer.add(obj, property, subscription)) {
-                    subscription.dependencies.push({ obj, property });
-                }
-            },
-            setChange(obj, property: string) {
-                throw new Error("invalid change");
-            }
-        });
-        updateArgs = [observable, subscription].concat(additionalArgs);
         subscription.notify();
 
         return subscription;
@@ -661,10 +655,10 @@ class Observer {
     update() {
         if (this.dirty.size > 0) {
             // window.requestAnimationFrame(() => {
-                this.dirty.forEach(subscriber => {
-                    subscriber.notify();
-                });
-                this.dirty.clear();
+            this.dirty.forEach(subscriber => {
+                subscriber.notify();
+            });
+            this.dirty.clear();
             // });
         }
     }
@@ -702,19 +696,12 @@ class TextBinding extends Binding {
 
     constructor(private tpl: TextTemplate, context) {
         super(context);
-
         this.dom = document.createTextNode("");
     }
 
     update(context) {
-        this.dom.textContent = this.tpl.execute(context);
-    }
-
-    destroy() {
-        if (!!this.dom) {
-            this.dom.remove();
-        }
-        this.destroyed = true;
+        this.context = context;
+        this.render(context);
     }
 
     render(context) {
@@ -724,7 +711,6 @@ class TextBinding extends Binding {
 
 class TagBinding extends Binding {
 
-    public children: Binding[] = [];
     protected dom: HTMLElement;
 
     constructor(private tpl: TagTemplate, context) {
@@ -732,6 +718,10 @@ class TagBinding extends Binding {
 
         this.dom = document.createElement(tpl.name);
         this.dom.attributes["__binding"] = this;
+    }
+
+    update(context) {
+        this.context = context;
     }
 
     render(context) {
@@ -766,13 +756,6 @@ class TagBinding extends Binding {
         }
 
         return dom;
-    }
-
-    destroy() {
-        if (!!this.dom) {
-            this.dom.remove();
-        }
-        this.destroyed = true;
     }
 }
 
@@ -840,61 +823,89 @@ class Binder {
 
     execute(rootContext, rootTpl, rootTarget) {
 
-        var visit = (parent, context, tpl, target, offset: number) => {
-            return this.observer.subscribe(context, (observable, subscription, state = { length: 0 }) => {
-                var visitArray = arr => {
-                    var prevLength = state.length;
-
-                    for (let e = prevLength - 1; e >= 0; e--) {
-                        const idx = offset + e;
-                        target.removeChild(target.childNodes[idx]);
+        var visit = (context, tpl, target, offset: number) => {
+            return this.observer.subscribe(context, (observable, subscription, state = { bindings: <any[]>[] }) => {
+                var removeBindings = (bindings, maxLength) => {
+                    while (bindings.length > maxLength) {
+                        const oldBinding = bindings.pop();
+                        target.removeChild(oldBinding.dom);
                     }
-
-                    var docfrag = document.createDocumentFragment();
-
-                    for (let idx = 0; idx < arr.length; idx++) {
-
+                };
+                var updateBindings = (bindings, arr, context) => {
+                    for (let idx = 0; idx < bindings.length; idx++) {
+                        const binding = bindings[idx];
                         const result = !!arr[idx] ? Xania.assign({}, context, arr[idx]) : context;
-                        var binding = tpl.bind(result);
+                        binding.context = result;
 
-                        this.observer.subscribe(result, binding.render.bind(binding)).attach(subscription);
+                        for (let s = 0; s < binding.subscriptions.length; s++) {
+                            binding.subscriptions[s].update(result);
+                        }
+                    }
+                }
+                var addBindings = (arr, offset) => {
+                    var newBindings = [];
+                    for (let idx = offset; idx < arr.length; idx++) {
+                        const result = !!arr[idx] ? Xania.assign({}, context, arr[idx]) : context;
+                        const newBinding = tpl.bind(result);
+                        newBindings.push(newBinding);
 
-                        const visitChild = Xania.partialApp((data, parent, prev, cur) => {
+                        var tagSubscription = this.observer.subscribe(result, newBinding.render.bind(newBinding));
+                        newBinding.subscriptions.push(tagSubscription);
+
+                        const visitChild = Xania.partialApp((data, parentBinding, prev, cur) => {
                             return Xania.promise(prev)
                                 .then(p => {
-                                    return visit(subscription, data, cur, parent, p).then(x => p + x.length);
+                                    var childSubscription = visit(data, cur, parentBinding.dom, p);
+                                    parentBinding.subscriptions.push(childSubscription);
+                                    return childSubscription.then(x => { return p + x.bindings.length });
                                 });
-                        }, result, binding.dom);
+                        }, result, newBinding);
 
                         tpl.children().reduce(visitChild, 0);
-                        docfrag.appendChild(binding.dom);
                     }
 
-                    if (offset < target.childNodes.length)
-                        target.insertBefore(docfrag, target.childNodes[offset]);
-                    else
-                        target.appendChild(docfrag);
-
-                    return { length: arr.length };
+                    return newBindings;
                 };
+                var visitArray = arr => {
+                    var bindings = state.bindings;
 
-                subscription.attach(parent);
+                    removeBindings(bindings, arr.length);
+                    updateBindings(bindings, arr, subscription.context);
+
+                    if (arr.length > bindings.length) {
+                        var newBindings = addBindings(arr, bindings.length);
+
+                        var insertAt = offset + bindings.length;
+                        if (insertAt < target.childNodes.length) {
+                            var beforeElement = target.childNodes[insertAt];
+                            for (var i = 0; i < newBindings.length; i++)
+                                target.insertBefore(newBindings[i].dom, beforeElement);
+                        } else {
+                            for (var i = 0; i < newBindings.length; i++)
+                                target.appendChild(newBindings[i].dom);
+                        }
+
+                        return bindings.concat(newBindings);
+                    }
+                    return bindings;
+                };
 
                 if (!!tpl.modelAccessor) {
                     return Xania.promise(tpl.modelAccessor(observable))
                         .then(model => {
                             if (model === null || model === undefined)
-                                return [];
+                                return { bindings: [] };
 
                             // model = Xania.unwrap(model);
-                            return visitArray(Array.isArray(model) ? model : [model]);
+                            var arr = Array.isArray(model) ? model : [model];
+                            return { bindings: visitArray(arr) };
                         });
                 } else {
-                    return visitArray([null]);
+                    return { bindings: visitArray([null]) };
                 }
             });
         };
-        visit(null, rootContext, rootTpl, rootTarget, 0);
+        visit(rootContext, rootTpl, rootTarget, 0);
     }
 
     static find(selector) {
@@ -949,8 +960,11 @@ class Binder {
                 }
                 push(template);
             } else if (node.nodeType === 3) {
-                const tpl = this.compile(node.textContent);
-                push(new TextTemplate(tpl || node.textContent));
+                var textContent = node.textContent;
+                if (textContent.trim().length > 0) {
+                    const tpl = this.compile(textContent);
+                    push(new TextTemplate(tpl || node.textContent));
+                }
             }
         }
 

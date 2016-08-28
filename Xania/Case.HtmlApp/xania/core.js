@@ -397,21 +397,6 @@ var Xania = (function () {
     Xania.shallow = function (obj) {
         return Xania.assign({}, obj);
     };
-    Xania.assign = function (target) {
-        var args = [];
-        for (var _i = 1; _i < arguments.length; _i++) {
-            args[_i - 1] = arguments[_i];
-        }
-        for (var i = 0; i < args.length; i++) {
-            var object = args[i];
-            for (var prop in object) {
-                if (object.hasOwnProperty(prop)) {
-                    target[prop] = object[prop];
-                }
-            }
-        }
-        return target;
-    };
     Xania.proxy = function (target, config) {
         if (typeof window["Proxy"] === "undefined")
             throw new Error("Browser is not supported");
@@ -434,6 +419,7 @@ var Xania = (function () {
         else
             return id;
     };
+    Xania.assign = Object.assign;
     return Xania;
 })();
 var Router = (function () {

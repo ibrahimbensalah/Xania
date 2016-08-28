@@ -454,18 +454,18 @@ class Xania {
         return Xania.assign({}, obj);
     }
 
-    // static assign = (<any>Object).assign;
-    static assign(target, ...args) {
-        for (var i = 0; i < args.length; i++) {
-            const object = args[i];
-            for (let prop in object) {
-                if (object.hasOwnProperty(prop)) {
-                    target[prop] = object[prop];
-                }
-            }
-        }
-        return target;
-    }
+    static assign = (<any>Object).assign;
+    //static assign(target, ...args) {
+    //    for (var i = 0; i < args.length; i++) {
+    //        const object = args[i];
+    //        for (let prop in object) {
+    //            if (object.hasOwnProperty(prop)) {
+    //                target[prop] = object[prop];
+    //            }
+    //        }
+    //    }
+    //    return target;
+    //}
 
     static proxy(target, config) {
         if (typeof window["Proxy"] === "undefined")

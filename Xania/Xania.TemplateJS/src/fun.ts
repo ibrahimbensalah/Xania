@@ -121,7 +121,7 @@ module Ast {
             var collection = this.sourceExpr.execute(context).map(x => {
                 var item = {};
                 item[this.varName] = x;
-                var result = this.assign({}, context, item);
+                var result = Query.assign({}, context, item);
 
                 if (this.selectorExpr != null)
                     return this.selectorExpr.execute(result);
@@ -132,18 +132,18 @@ module Ast {
         }
         app(): App { throw new Error("app on query is not supported"); }
 
-        // static assign = (<any>Object).assign;
-        assign(target, ...args) {
-            for (var i = 0; i < args.length; i++) {
-                const object = args[i];
-                for (let prop in object) {
-                    if (object.hasOwnProperty(prop)) {
-                        target[prop] = object[prop];
-                    }
-                }
-            }
-            return target;
-        }
+        static assign = (<any>Object).assign;
+        //assign(target, ...args) {
+        //    for (var i = 0; i < args.length; i++) {
+        //        const object = args[i];
+        //        for (let prop in object) {
+        //            if (object.hasOwnProperty(prop)) {
+        //                target[prop] = object[prop];
+        //            }
+        //        }
+        //    }
+        //    return target;
+        //}
     }
 
     class Template {

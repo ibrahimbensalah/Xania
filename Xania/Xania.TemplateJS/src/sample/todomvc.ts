@@ -15,7 +15,7 @@ class TodoStore {
     constructor() {
         this.todos = [];
 
-        for (var i = 0; i < 500; i++)
+        for (var i = 0; i < 2; i++)
             this.todos.push(new Todo(`todo ${i}`));
     }
 
@@ -30,7 +30,7 @@ class TodoStore {
     }
 
     remove(todo) {
-        var idx = this.todos.indexOf(todo.valueOf());
+        var idx = this.todos.indexOf(todo);
         console.debug("remove todo ", idx);
         if (idx >= 0)
             this.todos.splice(idx, 1);

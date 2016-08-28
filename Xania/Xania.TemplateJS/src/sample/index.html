@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="css/index.css">
 
     <script src="../fun.js"></script>
-    <script src="../core.js"></script>
+    <script src="../core.js?2345"></script>
     <script src="todomvc.js"></script>
 </head>
 <body>
@@ -49,9 +49,7 @@
         new Binder(viewModel).import("todoapp.html")
             .then(function(doc) {
                 var tpl = doc.querySelector("template");
-                this.bind(tpl, "#panel1")
-                    .bind(tpl, "#panel2")
-                    .bind(tpl, "#panel3");
+                this.bind(tpl, "#panel1");
             });
             
     </script>
