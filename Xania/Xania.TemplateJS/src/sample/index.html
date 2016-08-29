@@ -49,7 +49,9 @@
         new Binder(viewModel).import("todoapp.html")
             .then(function(doc) {
                 var tpl = doc.querySelector("template");
-                this.bind(tpl, "#panel1");
+                this.bind(tpl, "#panel1")
+                    .bind(tpl, "#panel2")
+                    .bind(tpl, "#panel3");
             });
             
     </script>

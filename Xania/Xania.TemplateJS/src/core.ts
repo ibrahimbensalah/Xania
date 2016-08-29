@@ -207,6 +207,7 @@ interface IObserver {
 class Xania {
 
     private static lut;
+    static empty = [];
 
     static identity(x) {
         return x;
@@ -222,8 +223,14 @@ class Xania {
         }
 
         return {
-            then(resolve, ...args: any[]) {
-                const result = resolve.apply(this, args.concat([data]));
+            then() {
+                var resolve = arguments[0];
+                var args = new Array(arguments.length);
+                for (var i = 1; i < args.length; i++) {
+                    args[i-1] = arguments[i];
+                }
+                args[args.length - 1] = data;
+                const result = resolve.apply(this, args);
                 if (result === undefined)
                     return this;
                 return Xania.promise(result);
@@ -573,7 +580,7 @@ class Observer {
     }
 
     unsubscribe(subscription) {
-        while(subscription.dependencies.length > 0) {
+        while (subscription.dependencies.length > 0) {
             var dep = subscription.dependencies.pop();
 
             const deps = this.subscriptions.get(dep.obj);
@@ -617,11 +624,13 @@ class Observer {
                 this.notify();
                 // }
             },
+            stateReady(state) {
+                var observable = Xania.observe(this.context, this);
+                this.state = update.apply(this, [observable, this, state].concat(additionalArgs));
+            },
             notify() {
                 observer.unsubscribe(this);
-                var observable = Xania.observe(this.context, this);
-                return Xania.promise(this.state)
-                    .then(s => this.state = update.apply(observer, [observable, this].concat(additionalArgs.concat([s]))));
+                return Xania.promise(this.state).then(this.stateReady.bind(this));
             },
             then(resolve) {
                 return Xania.promise(this.state).then(resolve);
@@ -820,92 +829,115 @@ class Binder {
         }
     }
 
+    static updateSubscription(observable, subscription, state = { bindings: <any[]>[] }) {
 
-    execute(rootContext, rootTpl, rootTarget) {
+    }
 
-        var visit = (context, tpl, target, offset: number) => {
-            return this.observer.subscribe(context, (observable, subscription, state = { bindings: <any[]>[] }) => {
-                var removeBindings = (bindings, maxLength) => {
-                    while (bindings.length > maxLength) {
-                        const oldBinding = bindings.pop();
-                        target.removeChild(oldBinding.dom);
-                    }
-                };
-                var updateBindings = (bindings, arr, context) => {
-                    for (let idx = 0; idx < bindings.length; idx++) {
-                        const binding = bindings[idx];
-                        const result = !!arr[idx] ? Xania.assign({}, context, arr[idx]) : context;
-                        binding.context = result;
+    static removeBindings(target, bindings, maxLength) {
+        while (bindings.length > maxLength) {
+            const oldBinding = bindings.pop();
+            target.removeChild(oldBinding.dom);
+        }
+    }
 
-                        for (let s = 0; s < binding.subscriptions.length; s++) {
-                            binding.subscriptions[s].update(result);
-                        }
-                    }
-                }
-                var addBindings = (arr, offset) => {
-                    var newBindings = [];
-                    for (let idx = offset; idx < arr.length; idx++) {
-                        const result = !!arr[idx] ? Xania.assign({}, context, arr[idx]) : context;
-                        const newBinding = tpl.bind(result);
-                        newBindings.push(newBinding);
+    static updateBindings(bindings, arr, context) {
+        for (let idx = 0; idx < bindings.length; idx++) {
+            const binding = bindings[idx];
+            const result = !!arr[idx] ? Xania.assign({}, context, arr[idx]) : context;
+            binding.context = result;
 
-                        var tagSubscription = this.observer.subscribe(result, newBinding.render.bind(newBinding));
-                        newBinding.subscriptions.push(tagSubscription);
+            for (let s = 0; s < binding.subscriptions.length; s++) {
+                binding.subscriptions[s].update(result);
+            }
+        }
+    }
 
-                        const visitChild = Xania.partialApp((data, parentBinding, prev, cur) => {
-                            return Xania.promise(prev)
-                                .then(p => {
-                                    var childSubscription = visit(data, cur, parentBinding.dom, p);
-                                    parentBinding.subscriptions.push(childSubscription);
-                                    return childSubscription.then(x => { return p + x.bindings.length });
-                                });
-                        }, result, newBinding);
+    addBindings(arr, offset, tpl, context) {
+        var newBindings = [];
+        for (let idx = offset; idx < arr.length; idx++) {
+            const result = !!arr[idx] ? Xania.assign({}, context, arr[idx]) : context;
+            const newBinding = tpl.bind(result);
+            newBindings.push(newBinding);
 
-                        tpl.children().reduce(visitChild, 0);
-                    }
+            var tagSubscription = this.observer.subscribe(result, newBinding.render.bind(newBinding));
+            newBinding.subscriptions.push(tagSubscription);
+        }
 
-                    return newBindings;
-                };
-                var visitArray = arr => {
-                    var bindings = state.bindings;
+        return newBindings;
+    }
 
-                    removeBindings(bindings, arr.length);
-                    updateBindings(bindings, arr, subscription.context);
+    executeChild(parentBinding, cur, p) {
+        var subscr = this.execute(parentBinding.context, cur, parentBinding.dom, p);
+        parentBinding.subscriptions.push(subscr);
 
-                    if (arr.length > bindings.length) {
-                        var newBindings = addBindings(arr, bindings.length);
+        // if (Xania.composable(subscr.state))
+        return subscr.then(x => { return p + x.bindings.length });
+        // return subscr.state;
+    }
 
-                        var insertAt = offset + bindings.length;
-                        if (insertAt < target.childNodes.length) {
-                            var beforeElement = target.childNodes[insertAt];
-                            for (var i = 0; i < newBindings.length; i++)
-                                target.insertBefore(newBindings[i].dom, beforeElement);
-                        } else {
-                            for (var i = 0; i < newBindings.length; i++)
-                                target.appendChild(newBindings[i].dom);
-                        }
+    reduceChild(prev, cur) {
+        var parentBinding = prev.parentBinding;
+        const offset = Xania.promise(prev.offset)
+            .then(this.executeChild.bind(this, parentBinding, cur));
+        return { offset, parentBinding };
+    }
 
-                        return bindings.concat(newBindings);
-                    }
-                    return bindings;
-                };
+    executeArray(context, arr, offset, tpl, target, bindings) {
+        Binder.removeBindings(target, bindings, arr.length);
+        Binder.updateBindings(bindings, arr, context);
 
-                if (!!tpl.modelAccessor) {
-                    return Xania.promise(tpl.modelAccessor(observable))
-                        .then(model => {
-                            if (model === null || model === undefined)
-                                return { bindings: [] };
+        if (arr.length > bindings.length) {
+            const newBindings = this.addBindings(arr, bindings.length, tpl, context);
 
-                            // model = Xania.unwrap(model);
-                            var arr = Array.isArray(model) ? model : [model];
-                            return { bindings: visitArray(arr) };
-                        });
-                } else {
-                    return { bindings: visitArray([null]) };
-                }
-            });
-        };
-        visit(rootContext, rootTpl, rootTarget, 0);
+            for (let i = 0; i < newBindings.length; i++) {
+                var children = tpl.children();
+                children.reduce(this.reduceChild.bind(this), { offset: 0, parentBinding: newBindings[i] });
+            }
+
+            var insertAt = offset + bindings.length;
+            if (insertAt < target.childNodes.length) {
+                var beforeElement = target.childNodes[insertAt];
+                for (let i = 0; i < newBindings.length; i++)
+                    target.insertBefore(newBindings[i].dom, beforeElement);
+            } else {
+                for (let i = 0; i < newBindings.length; i++)
+                    target.appendChild(newBindings[i].dom);
+            }
+
+            return bindings.concat(newBindings);
+        }
+        return bindings;
+    }
+
+    modelReady(subscription, offset, tpl, target, bindings, model) {
+        if (model === null || model === undefined)
+            return { bindings: [] };
+
+        // model = Xania.unwrap(model);
+        var arr = Array.isArray(model) ? model : [model];
+        return { bindings: this.executeArray(subscription.context, arr, offset, tpl, target, bindings) };
+    }
+
+    updateSubscription(observable, subscription, state, tpl, target, offset) {
+        var bindings = !!state ? state.bindings : Xania.empty;
+        if (!!tpl.modelAccessor) {
+            return Xania.promise(tpl.modelAccessor(observable))
+                .then(this.modelReady.bind(this), subscription, offset, tpl, target, bindings);
+                //.then(model => {
+                //    if (model === null || model === undefined)
+                //        return { bindings: [] };
+
+                //    // model = Xania.unwrap(model);
+                //    var arr = Array.isArray(model) ? model : [model];
+                //    return { bindings: this.executeArray(subscription.context, arr, offset, tpl, target, bindings) };
+                //});
+        } else {
+            return { bindings: this.executeArray(subscription.context, [null], offset, tpl, target, bindings) };
+        }
+    }
+
+    execute(context, tpl, target, offset: number = 0) {
+        return this.observer.subscribe(context, this.updateSubscription.bind(this), tpl, target, offset);
     }
 
     static find(selector) {

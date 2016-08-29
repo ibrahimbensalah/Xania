@@ -91,17 +91,25 @@ var Ast;
             this.sourceExpr = sourceExpr;
             this.selectorExpr = selectorExpr;
         }
+        Query.prototype.merge = function (context, x) {
+            var item = {};
+            item[this.varName] = x;
+            var result = Query.assign({}, context, item);
+            if (this.selectorExpr != null)
+                return this.selectorExpr.execute(result);
+            return result;
+        };
         Query.prototype.execute = function (context) {
-            var _this = this;
-            var collection = this.sourceExpr.execute(context).map(function (x) {
-                var item = {};
-                item[_this.varName] = x;
-                var result = Query.assign({}, context, item);
-                if (_this.selectorExpr != null)
-                    return _this.selectorExpr.execute(result);
-                return result;
-            });
-            return collection;
+            var result = this.sourceExpr.execute(context);
+            if (Array.isArray(result)) {
+                var arr = new Array(result.length);
+                for (var i = 0; i < result.length; i++) {
+                    arr[i] = this.merge(context, result[i]);
+                }
+                return arr;
+            }
+            else
+                return result.map(this.merge.bind(this, context));
         };
         Query.prototype.app = function () { throw new Error("app on query is not supported"); };
         Query.assign = Object.assign;

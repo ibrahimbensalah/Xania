@@ -117,18 +117,29 @@ module Ast {
 
     class Query implements IExpr {
         constructor(public varName: string, public sourceExpr: IExpr, public selectorExpr: IExpr) { }
+
+        merge(context, x) {
+            var item = {};
+            item[this.varName] = x;
+            var result = Query.assign({}, context, item);
+
+            if (this.selectorExpr != null)
+                return this.selectorExpr.execute(result);
+
+            return result;
+        }
+
         execute(context) {
-            var collection = this.sourceExpr.execute(context).map(x => {
-                var item = {};
-                item[this.varName] = x;
-                var result = Query.assign({}, context, item);
-
-                if (this.selectorExpr != null)
-                    return this.selectorExpr.execute(result);
-
-                return result;
-            });
-            return collection;
+            var result = this.sourceExpr.execute(context);
+            if (Array.isArray(result)) {
+                var arr = new Array(result.length);
+                for (var i = 0; i < result.length; i++) {
+                    arr[i] = this.merge(context, result[i]);
+                }
+                return arr;
+            }
+            else
+                return result.map(this.merge.bind(this, context));
         }
         app(): App { throw new Error("app on query is not supported"); }
 
