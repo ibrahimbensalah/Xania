@@ -121,9 +121,9 @@ module Ast {
         merge(context, x) {
             var item = {};
             item[this.varName] = x;
-            var result = Query.assign({}, context, item);
+            var result = Query.assign(item, context);
 
-            if (this.selectorExpr != null)
+            if (this.selectorExpr !== null)
                 return this.selectorExpr.execute(result);
 
             return result;
@@ -131,7 +131,7 @@ module Ast {
 
         execute(context) {
             var result = this.sourceExpr.execute(context);
-            if (Array.isArray(result)) {
+            if (typeof result.length === "number") {
                 var arr = new Array(result.length);
                 for (var i = 0; i < result.length; i++) {
                     arr[i] = this.merge(context, result[i]);
@@ -139,7 +139,7 @@ module Ast {
                 return arr;
             }
             else
-                return result.map(this.merge.bind(this, context));
+                return result.map(x => this.merge(context, x));
         }
         app(): App { throw new Error("app on query is not supported"); }
 
@@ -423,8 +423,10 @@ module Ast {
                 }
             }
 
-            const tpl = new Template(parts);
-            return tpl.execute.bind(tpl);
+            //if (parts.length === 1 && typeof parts[0] === "string")
+            //    return new Const(parts[0]);
+
+            return new Template(parts);
         }
 
         regex: RegExp;

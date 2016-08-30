@@ -9,9 +9,7 @@ class TextTemplate implements IDomTemplate {
     constructor(private tpl) {
     }
     execute(context) {
-        return typeof this.tpl == "function"
-            ? this.tpl(context)
-            : this.tpl;
+        return this.tpl.execute(context);
     }
     bind(model) {
         return new TextBinding(this, model);
@@ -57,16 +55,11 @@ class TagTemplate implements IDomTemplate {
         return this._children;
     }
 
-    public attr(name: string, value: string | Function) {
-        return this.addAttribute(name, value);
+    public attr(name: string, tpl: any) {
+        return this.addAttribute(name, tpl);
     }
 
-    public addAttribute(name: string, value: string | Function) {
-
-        var tpl = typeof (value) === "function"
-            ? value
-            : () => value;
-
+    public addAttribute(name: string, tpl: any) {
         this.attributes.set(name.toLowerCase(), tpl);
         return this;
     }
@@ -100,15 +93,14 @@ class TagTemplate implements IDomTemplate {
         };
 
         this.attributes.forEach((tpl, name) => {
-            var value = tpl(context);
-            if (name.startsWith("class.")) {
+            var value = tpl.execute(context);
+            if (name === "class") {
+                result["class"].push(value);
+            } else if (name.startsWith("class.")) {
                 if (!!value) {
                     var className = name.substr(6);
                     result["class"].push(className);
                 }
-            } else if (name === "class") {
-                var cls = value.split(" ");
-                result["class"].push.apply(result["class"], cls);
             } else {
                 result[name] = value;
             }
@@ -432,18 +424,20 @@ class Xania {
         });
     }
 
-    static observeFunction() {
-        var self = (<any>this);
-        var retval = self.func.apply(self.object, arguments);
+    static observeFunction(object, func, observer, args) {
+        var retval = func.apply(object, args);
 
-        return Xania.observe(retval, self.observer);
+        return Xania.observe(retval, observer);
     }
 
     static observeProperty(object, propertyName, observer: IObserver) {
         var propertyValue = object[propertyName];
         if (typeof propertyValue === "function") {
             var proxy = Xania.observe(object, observer);
-            return this.observeFunction.bind({ object: proxy, func: propertyValue, observer });
+            return function () {
+                return Xania.observeFunction(proxy, propertyValue, observer, arguments);
+            }
+            // return this.observeFunction.bind({ object: proxy, func: propertyValue, observer });
         } else {
             observer.setRead(Xania.id(object), propertyName);
             if (propertyValue === null || typeof propertyValue === "undefined") {
@@ -529,7 +523,7 @@ class Binding {
         throw new Error("Abstract method Binding.update");
     }
 
-    render(context) { throw new Error("Not implemented"); }
+    // render(context) { throw new Error("Not implemented"); }
 
     update(context) { throw new Error("Not implemented"); }
 }
@@ -539,28 +533,28 @@ interface ISubsriber {
 }
 
 class Observer {
-    private subscriptions = new Map<any, any>();
+    private dependencies = new Map<any, Map<string, Set<ISubsriber>>>();
     private dirty = new Set<ISubsriber>();
     private state = {};
 
     add(object: any, property: string, subsriber: ISubsriber) {
-        if (this.subscriptions.has(object)) {
-            const deps = this.subscriptions.get(object);
-
-            if (deps.has(property)) {
-                var subset = deps.get(property);
-                if (!subset.has(subsriber)) {
-                    subset.add(subsriber);
+        var properties = this.dependencies.get(object);
+        if (!!properties) {
+            let subscriptions = properties.get(property);
+            if (!!subscriptions) {
+                if (!subscriptions.has(subsriber)) {
+                    subscriptions.add(subsriber);
                     return true;
                 }
             } else {
-                deps.set(property, new Set<ISubsriber>().add(subsriber));
+                subscriptions = new Set<ISubsriber>().add(subsriber);
+                properties.set(property, subscriptions);
                 return true;
             }
         } else {
-            const deps = new Map();
-            deps.set(property, new Set<ISubsriber>().add(subsriber));
-            this.subscriptions.set(object, deps);
+            var subscriptions = new Set<ISubsriber>().add(subsriber);
+            properties = new Map<string, Set<ISubsriber>>().set(property, subscriptions);
+            this.dependencies.set(object, properties);
             return true;
         }
 
@@ -568,31 +562,26 @@ class Observer {
     }
 
     get(object: any, property: string) {
-        if (!this.subscriptions.has(object))
+        var properties = this.dependencies.get(object);
+        if (!properties)
             return null;
 
-        const deps = this.subscriptions.get(object);
-
-        // if (deps.has(property))
-        return deps.get(property);
-
-        // return null;
+        return properties.get(property);
     }
 
     unsubscribe(subscription) {
         while (subscription.dependencies.length > 0) {
             var dep = subscription.dependencies.pop();
 
-            const deps = this.subscriptions.get(dep.obj);
-            if (!!deps) {
-                var subset: Set<any> = deps.get(dep.property);
-                if (!!subset) {
-                    subset.delete(subscription);
-                    if (subset.size === 0) {
-                        deps.delete(dep.property);
-
-                        if (deps.size === 0) {
-                            this.subscriptions.delete(dep.obj);
+            var properties = this.dependencies.get(dep.object);
+            if (!!properties) {
+                var subscriptions = properties.get(dep.property);
+                if (!!subscriptions) {
+                    subscriptions.delete(subscription);
+                    if (subscriptions.size === 0) {
+                        properties.delete(dep.property);
+                        if (properties.size === 0) {
+                            this.dependencies.delete(dep.object);
                         }
                     }
                 }
@@ -601,7 +590,7 @@ class Observer {
         this.dirty.delete(subscription);
     }
 
-    subscribe(initial, update: Function, ...additionalArgs) {
+    subscribe(initial, binding, ...additionalArgs) {
         var observer = this;
 
         var subscription = {
@@ -609,9 +598,9 @@ class Observer {
             parent: undefined,
             state: undefined,
             dependencies: [],
-            setRead(obj, property) {
-                if (observer.add(obj, property, this)) {
-                    this.dependencies.push({ obj, property });
+            setRead(object, property) {
+                if (observer.add(object, property, this)) {
+                    this.dependencies.push({ object, property });
                 }
             },
             setChange(obj, property: string) {
@@ -626,7 +615,7 @@ class Observer {
             },
             stateReady(state) {
                 var observable = Xania.observe(this.context, this);
-                this.state = update.apply(this, [observable, this, state].concat(additionalArgs));
+                this.state = binding.execute.apply(binding, [observable, this, state].concat(additionalArgs));
             },
             notify() {
                 observer.unsubscribe(this);
@@ -671,19 +660,6 @@ class Observer {
             // });
         }
     }
-
-    get size() {
-        var total = 0;
-        this.subscriptions.forEach(deps => {
-            for (let p in deps) {
-                if (deps.hasOwnProperty(p)) {
-                    total += deps[p].size;
-                }
-            }
-        });
-
-        return total;
-    }
 }
 
 class ContentBinding extends Binding {
@@ -695,13 +671,14 @@ class ContentBinding extends Binding {
         this.dom = document.createDocumentFragment();
     }
 
-    render(context) {
+    execute(context) {
         return this.dom;
     }
 }
 
 class TextBinding extends Binding {
     private dom;
+    private value;
 
     constructor(private tpl: TextTemplate, context) {
         super(context);
@@ -710,10 +687,10 @@ class TextBinding extends Binding {
 
     update(context) {
         this.context = context;
-        this.render(context);
+        this.execute(context);
     }
 
-    render(context) {
+    execute(context) {
         this.dom.textContent = this.tpl.execute(context);
     }
 }
@@ -733,7 +710,7 @@ class TagBinding extends Binding {
         this.context = context;
     }
 
-    render(context) {
+    execute(context) {
         const tpl = this.tpl;
         const dom = this.dom;
 
@@ -859,7 +836,7 @@ class Binder {
             const newBinding = tpl.bind(result);
             newBindings.push(newBinding);
 
-            var tagSubscription = this.observer.subscribe(result, newBinding.render.bind(newBinding));
+            var tagSubscription = this.observer.subscribe(result, newBinding);
             newBinding.subscriptions.push(tagSubscription);
         }
 
@@ -867,7 +844,7 @@ class Binder {
     }
 
     executeChild(parentBinding, cur, p) {
-        var subscr = this.execute(parentBinding.context, cur, parentBinding.dom, p);
+        var subscr = this.subscribe(parentBinding.context, cur, parentBinding.dom, p);
         parentBinding.subscriptions.push(subscr);
 
         // if (Xania.composable(subscr.state))
@@ -918,26 +895,26 @@ class Binder {
         return { bindings: this.executeArray(subscription.context, arr, offset, tpl, target, bindings) };
     }
 
-    updateSubscription(observable, subscription, state, tpl, target, offset) {
+    execute(observable, subscription, state, tpl, target, offset) {
         var bindings = !!state ? state.bindings : Xania.empty;
         if (!!tpl.modelAccessor) {
-            return Xania.promise(tpl.modelAccessor(observable))
-                .then(this.modelReady.bind(this), subscription, offset, tpl, target, bindings);
-                //.then(model => {
-                //    if (model === null || model === undefined)
-                //        return { bindings: [] };
+            return Xania.promise(tpl.modelAccessor.execute(observable))
+                // .then(this.modelReady.bind(this), subscription, offset, tpl, target, bindings);
+                .then(model => {
+                    if (model === null || model === undefined)
+                        return { bindings: [] };
 
-                //    // model = Xania.unwrap(model);
-                //    var arr = Array.isArray(model) ? model : [model];
-                //    return { bindings: this.executeArray(subscription.context, arr, offset, tpl, target, bindings) };
-                //});
+                    // model = Xania.unwrap(model);
+                    var arr = Array.isArray(model) ? model : [model];
+                    return { bindings: this.executeArray(subscription.context, arr, offset, tpl, target, bindings) };
+                });
         } else {
             return { bindings: this.executeArray(subscription.context, [null], offset, tpl, target, bindings) };
         }
     }
 
-    execute(context, tpl, target, offset: number = 0) {
-        return this.observer.subscribe(context, this.updateSubscription.bind(this), tpl, target, offset);
+    subscribe(context, tpl, target, offset: number = 0) {
+        return this.observer.subscribe(context, this, tpl, target, offset);
     }
 
     static find(selector) {
@@ -949,7 +926,7 @@ class Binder {
     bind(templateSelector, targetSelector) {
         const target = Binder.find(targetSelector) || document.body;
         const template = this.parseDom(Binder.find(templateSelector));
-        this.execute(this.model, template, target);
+        this.subscribe(this.model, template, target);
 
         return this;
     }

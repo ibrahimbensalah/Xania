@@ -82,7 +82,13 @@ var TagTemplate = (function () {
         var result = {
             "class": []
         };
-        this.attributes.forEach(function (tpl, name) {
+        var keys = this.attributes.keys();
+        while (true) {
+            var next = keys.next();
+            if (!next)
+                break;
+            var name = next.value;
+            var tpl = this.attributes.get(name);
             var value = tpl(context);
             if (name.startsWith("class.")) {
                 if (!!value) {
@@ -97,7 +103,7 @@ var TagTemplate = (function () {
             else {
                 result[name] = value;
             }
-        });
+        }
         return result;
     };
     TagTemplate.prototype.executeEvents = function (context) {
@@ -373,16 +379,17 @@ var Xania = (function () {
             }
         });
     };
-    Xania.observeFunction = function () {
-        var self = this;
-        var retval = self.func.apply(self.object, arguments);
-        return Xania.observe(retval, self.observer);
+    Xania.observeFunction = function (object, func, observer, args) {
+        var retval = func.apply(object, args);
+        return Xania.observe(retval, observer);
     };
     Xania.observeProperty = function (object, propertyName, observer) {
         var propertyValue = object[propertyName];
         if (typeof propertyValue === "function") {
             var proxy = Xania.observe(object, observer);
-            return this.observeFunction.bind({ object: proxy, func: propertyValue, observer: observer });
+            return function () {
+                return Xania.observeFunction(proxy, propertyValue, observer, arguments);
+            };
         }
         else {
             observer.setRead(Xania.id(object), propertyName);

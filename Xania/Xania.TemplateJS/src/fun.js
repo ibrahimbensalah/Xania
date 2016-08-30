@@ -94,14 +94,15 @@ var Ast;
         Query.prototype.merge = function (context, x) {
             var item = {};
             item[this.varName] = x;
-            var result = Query.assign({}, context, item);
-            if (this.selectorExpr != null)
+            var result = Query.assign(item, context);
+            if (this.selectorExpr !== null)
                 return this.selectorExpr.execute(result);
             return result;
         };
         Query.prototype.execute = function (context) {
+            var _this = this;
             var result = this.sourceExpr.execute(context);
-            if (Array.isArray(result)) {
+            if (typeof result.length === "number") {
                 var arr = new Array(result.length);
                 for (var i = 0; i < result.length; i++) {
                     arr[i] = this.merge(context, result[i]);
@@ -109,7 +110,7 @@ var Ast;
                 return arr;
             }
             else
-                return result.map(this.merge.bind(this, context));
+                return result.map(function (x) { return _this.merge(context, x); });
         };
         Query.prototype.app = function () { throw new Error("app on query is not supported"); };
         Query.assign = Object.assign;
@@ -331,8 +332,7 @@ var Ast;
                     break;
                 }
             }
-            var tpl = new Template(parts);
-            return tpl.execute.bind(tpl);
+            return new Template(parts);
         };
         return Compiler;
     })();

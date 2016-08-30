@@ -99,7 +99,13 @@ class TagTemplate implements IDomTemplate {
             "class": []
         };
 
-        this.attributes.forEach((tpl, name) => {
+        var keys = this.attributes.keys();
+        while(true) {
+            var next = keys.next();
+            if (!next)
+                break;
+            var name = next.value;
+            var tpl = this.attributes.get(name);
             var value = tpl(context);
             if (name.startsWith("class.")) {
                 if (!!value) {
@@ -112,7 +118,7 @@ class TagTemplate implements IDomTemplate {
             } else {
                 result[name] = value;
             }
-        });
+        }
 
         return result;
     }
@@ -425,18 +431,19 @@ class Xania {
         });
     }
 
-    static observeFunction() {
-        var self = (<any>this);
-        var retval = self.func.apply(self.object, arguments);
+    static observeFunction(object, func, observer, args) {
+        var retval = func.apply(object, args);
 
-        return Xania.observe(retval, self.observer);
+        return Xania.observe(retval, observer);
     }
 
     static observeProperty(object, propertyName, observer: IObserver) {
         var propertyValue = object[propertyName];
         if (typeof propertyValue === "function") {
             var proxy = Xania.observe(object, observer);
-            return this.observeFunction.bind({ object: proxy, func: propertyValue, observer });
+            return function() {
+                return Xania.observeFunction(proxy, propertyValue, observer, arguments);
+            }
         } else {
             observer.setRead(Xania.id(object), propertyName);
             if (propertyValue === null || typeof propertyValue === "undefined") {
