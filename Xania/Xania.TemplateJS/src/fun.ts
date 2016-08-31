@@ -33,36 +33,63 @@
 //}
 
 module Ast {
+    export class Context {
+        constructor(private objects: any[]) {
+
+        }
+
+        get(name) {
+            for (var i = 0; i < this.objects.length; i++) {
+                var object = this.objects[i];
+                var value = object[name];
+                if (value !== undefined)
+                    return value;
+            }
+            return undefined;
+        }
+
+        extend(object) {
+            if (!object)
+                return this;
+
+            if (object instanceof Context)
+                return new Context(object.objects.concat(this.objects));
+
+            return new Context([object].concat(this.objects));
+        }
+    }
+
     interface IExpr {
-        execute(...args: any[]);
+        execute(context: Context);
         app(args: IExpr[]): IExpr;
     }
+
     class Const implements IExpr {
         constructor(public value: any) { }
-        execute() {
+        execute(context) {
             return this.value;
         }
-        app(): App {throw new Error("app on const is not supported");}
+        app(): IExpr {throw new Error("app on const is not supported");}
     }
 
     class Ident implements IExpr {
         constructor(public id: string) { }
 
-        execute(context) {
-            return context[this.id];
+        execute(context : Context) {
+            return context.get(this.id);
         }
-        app(args: IExpr[]): App {
+        app(args: IExpr[]): IExpr {
             return new App(this, args);
         }
     }
 
     class Member implements IExpr {
-        constructor(public targetExpr: IExpr, public memberExpr: string) {
+        constructor(public targetExpr: IExpr, public name: string) {
         }
 
         execute(context) {
             const obj = this.targetExpr.execute(context);
-            var member = obj[this.memberExpr];
+            var member = obj[this.name];
 
             if (typeof member === "function")
                 return member.bind(obj);
@@ -70,9 +97,9 @@ module Ast {
             return member;
         }
         toString() {
-            return `${this.targetExpr}.${this.memberExpr}`;
+            return `${this.targetExpr}.${this.name}`;
         }
-        app(args: IExpr[]): App {
+        app(args: IExpr[]): IExpr {
             return new App(this, args);
         }
     }
@@ -81,10 +108,8 @@ module Ast {
         constructor(public targetExpr: IExpr, public args: IExpr[]) {
         }
 
-        execute(context, addArgs: any[]) {
+        execute(context) {
             let args = this.args.map(x => x.execute(context));
-            if (!!addArgs)
-                args = args.concat(addArgs);
 
             const target = this.targetExpr.execute(context);
             if (!!target && typeof target.apply === "function")
@@ -92,7 +117,7 @@ module Ast {
 
             throw new Error(`${this.targetExpr.toString() } is not a function`);
         }
-        app(args: IExpr[]): App {
+        app(args: IExpr[]): IExpr {
             return new App(this.targetExpr, this.args.concat(args));
         }
     }
@@ -102,7 +127,7 @@ module Ast {
             return undefined;
         }
         static instance = new Unit();
-        app(): App { throw new Error("app on unit is not supported"); }
+        app(): IExpr { throw new Error("app on unit is not supported"); }
     }
 
     class Not implements IExpr {
@@ -121,7 +146,7 @@ module Ast {
         merge(context, x) {
             var item = {};
             item[this.varName] = x;
-            var result = Query.assign(item, context);
+            var result = new Context([item, context]);
 
             if (this.selectorExpr !== null)
                 return this.selectorExpr.execute(result);
@@ -141,7 +166,7 @@ module Ast {
             else
                 return result.map(x => this.merge(context, x));
         }
-        app(): App { throw new Error("app on query is not supported"); }
+        app(): IExpr { throw new Error("app on query is not supported"); }
 
         static assign = (<any>Object).assign;
         //assign(target, ...args) {
@@ -162,7 +187,7 @@ module Ast {
 
         }
 
-        execute(context) {
+        execute(context: Context) {
             if (this.parts.length === 0)
                 return null;
 

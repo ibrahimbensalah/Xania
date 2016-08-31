@@ -2,7 +2,8 @@
 var viewModel = {
     databases: []
 };
-var binder = new Binder(viewModel);
+
+var binder = new Binder(new Ast.Context([ viewModel, Fun.List ]));
 binder.bind("template", "#content");
 var observable = binder.observer.track(viewModel);
 

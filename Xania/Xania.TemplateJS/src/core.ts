@@ -449,13 +449,11 @@ class Xania {
         }
     }
 
+    //static shallow(obj) {
+    //    return Xania.assign({}, obj);
+    //}
 
-
-    static shallow(obj) {
-        return Xania.assign({}, obj);
-    }
-
-    static assign = (<any>Object).assign;
+    // static assign = (<any>Object).assign;
     //static assign(target, ...args) {
     //    for (var i = 0; i < args.length; i++) {
     //        const object = args[i];
@@ -752,7 +750,6 @@ class Binder {
     private compiler: Ast.Compiler;
 
     constructor(public model, target = null) {
-        Xania.assign(model, Fun.List);
         this.compiler = new Ast.Compiler();
         this.compile = this.compiler.template.bind(this.compiler);
         this.target = target || document.body;
@@ -820,7 +817,7 @@ class Binder {
     static updateBindings(bindings, arr, context) {
         for (let idx = 0; idx < bindings.length; idx++) {
             const binding = bindings[idx];
-            const result = !!arr[idx] ? Xania.assign({}, context, arr[idx]) : context;
+            const result = context.extend(arr[idx]);
             binding.context = result;
 
             for (let s = 0; s < binding.subscriptions.length; s++) {
@@ -832,7 +829,7 @@ class Binder {
     addBindings(arr, offset, tpl, context) {
         var newBindings = [];
         for (let idx = offset; idx < arr.length; idx++) {
-            const result = !!arr[idx] ? Xania.assign({}, context, arr[idx]) : context;
+            const result = context.extend(arr[idx]);
             const newBinding = tpl.bind(result);
             newBindings.push(newBinding);
 

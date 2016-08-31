@@ -391,9 +391,6 @@ var Xania = (function () {
             }
         }
     };
-    Xania.shallow = function (obj) {
-        return Xania.assign({}, obj);
-    };
     Xania.proxy = function (target, config) {
         if (typeof window["Proxy"] === "undefined")
             throw new Error("Browser is not supported");
@@ -417,7 +414,6 @@ var Xania = (function () {
             return id;
     };
     Xania.empty = [];
-    Xania.assign = Object.assign;
     return Xania;
 })();
 var Router = (function () {
@@ -644,7 +640,6 @@ var Binder = (function () {
         if (target === void 0) { target = null; }
         this.model = model;
         this.observer = new Observer();
-        Xania.assign(model, Fun.List);
         this.compiler = new Ast.Compiler();
         this.compile = this.compiler.template.bind(this.compiler);
         this.target = target || document.body;
@@ -704,7 +699,7 @@ var Binder = (function () {
     Binder.updateBindings = function (bindings, arr, context) {
         for (var idx = 0; idx < bindings.length; idx++) {
             var binding = bindings[idx];
-            var result = !!arr[idx] ? Xania.assign({}, context, arr[idx]) : context;
+            var result = context.extend(arr[idx]);
             binding.context = result;
             for (var s = 0; s < binding.subscriptions.length; s++) {
                 binding.subscriptions[s].update(result);
@@ -714,7 +709,7 @@ var Binder = (function () {
     Binder.prototype.addBindings = function (arr, offset, tpl, context) {
         var newBindings = [];
         for (var idx = offset; idx < arr.length; idx++) {
-            var result = !!arr[idx] ? Xania.assign({}, context, arr[idx]) : context;
+            var result = context.extend(arr[idx]);
             var newBinding = tpl.bind(result);
             newBindings.push(newBinding);
             var tagSubscription = this.observer.subscribe(result, newBinding);

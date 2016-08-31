@@ -2,11 +2,34 @@
 //    private static cacheFn: any = {};
 var Ast;
 (function (Ast) {
+    var Context = (function () {
+        function Context(objects) {
+            this.objects = objects;
+        }
+        Context.prototype.get = function (name) {
+            for (var i = 0; i < this.objects.length; i++) {
+                var object = this.objects[i];
+                var value = object[name];
+                if (value !== undefined)
+                    return value;
+            }
+            return undefined;
+        };
+        Context.prototype.extend = function (object) {
+            if (!object)
+                return this;
+            if (object instanceof Context)
+                return new Context(object.objects.concat(this.objects));
+            return new Context([object].concat(this.objects));
+        };
+        return Context;
+    })();
+    Ast.Context = Context;
     var Const = (function () {
         function Const(value) {
             this.value = value;
         }
-        Const.prototype.execute = function () {
+        Const.prototype.execute = function (context) {
             return this.value;
         };
         Const.prototype.app = function () { throw new Error("app on const is not supported"); };
@@ -17,7 +40,7 @@ var Ast;
             this.id = id;
         }
         Ident.prototype.execute = function (context) {
-            return context[this.id];
+            return context.get(this.id);
         };
         Ident.prototype.app = function (args) {
             return new App(this, args);
@@ -25,19 +48,19 @@ var Ast;
         return Ident;
     })();
     var Member = (function () {
-        function Member(targetExpr, memberExpr) {
+        function Member(targetExpr, name) {
             this.targetExpr = targetExpr;
-            this.memberExpr = memberExpr;
+            this.name = name;
         }
         Member.prototype.execute = function (context) {
             var obj = this.targetExpr.execute(context);
-            var member = obj[this.memberExpr];
+            var member = obj[this.name];
             if (typeof member === "function")
                 return member.bind(obj);
             return member;
         };
         Member.prototype.toString = function () {
-            return this.targetExpr + "." + this.memberExpr;
+            return this.targetExpr + "." + this.name;
         };
         Member.prototype.app = function (args) {
             return new App(this, args);
@@ -49,10 +72,8 @@ var Ast;
             this.targetExpr = targetExpr;
             this.args = args;
         }
-        App.prototype.execute = function (context, addArgs) {
+        App.prototype.execute = function (context) {
             var args = this.args.map(function (x) { return x.execute(context); });
-            if (!!addArgs)
-                args = args.concat(addArgs);
             var target = this.targetExpr.execute(context);
             if (!!target && typeof target.apply === "function")
                 return target.apply(this, args);
@@ -94,7 +115,7 @@ var Ast;
         Query.prototype.merge = function (context, x) {
             var item = {};
             item[this.varName] = x;
-            var result = Query.assign(item, context);
+            var result = new Context([item, context]);
             if (this.selectorExpr !== null)
                 return this.selectorExpr.execute(result);
             return result;
