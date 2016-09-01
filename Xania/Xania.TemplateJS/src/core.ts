@@ -87,26 +87,25 @@ class TagTemplate implements IDomTemplate {
         return this;
     }
 
-    public executeAttributes(context) {
-        var result = {
-            "class": []
-        };
+    public executeAttributes(context, dom, resolve) {
+        var classes = [];
 
         this.attributes.forEach((tpl, name) => {
             var value = tpl.execute(context);
             if (name === "class") {
-                result["class"].push(value);
+                classes.push(value);
             } else if (name.startsWith("class.")) {
                 if (!!value) {
                     var className = name.substr(6);
-                    result["class"].push(className);
+                    classes.push(className);
                 }
             } else {
-                result[name] = value;
+                resolve(name, value, dom);
             }
         });
 
-        return result;
+        if (classes.length > 0)
+            resolve("class", Xania.join(" ", classes), dom);
     }
 
     public executeEvents(context) {
@@ -613,6 +612,7 @@ class ContentBinding extends Binding {
 
 class TextBinding extends Binding {
     private dom;
+    private value;
 
     constructor(private tpl: TextTemplate) {
         super();
@@ -620,7 +620,11 @@ class TextBinding extends Binding {
     }
 
     execute(context) {
-        this.dom.textContent = this.tpl.execute(context);
+        var newValue = this.tpl.execute(context);
+        if (newValue !== this.value) {
+            this.value = newValue;
+            this.dom.textContent = newValue;
+        }
     }
 }
 
@@ -637,36 +641,33 @@ class TagBinding extends Binding {
 
     execute(context) {
         const tpl = this.tpl;
-        const dom = this.dom;
 
-        const attributes = tpl.executeAttributes(context);
-        for (let attrName in attributes) {
-            if (attributes.hasOwnProperty(attrName)) {
-                const newValue = Xania.join(" ", attributes[attrName]);
+        tpl.executeAttributes(context, this.dom, TagBinding.executeAttribute);
 
-                if (dom.attributes.hasOwnProperty(attrName) && dom[attrName] === newValue)
-                    continue;
+        return this.dom;
+    }
 
-                dom[attrName] = newValue;
-                if (typeof newValue === "undefined" || newValue === null) {
-                    dom.removeAttribute(attrName);
-                } else if (attrName === "value") {
-                    dom["value"] = newValue;
-                } else {
-                    let domAttr = dom.attributes[attrName];
-                    if (!!domAttr) {
-                        domAttr.nodeValue = newValue;
-                        domAttr.value = newValue;
-                    } else {
-                        domAttr = document.createAttribute(attrName);
-                        domAttr.value = newValue;
-                        dom.setAttributeNode(domAttr);
-                    }
-                }
+    static executeAttribute(attrName: string, newValue, dom) {
+        if (dom.attributes["__value"] === newValue)
+            return;
+
+        dom.attributes["__value"] = newValue;
+        dom[attrName] = newValue;
+        if (typeof newValue === "undefined" || newValue === null) {
+            dom.removeAttribute(attrName);
+        } else if (attrName === "value") {
+            dom["value"] = newValue;
+        } else {
+            let domAttr = dom.attributes[attrName];
+            if (!!domAttr) {
+                domAttr.nodeValue = newValue;
+                domAttr.value = newValue;
+            } else {
+                domAttr = document.createAttribute(attrName);
+                domAttr.value = newValue;
+                dom.setAttributeNode(domAttr);
             }
         }
-
-        return dom;
     }
 }
 
@@ -742,7 +743,7 @@ class Binder {
     }
 
     static updateBindings(bindings, arr, context) {
-        for (let idx = bindings.length-1; idx >= 0 ; idx--) {
+        for (let idx = bindings.length - 1; idx >= 0; idx--) {
             var result = context.extend(arr[idx]);
 
             const binding = bindings[idx];

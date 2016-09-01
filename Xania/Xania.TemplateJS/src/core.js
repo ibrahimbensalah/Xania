@@ -73,26 +73,25 @@ var TagTemplate = (function () {
         this.modelAccessor = modelAccessor;
         return this;
     };
-    TagTemplate.prototype.executeAttributes = function (context) {
-        var result = {
-            "class": []
-        };
+    TagTemplate.prototype.executeAttributes = function (context, dom, resolve) {
+        var classes = [];
         this.attributes.forEach(function (tpl, name) {
             var value = tpl.execute(context);
             if (name === "class") {
-                result["class"].push(value);
+                classes.push(value);
             }
             else if (name.startsWith("class.")) {
                 if (!!value) {
                     var className = name.substr(6);
-                    result["class"].push(className);
+                    classes.push(className);
                 }
             }
             else {
-                result[name] = value;
+                resolve(name, value, dom);
             }
         });
-        return result;
+        if (classes.length > 0)
+            resolve("class", Xania.join(" ", classes), dom);
     };
     TagTemplate.prototype.executeEvents = function (context) {
         var result = {}, self = this;
@@ -530,7 +529,11 @@ var TextBinding = (function (_super) {
         this.dom = document.createTextNode("");
     }
     TextBinding.prototype.execute = function (context) {
-        this.dom.textContent = this.tpl.execute(context);
+        var newValue = this.tpl.execute(context);
+        if (newValue !== this.value) {
+            this.value = newValue;
+            this.dom.textContent = newValue;
+        }
     };
     return TextBinding;
 })(Binding);
@@ -544,35 +547,32 @@ var TagBinding = (function (_super) {
     }
     TagBinding.prototype.execute = function (context) {
         var tpl = this.tpl;
-        var dom = this.dom;
-        var attributes = tpl.executeAttributes(context);
-        for (var attrName in attributes) {
-            if (attributes.hasOwnProperty(attrName)) {
-                var newValue = Xania.join(" ", attributes[attrName]);
-                if (dom.attributes.hasOwnProperty(attrName) && dom[attrName] === newValue)
-                    continue;
-                dom[attrName] = newValue;
-                if (typeof newValue === "undefined" || newValue === null) {
-                    dom.removeAttribute(attrName);
-                }
-                else if (attrName === "value") {
-                    dom["value"] = newValue;
-                }
-                else {
-                    var domAttr = dom.attributes[attrName];
-                    if (!!domAttr) {
-                        domAttr.nodeValue = newValue;
-                        domAttr.value = newValue;
-                    }
-                    else {
-                        domAttr = document.createAttribute(attrName);
-                        domAttr.value = newValue;
-                        dom.setAttributeNode(domAttr);
-                    }
-                }
+        tpl.executeAttributes(context, this.dom, TagBinding.executeAttribute);
+        return this.dom;
+    };
+    TagBinding.executeAttribute = function (attrName, newValue, dom) {
+        if (dom.attributes["__value"] === newValue)
+            return;
+        dom.attributes["__value"] = newValue;
+        dom[attrName] = newValue;
+        if (typeof newValue === "undefined" || newValue === null) {
+            dom.removeAttribute(attrName);
+        }
+        else if (attrName === "value") {
+            dom["value"] = newValue;
+        }
+        else {
+            var domAttr = dom.attributes[attrName];
+            if (!!domAttr) {
+                domAttr.nodeValue = newValue;
+                domAttr.value = newValue;
+            }
+            else {
+                domAttr = document.createAttribute(attrName);
+                domAttr.value = newValue;
+                dom.setAttributeNode(domAttr);
             }
         }
-        return dom;
     };
     return TagBinding;
 })(Binding);
