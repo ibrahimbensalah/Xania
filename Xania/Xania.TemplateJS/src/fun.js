@@ -22,6 +22,10 @@ var Ast;
                 return new Context(object.objects.concat(this.objects));
             return new Context([object].concat(this.objects));
         };
+        Context.prototype.reset = function (object) {
+            this.objects[0] = object;
+            return this;
+        };
         return Context;
     })();
     Ast.Context = Context;

@@ -11,8 +11,8 @@ var TextTemplate = (function () {
     TextTemplate.prototype.execute = function (context) {
         return this.tpl.execute(context);
     };
-    TextTemplate.prototype.bind = function (model) {
-        return new TextBinding(this, model);
+    TextTemplate.prototype.bind = function () {
+        return new TextBinding(this);
     };
     TextTemplate.prototype.toString = function () {
         return this.tpl.toString();
@@ -26,8 +26,8 @@ var ContentTemplate = (function () {
     function ContentTemplate() {
         this._children = [];
     }
-    ContentTemplate.prototype.bind = function (model, idx) {
-        return new ContentBinding(this, model);
+    ContentTemplate.prototype.bind = function () {
+        return new ContentBinding(this);
     };
     ContentTemplate.prototype.children = function () {
         return this._children;
@@ -66,8 +66,8 @@ var TagTemplate = (function () {
         this._children.push(child);
         return this;
     };
-    TagTemplate.prototype.bind = function (model) {
-        return new TagBinding(this, model);
+    TagTemplate.prototype.bind = function () {
+        return new TagBinding(this);
     };
     TagTemplate.prototype.select = function (modelAccessor) {
         this.modelAccessor = modelAccessor;
@@ -107,83 +107,23 @@ var TagTemplate = (function () {
     };
     return TagTemplate;
 })();
-var SelectManyExpression = (function () {
-    function SelectManyExpression(varName, viewModel, collectionExpr, loader) {
-        this.varName = varName;
-        this.viewModel = viewModel;
-        this.collectionExpr = collectionExpr;
-        this.loader = loader;
-        this.items = [];
-        if (collectionExpr === undefined || collectionExpr === null) {
-            throw new Error("null argument exception");
-        }
-    }
-    SelectManyExpression.prototype.execute = function (context) {
-        var collectionFunc = new Function("m", "with(m) { return " + this.collectionExpr + "; }"), varName = this.varName;
-        if (Array.isArray(context))
-            throw new Error("context is Array");
-        var col = collectionFunc(context);
-        return Xania.promise(col).then(function (data) {
-            var arr = Array.isArray(data) ? data : [data];
-            var results = [];
-            for (var i = 0; i < arr.length; i++) {
-                var result = {};
-                result[varName] = arr[i];
-                results.push(result);
-            }
-            return results;
-        });
-    };
-    SelectManyExpression.parse = function (expr, loader) {
-        if (loader === void 0) { loader = function (t) { return window[t]; }; }
-        var m = expr.match(/^(\w+)(\s*:\s*(\w+))?\s+of\s+((\w+)\s*:\s*)?(.*)$/i);
-        if (!!m) {
-            var varName = m[1], itemType = m[3], directive = m[5], collectionExpr = m[6];
-            var viewModel = loader(itemType);
-            return new SelectManyExpression(varName, viewModel, collectionExpr, loader);
-        }
-        return null;
-    };
-    SelectManyExpression.ensureIsArray = function (obj) {
-        return Array.isArray(obj) ? obj : [obj];
-    };
-    return SelectManyExpression;
-})();
-var Value = (function () {
-    function Value(obj) {
-        this.obj = obj;
-    }
-    Value.prototype.valueOf = function () {
-        return this.obj;
-    };
-    return Value;
-})();
 var Xania = (function () {
     function Xania() {
     }
     Xania.identity = function (x) {
         return x;
     };
-    Xania.composable = function (data) {
-        return data !== null && data !== undefined && typeof (data.then) === "function";
-    };
-    Xania.promise = function (data) {
-        if (data !== null && data !== undefined && typeof (data.then) === "function") {
-            return data;
-        }
-        return {
-            then: function (resolve) {
-                var args = new Array(arguments.length);
-                for (var i = 1; i < args.length; i++) {
-                    args[i - 1] = arguments[i];
-                }
-                args[args.length - 1] = data;
-                var result = resolve.apply(resolve, args);
-                if (result === undefined)
-                    return this;
-                return Xania.promise(result);
-            }
-        };
+    Xania.ready = function (data, resolve) {
+        //var args = new Array(arguments.length);
+        //for (var i = 1; i < args.length; i++) {
+        //    args[i - 1] = arguments[i];
+        //}
+        //args[args.length - 1] = data;
+        if (data !== null && data !== undefined && typeof (data.then) === "function")
+            return data.then(resolve);
+        if (typeof (resolve.execute) === "function")
+            return resolve.execute.call(resolve, data);
+        return resolve.call(resolve, data);
     };
     Xania.map = function (fn, data) {
         if (typeof data.then === "function") {
@@ -426,14 +366,12 @@ var Router = (function () {
     return Router;
 })();
 var Binding = (function () {
-    function Binding(context) {
-        this.context = context;
+    function Binding() {
         this.subscriptions = [];
     }
     Binding.prototype.addChild = function (child, idx) {
         throw new Error("Abstract method Binding.update");
     };
-    Binding.prototype.update = function (context) { throw new Error("Not implemented"); };
     return Binding;
 })();
 var Observer = (function () {
@@ -497,9 +435,10 @@ var Observer = (function () {
             additionalArgs[_i - 2] = arguments[_i];
         }
         var observer = this;
+        if (!initial)
+            throw new Error("context is null");
         var subscription = {
             context: initial,
-            parent: undefined,
             state: undefined,
             dependencies: [],
             setRead: function (object, property) {
@@ -514,17 +453,26 @@ var Observer = (function () {
                 this.context = context;
                 this.notify();
             },
-            apply: function (subscription, args) {
-                var state = args[0];
-                var observable = Xania.observe(subscription.context, subscription);
-                subscription.state = binding.execute.apply(binding, [observable, subscription, state].concat(additionalArgs));
+            execute: function (state) {
+                var key = additionalArgs.length;
+                var args = Observer.cache[key];
+                if (!args) {
+                    Observer.cache[key] = args = new Array(3 + additionalArgs.length);
+                    console.debug("create cache array ", key);
+                }
+                args[0] = Xania.observe(this.context, this);
+                args[1] = this;
+                args[2] = state;
+                for (var i = additionalArgs.length - 1; i >= 0; i--)
+                    args[i + 3] = additionalArgs[i];
+                this.state = binding.execute.apply(binding, args);
             },
             notify: function () {
                 observer.unsubscribe(this);
-                return Xania.promise(this.state).then(this);
+                return Xania.ready(this.state, this);
             },
             then: function (resolve) {
-                return Xania.promise(this.state).then(resolve);
+                return Xania.ready(this.state, resolve);
             },
             subscribe: function () {
                 var args = [];
@@ -559,12 +507,13 @@ var Observer = (function () {
             this.dirty.clear();
         }
     };
+    Observer.cache = [];
     return Observer;
 })();
 var ContentBinding = (function (_super) {
     __extends(ContentBinding, _super);
-    function ContentBinding(tpl, context) {
-        _super.call(this, context);
+    function ContentBinding(tpl) {
+        _super.call(this);
         this.tpl = tpl;
         this.dom = document.createDocumentFragment();
     }
@@ -575,15 +524,11 @@ var ContentBinding = (function (_super) {
 })(Binding);
 var TextBinding = (function (_super) {
     __extends(TextBinding, _super);
-    function TextBinding(tpl, context) {
-        _super.call(this, context);
+    function TextBinding(tpl) {
+        _super.call(this);
         this.tpl = tpl;
         this.dom = document.createTextNode("");
     }
-    TextBinding.prototype.update = function (context) {
-        this.context = context;
-        this.execute(context);
-    };
     TextBinding.prototype.execute = function (context) {
         this.dom.textContent = this.tpl.execute(context);
     };
@@ -591,15 +536,12 @@ var TextBinding = (function (_super) {
 })(Binding);
 var TagBinding = (function (_super) {
     __extends(TagBinding, _super);
-    function TagBinding(tpl, context) {
-        _super.call(this, context);
+    function TagBinding(tpl) {
+        _super.call(this);
         this.tpl = tpl;
         this.dom = document.createElement(tpl.name);
         this.dom.attributes["__binding"] = this;
     }
-    TagBinding.prototype.update = function (context) {
-        this.context = context;
-    };
     TagBinding.prototype.execute = function (context) {
         var tpl = this.tpl;
         var dom = this.dom;
@@ -696,10 +638,9 @@ var Binder = (function () {
         }
     };
     Binder.updateBindings = function (bindings, arr, context) {
-        for (var idx = 0; idx < bindings.length; idx++) {
-            var binding = bindings[idx];
+        for (var idx = bindings.length - 1; idx >= 0; idx--) {
             var result = context.extend(arr[idx]);
-            binding.context = result;
+            var binding = bindings[idx];
             for (var s = 0; s < binding.subscriptions.length; s++) {
                 binding.subscriptions[s].update(result);
             }
@@ -707,35 +648,37 @@ var Binder = (function () {
     };
     Binder.prototype.addBindings = function (arr, offset, tpl, context) {
         var newBindings = [];
+        var children = tpl.children();
+        var reduceContext = { context: null, offset: 0, parentBinding: null, binder: this };
         for (var idx = offset; idx < arr.length; idx++) {
             var result = context.extend(arr[idx]);
             var newBinding = tpl.bind(result);
             newBindings.push(newBinding);
             var tagSubscription = this.observer.subscribe(result, newBinding);
             newBinding.subscriptions.push(tagSubscription);
+            reduceContext.context = result;
+            reduceContext.parentBinding = newBindings[idx];
+            reduceContext.offset = 0;
+            children.reduce(Binder.reduceChild, reduceContext);
         }
         return newBindings;
     };
-    Binder.prototype.executeChild = function (parentBinding, cur, p) {
-        var subscr = this.subscribe(parentBinding.context, cur, parentBinding.dom, p);
-        parentBinding.subscriptions.push(subscr);
-        return subscr.then(function (x) { return p + x.bindings.length; });
-    };
-    Binder.prototype.reduceChild = function (prev, cur) {
+    Binder.reduceChild = function (prev, cur) {
         var parentBinding = prev.parentBinding;
-        var offset = Xania.promise(prev.offset)
-            .then(this.executeChild.bind(this, parentBinding, cur));
-        return { offset: offset, parentBinding: parentBinding };
+        var context = prev.context;
+        var binder = prev.binder;
+        prev.offset = Xania.ready(prev.offset, function (p) {
+            var subscr = binder.subscribe(context, cur, parentBinding.dom, p);
+            parentBinding.subscriptions.push(subscr);
+            return subscr.then(function (x) { return p + x.bindings.length; });
+        });
+        return prev;
     };
     Binder.prototype.executeArray = function (context, arr, offset, tpl, target, bindings) {
         Binder.removeBindings(target, bindings, arr.length);
         Binder.updateBindings(bindings, arr, context);
         if (arr.length > bindings.length) {
             var newBindings = this.addBindings(arr, bindings.length, tpl, context);
-            for (var i = 0; i < newBindings.length; i++) {
-                var children = tpl.children();
-                children.reduce(this.reduceChild.bind(this), { offset: 0, parentBinding: newBindings[i] });
-            }
             var insertAt = offset + bindings.length;
             if (insertAt < target.childNodes.length) {
                 var beforeElement = target.childNodes[insertAt];
@@ -760,8 +703,7 @@ var Binder = (function () {
         var _this = this;
         var bindings = !!state ? state.bindings : Xania.empty;
         if (!!tpl.modelAccessor) {
-            return Xania.promise(tpl.modelAccessor.execute(observable))
-                .then(function (model) {
+            return Xania.ready(tpl.modelAccessor.execute(observable), function (model) {
                 if (model === null || model === undefined)
                     return { bindings: [] };
                 var arr = Array.isArray(model) ? model : [model];

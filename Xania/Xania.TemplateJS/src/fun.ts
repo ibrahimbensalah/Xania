@@ -57,6 +57,11 @@ module Ast {
 
             return new Context([object].concat(this.objects));
         }
+
+        reset(object) {
+            this.objects[0] = object;
+            return this;
+        }
     }
 
     interface IExpr {

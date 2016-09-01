@@ -46,7 +46,7 @@
             }
         };
 
-        new Binder(viewModel).import("todoapp.html")
+        new Binder(new Ast.Context([viewModel, Fun.List])).import("todoapp.html")
             .then(function(doc) {
                 var tpl = doc.querySelector("template");
                 this.bind(tpl, "#panel1")
