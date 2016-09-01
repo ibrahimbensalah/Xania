@@ -110,7 +110,7 @@ class TagTemplate implements IDomTemplate {
     }
 
     public executeEvents(context) {
-        var result: any = {};
+        var result: any = {}, self = this;
 
         if (this.name.toUpperCase() === "INPUT") {
             var name = this.attributes.get("name")(context);
@@ -118,7 +118,7 @@ class TagTemplate implements IDomTemplate {
         }
 
         this.events.forEach((callback, eventName) => {
-            result[eventName] = callback.bind(this, context);
+            result[eventName] = function () { callback.apply(self, [context].concat(arguments)); }
         });
 
         return result;
@@ -215,14 +215,13 @@ class Xania {
         }
 
         return {
-            then() {
-                var resolve = arguments[0];
+            then(resolve) {
                 var args = new Array(arguments.length);
                 for (var i = 1; i < args.length; i++) {
                     args[i-1] = arguments[i];
                 }
                 args[args.length - 1] = data;
-                const result = resolve.apply(this, args);
+                const result = resolve.apply(resolve, args);
                 if (result === undefined)
                     return this;
                 return Xania.promise(result);
@@ -611,13 +610,14 @@ class Observer {
                 this.notify();
                 // }
             },
-            stateReady(state) {
-                var observable = Xania.observe(this.context, this);
-                this.state = binding.execute.apply(binding, [observable, this, state].concat(additionalArgs));
+            apply(subscription, args) {
+                var state = args[0];
+                var observable = Xania.observe(subscription.context, subscription);
+                subscription.state = binding.execute.apply(binding, [observable, subscription, state].concat(additionalArgs));
             },
             notify() {
                 observer.unsubscribe(this);
-                return Xania.promise(this.state).then(this.stateReady.bind(this));
+                return Xania.promise(this.state).then(this);
             },
             then(resolve) {
                 return Xania.promise(this.state).then(resolve);
@@ -676,7 +676,6 @@ class ContentBinding extends Binding {
 
 class TextBinding extends Binding {
     private dom;
-    private value;
 
     constructor(private tpl: TextTemplate, context) {
         super(context);

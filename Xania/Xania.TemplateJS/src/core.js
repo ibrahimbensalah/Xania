@@ -95,14 +95,13 @@ var TagTemplate = (function () {
         return result;
     };
     TagTemplate.prototype.executeEvents = function (context) {
-        var _this = this;
-        var result = {};
+        var result = {}, self = this;
         if (this.name.toUpperCase() === "INPUT") {
             var name = this.attributes.get("name")(context);
             result.update = new Function("value", "with (this) { " + name + " = value; }").bind(context);
         }
         this.events.forEach(function (callback, eventName) {
-            result[eventName] = callback.bind(_this, context);
+            result[eventName] = function () { callback.apply(self, [context].concat(arguments)); };
         });
         return result;
     };
@@ -173,14 +172,13 @@ var Xania = (function () {
             return data;
         }
         return {
-            then: function () {
-                var resolve = arguments[0];
+            then: function (resolve) {
                 var args = new Array(arguments.length);
                 for (var i = 1; i < args.length; i++) {
                     args[i - 1] = arguments[i];
                 }
                 args[args.length - 1] = data;
-                var result = resolve.apply(this, args);
+                var result = resolve.apply(resolve, args);
                 if (result === undefined)
                     return this;
                 return Xania.promise(result);
@@ -516,13 +514,14 @@ var Observer = (function () {
                 this.context = context;
                 this.notify();
             },
-            stateReady: function (state) {
-                var observable = Xania.observe(this.context, this);
-                this.state = binding.execute.apply(binding, [observable, this, state].concat(additionalArgs));
+            apply: function (subscription, args) {
+                var state = args[0];
+                var observable = Xania.observe(subscription.context, subscription);
+                subscription.state = binding.execute.apply(binding, [observable, subscription, state].concat(additionalArgs));
             },
             notify: function () {
                 observer.unsubscribe(this);
-                return Xania.promise(this.state).then(this.stateReady.bind(this));
+                return Xania.promise(this.state).then(this);
             },
             then: function (resolve) {
                 return Xania.promise(this.state).then(resolve);
