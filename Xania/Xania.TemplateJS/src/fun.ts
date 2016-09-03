@@ -13,13 +13,13 @@
         execute(context: IContext) {
             return this.value;
         }
-        app(): IExpr {throw new Error("app on const is not supported");}
+        app(): IExpr { throw new Error("app on const is not supported"); }
     }
 
     class Ident implements IExpr {
         constructor(public id: string) { }
 
-        execute(context : IContext) {
+        execute(context: IContext) {
             return context.prop(this.id);
         }
         app(args: IExpr[]): IExpr {
@@ -101,29 +101,29 @@
         execute(context: IContext) {
             var result = this.sourceExpr.execute(context);
             if (typeof result.length === "number") {
-                var arr = new Array(result.length);
-                for (var i = 0; i < arr.length; i++) {
-                    arr[i] = this.merge(context, result.prop(i));
+                //var arr = new Array(result.length);
+                //for (var i = 0; i < arr.length; i++) {
+                //    arr[i] = this.merge(context, result.prop(i));
+                //}
+                //return arr;
+                return {
+                    query: this,
+                    length: result.length,
+                    itemAt(idx) {
+                        return this.query.merge(context, result.prop(idx));
+                    },
+                    forEach(fn) {
+                        for (let idx = 0; idx < result.length; idx++) {
+                            var merged = this.query.merge(context, result.prop(idx));
+                            fn(merged, idx);
+                        }
+                    }
                 }
-                return arr;
             }
             else
                 return result.map(x => this.merge(context, x));
         }
         app(): IExpr { throw new Error("app on query is not supported"); }
-
-        static assign = (<any>Object).assign;
-        //assign(target, ...args) {
-        //    for (var i = 0; i < args.length; i++) {
-        //        const object = args[i];
-        //        for (let prop in object) {
-        //            if (object.hasOwnProperty(prop)) {
-        //                target[prop] = object[prop];
-        //            }
-        //        }
-        //    }
-        //    return target;
-        //}
     }
 
     class Template {
@@ -150,7 +150,7 @@
                 return part;
             else {
                 var result = part.execute(context);
-                if (typeof result === "function")
+                if (!!result && typeof result.call === "function")
                     return result.call(this);
                 return result;
             }
@@ -343,7 +343,7 @@
                 if (!filter)
                     throw new SyntaxError(`Expected filter at: ${stream}`);
 
-                return filter.app([ expr ]);
+                return filter.app([expr]);
             }
 
             return expr;
@@ -404,12 +404,13 @@
 
 module Fun {
     export class List {
-        static count (fn, list) {
+        static count(fn, list) {
             if (!list)
                 return 0;
             if (!!list.count)
                 return list.count(fn);
             var result = 0;
+            debugger;
             for (var i = 0; i < list.length; i++)
                 if (fn(list[i]))
                     result++;

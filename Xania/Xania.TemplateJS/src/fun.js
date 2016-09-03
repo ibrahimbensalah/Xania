@@ -99,17 +99,24 @@ var Ast;
             var _this = this;
             var result = this.sourceExpr.execute(context);
             if (typeof result.length === "number") {
-                var arr = new Array(result.length);
-                for (var i = 0; i < arr.length; i++) {
-                    arr[i] = this.merge(context, result.prop(i));
-                }
-                return arr;
+                return {
+                    query: this,
+                    length: result.length,
+                    itemAt: function (idx) {
+                        return this.query.merge(context, result.prop(idx));
+                    },
+                    forEach: function (fn) {
+                        for (var idx = 0; idx < result.length; idx++) {
+                            var merged = this.query.merge(context, result.prop(idx));
+                            fn(merged, idx);
+                        }
+                    }
+                };
             }
             else
                 return result.map(function (x) { return _this.merge(context, x); });
         };
         Query.prototype.app = function () { throw new Error("app on query is not supported"); };
-        Query.assign = Object.assign;
         return Query;
     })();
     var Template = (function () {
@@ -132,7 +139,7 @@ var Ast;
                 return part;
             else {
                 var result = part.execute(context);
-                if (typeof result === "function")
+                if (!!result && typeof result.call === "function")
                     return result.call(this);
                 return result;
             }
@@ -345,6 +352,7 @@ var Fun;
             if (!!list.count)
                 return list.count(fn);
             var result = 0;
+            debugger;
             for (var i = 0; i < list.length; i++)
                 if (fn(list[i]))
                     result++;
