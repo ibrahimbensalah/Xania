@@ -3,7 +3,7 @@ var viewModel = {
     databases: []
 };
 
-var binder = new Binder(new Ast.Context([ viewModel, Fun.List ]));
+var binder = new Binder(viewModel, [Fun.List], document.body);
 binder.bind("template", "#content");
 
 var load = function () {

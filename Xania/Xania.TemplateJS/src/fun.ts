@@ -1,77 +1,16 @@
-﻿//class TemplateEngine {
-//    private static cacheFn: any = {};
-
-//    static compile(input) {
-//        if (!input || !input.trim()) {
-//            return null;
-//        }
-
-//        var template = input.replace(/\n/g, "\\\n");
-//        var decl = [];
-//        var returnExpr = template.replace(/@([\w\(\)\.,=!']+)/gim, (a, b) => {
-//            var paramIdx = `arg${decl.length}`;
-//            decl.push(b);
-//            return `"+${paramIdx}+"`;
-//        });
-
-//        if (returnExpr === '"+arg0+"') {
-//            if (!TemplateEngine.cacheFn[input]) {
-//                const functionBody = `with(m) {return ${decl[0]};}`;
-//                TemplateEngine.cacheFn[input] = new Function("m", functionBody);
-//            }
-//            return TemplateEngine.cacheFn[input];
-//        } else if (decl.length > 0) {
-//            var params = decl.map((v, i) => `var arg${i} = ${v}`).join(";");
-//            if (!TemplateEngine.cacheFn[input]) {
-//                const functionBody = `with(m) {${params};return "${returnExpr}"}`;
-//                TemplateEngine.cacheFn[input] = new Function("m", functionBody);
-//            }
-//            return TemplateEngine.cacheFn[input];
-//        }
-//        return () => returnExpr;
-//    }
-//}
-
-module Ast {
-    export class Context {
-        constructor(private objects: any[]) {
-
-        }
-
-        get(name) {
-            for (var i = 0; i < this.objects.length; i++) {
-                var object = this.objects[i];
-                var value = object[name];
-                if (value !== undefined)
-                    return value;
-            }
-            return undefined;
-        }
-
-        extend(object) {
-            if (!object)
-                return this;
-
-            if (object instanceof Context)
-                return new Context(object.objects.concat(this.objects));
-
-            return new Context([object].concat(this.objects));
-        }
-
-        reset(object) {
-            this.objects[0] = object;
-            return this;
-        }
+﻿module Ast {
+    interface IContext {
+        prop(name: string);
+        extend(object);
     }
-
     interface IExpr {
-        execute(context: Context);
+        execute(context: IContext);
         app(args: IExpr[]): IExpr;
     }
 
     class Const implements IExpr {
         constructor(public value: any) { }
-        execute(context) {
+        execute(context: IContext) {
             return this.value;
         }
         app(): IExpr {throw new Error("app on const is not supported");}
@@ -80,8 +19,8 @@ module Ast {
     class Ident implements IExpr {
         constructor(public id: string) { }
 
-        execute(context : Context) {
-            return context.get(this.id);
+        execute(context : IContext) {
+            return context.prop(this.id);
         }
         app(args: IExpr[]): IExpr {
             return new App(this, args);
@@ -92,9 +31,9 @@ module Ast {
         constructor(public targetExpr: IExpr, public name: string) {
         }
 
-        execute(context) {
+        execute(context: IContext) {
             const obj = this.targetExpr.execute(context);
-            var member = obj[this.name];
+            var member = obj.prop(this.name);
 
             if (typeof member === "function")
                 return member.bind(obj);
@@ -113,7 +52,7 @@ module Ast {
         constructor(public targetExpr: IExpr, public args: IExpr[]) {
         }
 
-        execute(context) {
+        execute(context: IContext) {
             let args = this.args.map(x => x.execute(context));
 
             const target = this.targetExpr.execute(context);
@@ -128,7 +67,7 @@ module Ast {
     }
 
     class Unit implements IExpr {
-        execute(context) {
+        execute(context: IContext) {
             return undefined;
         }
         static instance = new Unit();
@@ -137,7 +76,7 @@ module Ast {
 
     class Not implements IExpr {
         constructor(public expr) { }
-        execute(context) {
+        execute(context: IContext) {
             return !this.expr.execute(context);
         }
         app(args: IExpr[]): IExpr {
@@ -148,10 +87,10 @@ module Ast {
     class Query implements IExpr {
         constructor(public varName: string, public sourceExpr: IExpr, public selectorExpr: IExpr) { }
 
-        merge(context, x) {
+        merge(context: IContext, x) {
             var item = {};
             item[this.varName] = x;
-            var result = new Context([item, context]);
+            var result = context.extend(item);
 
             if (this.selectorExpr !== null)
                 return this.selectorExpr.execute(result);
@@ -159,12 +98,12 @@ module Ast {
             return result;
         }
 
-        execute(context) {
+        execute(context: IContext) {
             var result = this.sourceExpr.execute(context);
             if (typeof result.length === "number") {
                 var arr = new Array(result.length);
-                for (var i = 0; i < result.length; i++) {
-                    arr[i] = this.merge(context, result[i]);
+                for (var i = 0; i < arr.length; i++) {
+                    arr[i] = this.merge(context, result.prop(i));
                 }
                 return arr;
             }
@@ -192,7 +131,7 @@ module Ast {
 
         }
 
-        execute(context: Context) {
+        execute(context: IContext) {
             if (this.parts.length === 0)
                 return null;
 
@@ -206,7 +145,7 @@ module Ast {
             return result;
         }
 
-        executePart(context, part) {
+        executePart(context: IContext, part) {
             if (typeof part === "string")
                 return part;
             else {

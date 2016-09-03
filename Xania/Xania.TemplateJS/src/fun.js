@@ -1,34 +1,5 @@
-//class TemplateEngine {
-//    private static cacheFn: any = {};
 var Ast;
 (function (Ast) {
-    var Context = (function () {
-        function Context(objects) {
-            this.objects = objects;
-        }
-        Context.prototype.get = function (name) {
-            for (var i = 0; i < this.objects.length; i++) {
-                var object = this.objects[i];
-                var value = object[name];
-                if (value !== undefined)
-                    return value;
-            }
-            return undefined;
-        };
-        Context.prototype.extend = function (object) {
-            if (!object)
-                return this;
-            if (object instanceof Context)
-                return new Context(object.objects.concat(this.objects));
-            return new Context([object].concat(this.objects));
-        };
-        Context.prototype.reset = function (object) {
-            this.objects[0] = object;
-            return this;
-        };
-        return Context;
-    })();
-    Ast.Context = Context;
     var Const = (function () {
         function Const(value) {
             this.value = value;
@@ -44,7 +15,7 @@ var Ast;
             this.id = id;
         }
         Ident.prototype.execute = function (context) {
-            return context.get(this.id);
+            return context.prop(this.id);
         };
         Ident.prototype.app = function (args) {
             return new App(this, args);
@@ -58,7 +29,7 @@ var Ast;
         }
         Member.prototype.execute = function (context) {
             var obj = this.targetExpr.execute(context);
-            var member = obj[this.name];
+            var member = obj.prop(this.name);
             if (typeof member === "function")
                 return member.bind(obj);
             return member;
@@ -119,7 +90,7 @@ var Ast;
         Query.prototype.merge = function (context, x) {
             var item = {};
             item[this.varName] = x;
-            var result = new Context([item, context]);
+            var result = context.extend(item);
             if (this.selectorExpr !== null)
                 return this.selectorExpr.execute(result);
             return result;
@@ -129,8 +100,8 @@ var Ast;
             var result = this.sourceExpr.execute(context);
             if (typeof result.length === "number") {
                 var arr = new Array(result.length);
-                for (var i = 0; i < result.length; i++) {
-                    arr[i] = this.merge(context, result[i]);
+                for (var i = 0; i < arr.length; i++) {
+                    arr[i] = this.merge(context, result.prop(i));
                 }
                 return arr;
             }

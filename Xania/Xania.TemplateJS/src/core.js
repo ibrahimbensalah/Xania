@@ -125,7 +125,10 @@ var Xania = (function () {
         return resolve.call(resolve, data);
     };
     Xania.map = function (fn, data) {
-        if (typeof data.then === "function") {
+        if (data === null || data === undefined) {
+            return Xania.empty;
+        }
+        else if (typeof data.then === "function") {
             return data.then(function (arr) {
                 Xania.map(fn, arr);
             });
@@ -219,7 +222,7 @@ var Xania = (function () {
                     case "valueOf":
                         return arr.valueOf.bind(arr);
                     case "indexOf":
-                        observer.setRead(arr, "length");
+                        observer.addDependency(arr, "length", arr.length);
                         return function (item) {
                             for (var i = 0; i < arr.length; i++) {
                                 if (Xania.id(item) === Xania.id(arr[i]))
@@ -228,10 +231,14 @@ var Xania = (function () {
                             return -1;
                         };
                     case "length":
-                        observer.setRead(arr, "length");
+                        observer.addDependency(arr, "length", arr.length);
                         return arr.length;
                     case "constructor":
                         return Array;
+                    case "concat":
+                        return function (append) {
+                            return arr.concat(append);
+                        };
                     case "splice":
                     case "some":
                     case "every":
@@ -240,11 +247,11 @@ var Xania = (function () {
                     case "map":
                     case "pop":
                     case "push":
-                        observer.setRead(arr, "length");
-                        return Xania.observeProperty(arr, property, observer);
+                        observer.addDependency(arr, "length", arr.length);
+                        return Xania.observeProperty(arr, property, arr[property], observer);
                     default:
                         if (arr.hasOwnProperty(property))
-                            return Xania.observeProperty(arr, property, observer);
+                            return Xania.observeProperty(arr, property, arr[property], observer);
                         return undefined;
                 }
             },
@@ -259,25 +266,6 @@ var Xania = (function () {
                 return true;
             }
         });
-    };
-    Xania.unwrap = function (obj, cache) {
-        if (cache === void 0) { cache = null; }
-        if (obj === undefined || obj === null || typeof (obj) !== "object")
-            return obj;
-        if (!!cache && cache.has(obj))
-            return obj;
-        if (!!obj.isSpy) {
-            return Xania.unwrap(obj.valueOf(), cache);
-        }
-        if (!cache)
-            cache = new Set();
-        cache.add(obj);
-        for (var prop in obj) {
-            if (obj.hasOwnProperty(prop)) {
-                obj[prop] = Xania.unwrap(obj[prop], cache);
-            }
-        }
-        return obj;
     };
     Xania.observeObject = function (object, observer) {
         return Xania.proxy(object, {
@@ -294,7 +282,7 @@ var Xania = (function () {
                     case "constructor":
                         return object.constructor;
                     default:
-                        return Xania.observeProperty(object, property, observer);
+                        return Xania.observeProperty(object, property, object[property], observer);
                 }
             },
             set: function (target, property, value, receiver) {
@@ -310,22 +298,16 @@ var Xania = (function () {
         var retval = func.apply(object, args);
         return Xania.observe(retval, observer);
     };
-    Xania.observeProperty = function (object, propertyName, observer) {
-        var propertyValue = object[propertyName];
-        if (typeof propertyValue === "function") {
+    Xania.observeProperty = function (object, prop, value, observer) {
+        if (typeof value === "function") {
             var proxy = Xania.observe(object, observer);
             return function () {
-                return Xania.observeFunction(proxy, propertyValue, observer, arguments);
+                return Xania.observeFunction(proxy, value, observer, arguments);
             };
         }
         else {
-            observer.setRead(Xania.id(object), propertyName);
-            if (propertyValue === null || typeof propertyValue === "undefined") {
-                return null;
-            }
-            else {
-                return Xania.observe(propertyValue, observer);
-            }
+            observer.addDependency(Xania.id(object), prop, value);
+            return Xania.observe(value, observer);
         }
     };
     Xania.proxy = function (target, config) {
@@ -379,7 +361,7 @@ var Observer = (function () {
         this.dirty = new Set();
         this.state = {};
     }
-    Observer.prototype.add = function (object, property, subsriber) {
+    Observer.prototype.add = function (object, property, value, subsriber) {
         var properties = this.dependencies.get(object);
         if (!!properties) {
             var subscriptions_1 = properties.get(property);
@@ -428,20 +410,18 @@ var Observer = (function () {
         }
         this.dirty.delete(subscription);
     };
-    Observer.prototype.subscribe = function (initial, binding) {
+    Observer.prototype.subscribe = function (binding) {
         var additionalArgs = [];
-        for (var _i = 2; _i < arguments.length; _i++) {
-            additionalArgs[_i - 2] = arguments[_i];
+        for (var _i = 1; _i < arguments.length; _i++) {
+            additionalArgs[_i - 1] = arguments[_i];
         }
         var observer = this;
-        if (!initial)
-            throw new Error("context is null");
         var subscription = {
-            context: initial,
+            context: null,
             state: undefined,
             dependencies: [],
-            setRead: function (object, property) {
-                if (observer.add(object, property, this)) {
+            addDependency: function (object, property, value) {
+                if (observer.add(object, property, value, this)) {
                     this.dependencies.push({ object: object, property: property });
                 }
             },
@@ -449,8 +429,9 @@ var Observer = (function () {
                 throw new Error("invalid change");
             },
             update: function (context) {
-                this.context = context;
+                this.context = context.subscribe(this);
                 this.notify();
+                return this;
             },
             execute: function (state) {
                 var key = additionalArgs.length;
@@ -459,7 +440,7 @@ var Observer = (function () {
                     Observer.cache[key] = args = new Array(3 + additionalArgs.length);
                     console.debug("create cache array ", key);
                 }
-                args[0] = Xania.observe(this.context, this);
+                args[0] = this.context;
                 args[1] = this;
                 args[2] = state;
                 for (var i = additionalArgs.length - 1; i >= 0; i--)
@@ -472,19 +453,11 @@ var Observer = (function () {
             },
             then: function (resolve) {
                 return Xania.ready(this.state, resolve);
-            },
-            subscribe: function () {
-                var args = [];
-                for (var _i = 0; _i < arguments.length; _i++) {
-                    args[_i - 0] = arguments[_i];
-                }
-                return observer.subscribe.apply(observer, args);
             }
         };
-        subscription.notify();
         return subscription;
     };
-    Observer.prototype.setRead = function (obj, property) {
+    Observer.prototype.addDependency = function (obj, property) {
     };
     Observer.prototype.setChange = function (obj, property) {
         var _this = this;
@@ -576,11 +549,96 @@ var TagBinding = (function (_super) {
     };
     return TagBinding;
 })(Binding);
+var ObservableValue = (function () {
+    function ObservableValue(value, observer) {
+        this.value = value;
+        this.observer = observer;
+        this.$id = Xania.id(value);
+    }
+    Object.defineProperty(ObservableValue.prototype, "length", {
+        get: function () {
+            if (this.value === null || this.value === undefined)
+                return 0;
+            var length = this.value.length;
+            if (typeof length === "number")
+                return length;
+            return 1;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    ObservableValue.prototype.apply = function (context) {
+        if (!!this.value && typeof this.value.apply === "function") {
+            var value = this.value.apply(context, arguments);
+            if (value !== null && value !== undefined) {
+                return new ObservableValue(value.valueOf(), this.observer);
+            }
+            return value;
+        }
+        throw new Error("is not a function");
+    };
+    ObservableValue.prototype.prop = function (name) {
+        var value = this.value[name];
+        this.observer.addDependency(this.$id, name, value);
+        if (this.value === null || this.value === undefined)
+            return null;
+        return new ObservableValue(value, this.observer);
+    };
+    ObservableValue.prototype.map = function (fn) {
+        return Xania.map(fn, this.value);
+    };
+    ObservableValue.prototype.valueOf = function () {
+        return this.value;
+    };
+    return ObservableValue;
+})();
+var Observable = (function () {
+    function Observable($id, objects, observer) {
+        if (observer === void 0) { observer = null; }
+        this.$id = $id;
+        this.objects = objects;
+        this.observer = observer;
+    }
+    Observable.prototype.prop = function (name) {
+        for (var i = 0; i < this.objects.length; i++) {
+            var object = this.objects[i];
+            var value = object[name];
+            if (value !== null && value !== undefined) {
+                if (typeof value.apply !== "function") {
+                    this.observer.addDependency(Xania.id(object), name, value);
+                }
+                return new ObservableValue(value.valueOf(), this.observer);
+            }
+        }
+        return undefined;
+    };
+    Observable.prototype.extend = function (object) {
+        if (!object) {
+            return this;
+        }
+        if (object instanceof Observable)
+            return new Observable(object, object.objects.concat(this.objects));
+        if (object instanceof ObservableValue) {
+            var inner = object.value;
+            return new Observable(inner, [inner].concat(this.objects));
+        }
+        return new Observable(object, [object].concat(this.objects));
+    };
+    Observable.prototype.reset = function (object) {
+        this.objects[0] = object;
+        return this;
+    };
+    Observable.prototype.subscribe = function (observer) {
+        if (this.observer === observer)
+            return this;
+        return new Observable(this.$id, this.objects, observer);
+    };
+    return Observable;
+})();
 var Binder = (function () {
-    function Binder(model, target) {
-        if (target === void 0) { target = null; }
-        this.model = model;
+    function Binder(viewModel, lib, target) {
         this.observer = new Observer();
+        this.rootContext = new Observable(viewModel, [viewModel].concat(lib), null);
         this.compiler = new Ast.Compiler();
         this.compile = this.compiler.template.bind(this.compiler);
         this.target = target || document.body;
@@ -639,9 +697,9 @@ var Binder = (function () {
     };
     Binder.updateBindings = function (bindings, arr, context) {
         for (var idx = bindings.length - 1; idx >= 0; idx--) {
-            var result = context.extend(arr[idx]);
             var binding = bindings[idx];
             for (var s = 0; s < binding.subscriptions.length; s++) {
+                var result = context.extend(arr[idx]);
                 binding.subscriptions[s].update(result);
             }
         }
@@ -651,10 +709,11 @@ var Binder = (function () {
         var children = tpl.children();
         var reduceContext = { context: null, offset: 0, parentBinding: null, binder: this };
         for (var idx = offset; idx < arr.length; idx++) {
-            var result = context.extend(arr[idx]);
-            var newBinding = tpl.bind(result);
+            var newBinding = tpl.bind();
             newBindings.push(newBinding);
-            var tagSubscription = this.observer.subscribe(result, newBinding);
+            var tagSubscription = this.observer.subscribe(newBinding);
+            var result = context.extend(arr[idx]);
+            tagSubscription.update(result);
             newBinding.subscriptions.push(tagSubscription);
             reduceContext.context = result;
             reduceContext.parentBinding = newBindings[idx];
@@ -693,12 +752,6 @@ var Binder = (function () {
         }
         return bindings;
     };
-    Binder.prototype.modelReady = function (subscription, offset, tpl, target, bindings, model) {
-        if (model === null || model === undefined)
-            return { bindings: [] };
-        var arr = Array.isArray(model) ? model : [model];
-        return { bindings: this.executeArray(subscription.context, arr, offset, tpl, target, bindings) };
-    };
     Binder.prototype.execute = function (observable, subscription, state, tpl, target, offset) {
         var _this = this;
         var bindings = !!state ? state.bindings : Xania.empty;
@@ -716,7 +769,7 @@ var Binder = (function () {
     };
     Binder.prototype.subscribe = function (context, tpl, target, offset) {
         if (offset === void 0) { offset = 0; }
-        return this.observer.subscribe(context, this, tpl, target, offset);
+        return this.observer.subscribe(this, tpl, target, offset).update(context);
     };
     Binder.find = function (selector) {
         if (typeof selector === "string")
@@ -726,7 +779,7 @@ var Binder = (function () {
     Binder.prototype.bind = function (templateSelector, targetSelector) {
         var target = Binder.find(targetSelector) || document.body;
         var template = this.parseDom(Binder.find(templateSelector));
-        this.subscribe(this.model, template, target);
+        this.subscribe(this.rootContext, template, target);
         return this;
     };
     Binder.prototype.parseDom = function (rootDom) {
