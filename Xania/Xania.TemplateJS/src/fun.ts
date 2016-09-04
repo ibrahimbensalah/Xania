@@ -100,7 +100,8 @@
 
         execute(context: IContext) {
             var result = this.sourceExpr.execute(context);
-            if (typeof result.length === "number") {
+            var length = result.length;
+            if (typeof length === "number") {
                 //var arr = new Array(result.length);
                 //for (var i = 0; i < arr.length; i++) {
                 //    arr[i] = this.merge(context, result.prop(i));
@@ -108,12 +109,12 @@
                 //return arr;
                 return {
                     query: this,
-                    length: result.length,
+                    length: length,
                     itemAt(idx) {
                         return this.query.merge(context, result.prop(idx));
                     },
                     forEach(fn) {
-                        for (let idx = 0; idx < result.length; idx++) {
+                        for (let idx = 0; idx < this.length; idx++) {
                             var merged = this.query.merge(context, result.prop(idx));
                             fn(merged, idx);
                         }

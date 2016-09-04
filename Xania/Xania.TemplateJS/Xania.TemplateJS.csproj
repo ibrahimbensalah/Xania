@@ -52,6 +52,7 @@
   <ItemGroup>
     <TypeScriptCompile Include="app.ts" />
     <TypeScriptCompile Include="Scripts\typings\es6-shim\es6-shim.d.ts" />
+    <TypeScriptCompile Include="src\dom.ts" />
     <TypeScriptCompile Include="src\fun.ts" />
     <TypeScriptCompile Include="src\core.ts" />
     <Content Include="test\coretests.js" />

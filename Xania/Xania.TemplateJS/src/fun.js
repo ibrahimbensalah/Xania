@@ -98,15 +98,16 @@ var Ast;
         Query.prototype.execute = function (context) {
             var _this = this;
             var result = this.sourceExpr.execute(context);
-            if (typeof result.length === "number") {
+            var length = result.length;
+            if (typeof length === "number") {
                 return {
                     query: this,
-                    length: result.length,
+                    length: length,
                     itemAt: function (idx) {
                         return this.query.merge(context, result.prop(idx));
                     },
                     forEach: function (fn) {
-                        for (var idx = 0; idx < result.length; idx++) {
+                        for (var idx = 0; idx < this.length; idx++) {
                             var merged = this.query.merge(context, result.prop(idx));
                             fn(merged, idx);
                         }
@@ -384,3 +385,4 @@ var Fun;
     })();
     Fun.List = List;
 })(Fun || (Fun = {}));
+//# sourceMappingURL=fun.js.map
