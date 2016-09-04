@@ -27,8 +27,8 @@ class Xania {
         if (data === null || data === undefined) {
             return Xania.empty;
         } else if (typeof data.then === "function") {
-            return data.then(arr => {
-                Xania.map(fn, arr);
+            return data.then(function dataThenBoundFn(arr) {
+                return Xania.map(fn, arr);
             });
         } else if (typeof data.map === "function") {
             data.map(fn);
@@ -295,7 +295,7 @@ class Observer {
     unsubscribe(subscription) {
         // subscription.dependencies.clear();
         this.all.delete(subscription);
-        this.dirty.delete(subscription);
+//        this.dirty.delete(subscription);
     }
 
     private static cache = [];
@@ -393,7 +393,7 @@ class TextBinding extends Binding {
     }
 
     execute(context) {
-        var newValue = this.tpl.execute(context);
+        var newValue = this.tpl.execute(context).valueOf();
         if (newValue !== this.value) {
             this.value = newValue;
             this.dom.textContent = newValue;
@@ -404,6 +404,7 @@ class TextBinding extends Binding {
 class TagBinding extends Binding {
 
     protected dom: HTMLElement;
+    protected attrs = {};
 
     constructor(private tpl: TagTemplate, context) {
         super(context);
@@ -415,28 +416,25 @@ class TagBinding extends Binding {
     execute(context) {
         const tpl = this.tpl;
 
-        tpl.executeAttributes(context, this.dom, TagBinding.executeAttribute);
+        tpl.executeAttributes(context, this, TagBinding.executeAttribute);
 
         return this.dom;
     }
 
-    static executeAttribute(attrName: string, newValue, dom) {
-        if (dom.attributes["__value"] === newValue)
+    static executeAttribute(attrName: string, newValue, binding) {
+        if (binding.attrs[attrName] === newValue)
             return;
+        binding.attrs[attrName] = newValue;
 
-        dom.attributes["__value"] = newValue;
-        dom[attrName] = newValue;
+        var dom = binding.dom;
         if (typeof newValue === "undefined" || newValue === null) {
             dom.removeAttribute(attrName);
-        } else if (attrName === "value") {
-            dom["value"] = newValue;
         } else {
-            let domAttr = dom.attributes[attrName];
-            if (!!domAttr) {
-                domAttr.nodeValue = newValue;
-                domAttr.value = newValue;
+            dom[attrName] = newValue;
+            if (attrName === "value") {
+                dom["value"] = newValue;
             } else {
-                domAttr = document.createAttribute(attrName);
+                var domAttr = document.createAttribute(attrName);
                 domAttr.value = newValue;
                 dom.setAttributeNode(domAttr);
             }
@@ -577,9 +575,9 @@ class ScopeBinding {
         Binder.removeBindings(target, bindings, arr.length);
 
         var startInsertAt = offset + bindings.length;
-
-        arr.forEach((result, idx) => {
-            this.mergeBinding(result, startInsertAt, tpl, target, bindings, idx);
+        var self = this;
+        arr.forEach(function arrForEachBoundFn(result, idx) {
+            return self.mergeBinding(result, startInsertAt, tpl, target, bindings, idx);
         });
 
         return bindings;

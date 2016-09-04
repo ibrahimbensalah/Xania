@@ -90,7 +90,7 @@ class TagTemplate implements IDomTemplate {
     public executeAttributes(context, dom, resolve) {
         var classes = [];
 
-        this.attributes.forEach((tpl, name) => {
+        this.attributes.forEach(function attributesForEachBoundFn (tpl, name) {
             var value = tpl.execute(context).valueOf();
             if (name === "class") {
                 classes.push(value);

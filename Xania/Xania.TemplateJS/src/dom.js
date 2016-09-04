@@ -69,7 +69,7 @@ var TagTemplate = (function () {
     };
     TagTemplate.prototype.executeAttributes = function (context, dom, resolve) {
         var classes = [];
-        this.attributes.forEach(function (tpl, name) {
+        this.attributes.forEach(function attributesForEachBoundFn(tpl, name) {
             var value = tpl.execute(context).valueOf();
             if (name === "class") {
                 classes.push(value);

@@ -315,12 +315,17 @@ var Ast;
         };
         Compiler.prototype.template = function (text) {
             var parts = [];
+            var appendText = function (x) {
+                var s = x.trim();
+                if (s.length > 0)
+                    parts.push(x);
+            };
             var offset = 0;
             while (offset < text.length) {
                 var begin = text.indexOf("{{", offset);
                 if (begin >= 0) {
                     if (begin > offset)
-                        parts.push(text.substring(offset, begin));
+                        appendText(text.substring(offset, begin));
                     offset = begin + 2;
                     var end = text.indexOf("}}", offset);
                     if (end >= 0) {
@@ -332,7 +337,7 @@ var Ast;
                     }
                 }
                 else {
-                    parts.push(text.substring(offset));
+                    appendText(text.substring(offset));
                     break;
                 }
             }

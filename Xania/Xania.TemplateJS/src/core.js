@@ -22,8 +22,8 @@ var Xania = (function () {
             return Xania.empty;
         }
         else if (typeof data.then === "function") {
-            return data.then(function (arr) {
-                Xania.map(fn, arr);
+            return data.then(function dataThenBoundFn(arr) {
+                return Xania.map(fn, arr);
             });
         }
         else if (typeof data.map === "function") {
@@ -263,7 +263,6 @@ var Observer = (function () {
     }
     Observer.prototype.unsubscribe = function (subscription) {
         this.all.delete(subscription);
-        this.dirty.delete(subscription);
     };
     Observer.prototype.subscribe = function (binding) {
         var additionalArgs = [];
@@ -351,7 +350,7 @@ var TextBinding = (function (_super) {
         this.dom = document.createTextNode("");
     }
     TextBinding.prototype.execute = function (context) {
-        var newValue = this.tpl.execute(context);
+        var newValue = this.tpl.execute(context).valueOf();
         if (newValue !== this.value) {
             this.value = newValue;
             this.dom.textContent = newValue;
@@ -364,33 +363,30 @@ var TagBinding = (function (_super) {
     function TagBinding(tpl, context) {
         _super.call(this, context);
         this.tpl = tpl;
+        this.attrs = {};
         this.dom = document.createElement(tpl.name);
         this.dom.attributes["__binding"] = this;
     }
     TagBinding.prototype.execute = function (context) {
         var tpl = this.tpl;
-        tpl.executeAttributes(context, this.dom, TagBinding.executeAttribute);
+        tpl.executeAttributes(context, this, TagBinding.executeAttribute);
         return this.dom;
     };
-    TagBinding.executeAttribute = function (attrName, newValue, dom) {
-        if (dom.attributes["__value"] === newValue)
+    TagBinding.executeAttribute = function (attrName, newValue, binding) {
+        if (binding.attrs[attrName] === newValue)
             return;
-        dom.attributes["__value"] = newValue;
-        dom[attrName] = newValue;
+        binding.attrs[attrName] = newValue;
+        var dom = binding.dom;
         if (typeof newValue === "undefined" || newValue === null) {
             dom.removeAttribute(attrName);
         }
-        else if (attrName === "value") {
-            dom["value"] = newValue;
-        }
         else {
-            var domAttr = dom.attributes[attrName];
-            if (!!domAttr) {
-                domAttr.nodeValue = newValue;
-                domAttr.value = newValue;
+            dom[attrName] = newValue;
+            if (attrName === "value") {
+                dom["value"] = newValue;
             }
             else {
-                domAttr = document.createAttribute(attrName);
+                var domAttr = document.createAttribute(attrName);
                 domAttr.value = newValue;
                 dom.setAttributeNode(domAttr);
             }
@@ -516,11 +512,11 @@ var ScopeBinding = (function () {
         }
     };
     ScopeBinding.prototype.executeArray = function (context, arr, offset, tpl, target, bindings) {
-        var _this = this;
         Binder.removeBindings(target, bindings, arr.length);
         var startInsertAt = offset + bindings.length;
-        arr.forEach(function (result, idx) {
-            _this.mergeBinding(result, startInsertAt, tpl, target, bindings, idx);
+        var self = this;
+        arr.forEach(function arrForEachBoundFn(result, idx) {
+            return self.mergeBinding(result, startInsertAt, tpl, target, bindings, idx);
         });
         return bindings;
     };
