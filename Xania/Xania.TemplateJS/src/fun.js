@@ -99,16 +99,17 @@ var Ast;
             var _this = this;
             var result = this.sourceExpr.execute(context);
             var length = result.length;
-            if (typeof length === "number") {
+            if (typeof result.length === "number") {
+                var query = this;
                 return {
-                    query: this,
                     length: length,
                     itemAt: function (idx) {
-                        return this.query.merge(context, result.prop(idx));
+                        return query.merge(context, result.prop(idx));
                     },
                     forEach: function (fn) {
-                        for (var idx = 0; idx < this.length; idx++) {
-                            var merged = this.query.merge(context, result.prop(idx));
+                        var q = query, r = result, l = length;
+                        for (var idx = 0; idx < l; idx++) {
+                            var merged = q.merge(context, r.prop(idx));
                             fn(merged, idx);
                         }
                     }
@@ -390,4 +391,3 @@ var Fun;
     })();
     Fun.List = List;
 })(Fun || (Fun = {}));
-//# sourceMappingURL=fun.js.map

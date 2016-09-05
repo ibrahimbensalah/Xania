@@ -263,6 +263,7 @@ var Observer = (function () {
     }
     Observer.prototype.unsubscribe = function (subscription) {
         this.all.delete(subscription);
+        this.dirty.delete(subscription);
     };
     Observer.prototype.subscribe = function (binding) {
         var additionalArgs = [];
@@ -439,10 +440,11 @@ var ObservableValue = (function () {
     return ObservableValue;
 })();
 var Observable = (function () {
-    function Observable($id, objects, observer) {
+    function Observable($id, objects, lib, observer) {
         if (observer === void 0) { observer = null; }
         this.$id = $id;
         this.objects = objects;
+        this.lib = lib;
         this.observer = observer;
         this.length = 1;
     }
@@ -457,7 +459,10 @@ var Observable = (function () {
                 return new ObservableValue(value.valueOf(), this.observer);
             }
         }
-        return undefined;
+        return this.lib[name];
+    };
+    Observable.prototype.itemAt = function () {
+        return this;
     };
     Observable.prototype.forEach = function (fn) {
         fn(this, 0);
@@ -466,18 +471,12 @@ var Observable = (function () {
         if (!object) {
             return this;
         }
-        if (object instanceof Observable)
-            return new Observable(object, object.objects.concat(this.objects));
-        if (object instanceof ObservableValue) {
-            var inner = object.value;
-            return new Observable(inner, [inner].concat(this.objects));
-        }
-        return new Observable(object, [object].concat(this.objects));
+        return new Observable(object, [object].concat(this.objects), this.lib);
     };
     Observable.prototype.subscribe = function (observer) {
         if (this.observer === observer)
             return this;
-        return new Observable(this.$id, this.objects, observer);
+        return new Observable(this.$id, this.objects, this.lib, observer);
     };
     return Observable;
 })();
@@ -514,32 +513,29 @@ var ScopeBinding = (function () {
     ScopeBinding.prototype.executeArray = function (context, arr, offset, tpl, target, bindings) {
         Binder.removeBindings(target, bindings, arr.length);
         var startInsertAt = offset + bindings.length;
-        var self = this;
-        arr.forEach(function arrForEachBoundFn(result, idx) {
-            return self.mergeBinding(result, startInsertAt, tpl, target, bindings, idx);
-        });
-        return bindings;
-    };
-    ScopeBinding.prototype.mergeBinding = function (result, startInsertAt, tpl, target, bindings, idx) {
-        if (idx < bindings.length) {
-            bindings[idx].update(result);
-        }
-        else {
-            var newBinding = tpl.bind(result);
-            var tagSubscription = this.observer.subscribe(newBinding);
-            tagSubscription.notify();
-            newBinding.subscriptions.push(tagSubscription);
-            tpl.children().reduce(Binder.reduceChild, { context: result, offset: 0, parentBinding: newBinding, binder: this });
-            var insertAt = startInsertAt + idx;
-            if (insertAt < target.childNodes.length) {
-                var beforeElement = target.childNodes[insertAt];
-                target.insertBefore(newBinding.dom, beforeElement);
+        for (var idx = 0; idx < arr.length; idx++) {
+            var result = arr.itemAt(idx);
+            if (idx < bindings.length) {
+                bindings[idx].update(result);
             }
             else {
-                target.appendChild(newBinding.dom);
+                var newBinding = tpl.bind(result);
+                var tagSubscription = this.observer.subscribe(newBinding);
+                tagSubscription.notify();
+                newBinding.subscriptions.push(tagSubscription);
+                tpl.children().reduce(Binder.reduceChild, { context: result, offset: 0, parentBinding: newBinding, binder: this });
+                var insertAt = startInsertAt + idx;
+                if (insertAt < target.childNodes.length) {
+                    var beforeElement = target.childNodes[insertAt];
+                    target.insertBefore(newBinding.dom, beforeElement);
+                }
+                else {
+                    target.appendChild(newBinding.dom);
+                }
+                bindings.push(newBinding);
             }
-            bindings.push(newBinding);
         }
+        return bindings;
     };
     ScopeBinding.prototype.subscribe = function (tpl, target, offset) {
         if (offset === void 0) { offset = 0; }
@@ -550,14 +546,21 @@ var ScopeBinding = (function () {
     return ScopeBinding;
 })();
 var Binder = (function () {
-    function Binder(viewModel, lib, target) {
+    function Binder(viewModel, libs, target) {
         this.observer = new Observer();
-        this.context = new Observable(viewModel, [viewModel].concat(lib), null);
+        this.context = new Observable(viewModel, [viewModel], libs.reduce(function (x, y) { return Object.assign(x, y); }, {}));
         this.compiler = new Ast.Compiler();
         this.compile = this.compiler.template.bind(this.compiler);
         this.target = target || document.body;
         this.init();
     }
+    Object.defineProperty(Binder.prototype, "rootBinding", {
+        get: function () {
+            return this.rootBinding = new ScopeBinding(this, this.observer);
+        },
+        enumerable: true,
+        configurable: true
+    });
     Binder.prototype.import = function (templateUrl) {
         var binder = this;
         if (!("import" in document.createElement("link"))) {
@@ -624,7 +627,7 @@ var Binder = (function () {
     };
     Binder.prototype.subscribe = function (context, tpl, target, offset) {
         if (offset === void 0) { offset = 0; }
-        var subscription = this.observer.subscribe(new ScopeBinding(this, this.observer), tpl, target, offset);
+        var subscription = this.observer.subscribe(this.rootBinding, tpl, target, offset);
         subscription.notify();
         return subscription;
     };
@@ -723,4 +726,3 @@ var Binder = (function () {
     };
     return Binder;
 })();
-//# sourceMappingURL=core.js.map

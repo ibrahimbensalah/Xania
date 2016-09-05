@@ -34,6 +34,7 @@
     <Content Include="Scripts\jasmine\console.js" />
     <Content Include="Scripts\jasmine\jasmine-html.js" />
     <Content Include="Scripts\jasmine\jasmine.js" />
+    <Content Include="src\dom.js" />
     <Content Include="src\sample\css\base.css" />
     <Content Include="src\sample\dbmon\app.js" />
     <Content Include="src\sample\dbmon\ENV.js" />
@@ -66,6 +67,7 @@
     <Content Include="package.json" />
     <Content Include="src\core.js.map" />
     <Content Include="src\fun.js.map" />
+    <Content Include="src\dom.js.map" />
     <None Include="web.Debug.config">
       <DependentUpon>web.config</DependentUpon>
     </None>

@@ -293,9 +293,8 @@ class Observer {
     private state = {};
 
     unsubscribe(subscription) {
-        // subscription.dependencies.clear();
         this.all.delete(subscription);
-//        this.dirty.delete(subscription);
+        this.dirty.delete(subscription);
     }
 
     private static cache = [];
@@ -491,13 +490,13 @@ class ObservableValue {
 class Observable {
     public length = 1;
 
-    constructor(private $id: any, private objects: any[], private observer: IObserver = null) {
+    constructor(private $id: any, private objects: any[], private lib: any, private observer: IObserver = null) {
     }
 
     prop(name) {
-        for (var i = 0; i < this.objects.length; i++) {
-            var object = this.objects[i];
-            var value = object[name];
+        for (let i = 0; i < this.objects.length; i++) {
+            const object = this.objects[i];
+            const value = object[name];
             if (value !== null && value !== undefined) {
                 if (typeof value.apply !== "function") {
                     this.observer.addDependency(Xania.id(object), name, value);
@@ -505,7 +504,12 @@ class Observable {
                 return new ObservableValue(value.valueOf(), this.observer);
             }
         }
-        return undefined;
+
+        return this.lib[name];
+    }
+
+    itemAt() {
+        return this;
     }
 
     forEach(fn) {
@@ -517,29 +521,14 @@ class Observable {
             return this;
         }
 
-        if (object instanceof Observable)
-            return new Observable(object, object.objects.concat(this.objects));
-
-        if (object instanceof ObservableValue) {
-            var inner = object.value;
-            return new Observable(inner, [inner].concat(this.objects));
-        }
-
-        return new Observable(object, [object].concat(this.objects));
+        return new Observable(object, [object].concat(this.objects), this.lib);
     }
-
-    //reset(object): Observable {
-    //    this.objects[0] = object;
-    //    this.$id = object;
-
-    //    return this;
-    //}
 
     subscribe(observer: IObserver) {
         if (this.observer === observer)
             return this;
 
-        return new Observable(this.$id, this.objects, observer);
+        return new Observable(this.$id, this.objects, this.lib, observer);
     }
 }
 
@@ -575,36 +564,35 @@ class ScopeBinding {
         Binder.removeBindings(target, bindings, arr.length);
 
         var startInsertAt = offset + bindings.length;
-        var self = this;
-        arr.forEach(function arrForEachBoundFn(result, idx) {
-            return self.mergeBinding(result, startInsertAt, tpl, target, bindings, idx);
-        });
+
+        for (var idx = 0; idx < arr.length; idx++) {
+            var result = arr.itemAt(idx);
+
+            if (idx < bindings.length) {
+                bindings[idx].update(result);
+            } else {
+                const newBinding = tpl.bind(result);
+
+                var tagSubscription = this.observer.subscribe(newBinding);
+                tagSubscription.notify();
+
+                newBinding.subscriptions.push(tagSubscription);
+
+                tpl.children().reduce(Binder.reduceChild, { context: result, offset: 0, parentBinding: newBinding, binder: this });
+
+                var insertAt = startInsertAt + idx;
+                if (insertAt < target.childNodes.length) {
+                    var beforeElement = target.childNodes[insertAt];
+                    target.insertBefore(newBinding.dom, beforeElement);
+                } else {
+                    target.appendChild(newBinding.dom);
+                }
+                bindings.push(newBinding);
+            }
+        }
+        // arr.forEach((result, idx) => this.mergeBinding(result, startInsertAt, tpl, target, bindings, idx));
 
         return bindings;
-    }
-
-    mergeBinding(result, startInsertAt, tpl, target, bindings: Binding[], idx) {
-        if (idx < bindings.length) {
-            bindings[idx].update(result);
-        } else {
-            const newBinding = tpl.bind(result);
-
-            var tagSubscription = this.observer.subscribe(newBinding);
-            tagSubscription.notify();
-
-            newBinding.subscriptions.push(tagSubscription);
-
-            tpl.children().reduce(Binder.reduceChild, { context: result, offset: 0, parentBinding: newBinding, binder: this });
-
-            var insertAt = startInsertAt + idx;
-            if (insertAt < target.childNodes.length) {
-                var beforeElement = target.childNodes[insertAt];
-                target.insertBefore(newBinding.dom, beforeElement);
-            } else {
-                target.appendChild(newBinding.dom);
-            }
-            bindings.push(newBinding);
-        }
     }
 
     subscribe(tpl, target, offset: number = 0) {
@@ -620,13 +608,17 @@ class Binder {
     private compiler: Ast.Compiler;
     private context: Observable;
 
-    constructor(viewModel, lib: any[], target) {
-        this.context = new Observable(viewModel, [viewModel].concat(lib), null);
+    constructor(viewModel, libs: any[], target) {
+        this.context = new Observable(viewModel, [viewModel], libs.reduce((x, y) => Object.assign(x, y), {}));
         this.compiler = new Ast.Compiler();
         this.compile = this.compiler.template.bind(this.compiler);
         this.target = target || document.body;
 
         this.init();
+    }
+
+    get rootBinding() {
+        return this.rootBinding = new ScopeBinding(this, this.observer);
     }
 
     public import(templateUrl) {
@@ -705,7 +697,7 @@ class Binder {
     }
 
     subscribe(context, tpl, target, offset: number = 0) {
-        var subscription = this.observer.subscribe(new ScopeBinding(this, this.observer), tpl, target, offset);
+        var subscription = this.observer.subscribe(this.rootBinding, tpl, target, offset);
         subscription.notify();
         return subscription;
     }
