@@ -258,7 +258,6 @@ var Binding = (function () {
 var Observer = (function () {
     function Observer() {
         this.all = new Set();
-        this.dirty = new Set();
         this.state = {};
     }
     Observer.prototype.unsubscribe = function (subscription) {
@@ -275,12 +274,21 @@ var Observer = (function () {
             state: undefined,
             dependencies: [],
             addDependency: function (object, property, value) {
-                this.dependencies.push({ object: object, property: property });
+                this.dependencies.push({ object: object, property: property, value: value });
             },
             hasDependency: function (object, property) {
                 for (var i = 0; i < this.dependencies.length; i++) {
                     var dep = this.dependencies[i];
                     if (dep.object === object && dep.property === property)
+                        return true;
+                }
+                return false;
+            },
+            hasChanges: function () {
+                for (var i = 0; i < this.dependencies.length; i++) {
+                    var dep = this.dependencies[i];
+                    var value = dep.object[dep.property];
+                    if (value !== dep.value)
                         return true;
                 }
                 return false;
@@ -309,23 +317,16 @@ var Observer = (function () {
     Observer.prototype.addDependency = function (obj, property) {
     };
     Observer.prototype.setChange = function (obj, property) {
-        var _this = this;
-        this.all.forEach(function (s) {
-            if (s.hasDependency(obj, property)) {
-                _this.dirty.add(s);
-            }
-        });
     };
     Observer.prototype.track = function (context) {
         return Xania.observe(context, this);
     };
     Observer.prototype.update = function () {
-        if (this.dirty.size > 0) {
-            this.dirty.forEach(function (subscriber) {
-                subscriber.notify();
-            });
-            this.dirty.clear();
-        }
+        this.all.forEach(function (s) {
+            if (s.hasChanges()) {
+                s.notify();
+            }
+        });
     };
     Observer.cache = [];
     return Observer;
@@ -579,7 +580,7 @@ var Binder = (function () {
     };
     Binder.prototype.parseAttr = function (tagElement, attr) {
         var name = attr.name;
-        if (name === "click" || name.startsWith("keyup.")) {
+        if (name === "click" || name.match(/keyup\./)) {
             var fn = this.compile(attr.value);
             tagElement.addEvent(name, fn);
         }

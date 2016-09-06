@@ -289,7 +289,7 @@ interface ISubscriber {
 
 class Observer {
     private all = new Set<ISubscriber>();
-    private dirty = new Set<ISubscriber>();
+    // private dirty = new Set<ISubscriber>();
     private state = {};
 
     unsubscribe(subscription) {
@@ -308,12 +308,21 @@ class Observer {
             state: undefined,
             dependencies: [],
             addDependency(object: any, property: string, value: any) {
-                this.dependencies.push({ object, property });
+                this.dependencies.push({ object, property, value });
             },
             hasDependency(object: any, property: string) {
                 for (var i = 0; i < this.dependencies.length; i++) {
                     var dep = this.dependencies[i];
                     if (dep.object === object && dep.property === property)
+                        return true;
+                }
+                return false;
+            },
+            hasChanges(): boolean {
+                for (var i = 0; i < this.dependencies.length; i++) {
+                    var dep = this.dependencies[i];
+                    var value = dep.object[dep.property];
+                    if (value !== dep.value)
                         return true;
                 }
                 return false;
@@ -348,11 +357,11 @@ class Observer {
     }
 
     setChange(obj, property: string) {
-        this.all.forEach((s: any) => {
-            if (s.hasDependency(obj, property)) {
-                this.dirty.add(s);
-            }
-        });
+        //this.all.forEach((s: any) => {
+        //    if (s.hasChanges(obj, property)) {
+        //        this.dirty.add(s);
+        //    }
+        //});
     }
 
     track(context) {
@@ -360,12 +369,11 @@ class Observer {
     }
 
     update() {
-        if (this.dirty.size > 0) {
-            this.dirty.forEach(subscriber => {
-                subscriber.notify();
-            });
-            this.dirty.clear();
-        }
+        this.all.forEach((s: any) => {
+            if (s.hasChanges()) {
+                s.notify();
+            }
+        });
     }
 }
 
@@ -654,7 +662,7 @@ class Binder {
 
     parseAttr(tagElement: TagTemplate, attr: Attr) {
         const name = attr.name;
-        if (name === "click" || name.startsWith("keyup.")) {
+        if (name === "click" || name.match(/keyup\./)) {
             const fn = this.compile(attr.value);
             tagElement.addEvent(name, fn);
         } else if (name === "data-select" || name === "data-from") {
