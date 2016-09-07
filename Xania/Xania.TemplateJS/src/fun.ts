@@ -1,4 +1,4 @@
-﻿module Ast {
+﻿module Xania.Ast {
     interface IContext {
         prop(name: string);
         extend(object);
@@ -407,7 +407,7 @@
     }
 }
 
-module Fun {
+module Xania.Fun {
     export class List {
         static count(fn, list) {
             if (!list)

@@ -36,8 +36,9 @@
     <Content Include="Scripts\jasmine\jasmine.js" />
     <Content Include="src\dom.js" />
     <Content Include="src\sample\css\base.css" />
-    <Content Include="src\sample\dbmon\app.js" />
+    <TypeScriptCompile Include="src\sample\dbmon\app.ts" />
     <Content Include="src\sample\dbmon\ENV.js" />
+    <Content Include="src\sample\dbmon\dbmon-app.html" />
     <Content Include="src\sample\dbmon\memory-stats.js" />
     <Content Include="src\sample\dbmon\monitor.js" />
     <Content Include="src\sample\dbmon\styles.css" />

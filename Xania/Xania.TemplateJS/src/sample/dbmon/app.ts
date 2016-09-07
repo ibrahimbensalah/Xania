@@ -2,16 +2,20 @@
 /// <reference path="../../fun.ts" />
 var ENV = window['ENV'];
 var Monitoring = window['Monitoring'];
-var DbmonApp = (function () {
-    function DbmonApp() {
+
+class DbmonApp {
+    databases;
+    constructor() {
         this.databases = ENV.generateData(true).toArray();
     }
-    return DbmonApp;
-})();
+}
+
 var app = Xania.app()
+    // .bind("dbmon-app.html", DbmonApp, document.querySelector("dbmon-app"));
     .component(DbmonApp)
     .start();
-var load = function () {
+
+var load = () => {
     ENV.generateData(true);
     app.update();
     Monitoring.renderRate.ping();
