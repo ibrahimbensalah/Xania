@@ -1,31 +1,27 @@
-/// <reference path="../scripts/typings/es6-shim/es6-shim.d.ts" />
 var __extends = (this && this.__extends) || function (d, b) {
     for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
     function __() { this.constructor = d; }
     __.prototype = b.prototype;
     d.prototype = new __();
 };
+/// <reference path="../scripts/typings/es6-shim/es6-shim.d.ts" />
 var Xania;
 (function (Xania) {
-    Xania.app = function () {
-        var libs = [];
-        for (var _i = 0; _i < arguments.length; _i++) {
-            libs[_i - 0] = arguments[_i];
-        }
-        return new Application(libs);
-    };
     var Application = (function () {
         function Application(libs) {
             this.libs = libs;
             this.components = new Map();
             this.observer = new Observer();
-            this.binders = [];
             this.compiler = new Xania.Ast.Compiler();
             this.compile = this.compiler.template.bind(this.compiler);
         }
-        Application.prototype.component = function (component) {
-            this.components.set(component.name.toLowerCase(), component);
-            return this;
+        Application.prototype.component = function () {
+            var _this = this;
+            var dependencies = [];
+            for (var _i = 0; _i < arguments.length; _i++) {
+                dependencies[_i - 0] = arguments[_i];
+            }
+            return function (component) { return _this.components.set(component.name.toLowerCase(), { Type: component, Dependencies: dependencies }); };
         };
         Application.prototype.start = function () {
             var stack = [document.body];
@@ -66,8 +62,8 @@ var Xania;
                     if (!!nameAttr) {
                         var proxy = _this.observer.track(binding.context);
                         var prop = nameAttr.value;
-                        var update = new Function("context", "value", "with (context) { " + prop + " = value; }");
-                        update(proxy, evt.target.value);
+                        var update_1 = new Function("context", "value", "with (context) { " + prop + " = value; }");
+                        update_1(proxy, evt.target.value);
                     }
                 }
             };
@@ -92,36 +88,49 @@ var Xania;
             if (!this.components.has(name)) {
                 return false;
             }
-            return this.components.get(name);
+            var cmp = this.components.get(name);
+            return Reflect.construct(cmp.Type, cmp.Dependencies);
         };
-        Application.prototype.bind = function (view, Component, target) {
-            var binder = new Binder(new Component(), this.libs, this.observer);
-            this.import(view).then(function (template) {
-                binder.subscribe(null, template, target);
-            });
-            this.binders.push(binder);
-            return this;
-        };
-        Application.prototype.import = function (templateUrl) {
-            if (!("import" in document.createElement("link"))) {
-                throw new Error("HTML import is not supported in this browser");
+        Application.prototype.import = function (view) {
+            var args = [];
+            for (var _i = 1; _i < arguments.length; _i++) {
+                args[_i - 1] = arguments[_i];
             }
-            var app = this;
-            return {
-                then: function (resolve) {
-                    var _this = this;
-                    var link = document.createElement('link');
-                    link.rel = 'import';
-                    link.href = templateUrl;
-                    link.setAttribute('async', '');
-                    link.onload = function (e) {
-                        var link = e.target;
-                        var dom = link.import.querySelector("template");
-                        resolve.call(_this, app.parseDom(dom));
-                    };
-                    document.head.appendChild(link);
+            if (typeof view === "string") {
+                if (!("import" in document.createElement("link"))) {
+                    throw new Error("HTML import is not supported in this browser");
                 }
-            };
+                return {
+                    then: function (resolve) {
+                        var _this = this;
+                        var link = document.createElement('link');
+                        link.rel = 'import';
+                        link.href = view;
+                        link.setAttribute('async', "");
+                        link.onload = function (e) {
+                            var link = e.target;
+                            var dom = link.import.querySelector("template");
+                            resolve.apply(_this, [dom].concat(args));
+                        };
+                        document.head.appendChild(link);
+                    }
+                };
+            }
+            else if (view instanceof HTMLElement) {
+                return view;
+            }
+            else {
+                throw new Error("view type is not supported");
+            }
+        };
+        Application.prototype.bind = function (view, component, target) {
+            var _this = this;
+            var binder = new Binder(component, this.libs, this.observer);
+            Util.ready(this.import(view), function (dom) {
+                var tpl = _this.parseDom(dom);
+                binder.subscribe(null, tpl, target);
+            });
+            return this;
         };
         Application.prototype.parseDom = function (rootDom) {
             var stack = [];
@@ -881,4 +890,10 @@ var Xania;
         return Binder;
     })();
     Xania.Binder = Binder;
+    var defaultApp = new Application([]);
+    document.addEventListener("DOMContentLoaded", function (event) {
+        defaultApp.start();
+    });
+    Xania.Component = defaultApp.component.bind(defaultApp);
+    Xania.update = defaultApp.update.bind(defaultApp);
 })(Xania || (Xania = {}));

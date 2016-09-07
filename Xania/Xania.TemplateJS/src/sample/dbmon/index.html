@@ -7,8 +7,8 @@
     <meta charset="utf-8">
     <title>dbmon (template js)</title>
     <script src="../../dom.js"></script>
-    <script src="../../core.js"></script>
     <script src="../../fun.js"></script>
+    <script src="../../core.js"></script>
 </head>
 <body>
     <dbmon-app />
@@ -16,5 +16,14 @@
     <script src="memory-stats.js"></script>
     <script src="monitor.js"></script>
     <script src="app.js"></script>
+    <script>
+        var load = function() {
+            ENV.generateData(true);
+            Xania.update();
+            Monitoring.renderRate.ping();
+            window.setTimeout(load, ENV.timeout);
+        };
+        load();
+    </script>
 </body>
 </html>

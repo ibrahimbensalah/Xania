@@ -1,15 +1,8 @@
 ﻿/// <reference path="../scripts/typings/es6-shim/es6-shim.d.ts" />
-
 module Xania {
-
-    export var app = (...libs) => {
-        return new Application(libs);
-    };
-
     class Application {
         private components = new Map<string, any>();
         private observer = new Observer();
-        private binders: Binder[] = [];
         private compile: Function;
         private compiler: Ast.Compiler;
 
@@ -18,9 +11,8 @@ module Xania {
             this.compile = this.compiler.template.bind(this.compiler);
         }
 
-        component(component) {
-            this.components.set(component.name.toLowerCase(), component);
-            return this;
+        component(...dependencies) {
+            return (component) => this.components.set(component.name.toLowerCase(), { Type: component, Dependencies: dependencies });
         }
 
         start() {
@@ -98,42 +90,48 @@ module Xania {
             if (!this.components.has(name)) {
                 return false;
             }
-            return this.components.get(name);
+            var cmp = this.components.get(name);
+            return Reflect.construct(cmp.Type, cmp.Dependencies);
+        }
+
+        import(view, ...args): IPromise | IDomTemplate {
+            if (typeof view === "string") {
+                if (!("import" in document.createElement("link"))) {
+                    throw new Error("HTML import is not supported in this browser");
+                }
+
+                return {
+                    then(resolve) {
+                        var link = document.createElement('link');
+                        link.rel = 'import';
+                        link.href = view;
+                        link.setAttribute('async', ""); // make it async!
+                        link.onload = e => {
+                            var link = (<any>e.target);
+                            var dom = link.import.querySelector("template");
+                            resolve.apply(this, [dom].concat(args));
+                        }
+                        document.head.appendChild(link);
+                    }
+                };
+            } else if (view instanceof HTMLElement) {
+                return view;
+            } else {
+                throw new Error("view type is not supported");
+            }
         }
 
         // ReSharper disable once InconsistentNaming
-        bind(view, Component, target: Node) {
-            var binder = new Binder(new Component(), this.libs, this.observer);
+        bind(view, component, target: Node) {
+            var binder = new Binder(component, this.libs, this.observer);
 
-            this.import(view).then(template => {
-                binder.subscribe(null, template, target);
-            });
-
-            this.binders.push(binder);
+            Util.ready(this.import(view),
+                dom => {
+                    var tpl = this.parseDom(dom);
+                    binder.subscribe(null, tpl, target);
+                });
 
             return this;
-        }
-
-        public import(templateUrl) {
-            if (!("import" in document.createElement("link"))) {
-                throw new Error("HTML import is not supported in this browser");
-            }
-            var app = this;
-            return {
-                then(resolve) {
-                    var link = document.createElement('link');
-                    link.rel = 'import';
-                    link.href = templateUrl;
-                    link.setAttribute('async', ''); // make it async!
-                    link.onload = e => {
-                        var link = (<any>e.target);
-                        var dom = link.import.querySelector("template");
-                        resolve.call(this, app.parseDom(dom));
-                    }
-                    // link.onerror = function(e) {...};
-                    document.head.appendChild(link);
-                }
-            };
         }
 
         parseDom(rootDom: HTMLElement): TagTemplate {
@@ -209,6 +207,10 @@ module Xania {
             }
         }
 
+    }
+
+    interface IPromise {
+        then(resolve, ...args);
     }
 
     interface IDomTemplate {
@@ -1005,6 +1007,16 @@ module Xania {
             return subscription;
         }
     }
+
+    var defaultApp = new Application([]);
+
+    document.addEventListener("DOMContentLoaded", event => {
+        defaultApp.start();
+    });
+
+    // ReSharper disable once InconsistentNaming
+    export var Component = defaultApp.component.bind(defaultApp);
+    export var update = defaultApp.update.bind(defaultApp);
 
     // ReSharper restore InconsistentNaming
 }
