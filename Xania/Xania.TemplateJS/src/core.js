@@ -17,17 +17,41 @@ var Xania;
         }
         Application.prototype.component = function () {
             var _this = this;
-            var dependencies = [];
+            var args = [];
             for (var _i = 0; _i < arguments.length; _i++) {
-                dependencies[_i - 0] = arguments[_i];
+                args[_i - 0] = arguments[_i];
             }
-            return function (component) { return _this.components.set(component.name.toLowerCase(), { Type: component, Dependencies: dependencies }); };
+            if (args.length === 1 && typeof args[0] === "function") {
+                var component = args[0];
+                if (this.register(component, null)) {
+                    return function (component) {
+                        _this.unregister(component);
+                        _this.register(component, args);
+                    };
+                }
+            }
+            return function (component) {
+                _this.register(component, args);
+            };
+        };
+        Application.prototype.unregister = function (componentType) {
+            var key = componentType.name.toLowerCase();
+            var decl = componentType.get(key);
+            if (decl.Type === componentType)
+                this.components.delete(key);
+        };
+        Application.prototype.register = function (componentType, args) {
+            var key = componentType.name.toLowerCase();
+            if (this.components.has(key))
+                return false;
+            this.components.set(key, { Type: componentType, Args: args });
+            return true;
         };
         Application.prototype.start = function () {
             var stack = [document.body];
             while (stack.length > 0) {
                 var dom = stack.pop();
-                var component = this.getComponent(dom.nodeName);
+                var component = this.getComponent(dom);
                 if (component === false) {
                     for (var i = 0; i < dom.childNodes.length; i++) {
                         var child = dom.childNodes[i];
@@ -83,13 +107,20 @@ var Xania;
         Application.prototype.track = function (object) {
             return this.observer.track(object);
         };
-        Application.prototype.getComponent = function (nodeName) {
-            var name = nodeName.replace(/\-/, "").toLowerCase();
+        Application.prototype.getComponent = function (node) {
+            var name = node.nodeName.replace(/\-/, "").toLowerCase();
             if (!this.components.has(name)) {
                 return false;
             }
-            var cmp = this.components.get(name);
-            return Reflect.construct(cmp.Type, cmp.Dependencies);
+            var decl = this.components.get(name);
+            var comp = !!decl.Args
+                ? Reflect.construct(decl.Type, decl.Args)
+                : new decl.Type;
+            for (var i = 0; i < node.attributes.length; i++) {
+                var attr = node.attributes.item(i);
+                comp[attr.name] = eval(attr.value);
+            }
+            return comp;
         };
         Application.prototype.import = function (view) {
             var args = [];
@@ -415,7 +446,6 @@ var Xania;
                         case "valueOf":
                             return arr.valueOf.bind(arr);
                         case "indexOf":
-                            observer.addDependency(arr, "length", arr.length);
                             return function (item) {
                                 for (var i = 0; i < arr.length; i++) {
                                     if (Util.id(item) === Util.id(arr[i]))
@@ -424,7 +454,6 @@ var Xania;
                                 return -1;
                             };
                         case "length":
-                            observer.addDependency(arr, "length", arr.length);
                             return arr.length;
                         case "constructor":
                             return Array;
@@ -440,7 +469,6 @@ var Xania;
                         case "map":
                         case "pop":
                         case "push":
-                            observer.addDependency(arr, "length", arr.length);
                             return Util.observeProperty(arr, property, arr[property], observer);
                         default:
                             if (arr.hasOwnProperty(property))
@@ -453,8 +481,6 @@ var Xania;
                         var length = arr.length;
                         arr[property] = value;
                         observer.setChange(Util.id(arr), property);
-                        if (arr.length !== length)
-                            observer.setChange(Util.id(arr), "length");
                     }
                     return true;
                 }
@@ -726,7 +752,8 @@ var Xania;
         };
         ObservableValue.prototype.prop = function (name) {
             var value = this.value[name];
-            this.observer.addDependency(this.$id, name, value);
+            if (!!this.observer)
+                this.observer.addDependency(this.$id, name, value);
             if (this.value === null || this.value === undefined)
                 return null;
             return new ObservableValue(value, this.observer);
@@ -753,7 +780,7 @@ var Xania;
                 var object = this.objects[i];
                 var value = object[name];
                 if (value !== null && value !== undefined) {
-                    if (typeof value.apply !== "function") {
+                    if (!!this.observer && typeof value.apply !== "function") {
                         this.observer.addDependency(Util.id(object), name, value);
                     }
                     return new ObservableValue(value.valueOf(), this.observer);
@@ -897,3 +924,4 @@ var Xania;
     Xania.Component = defaultApp.component.bind(defaultApp);
     Xania.update = defaultApp.update.bind(defaultApp);
 })(Xania || (Xania = {}));
+//# sourceMappingURL=core.js.map

@@ -1,9 +1,5 @@
-/// <reference path="../../core.ts" />
 
-@Xania.Component(window['ENV'].generateData(true).toArray())
+@Xania.Component
 class DbmonApp {
     databases;
-    constructor(data) {
-        this.databases = data;
-    }
 }

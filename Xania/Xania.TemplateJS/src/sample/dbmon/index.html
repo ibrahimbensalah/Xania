@@ -11,7 +11,7 @@
     <script src="../../core.js"></script>
 </head>
 <body>
-    <dbmon-app />
+    <dbmon-app databases="{{ ENV.generateData(true).toArray() }}"></dbmon-app>
     <script src="ENV.js"></script>
     <script src="memory-stats.js"></script>
     <script src="monitor.js"></script>

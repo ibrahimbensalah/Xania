@@ -1,4 +1,3 @@
-/// <reference path="../../core.ts" />
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     if (typeof Reflect === "object" && typeof Reflect.decorate === "function") return Reflect.decorate(decorators, target, key, desc);
     switch (arguments.length) {
@@ -8,11 +7,11 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
     }
 };
 var DbmonApp = (function () {
-    function DbmonApp(data) {
-        this.databases = data;
+    function DbmonApp() {
     }
     DbmonApp = __decorate([
-        Xania.Component(window['ENV'].generateData(true).toArray())
+        Xania.Component
     ], DbmonApp);
     return DbmonApp;
 })();
+//# sourceMappingURL=app.js.map
