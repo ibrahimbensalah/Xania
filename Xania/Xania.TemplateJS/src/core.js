@@ -600,7 +600,8 @@ var Xania;
                 state: undefined,
                 dependencies: [],
                 addDependency: function (object, property, value) {
-                    this.dependencies.push({ object: object, property: property, value: value });
+                    if (!Object.isFrozen(object))
+                        this.dependencies.push({ object: object, property: property, value: value });
                 },
                 hasDependency: function (object, property) {
                     for (var i = 0; i < this.dependencies.length; i++) {
@@ -725,6 +726,7 @@ var Xania;
         function ObservableValue(value, observer) {
             this.value = value;
             this.observer = observer;
+            debugger;
             this.$id = Util.id(value);
         }
         Object.defineProperty(ObservableValue.prototype, "length", {
@@ -753,7 +755,7 @@ var Xania;
         ObservableValue.prototype.prop = function (name) {
             var value = this.value[name];
             if (!!this.observer)
-                this.observer.addDependency(this.$id, name, value);
+                this.observer.addDependency(this.value, name, value);
             if (this.value === null || this.value === undefined)
                 return null;
             return new ObservableValue(value, this.observer);
@@ -781,7 +783,7 @@ var Xania;
                 var value = object[name];
                 if (value !== null && value !== undefined) {
                     if (!!this.observer && typeof value.apply !== "function") {
-                        this.observer.addDependency(Util.id(object), name, value);
+                        this.observer.addDependency(object, name, value);
                     }
                     return new ObservableValue(value.valueOf(), this.observer);
                 }
@@ -924,4 +926,3 @@ var Xania;
     Xania.Component = defaultApp.component.bind(defaultApp);
     Xania.update = defaultApp.update.bind(defaultApp);
 })(Xania || (Xania = {}));
-//# sourceMappingURL=core.js.map

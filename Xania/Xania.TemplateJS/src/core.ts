@@ -688,7 +688,8 @@ module Xania {
                 state: undefined,
                 dependencies: [],
                 addDependency(object: any, property: string, value: any) {
-                    this.dependencies.push({ object, property, value });
+                    if (!Object.isFrozen(object))
+                        this.dependencies.push({ object, property, value });
                 },
                 hasDependency(object: any, property: string) {
                     for (var i = 0; i < this.dependencies.length; i++) {
@@ -835,6 +836,7 @@ module Xania {
         private $id;
 
         constructor(private value, private observer: IObserver) {
+            debugger;
             this.$id = Util.id(value);
         }
 
@@ -862,7 +864,7 @@ module Xania {
         prop(name) {
             var value = this.value[name];
             if (!!this.observer)
-                this.observer.addDependency(this.$id, name, value);
+                this.observer.addDependency(this.value, name, value);
 
             if (this.value === null || this.value === undefined)
                 return null;
@@ -891,7 +893,7 @@ module Xania {
                 const value = object[name];
                 if (value !== null && value !== undefined) {
                     if (!!this.observer && typeof value.apply !== "function") {
-                        this.observer.addDependency(Util.id(object), name, value);
+                        this.observer.addDependency(object, name, value);
                     }
                     return new ObservableValue(value.valueOf(), this.observer);
                 }
