@@ -1,5 +1,6 @@
 ﻿/// <reference path="../scripts/typings/es6-shim/es6-shim.d.ts" />
 module Xania {
+
     class Application {
         private components = new Map<string, any>();
         private observer = new Observer();
@@ -43,9 +44,9 @@ module Xania {
             return true;
         }
 
-        start() {
+        start(root = document.body) {
             // Find top level components and bind
-            var stack: Node[] = [document.body];
+            var stack: Node[] = [root];
 
             while (stack.length > 0) {
                 var dom = stack.pop();
@@ -62,6 +63,7 @@ module Xania {
                 }
             }
 
+            this.listen(root);
             return this;
         }
 
@@ -71,8 +73,8 @@ module Xania {
                 if (!!binding) {
                     var handler = binding.tpl.events.get(name);
                     if (!!handler) {
-                        const observable = this.observer.track(binding.context);
-                        handler(observable);
+                        const observable = binding.context.valueOf();
+                        Util.execute(handler, observable);
                         this.observer.update();
                     }
                 }
@@ -85,12 +87,7 @@ module Xania {
                 if (binding != null) {
                     const nameAttr = evt.target.attributes["name"];
                     if (!!nameAttr) {
-                        const proxy = this.observer.track(binding.context);
-                        const prop = nameAttr.value;
-                        const update = new Function("context",
-                            "value",
-                            `with (context) { ${prop} = value; }`);
-                        update(proxy, evt.target.value);
+                        binding.context.set(nameAttr.value, evt.target.value);
                     }
                 }
             };
@@ -107,10 +104,6 @@ module Xania {
 
         public update() {
             this.observer.update();
-        }
-
-        public track(object) {
-            return this.observer.track(object);
         }
 
         getComponent(node: Node) {
@@ -165,7 +158,7 @@ module Xania {
             Util.ready(this.import(view),
                 dom => {
                     var tpl = this.parseDom(dom);
-                    binder.subscribe(null, tpl, target);
+                    binder.subscribe(tpl, target);
                 });
 
             return this;
@@ -229,7 +222,14 @@ module Xania {
                 tagElement.select(fn);
             } else if (name === "checked") {
                 const fn = this.compile(attr.value);
-                tagElement.attr(name, Util.compose(ctx => !!ctx ? "checked" : null, fn));
+                tagElement.attr(name, ctx => {
+                    var result = Util.execute(fn, ctx);
+                    return !!result ? "checked" : null;
+                });
+
+                //tagElement.attr(name, Util.compose(ctx => {
+                //    return !!ctx ? "checked" : null;
+                //}, fn));
             } else {
                 const tpl = this.compile(attr.value);
                 tagElement.attr(name, tpl || attr.value);
@@ -343,7 +343,7 @@ module Xania {
             var classes = [];
 
             this.attributes.forEach(function attributesForEachBoundFn(tpl, name) {
-                var value = tpl.execute(context).valueOf();
+                var value = Util.execute(tpl, context);
                 if (name === "class") {
                     classes.push(value);
                 } else if (name.startsWith("class.")) {
@@ -378,7 +378,7 @@ module Xania {
     }
 
     interface IObserver {
-        addDependency(obj: any, prop: string, value: any);
+        addDependency(obj: any, prop: any, value: any);
         setChange(obj: any, prop: any);
     }
 
@@ -441,13 +441,34 @@ module Xania {
         }
 
         static compose(...fns: any[]): Function {
-            return function (result) {
+            return input => {
+                var result = input;
                 for (var i = fns.length - 1; i > -1; i--) {
-                    // ReSharper disable once SuspiciousThisUsage
-                    result = fns[i].call(this, result);
+                    var fn = fns[i];
+                    result = Util.execute(fn, result);
                 }
                 return result;
             };
+        }
+
+        static execute(fn, arg) {
+            if (typeof fn.execute === "function")
+                return fn.execute(arg);
+            else if (typeof fn.call === "function")
+                return fn.call(null, arg);
+            else if (typeof fn.apply === "function")
+                return fn.apply(null, [arg]);
+            else
+                throw new Error("not a function");
+        }
+
+        static callable(fn) {
+            if (fn === null || fn === undefined)
+                return false;
+            return typeof fn === "function" ||
+                typeof fn.execute === "function" ||
+                typeof fn.apply === "function" ||
+                typeof fn.call === "function";
         }
 
         static partialFunc() {
@@ -543,7 +564,7 @@ module Xania {
                             observer.setChange(Util.id(arr), property);
 
                             // if (arr.length !== length)
-                                // observer.setChange(Util.id(arr), "length");
+                            // observer.setChange(Util.id(arr), "length");
                         }
 
                         return true;
@@ -566,6 +587,10 @@ module Xania {
                                 return () => object;
                             case "constructor":
                                 return object.constructor;
+                            case "prop":
+                                return property => {
+                                    return Util.observeProperty(object, property, object[property], observer);
+                                };
                             default:
                                 // ReSharper disable once SuspiciousThisUsage
                                 return Util.observeProperty(object, property, object[property], observer);
@@ -645,22 +670,69 @@ module Xania {
 
     class Binding {
         private data;
-        public parent: TagBinding;
-        public subscriptions = [];
+        public dependencies;
+        public state = undefined;
+        public id;
 
-        constructor(public context) { }
-
-        addChild(child, idx) {
-            throw new Error("Abstract method Binding.update");
+        constructor(public context = undefined) {
+            this.id = (new Date().getTime()) + Math.random();
         }
 
-        // render(context) { throw new Error("Not implemented"); }
+        addDependency(object: any, property: string, value: any) {
+            // if (!Object.isFrozen(object))
+            this.dependencies.push({ object, property, value });
+        }
 
-        update(context) {
-            this.context = context;
-            for (let s = 0; s < this.subscriptions.length; s++) {
-                this.subscriptions[s].notify();
+        notify(observer) {
+            if (this.hasChanges()) {
+                this.update(observer);
+                //binding.dependencies.length = 0;
+
+                //if (!!binding.state && !!binding.state.then)
+                //    return Util.ready(binding.state,
+                //        s => {
+                //            binding.state = binding.execute(s);
+                //            throw new Error();
+                //            // subscription.execute(binding.dependencies.length > 0);
+                //        });
+                //else {
+                //    binding.state = binding.execute(binding.state);
+                //    if (binding.dependencies.length > 0)
+                //        observer.subscribe(binding);
+                //    else
+                //        observer.unsubscribe(binding);
+                //    // subscription.execute(binding.dependencies.length > 0);
+                //}
             }
+        }
+
+        update(observer: Observer) {
+            var binding = <any>this;
+            binding.dependencies.length = 0;
+
+            binding.state = binding.execute(binding.state);
+            if (binding.dependencies.length > 0)
+                observer.subscribe(binding);
+            else
+                observer.unsubscribe(binding);
+        }
+
+        hasChanges(): boolean {
+            if (!this.dependencies) {
+                this.dependencies = [];
+                return true;
+            }
+
+            var deps = this.dependencies;
+            for (var i = 0; i < deps.length; i++) {
+                var dep = deps[i];
+                var value = dep.object[dep.property];
+
+                value = !!value ? value.valueOf() : value;
+                if (value !== dep.value)
+                    return true;
+            }
+            return false;
         }
     }
 
@@ -669,93 +741,54 @@ module Xania {
     }
 
     class Observer {
-        private all = new Set<ISubscriber>();
+        private all = [];
         // private dirty = new Set<ISubscriber>();
-        private state = {};
 
-        unsubscribe(subscription) {
-            this.all.delete(subscription);
+        subscribe(binding) {
+            if (this.all.indexOf(binding) < 0) {
+                this.all.push(binding);
+            }
+            // var x = 0, length = this.all.length;
+
+            //while (length > 0) {
+            //    var m = length >> 1;
+            //    var e = this.all[x + m];
+            //    if (e === binding)
+            //        return;
+            //    else if (e.id < binding.id) {
+            //        length = m;
+            //    } else if (m === 0) {
+            //        length = 0;
+            //        x++;
+            //    } else {
+            //        length = length - m;
+            //        x += m;
+            //    }
+            //}
+
+            //for (var i = this.all.length; i > x; i--) {
+            //    this.all[i] = this.all[i-1];
+            //}
+            //this.all[x] = binding;
+        }
+
+        unsubscribe(binding) {
+            var idx = this.all.indexOf(binding);
+            if (idx >= 0) {
+                this.all.splice(idx, 1);
+            }
+            // this.all.delete(binding);
             // this.dirty.delete(subscription);
         }
 
-        private static cache = [];
-
-        subscribe(binding, ...additionalArgs) {
-            var observer = this;
-
-            var subscription = {
-                binding,
-                state: undefined,
-                dependencies: [],
-                addDependency(object: any, property: string, value: any) {
-                    if (!Object.isFrozen(object))
-                        this.dependencies.push({ object, property, value });
-                },
-                hasDependency(object: any, property: string) {
-                    for (var i = 0; i < this.dependencies.length; i++) {
-                        var dep = this.dependencies[i];
-                        if (dep.object === object && dep.property === property)
-                            return true;
-                    }
-                    return false;
-                },
-                hasChanges(): boolean {
-                    for (var i = 0; i < this.dependencies.length; i++) {
-                        var dep = this.dependencies[i];
-                        var value = dep.object[dep.property];
-                        if (value !== dep.value)
-                            return true;
-                    }
-                    return false;
-                },
-                // ReSharper disable UnusedParameter
-                setChange(obj, property: string) {
-                    throw new Error("invalid change");
-                },
-                // ReSharper restore UnusedParameter
-                execute(state) {
-                    this.state = binding.execute(binding.context.subscribe(this), state, additionalArgs);
-                },
-                notify() {
-                    this.dependencies.length = 0;
-                    var result = Util.ready(this.state, this);
-
-                    if (this.dependencies.length > 0)
-                        observer.all.add(this);
-                    else
-                        observer.unsubscribe(this);
-
-                    return result;
-                },
-                then(resolve) {
-                    return Util.ready(this.state, resolve);
-                }
-            };
-            return subscription;
-        }
-
-        addDependency(obj, property) {
-            // ignore
-        }
-
-        setChange(obj, property: string) {
-            //this.all.forEach((s: any) => {
-            //    if (s.hasChanges(obj, property)) {
-            //        this.dirty.add(s);
-            //    }
-            //});
-        }
-
-        track(context) {
-            return Util.observe(context, this);
-        }
-
         update() {
-            this.all.forEach((s: any) => {
-                if (s.hasChanges()) {
-                    s.notify();
-                }
-            });
+            //this.all.forEach(binding => {
+            //    binding.notify(this);
+            //});
+            for (var i = 0; i < this.all.length; i++) {
+                const binding = this.all[i];
+                binding.notify(this);
+            }
         }
     }
 
@@ -764,30 +797,26 @@ module Xania {
 
         constructor(private tpl: ContentTemplate, context) {
             super(context);
-
             this.dom = document.createDocumentFragment();
         }
 
-        execute(context) {
+        execute() {
             return this.dom;
         }
     }
 
     class TextBinding extends Binding {
         private dom;
-        private value;
 
         constructor(private tpl: TextTemplate, context) {
             super(context);
             this.dom = document.createTextNode("");
         }
 
-        execute(context) {
-            var newValue = this.tpl.execute(context).valueOf();
-            if (newValue !== this.value) {
-                this.value = newValue;
-                this.dom.textContent = newValue;
-            }
+        execute() {
+            var observable = (<any>this.context).subscribe(this);
+            var newValue = this.tpl.execute(observable).valueOf();
+            this.dom.textContent = newValue;
         }
     }
 
@@ -803,32 +832,97 @@ module Xania {
             this.dom.attributes["__binding"] = this;
         }
 
-        execute(context) {
+        execute() {
             const tpl = this.tpl;
 
-            tpl.executeAttributes(context, this, TagBinding.executeAttribute);
+            var observable = (<any>this.context).subscribe(this);
+            tpl.executeAttributes(observable, this, TagBinding.executeAttribute);
 
             return this.dom;
         }
 
-        static executeAttribute(attrName: string, newValue, binding) {
+        static executeAttribute(attrName: string, newValue, binding: TagBinding) {
             if (binding.attrs[attrName] === newValue)
                 return;
-            binding.attrs[attrName] = newValue;
+            var oldValue = binding.attrs[attrName];
 
             var dom = binding.dom;
             if (typeof newValue === "undefined" || newValue === null) {
+                dom[attrName] = undefined;
                 dom.removeAttribute(attrName);
             } else {
-                dom[attrName] = newValue;
-                if (attrName === "value") {
-                    dom["value"] = newValue;
+                if (typeof oldValue !== "undefined") {
+                    dom[attrName] = newValue;
                 } else {
                     var domAttr = document.createAttribute(attrName);
                     domAttr.value = newValue;
                     dom.setAttributeNode(domAttr);
                 }
             }
+            binding.attrs[attrName] = newValue;
+        }
+    }
+
+    class ObservableFunction {
+        constructor(private func, private context, private observer: IObserver) {
+        }
+
+        execute() {
+            var value = this.func.apply(this.context, arguments);
+            return Observable.value(this.context, value, this.observer);
+        }
+
+        prop(name): any {
+            var value = this.func[name];
+            if (!!this.observer)
+                this.observer.addDependency(this.func, name, !!value ? value.valueOf() : value);
+
+            return Observable.value(this.func, value, this.observer);
+        }
+    }
+
+    class ObservableArray {
+        private $id;
+
+        constructor(private arr, private observer: IObserver) {
+            this.$id = Util.id(arr);
+        }
+
+        get length() {
+            return this.arr.length;
+        }
+
+        itemAt(idx) {
+            var item = this.arr[idx];
+            if (!!this.observer)
+                this.observer.addDependency(this.arr, idx, item.valueOf());
+
+            return Observable.value(this.arr, item, this.observer);
+        }
+
+        filter(fn) {
+            const result = [];
+            var length = this.arr.length;
+            for (var i = 0; i < length; i++) {
+                var item = this.arr[i];
+                if (!!this.observer)
+                    this.observer.addDependency(this.arr, i, item.valueOf());
+                if (!!Util.execute(fn, item))
+                    result.push(item);
+            }
+            return new ObservableArray(result, this.observer);
+        }
+
+        count(fn) {
+            var count = 0;
+            for (var i = this.arr.length - 1; i >= 0; i--) {
+                var item = this.arr[i];
+                if (!!this.observer)
+                    this.observer.addDependency(this.arr, i, item);
+                if (!!Util.execute(fn, item))
+                    count++;
+            }
+            return count;
         }
     }
 
@@ -836,45 +930,30 @@ module Xania {
         private $id;
 
         constructor(private value, private observer: IObserver) {
-            debugger;
             this.$id = Util.id(value);
+
         }
 
         get length() {
-            if (this.value === null || this.value === undefined)
-                return 0;
-            const length = this.value.length;
-            if (typeof length === "number") {
-                return length;
-            }
             return 1;
         }
 
-        apply(context) {
-            if (!!this.value && typeof this.value.apply === "function") {
-                var value = this.value.apply(context, arguments);
-                if (value !== null && value !== undefined) {
-                    return new ObservableValue(value.valueOf(), this.observer);
-                }
-                return value;
-            }
-            throw new Error("is not a function");
-        }
-
-        prop(name) {
-            var value = this.value[name];
+        prop(name): any {
+            var value = this.value[name].valueOf();
             if (!!this.observer)
                 this.observer.addDependency(this.value, name, value);
 
-            if (this.value === null || this.value === undefined)
-                return null;
-
-            return new ObservableValue(value, this.observer);
+            return Observable.value(this.value, value, this.observer);
         }
 
-        map(fn) {
-            return Util.map(fn, this.value);
+        valueOf() {
+            return this.value;
         }
+    }
+
+    class ObservableConst {
+        private length = 0;
+        constructor(private value, private observer: IObserver) { }
 
         valueOf() {
             return this.value;
@@ -887,19 +966,60 @@ module Xania {
         constructor(private $id: any, private objects: any[], private lib: any, private observer: IObserver = null) {
         }
 
+        valueOf() {
+            debugger;
+            var obj = {};
+            for (var i = 0; i < this.objects.length; i++) {
+                Object.assign(obj, this.objects[i]);
+            }
+            return obj;
+        }
+
         prop(name) {
             for (let i = 0; i < this.objects.length; i++) {
                 const object = this.objects[i];
                 const value = object[name];
                 if (value !== null && value !== undefined) {
-                    if (!!this.observer && typeof value.apply !== "function") {
-                        this.observer.addDependency(object, name, value);
+                    if (!!this.observer && typeof value !== "function") {
+                        this.observer.addDependency(object, name, value.valueOf());
                     }
-                    return new ObservableValue(value.valueOf(), this.observer);
+                    return Observable.value(object, value, this.observer);
                 }
             }
 
             return this.lib[name];
+        }
+
+        set(name, value) {
+            debugger;
+            for (let i = 0; i < this.objects.length; i++) {
+                const object = this.objects[i];
+                if (object.hasOwnProperty(name)) {
+                    object[name] = value;
+                    break;
+                }
+            }
+
+            return value;
+        }
+
+        static value(object, value, observer: IObserver): any {
+            if (!observer.addDependency)
+                throw new TypeError("observer");
+
+            if (value === null || value === undefined || typeof value === "boolean" || typeof value === "number" || typeof value === "string")
+                return value;
+
+            else if (typeof value === "function" ||
+                typeof value.execute === "function" ||
+                typeof value.apply === "function" ||
+                typeof value.call === "function") {
+                return new ObservableFunction(value.valueOf(), object, observer);
+            } else if (Array.isArray(value)) {
+                return new ObservableArray(value.valueOf(), observer);
+            } else {
+                return new ObservableValue(value.valueOf(), observer);
+            }
         }
 
         itemAt() {
@@ -926,18 +1046,20 @@ module Xania {
         }
     }
 
-    class ScopeBinding {
-        constructor(private scope, private observer: Observer) {
+    class ScopeBinding extends Binding {
+        constructor(private scope, private observer: Observer, private tpl, private target, private offset: number) {
+            super(scope.context);
         }
 
         get context() {
             return this.scope.context;
         }
 
-        execute(observable, state, additionalArgs) {
-            var tpl = additionalArgs[0];
-            var target = additionalArgs[1];
-            var offset = additionalArgs[2];
+        execute(state) {
+            var observable = (<any>this.context).subscribe(this);
+            var tpl = this.tpl;
+            var target = this.target;
+            var offset = this.offset;
 
             var bindings = !!state ? state.bindings : [];
             if (!!tpl.modelAccessor) {
@@ -963,14 +1085,10 @@ module Xania {
                 var result = arr.itemAt(idx);
 
                 if (idx < bindings.length) {
-                    bindings[idx].update(result);
+                    bindings[idx].update(result, this.observer);
                 } else {
                     const newBinding = tpl.bind(result);
-
-                    var tagSubscription = this.observer.subscribe(newBinding);
-                    tagSubscription.notify();
-
-                    newBinding.subscriptions.push(tagSubscription);
+                    newBinding.notify(this.observer);
 
                     tpl.children()
                         .reduce(Binder.reduceChild,
@@ -990,12 +1108,6 @@ module Xania {
 
             return bindings;
         }
-
-        subscribe(tpl, target, offset: number = 0) {
-            var subscription = this.observer.subscribe(this, tpl, target, offset);
-            subscription.notify();
-            return subscription;
-        }
     }
 
     export class Binder {
@@ -1003,10 +1115,6 @@ module Xania {
 
         constructor(viewModel, libs: any[], private observer: Observer = new Observer()) {
             this.context = new Observable(viewModel, [viewModel], libs.reduce((x, y) => Object.assign(x, y), {}));
-        }
-
-        get rootBinding() {
-            return this.rootBinding = new ScopeBinding(this, this.observer);
         }
 
         static removeBindings(target, bindings, maxLength) {
@@ -1022,14 +1130,11 @@ module Xania {
 
             prev.offset = Util.ready(prev.offset,
                 p => {
-                    var subscr = binder.observer.subscribe(new ScopeBinding(parentBinding, binder.observer),
-                        cur,
-                        parentBinding.dom,
-                        p);
-                    subscr.notify();
-                    parentBinding.subscriptions.push(subscr);
+                    var binding = new ScopeBinding(parentBinding, binder.observer, cur, parentBinding.dom, p);
+                    // var subscr = binder.observer.subscribe(binding);
+                    binding.notify(binder.observer);
 
-                    return subscr.then(x => { return p + x.bindings.length });
+                    return Util.ready(binding.state, x => { return p + x.bindings.length });
                 });
 
             return prev;
@@ -1041,22 +1146,26 @@ module Xania {
             return selector;
         }
 
-        subscribe(_, tpl, target, offset: number = 0) {
-            var subscription = this.observer.subscribe(this.rootBinding, tpl, target, offset);
-            subscription.notify();
-            return subscription;
+        subscribe(tpl, target, offset: number = 0) {
+            var rootBinding = new ScopeBinding(this, this.observer, tpl, target, offset);
+            rootBinding.notify(this.observer);
+            return rootBinding;
         }
     }
 
-    var defaultApp = new Application([]);
+    //var defaultApp = app();
 
-    document.addEventListener("DOMContentLoaded", event => {
-        defaultApp.start();
-    });
+    //document.addEventListener("DOMContentLoaded", event => {
+    //    defaultApp.start(document.body);
+    //});
 
     // ReSharper disable once InconsistentNaming
-    export var Component = defaultApp.component.bind(defaultApp);
-    export var update = defaultApp.update.bind(defaultApp);
+    //export var Component = defaultApp.component.bind(defaultApp);
+    //export var update = defaultApp.update.bind(defaultApp);
+
+    export function app(...libs: any[]) {
+        return new Application(libs);
+    };
 
     // ReSharper restore InconsistentNaming
 }

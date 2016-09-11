@@ -7,14 +7,15 @@
     <link rel="stylesheet" href="css/index.css">
 
     <script src="../fun.js"></script>
-    <script src="../core.js?2345"></script>
+    <script src="../core.js"></script>
     <script src="todomvc.js"></script>
 </head>
 <body>
     <div style="display: block; clear: both; overflow: hidden; width: 100%;">
-        <div style="float: left; width: 33%;" id="panel1"></div>
+        <todo-app></todo-app>
+        <!--<div style="float: left; width: 33%;" id="panel1"></div>
         <div style="float: left; width: 33%;" id="panel2"></div>
-        <div style="float: left; width: 33%;" id="panel3"></div>
+        <div style="float: left; width: 33%;" id="panel3"></div>-->
     </div>
     <footer class="info">
         <p>Double-click to edit a todo</p>
@@ -26,34 +27,24 @@
         </p>
     </footer>
     <script>
-        var viewModel = {
-            app: new TodoApp(),
-            show: new State('all'),
-            active: function (todo) {
-                return todo.completed === false;
-            },
-            completed: function (todo) {
-                return todo.completed === true;
-            },
-            todoPredicate: function (todo) {
-                var value = this.show.get();
-                switch (value) {
-                    case 'all':
-                        return true;
-                    default:
-                        return todo.completed === (value === 'completed');
-                }
+
+        var app = Xania.app(Xania.Fun.List);
+        app.component(TodoApp);
+        app.start(document.body);
+
+        var compiler = new Xania.Ast.Compiler();
+
+        var fn = compiler.expr("1 |> add 2");
+        var context = {
+            add: function (x, y) {
+                return x + y;
             }
         };
+        console.log(fn.execute(context), 3);
 
-        new Binder(new Ast.Context([viewModel, Fun.List])).import("todoapp.html")
-            .then(function(doc) {
-                var tpl = doc.querySelector("template");
-                this.bind(tpl, "#panel1")
-                    .bind(tpl, "#panel2")
-                    .bind(tpl, "#panel3");
-            });
-            
+        var ast = new Xania.Ast.Compiler().expr("x = 123");
+        console.log(ast.execute({ x: 123 }));
+
     </script>
 </body>
 </html>

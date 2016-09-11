@@ -16,14 +16,18 @@
     <script src="memory-stats.js"></script>
     <script src="monitor.js"></script>
     <script src="app.js"></script>
-    <script>
-        var load = function() {
-            ENV.generateData(true);
-            Xania.update();
-            Monitoring.renderRate.ping();
-            window.setTimeout(load, ENV.timeout);
-        };
-        load();
-    </script>
+<script>
+    var app = Xania.app();
+    app.component(DbmonApp);
+    app.start();
+
+    var load = function() {
+        ENV.generateData(true);
+        app.update();
+        Monitoring.renderRate.ping();
+        window.setTimeout(load, ENV.timeout);
+    };
+    load();
+</script>
 </body>
 </html>

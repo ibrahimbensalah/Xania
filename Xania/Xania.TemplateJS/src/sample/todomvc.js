@@ -11,7 +11,7 @@ var Todo = (function () {
 var TodoStore = (function () {
     function TodoStore() {
         this.todos = [];
-        for (var i = 0; i < 100; i++)
+        for (var i = 0; i < 10; i++)
             this.todos.push(new Todo("todo " + i));
     }
     TodoStore.prototype.toggleAll = function () {
@@ -34,17 +34,35 @@ var TodoStore = (function () {
 })();
 var TodoApp = (function () {
     function TodoApp() {
+        var _this = this;
         this.store = new TodoStore();
         this.newTodoText = "";
-        this.show = new State(null);
+        this.show = new State('all');
+        this.addTodo = function () {
+            debugger;
+            if (!!_this.newTodoText && _this.newTodoText.length > 0) {
+                _this.store.todos.push(new Todo(_this.newTodoText));
+                _this.newTodoText = "";
+            }
+        };
     }
     TodoApp.prototype.start = function () {
     };
-    TodoApp.prototype.addTodo = function () {
-        if (!!this.newTodoText && this.newTodoText.length > 0) {
-            this.store.todos.push(new Todo(this.newTodoText));
-            this.newTodoText = "";
-        }
+    TodoApp.prototype.active = function (todo) {
+        return todo.completed === false;
+    };
+    TodoApp.prototype.completed = function (todo) {
+        return todo.completed === true;
+    };
+    TodoApp.prototype.todoPredicate = function (value) {
+        return function (todo) {
+            switch (value) {
+                case 'all':
+                    return true;
+                default:
+                    return todo.completed === (value === 'completed');
+            }
+        };
     };
     return TodoApp;
 })();
@@ -58,9 +76,8 @@ var State = (function () {
     State.prototype.has = function (value) {
         return this.value === value;
     };
-    State.prototype.get = function () {
+    State.prototype.valueOf = function () {
         return this.value;
     };
     return State;
 })();
-//# sourceMappingURL=todomvc.js.map

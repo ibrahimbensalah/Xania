@@ -47,8 +47,9 @@ var Xania;
             this.components.set(key, { Type: componentType, Args: args });
             return true;
         };
-        Application.prototype.start = function () {
-            var stack = [document.body];
+        Application.prototype.start = function (root) {
+            if (root === void 0) { root = document.body; }
+            var stack = [root];
             while (stack.length > 0) {
                 var dom = stack.pop();
                 var component = this.getComponent(dom);
@@ -63,6 +64,7 @@ var Xania;
                     this.bind(dom.nodeName + ".html", component, dom);
                 }
             }
+            this.listen(root);
             return this;
         };
         Application.prototype.listen = function (target) {
@@ -72,8 +74,8 @@ var Xania;
                 if (!!binding) {
                     var handler = binding.tpl.events.get(name);
                     if (!!handler) {
-                        var observable = _this.observer.track(binding.context);
-                        handler(observable);
+                        var observable = binding.context.valueOf();
+                        Util.execute(handler, observable);
                         _this.observer.update();
                     }
                 }
@@ -84,10 +86,7 @@ var Xania;
                 if (binding != null) {
                     var nameAttr = evt.target.attributes["name"];
                     if (!!nameAttr) {
-                        var proxy = _this.observer.track(binding.context);
-                        var prop = nameAttr.value;
-                        var update_1 = new Function("context", "value", "with (context) { " + prop + " = value; }");
-                        update_1(proxy, evt.target.value);
+                        binding.context.set(nameAttr.value, evt.target.value);
                     }
                 }
             };
@@ -103,9 +102,6 @@ var Xania;
         };
         Application.prototype.update = function () {
             this.observer.update();
-        };
-        Application.prototype.track = function (object) {
-            return this.observer.track(object);
         };
         Application.prototype.getComponent = function (node) {
             var name = node.nodeName.replace(/\-/, "").toLowerCase();
@@ -159,7 +155,7 @@ var Xania;
             var binder = new Binder(component, this.libs, this.observer);
             Util.ready(this.import(view), function (dom) {
                 var tpl = _this.parseDom(dom);
-                binder.subscribe(null, tpl, target);
+                binder.subscribe(tpl, target);
             });
             return this;
         };
@@ -219,7 +215,10 @@ var Xania;
             }
             else if (name === "checked") {
                 var fn = this.compile(attr.value);
-                tagElement.attr(name, Util.compose(function (ctx) { return !!ctx ? "checked" : null; }, fn));
+                tagElement.attr(name, function (ctx) {
+                    var result = Util.execute(fn, ctx);
+                    return !!result ? "checked" : null;
+                });
             }
             else {
                 var tpl = this.compile(attr.value);
@@ -306,7 +305,7 @@ var Xania;
         TagTemplate.prototype.executeAttributes = function (context, dom, resolve) {
             var classes = [];
             this.attributes.forEach(function attributesForEachBoundFn(tpl, name) {
-                var value = tpl.execute(context).valueOf();
+                var value = Util.execute(tpl, context);
                 if (name === "class") {
                     classes.push(value);
                 }
@@ -392,12 +391,32 @@ var Xania;
             for (var _i = 0; _i < arguments.length; _i++) {
                 fns[_i - 0] = arguments[_i];
             }
-            return function (result) {
+            return function (input) {
+                var result = input;
                 for (var i = fns.length - 1; i > -1; i--) {
-                    result = fns[i].call(this, result);
+                    var fn = fns[i];
+                    result = Util.execute(fn, result);
                 }
                 return result;
             };
+        };
+        Util.execute = function (fn, arg) {
+            if (typeof fn.execute === "function")
+                return fn.execute(arg);
+            else if (typeof fn.call === "function")
+                return fn.call(null, arg);
+            else if (typeof fn.apply === "function")
+                return fn.apply(null, [arg]);
+            else
+                throw new Error("not a function");
+        };
+        Util.callable = function (fn) {
+            if (fn === null || fn === undefined)
+                return false;
+            return typeof fn === "function" ||
+                typeof fn.execute === "function" ||
+                typeof fn.apply === "function" ||
+                typeof fn.call === "function";
         };
         Util.partialFunc = function () {
             var self = this;
@@ -500,6 +519,10 @@ var Xania;
                             return function () { return object; };
                         case "constructor":
                             return object.constructor;
+                        case "prop":
+                            return function (property) {
+                                return Util.observeProperty(object, property, object[property], observer);
+                            };
                         default:
                             return Util.observeProperty(object, property, object[property], observer);
                     }
@@ -567,95 +590,66 @@ var Xania;
     })();
     var Binding = (function () {
         function Binding(context) {
+            if (context === void 0) { context = undefined; }
             this.context = context;
-            this.subscriptions = [];
+            this.state = undefined;
+            this.id = (new Date().getTime()) + Math.random();
         }
-        Binding.prototype.addChild = function (child, idx) {
-            throw new Error("Abstract method Binding.update");
+        Binding.prototype.addDependency = function (object, property, value) {
+            this.dependencies.push({ object: object, property: property, value: value });
         };
-        Binding.prototype.update = function (context) {
-            this.context = context;
-            for (var s = 0; s < this.subscriptions.length; s++) {
-                this.subscriptions[s].notify();
+        Binding.prototype.notify = function (observer) {
+            if (this.hasChanges()) {
+                this.update(observer);
             }
+        };
+        Binding.prototype.update = function (observer) {
+            var binding = this;
+            binding.dependencies.length = 0;
+            binding.state = binding.execute(binding.state);
+            if (binding.dependencies.length > 0)
+                observer.subscribe(binding);
+            else
+                observer.unsubscribe(binding);
+        };
+        Binding.prototype.hasChanges = function () {
+            if (!this.dependencies) {
+                this.dependencies = [];
+                return true;
+            }
+            var deps = this.dependencies;
+            for (var i = 0; i < deps.length; i++) {
+                var dep = deps[i];
+                var value = dep.object[dep.property];
+                value = !!value ? value.valueOf() : value;
+                if (value !== dep.value)
+                    return true;
+            }
+            return false;
         };
         return Binding;
     })();
     var Observer = (function () {
         function Observer() {
-            this.all = new Set();
-            this.state = {};
+            this.all = [];
         }
-        Observer.prototype.unsubscribe = function (subscription) {
-            this.all.delete(subscription);
-        };
         Observer.prototype.subscribe = function (binding) {
-            var additionalArgs = [];
-            for (var _i = 1; _i < arguments.length; _i++) {
-                additionalArgs[_i - 1] = arguments[_i];
+            if (this.all.indexOf(binding) < 0) {
+                this.all.push(binding);
             }
-            var observer = this;
-            var subscription = {
-                binding: binding,
-                state: undefined,
-                dependencies: [],
-                addDependency: function (object, property, value) {
-                    if (!Object.isFrozen(object))
-                        this.dependencies.push({ object: object, property: property, value: value });
-                },
-                hasDependency: function (object, property) {
-                    for (var i = 0; i < this.dependencies.length; i++) {
-                        var dep = this.dependencies[i];
-                        if (dep.object === object && dep.property === property)
-                            return true;
-                    }
-                    return false;
-                },
-                hasChanges: function () {
-                    for (var i = 0; i < this.dependencies.length; i++) {
-                        var dep = this.dependencies[i];
-                        var value = dep.object[dep.property];
-                        if (value !== dep.value)
-                            return true;
-                    }
-                    return false;
-                },
-                setChange: function (obj, property) {
-                    throw new Error("invalid change");
-                },
-                execute: function (state) {
-                    this.state = binding.execute(binding.context.subscribe(this), state, additionalArgs);
-                },
-                notify: function () {
-                    this.dependencies.length = 0;
-                    var result = Util.ready(this.state, this);
-                    if (this.dependencies.length > 0)
-                        observer.all.add(this);
-                    else
-                        observer.unsubscribe(this);
-                    return result;
-                },
-                then: function (resolve) {
-                    return Util.ready(this.state, resolve);
-                }
-            };
-            return subscription;
         };
-        Observer.prototype.addDependency = function (obj, property) {
-        };
-        Observer.prototype.setChange = function (obj, property) {
-        };
-        Observer.prototype.track = function (context) {
-            return Util.observe(context, this);
+        Observer.prototype.unsubscribe = function (binding) {
+            var idx = this.all.indexOf(binding);
+            if (idx >= 0) {
+                this.all.splice(idx, 1);
+            }
         };
         Observer.prototype.update = function () {
-            this.all.forEach(function (s) {
-                if (s.hasChanges()) {
-                    s.notify();
-                }
-            });
+            for (var i = 0; i < this.all.length; i++) {
+                var binding = this.all[i];
+                binding.notify(this);
+            }
         };
-        Observer.cache = [];
         return Observer;
     })();
     var ContentBinding = (function (_super) {
@@ -665,7 +659,7 @@ var Xania;
             this.tpl = tpl;
             this.dom = document.createDocumentFragment();
         }
-        ContentBinding.prototype.execute = function (context) {
+        ContentBinding.prototype.execute = function () {
             return this.dom;
         };
         return ContentBinding;
@@ -677,12 +671,10 @@ var Xania;
             this.tpl = tpl;
             this.dom = document.createTextNode("");
         }
-        TextBinding.prototype.execute = function (context) {
-            var newValue = this.tpl.execute(context).valueOf();
-            if (newValue !== this.value) {
-                this.value = newValue;
-                this.dom.textContent = newValue;
-            }
+        TextBinding.prototype.execute = function () {
+            var observable = this.context.subscribe(this);
+            var newValue = this.tpl.execute(observable).valueOf();
+            this.dom.textContent = newValue;
         };
         return TextBinding;
     })(Binding);
@@ -695,23 +687,24 @@ var Xania;
             this.dom = document.createElement(tpl.name);
             this.dom.attributes["__binding"] = this;
         }
-        TagBinding.prototype.execute = function (context) {
+        TagBinding.prototype.execute = function () {
             var tpl = this.tpl;
-            tpl.executeAttributes(context, this, TagBinding.executeAttribute);
+            var observable = this.context.subscribe(this);
+            tpl.executeAttributes(observable, this, TagBinding.executeAttribute);
             return this.dom;
         };
         TagBinding.executeAttribute = function (attrName, newValue, binding) {
             if (binding.attrs[attrName] === newValue)
                 return;
-            binding.attrs[attrName] = newValue;
+            var oldValue = binding.attrs[attrName];
             var dom = binding.dom;
             if (typeof newValue === "undefined" || newValue === null) {
+                dom[attrName] = undefined;
                 dom.removeAttribute(attrName);
             }
             else {
-                dom[attrName] = newValue;
-                if (attrName === "value") {
-                    dom["value"] = newValue;
+                if (typeof oldValue !== "undefined") {
+                    dom[attrName] = newValue;
                 }
                 else {
                     var domAttr = document.createAttribute(attrName);
@@ -719,54 +712,106 @@ var Xania;
                     dom.setAttributeNode(domAttr);
                 }
             }
+            binding.attrs[attrName] = newValue;
         };
         return TagBinding;
     })(Binding);
+    var ObservableFunction = (function () {
+        function ObservableFunction(func, context, observer) {
+            this.func = func;
+            this.context = context;
+            this.observer = observer;
+        }
+        ObservableFunction.prototype.execute = function () {
+            var value = this.func.apply(this.context, arguments);
+            return Observable.value(this.context, value, this.observer);
+        };
+        ObservableFunction.prototype.prop = function (name) {
+            var value = this.func[name];
+            if (!!this.observer)
+                this.observer.addDependency(this.func, name, !!value ? value.valueOf() : value);
+            return Observable.value(this.func, value, this.observer);
+        };
+        return ObservableFunction;
+    })();
+    var ObservableArray = (function () {
+        function ObservableArray(arr, observer) {
+            this.arr = arr;
+            this.observer = observer;
+            this.$id = Util.id(arr);
+        }
+        Object.defineProperty(ObservableArray.prototype, "length", {
+            get: function () {
+                return this.arr.length;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        ObservableArray.prototype.itemAt = function (idx) {
+            var item = this.arr[idx];
+            if (!!this.observer)
+                this.observer.addDependency(this.arr, idx, item.valueOf());
+            return Observable.value(this.arr, item, this.observer);
+        };
+        ObservableArray.prototype.filter = function (fn) {
+            var result = [];
+            var length = this.arr.length;
+            for (var i = 0; i < length; i++) {
+                var item = this.arr[i];
+                if (!!this.observer)
+                    this.observer.addDependency(this.arr, i, item.valueOf());
+                if (!!Util.execute(fn, item))
+                    result.push(item);
+            }
+            return new ObservableArray(result, this.observer);
+        };
+        ObservableArray.prototype.count = function (fn) {
+            var count = 0;
+            for (var i = this.arr.length - 1; i >= 0; i--) {
+                var item = this.arr[i];
+                if (!!this.observer)
+                    this.observer.addDependency(this.arr, i, item);
+                if (!!Util.execute(fn, item))
+                    count++;
+            }
+            return count;
+        };
+        return ObservableArray;
+    })();
     var ObservableValue = (function () {
         function ObservableValue(value, observer) {
             this.value = value;
             this.observer = observer;
-            debugger;
             this.$id = Util.id(value);
         }
         Object.defineProperty(ObservableValue.prototype, "length", {
             get: function () {
-                if (this.value === null || this.value === undefined)
-                    return 0;
-                var length = this.value.length;
-                if (typeof length === "number") {
-                    return length;
-                }
                 return 1;
             },
             enumerable: true,
             configurable: true
         });
-        ObservableValue.prototype.apply = function (context) {
-            if (!!this.value && typeof this.value.apply === "function") {
-                var value = this.value.apply(context, arguments);
-                if (value !== null && value !== undefined) {
-                    return new ObservableValue(value.valueOf(), this.observer);
-                }
-                return value;
-            }
-            throw new Error("is not a function");
-        };
         ObservableValue.prototype.prop = function (name) {
-            var value = this.value[name];
+            var value = this.value[name].valueOf();
             if (!!this.observer)
                 this.observer.addDependency(this.value, name, value);
-            if (this.value === null || this.value === undefined)
-                return null;
-            return new ObservableValue(value, this.observer);
-        };
-        ObservableValue.prototype.map = function (fn) {
-            return Util.map(fn, this.value);
+            return Observable.value(this.value, value, this.observer);
         };
         ObservableValue.prototype.valueOf = function () {
             return this.value;
         };
         return ObservableValue;
+    })();
+    var ObservableConst = (function () {
+        function ObservableConst(value, observer) {
+            this.value = value;
+            this.observer = observer;
+            this.length = 0;
+        }
+        ObservableConst.prototype.valueOf = function () {
+            return this.value;
+        };
+        return ObservableConst;
     })();
     var Observable = (function () {
         function Observable($id, objects, lib, observer) {
@@ -777,18 +822,55 @@ var Xania;
             this.observer = observer;
             this.length = 1;
         }
+        Observable.prototype.valueOf = function () {
+            debugger;
+            var obj = {};
+            for (var i = 0; i < this.objects.length; i++) {
+                Object.assign(obj, this.objects[i]);
+            }
+            return obj;
+        };
         Observable.prototype.prop = function (name) {
             for (var i = 0; i < this.objects.length; i++) {
                 var object = this.objects[i];
                 var value = object[name];
                 if (value !== null && value !== undefined) {
-                    if (!!this.observer && typeof value.apply !== "function") {
-                        this.observer.addDependency(object, name, value);
+                    if (!!this.observer && typeof value !== "function") {
+                        this.observer.addDependency(object, name, value.valueOf());
                     }
-                    return new ObservableValue(value.valueOf(), this.observer);
+                    return Observable.value(object, value, this.observer);
                 }
             }
             return this.lib[name];
+        };
+        Observable.prototype.set = function (name, value) {
+            debugger;
+            for (var i = 0; i < this.objects.length; i++) {
+                var object = this.objects[i];
+                if (object.hasOwnProperty(name)) {
+                    object[name] = value;
+                    break;
+                }
+            }
+            return value;
+        };
+        Observable.value = function (object, value, observer) {
+            if (!observer.addDependency)
+                throw new TypeError("observer");
+            if (value === null || value === undefined || typeof value === "boolean" || typeof value === "number" || typeof value === "string")
+                return value;
+            else if (typeof value === "function" ||
+                typeof value.execute === "function" ||
+                typeof value.apply === "function" ||
+                typeof value.call === "function") {
+                return new ObservableFunction(value.valueOf(), object, observer);
+            }
+            else if (Array.isArray(value)) {
+                return new ObservableArray(value.valueOf(), observer);
+            }
+            else {
+                return new ObservableValue(value.valueOf(), observer);
+            }
         };
         Observable.prototype.itemAt = function () {
             return this;
@@ -809,10 +891,15 @@ var Xania;
         };
         return Observable;
     })();
-    var ScopeBinding = (function () {
-        function ScopeBinding(scope, observer) {
+    var ScopeBinding = (function (_super) {
+        __extends(ScopeBinding, _super);
+        function ScopeBinding(scope, observer, tpl, target, offset) {
+            _super.call(this, scope.context);
             this.scope = scope;
             this.observer = observer;
+            this.tpl = tpl;
+            this.target = target;
+            this.offset = offset;
         }
         Object.defineProperty(ScopeBinding.prototype, "context", {
             get: function () {
@@ -821,11 +908,12 @@ var Xania;
             enumerable: true,
             configurable: true
         });
-        ScopeBinding.prototype.execute = function (observable, state, additionalArgs) {
+        ScopeBinding.prototype.execute = function (state) {
             var _this = this;
-            var tpl = additionalArgs[0];
-            var target = additionalArgs[1];
-            var offset = additionalArgs[2];
+            var observable = this.context.subscribe(this);
+            var tpl = this.tpl;
+            var target = this.target;
+            var offset = this.offset;
             var bindings = !!state ? state.bindings : [];
             if (!!tpl.modelAccessor) {
                 return Util.ready(tpl.modelAccessor.execute(observable), function (model) {
@@ -845,13 +933,11 @@ var Xania;
             for (var idx = 0; idx < arr.length; idx++) {
                 var result = arr.itemAt(idx);
                 if (idx < bindings.length) {
-                    bindings[idx].update(result);
+                    bindings[idx].update(result, this.observer);
                 }
                 else {
                     var newBinding = tpl.bind(result);
-                    var tagSubscription = this.observer.subscribe(newBinding);
-                    tagSubscription.notify();
-                    newBinding.subscriptions.push(tagSubscription);
+                    newBinding.notify(this.observer);
                     tpl.children()
                         .reduce(Binder.reduceChild, { context: result, offset: 0, parentBinding: newBinding, binder: this });
                     var insertAt = startInsertAt + idx;
@@ -867,27 +953,14 @@ var Xania;
             }
             return bindings;
         };
-        ScopeBinding.prototype.subscribe = function (tpl, target, offset) {
-            if (offset === void 0) { offset = 0; }
-            var subscription = this.observer.subscribe(this, tpl, target, offset);
-            subscription.notify();
-            return subscription;
-        };
         return ScopeBinding;
-    })();
+    })(Binding);
     var Binder = (function () {
         function Binder(viewModel, libs, observer) {
             if (observer === void 0) { observer = new Observer(); }
             this.observer = observer;
             this.context = new Observable(viewModel, [viewModel], libs.reduce(function (x, y) { return Object.assign(x, y); }, {}));
         }
-        Object.defineProperty(Binder.prototype, "rootBinding", {
-            get: function () {
-                return this.rootBinding = new ScopeBinding(this, this.observer);
-            },
-            enumerable: true,
-            configurable: true
-        });
         Binder.removeBindings = function (target, bindings, maxLength) {
             while (bindings.length > maxLength) {
                 var oldBinding = bindings.pop();
@@ -898,10 +971,9 @@ var Xania;
             var parentBinding = prev.parentBinding;
             var binder = prev.binder;
             prev.offset = Util.ready(prev.offset, function (p) {
-                var subscr = binder.observer.subscribe(new ScopeBinding(parentBinding, binder.observer), cur, parentBinding.dom, p);
-                subscr.notify();
-                parentBinding.subscriptions.push(subscr);
-                return subscr.then(function (x) { return p + x.bindings.length; });
+                var binding = new ScopeBinding(parentBinding, binder.observer, cur, parentBinding.dom, p);
+                binding.notify(binder.observer);
+                return Util.ready(binding.state, function (x) { return p + x.bindings.length; });
             });
             return prev;
         };
@@ -910,19 +982,22 @@ var Xania;
                 return document.querySelector(selector);
             return selector;
         };
-        Binder.prototype.subscribe = function (_, tpl, target, offset) {
+        Binder.prototype.subscribe = function (tpl, target, offset) {
             if (offset === void 0) { offset = 0; }
-            var subscription = this.observer.subscribe(this.rootBinding, tpl, target, offset);
-            subscription.notify();
-            return subscription;
+            var rootBinding = new ScopeBinding(this, this.observer, tpl, target, offset);
+            rootBinding.notify(this.observer);
+            return rootBinding;
         };
         return Binder;
     })();
     Xania.Binder = Binder;
-    var defaultApp = new Application([]);
-    document.addEventListener("DOMContentLoaded", function (event) {
-        defaultApp.start();
-    });
-    Xania.Component = defaultApp.component.bind(defaultApp);
-    Xania.update = defaultApp.update.bind(defaultApp);
+    function app() {
+        var libs = [];
+        for (var _i = 0; _i < arguments.length; _i++) {
+            libs[_i - 0] = arguments[_i];
+        }
+        return new Application(libs);
+    }
+    Xania.app = app;
+    ;
 })(Xania || (Xania = {}));

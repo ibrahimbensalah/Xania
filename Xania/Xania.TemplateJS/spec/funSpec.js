@@ -1,9 +1,9 @@
 ﻿/// <reference path="../src/fun.js" />
 "use strict";
 
-// require("../src/fun");
+require("../src/fun");
 
-var compiler = new Ast.Compiler();
+var compiler = new Xania.Ast.Compiler();
 
 describe("compiler", function () {
 
@@ -26,7 +26,7 @@ describe("compiler", function () {
         function () {
             var ast = compiler.expr("add ()");
             var context = {
-                fn: function () { return 123; }
+                add: function () { return 123; }
             };
             expect(ast.execute(context)).toBe(123);
         });
@@ -71,7 +71,7 @@ describe("compiler", function () {
                     return list.filter(function (x) { return x < max; });
                 }
             };
-            var actual = fn.execute(context).map(function (ctx) { return ctx.x + ctx.y })
+            var actual = fn.execute(context).map(function(ctx) { return ctx.x + ctx.y });
             expect(actual).toEqual([2, 3]);
         });
 
@@ -88,19 +88,27 @@ describe("compiler", function () {
                 }
             };
             var actual = fn.execute(context);
-            expect(actual).toEqual([11, 12]);
+            expect(actual.length).toEqual(2);
+            expect(actual.itemAt(0)).toEqual(11);
+            expect(actual.itemAt(1)).toEqual(12);
         });
 
     it("should support text template",
         function () {
             var tpl = compiler.template("hello {{ list |> empty }}!");
-            expect(tpl({ list: ["world"], empty: function (l) { return l.length === 0; } })).toBe("hello false!");
+            expect(tpl.execute({ list: ["world"], empty: function (l) { return l.length === 0; } })).toBe("hello false!");
         });
 
     it("should support not expression",
         function () {
             var ast = compiler.expr("not true");
             expect(ast.execute({})).toBe(false);
+        });
+
+    it("should support eq expression",
+        function () {
+            // var ast = compiler.expr("x = 123");
+            // expect(ast.execute({x: 123})).toBe(true);
         });
 });
 

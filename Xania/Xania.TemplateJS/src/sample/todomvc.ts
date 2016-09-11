@@ -15,7 +15,7 @@ class TodoStore {
     constructor() {
         this.todos = [];
 
-        for (var i = 0; i < 100; i++)
+        for (var i = 0; i < 10; i++)
             this.todos.push(new Todo(`todo ${i}`));
     }
 
@@ -39,18 +39,39 @@ class TodoStore {
     }
 }
 
+
 class TodoApp {
     public store = new TodoStore();
     public newTodoText: string = "";
-    public show = new State(null);
+    public show = new State('all');
 
     start() {
     }
 
-    addTodo() {
+    addTodo = () => {
+        debugger;
         if (!!this.newTodoText && this.newTodoText.length > 0) {
             this.store.todos.push(new Todo(this.newTodoText));
             this.newTodoText = "";
+        }
+    }
+
+    public active(todo) {
+        return todo.completed === false;
+    }
+
+    public completed(todo) {
+        return todo.completed === true;
+    }
+
+    public todoPredicate(value) {
+        return todo => {
+            switch (value) {
+                case 'all':
+                    return true;
+                default:
+                    return todo.completed === (value === 'completed');
+            }
         }
     }
 }
@@ -66,8 +87,8 @@ class State {
     has(value) {
         return this.value === value;
     }
-    
-    get() {
+
+    valueOf() {
         return this.value;
     }
 }

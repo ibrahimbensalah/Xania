@@ -1,5 +1,5 @@
 
-@Xania.Component
+// @Xania.Component
 class DbmonApp {
     databases;
 }

@@ -1,0 +1,29 @@
+﻿<template>
+    <section class="todoapp">
+        <header class="header">
+            <h1>todos</h1>
+            <input class="new-todo" placeholder="What needs to be done?" autofocus="" name="newTodoText" keyup.enter="{{ addTodo }}">
+        </header>
+        <section class="main" class.hidden="{{ store.todos |> empty }}">
+            <input class="toggle-all" type="checkbox" checked="{{ store.todos |> all completed }}" click="{{ store.toggleAll }}">
+            <ul class="todo-list">
+                <li data-select="{{ for todo in store.todos |> filter (todoPredicate show) }}" class.completed="{{ todo.completed }}" >
+                    <div class="view">
+                        <input class="toggle" type="checkbox" click="{{ todo.toggleCompletion }}" checked="{{ todo.completed }}">
+                        <label dblclick="editTodo(todo)">{{ todo.title }}</label>
+                        <button class="destroy" click="{{ store.remove todo }}"></button>
+                    </div>
+                </li>
+            </ul>
+        </section>
+        <footer class="footer" class.hidden="{{ store.todos |> empty }}">
+            <span class="todo-count"><strong>{{ store.todos |> count active }}</strong> item(s) left</span>
+            <ul class="filters">
+                <li><a href="#" class.selected="{{ show = 'all' }}" click="{{ show 'all' }}">All</a></li>
+                <li><a href="#" class.selected="{{ show = 'active' }}" click="{{ show 'active' }}">Active</a></li>
+                <li><a href="#" class.selected="{{ show = 'completed'}}" click="{{ show 'completed'}}">Completed</a></li>
+            </ul>
+            <button class="clear-completed" class.hidden="{{ store.todos |> all active }}" click="{{ store.removeCompleted }}">Clear completed</button>
+        </footer>
+    </section>
+</template>

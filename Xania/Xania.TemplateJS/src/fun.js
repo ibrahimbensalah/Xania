@@ -10,6 +10,9 @@ var Xania;
                 return this.value;
             };
             Const.prototype.app = function () { throw new Error("app on const is not supported"); };
+            Const.prototype.toString = function () {
+                return "'" + this.value + "'";
+            };
             return Const;
         })();
         var Ident = (function () {
@@ -17,10 +20,13 @@ var Xania;
                 this.id = id;
             }
             Ident.prototype.execute = function (context) {
-                return context.prop(this.id);
+                return !!context.prop ? context.prop(this.id) : context[this.id];
             };
             Ident.prototype.app = function (args) {
                 return new App(this, args);
+            };
+            Ident.prototype.toString = function () {
+                return this.id;
             };
             return Ident;
         })();
@@ -31,16 +37,16 @@ var Xania;
             }
             Member.prototype.execute = function (context) {
                 var obj = this.targetExpr.execute(context);
-                var member = obj.prop(this.name);
+                var member = !!obj.prop ? obj.prop(this.name) : obj[this.name];
                 if (typeof member === "function")
                     return member.bind(obj);
                 return member;
             };
-            Member.prototype.toString = function () {
-                return this.targetExpr + "." + this.name;
-            };
             Member.prototype.app = function (args) {
                 return new App(this, args);
+            };
+            Member.prototype.toString = function () {
+                return this.targetExpr + "." + this.name;
             };
             return Member;
         })();
@@ -52,12 +58,23 @@ var Xania;
             App.prototype.execute = function (context) {
                 var args = this.args.map(function (x) { return x.execute(context); });
                 var target = this.targetExpr.execute(context);
-                if (!!target && typeof target.apply === "function")
+                if (!target)
+                    throw new Error(this.targetExpr.toString() + " is undefined or null.");
+                if (typeof target.execute === "function")
+                    return target.execute.apply(target, args);
+                else if (typeof target.apply === "function")
                     return target.apply(this, args);
                 throw new Error(this.targetExpr.toString() + " is not a function");
             };
             App.prototype.app = function (args) {
                 return new App(this.targetExpr, this.args.concat(args));
+            };
+            App.prototype.toString = function () {
+                var str = this.targetExpr.toString();
+                for (var i = 0; i < this.args.length; i++) {
+                    str += " " + this.args[i];
+                }
+                return str;
             };
             return App;
         })();
@@ -68,6 +85,9 @@ var Xania;
                 return undefined;
             };
             Unit.prototype.app = function () { throw new Error("app on unit is not supported"); };
+            Unit.prototype.toString = function () {
+                return "unit";
+            };
             Unit.instance = new Unit();
             return Unit;
         })();
@@ -81,7 +101,48 @@ var Xania;
             Not.prototype.app = function (args) {
                 return new Not(this.expr.app(args));
             };
+            Not.prototype.toString = function () {
+                return "not " + this.expr;
+            };
             return Not;
+        })();
+        var BinaryExpression = (function () {
+            function BinaryExpression(left, right, handler) {
+                this.left = left;
+                this.right = right;
+                this.handler = handler;
+            }
+            BinaryExpression.prototype.app = function () { throw new Error("app on binary expression is not supported"); };
+            BinaryExpression.prototype.execute = function (context) {
+                var x = this.left.execute(context);
+                var y = this.right.execute(context);
+                return this.handler(x, y);
+            };
+            BinaryExpression.prototype.toString = function () {
+                return this.left + " = " + this.right;
+            };
+            return BinaryExpression;
+        })();
+        var BinaryOperator = (function () {
+            function BinaryOperator(handler) {
+                this.handler = handler;
+            }
+            BinaryOperator.prototype.app = function (x, y) {
+                return this.handler(x, y);
+            };
+            BinaryOperator.equals = function (left, right) {
+                return new BinaryExpression(left, right, function (x, y) { return x === y; });
+            };
+            BinaryOperator.add = function (left, right) {
+                return new BinaryExpression(left, right, function (x, y) { return x + y; });
+            };
+            BinaryOperator.substract = function (left, right) {
+                return new BinaryExpression(left, right, function (x, y) { return x - y; });
+            };
+            BinaryOperator.pipe = function (left, right) {
+                return right.app([left]);
+            };
+            return BinaryOperator;
         })();
         var Query = (function () {
             function Query(varName, sourceExpr, selectorExpr) {
@@ -91,8 +152,8 @@ var Xania;
             }
             Query.prototype.merge = function (context, x) {
                 var item = {};
-                item[this.varName] = x;
-                var result = context.extend(item);
+                item[this.varName] = x.valueOf();
+                var result = !!context.extend ? context.extend(item) : Object.assign({}, context, item);
                 if (this.selectorExpr !== null)
                     return this.selectorExpr.execute(result);
                 return result;
@@ -106,12 +167,19 @@ var Xania;
                     return {
                         length: length,
                         itemAt: function (idx) {
-                            return query.merge(context, result.prop(idx));
+                            return query.merge(context, !!result.itemAt ? result.itemAt(idx) : result[idx]);
+                        },
+                        map: function (fn) {
+                            var result = [];
+                            this.forEach(function (item) {
+                                result.push(fn(item));
+                            });
+                            return result;
                         },
                         forEach: function (fn) {
                             var q = query, r = result, l = length;
                             for (var idx = 0; idx < l; idx++) {
-                                var merged = q.merge(context, r.prop(idx));
+                                var merged = q.merge(context, !!r.itemAt ? r.itemAt(idx) : r[idx]);
                                 fn(merged, idx);
                             }
                         }
@@ -121,6 +189,9 @@ var Xania;
                     return result.map(function (x) { return _this.merge(context, x); });
             };
             Query.prototype.app = function () { throw new Error("app on query is not supported"); };
+            Query.prototype.toString = function () {
+                return "for " + this.varName + " in " + this.sourceExpr;
+            };
             return Query;
         })();
         var Template = (function () {
@@ -129,7 +200,7 @@ var Xania;
             }
             Template.prototype.execute = function (context) {
                 if (this.parts.length === 0)
-                    return null;
+                    return "";
                 if (this.parts.length === 1)
                     return this.executePart(context, this.parts[0]);
                 var result = "";
@@ -144,9 +215,16 @@ var Xania;
                 else {
                     var result = part.execute(context);
                     if (!!result && typeof result.call === "function")
-                        return result.call(this);
+                        return result.call(context);
                     return result;
                 }
+            };
+            Template.prototype.toString = function () {
+                var result = "";
+                for (var i = 0; i < this.parts.length; i++) {
+                    result += this.parts[i];
+                }
+                return result;
             };
             return Template;
         })();
@@ -164,10 +242,11 @@ var Xania;
                     lbrack: /^\s*\[\s*/g,
                     rbrack: /^\s*\]\s*/g,
                     navigate: /^\s*\.\s*/g,
-                    pipe1: /^\|>/g,
+                    binary: /^(\|>|=|\+|\-)/g,
                     pipe2: /^\|\|>/g,
                     select: /^->/g,
-                    compose: /^compose\b/g
+                    compose: /^compose\b/g,
+                    eq: /^\s*=\s*/g
                 };
             }
             Compiler.prototype.parsePattern = function (type, stream) {
@@ -244,6 +323,24 @@ var Xania;
                 }
                 return null;
             };
+            Compiler.prototype.parseBinary = function (stream) {
+                var op = this.parsePattern("binary", stream);
+                if (!!op) {
+                    switch (op) {
+                        case "=":
+                            return BinaryOperator.equals;
+                        case "+":
+                            return BinaryOperator.add;
+                        case "-":
+                            return BinaryOperator.substract;
+                        case "|>":
+                            return BinaryOperator.pipe;
+                        default:
+                            throw new SyntaxError("unresolved operator '" + op + "'");
+                    }
+                }
+                return null;
+            };
             Compiler.prototype.parseQuery = function (stream) {
                 if (this.parseRegex(/^for\b/g, stream) !== null) {
                     this.ws(stream);
@@ -290,11 +387,12 @@ var Xania;
                     return null;
                 }
                 this.ws(stream);
-                if (!!this.parsePattern("pipe1", stream)) {
+                var binary = this.parseBinary(stream);
+                if (!!binary) {
                     var filter = this.parseExpr(stream);
                     if (!filter)
                         throw new SyntaxError("Expected filter at: " + stream);
-                    return filter.app([expr]);
+                    return binary(expr, filter);
                 }
                 return expr;
             };
@@ -364,7 +462,6 @@ var Xania;
                 if (!!list.count)
                     return list.count(fn);
                 var result = 0;
-                debugger;
                 for (var i = 0; i < list.length; i++)
                     if (fn(list[i]))
                         result++;
@@ -397,4 +494,3 @@ var Xania;
         Fun.List = List;
     })(Fun = Xania.Fun || (Xania.Fun = {}));
 })(Xania || (Xania = {}));
-//# sourceMappingURL=fun.js.map
