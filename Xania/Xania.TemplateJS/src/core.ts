@@ -670,57 +670,72 @@ module Xania {
 
     class Binding {
         private data;
-        public dependencies;
+        public dependencies = [];
         public state = undefined;
+        private childBindings;
         public id;
 
         constructor(public context = undefined) {
             this.id = (new Date().getTime()) + Math.random();
         }
 
+        subscribe(binding) {
+            if (!this.childBindings)
+                this.childBindings = [binding];
+            else if (this.childBindings.indexOf(binding) < 0) {
+                this.childBindings.push(binding);
+            }
+        }
+
+        unsubscribe(binding) {
+            if (!!this.childBindings) {
+                var idx = this.childBindings.indexOf(binding);
+                if (idx >= 0) {
+                    this.childBindings.splice(idx, 1);
+                }
+            }
+        }
+
         addDependency(object: any, property: string, value: any) {
-            // if (!Object.isFrozen(object))
-            this.dependencies.push({ object, property, value });
+            if (!Object.isFrozen(object)) {
+                if (!!this.dependencies)
+                    this.dependencies.push({ object, property, value });
+                else
+                    this.dependencies = [{ object, property, value }];
+            }
         }
 
         notify(observer) {
             if (this.hasChanges()) {
                 this.update(observer);
-                //binding.dependencies.length = 0;
+            }
 
-                //if (!!binding.state && !!binding.state.then)
-                //    return Util.ready(binding.state,
-                //        s => {
-                //            binding.state = binding.execute(s);
-                //            throw new Error();
-                //            // subscription.execute(binding.dependencies.length > 0);
-                //        });
-                //else {
-                //    binding.state = binding.execute(binding.state);
-                //    if (binding.dependencies.length > 0)
-                //        observer.subscribe(binding);
-                //    else
-                //        observer.unsubscribe(binding);
-                //    // subscription.execute(binding.dependencies.length > 0);
-                //}
+            for (var i = 0; !!this.childBindings && i < this.childBindings.length; i++) {
+                const child = this.childBindings[i];
+                child.notify(this);
             }
         }
 
-        update(observer: Observer) {
+        update(observer) {
             var binding = <any>this;
-            binding.dependencies.length = 0;
 
-            binding.state = binding.execute(binding.state);
-            if (binding.dependencies.length > 0)
-                observer.subscribe(binding);
-            else
-                observer.unsubscribe(binding);
+            if (!!binding.dependencies)
+                binding.dependencies.length = 0;
+
+            Util.ready(binding.state,
+                s => {
+                    binding.state = binding.execute(s);
+
+                    if ((!!binding.childBindings && binding.childBindings.length > 0) || binding.dependencies.length > 0)
+                        observer.subscribe(binding);
+                    else
+                        observer.unsubscribe(binding);
+                });
         }
 
         hasChanges(): boolean {
             if (!this.dependencies) {
-                this.dependencies = [];
-                return true;
+               return true;
             }
 
             var deps = this.dependencies;
@@ -741,12 +756,12 @@ module Xania {
     }
 
     class Observer {
-        private all = [];
+        private bindings = [];
         // private dirty = new Set<ISubscriber>();
 
         subscribe(binding) {
-            if (this.all.indexOf(binding) < 0) {
-                this.all.push(binding);
+            if (this.bindings.indexOf(binding) < 0) {
+                this.bindings.push(binding);
             }
             // var x = 0, length = this.all.length;
 
@@ -773,9 +788,9 @@ module Xania {
         }
 
         unsubscribe(binding) {
-            var idx = this.all.indexOf(binding);
+            var idx = this.bindings.indexOf(binding);
             if (idx >= 0) {
-                this.all.splice(idx, 1);
+                this.bindings.splice(idx, 1);
             }
             // this.all.delete(binding);
             // this.dirty.delete(subscription);
@@ -785,8 +800,12 @@ module Xania {
             //this.all.forEach(binding => {
             //    binding.notify(this);
             //});
-            for (var i = 0; i < this.all.length; i++) {
-                const binding = this.all[i];
+            if (this.bindings.length != Observer['dummy']) {
+                Observer['dummy'] = this.bindings.length;
+                console.log(this.bindings.length);
+            }
+            for (var i = 0; i < this.bindings.length; i++) {
+                const binding = this.bindings[i];
                 binding.notify(this);
             }
         }
@@ -821,7 +840,6 @@ module Xania {
     }
 
     class TagBinding extends Binding {
-
         protected dom: HTMLElement;
         protected attrs = {};
 
@@ -1085,15 +1103,15 @@ module Xania {
                 var result = arr.itemAt(idx);
 
                 if (idx < bindings.length) {
-                    bindings[idx].update(result, this.observer);
+                    bindings[idx].update(result, this);
                 } else {
                     const newBinding = tpl.bind(result);
-                    newBinding.notify(this.observer);
 
                     tpl.children()
                         .reduce(Binder.reduceChild,
                             { context: result, offset: 0, parentBinding: newBinding, binder: this });
 
+                    newBinding.update(this);
                     var insertAt = startInsertAt + idx;
                     if (insertAt < target.childNodes.length) {
                         var beforeElement = target.childNodes[insertAt];
@@ -1130,9 +1148,9 @@ module Xania {
 
             prev.offset = Util.ready(prev.offset,
                 p => {
-                    var binding = new ScopeBinding(parentBinding, binder.observer, cur, parentBinding.dom, p);
+                    var binding = new ScopeBinding(parentBinding, parentBinding, cur, parentBinding.dom, p);
                     // var subscr = binder.observer.subscribe(binding);
-                    binding.notify(binder.observer);
+                    binding.update(parentBinding);
 
                     return Util.ready(binding.state, x => { return p + x.bindings.length });
                 });
@@ -1148,7 +1166,7 @@ module Xania {
 
         subscribe(tpl, target, offset: number = 0) {
             var rootBinding = new ScopeBinding(this, this.observer, tpl, target, offset);
-            rootBinding.notify(this.observer);
+            rootBinding.update(this.observer);
             return rootBinding;
         }
     }

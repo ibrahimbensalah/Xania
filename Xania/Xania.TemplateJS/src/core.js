@@ -592,29 +592,56 @@ var Xania;
         function Binding(context) {
             if (context === void 0) { context = undefined; }
             this.context = context;
+            this.dependencies = [];
             this.state = undefined;
             this.id = (new Date().getTime()) + Math.random();
         }
+        Binding.prototype.subscribe = function (binding) {
+            if (!this.childBindings)
+                this.childBindings = [binding];
+            else if (this.childBindings.indexOf(binding) < 0) {
+                this.childBindings.push(binding);
+            }
+        };
+        Binding.prototype.unsubscribe = function (binding) {
+            if (!!this.childBindings) {
+                var idx = this.childBindings.indexOf(binding);
+                if (idx >= 0) {
+                    this.childBindings.splice(idx, 1);
+                }
+            }
+        };
         Binding.prototype.addDependency = function (object, property, value) {
-            this.dependencies.push({ object: object, property: property, value: value });
+            if (!Object.isFrozen(object)) {
+                if (!!this.dependencies)
+                    this.dependencies.push({ object: object, property: property, value: value });
+                else
+                    this.dependencies = [{ object: object, property: property, value: value }];
+            }
         };
         Binding.prototype.notify = function (observer) {
             if (this.hasChanges()) {
                 this.update(observer);
             }
+            for (var i = 0; !!this.childBindings && i < this.childBindings.length; i++) {
+                var child = this.childBindings[i];
+                child.notify(this);
+            }
         };
         Binding.prototype.update = function (observer) {
             var binding = this;
-            binding.dependencies.length = 0;
-            binding.state = binding.execute(binding.state);
-            if (binding.dependencies.length > 0)
-                observer.subscribe(binding);
-            else
-                observer.unsubscribe(binding);
+            if (!!binding.dependencies)
+                binding.dependencies.length = 0;
+            Util.ready(binding.state, function (s) {
+                binding.state = binding.execute(s);
+                if ((!!binding.childBindings && binding.childBindings.length > 0) || binding.dependencies.length > 0)
+                    observer.subscribe(binding);
+                else
+                    observer.unsubscribe(binding);
+            });
         };
         Binding.prototype.hasChanges = function () {
             if (!this.dependencies) {
-                this.dependencies = [];
                 return true;
             }
             var deps = this.dependencies;
@@ -631,22 +658,26 @@ var Xania;
     })();
     var Observer = (function () {
         function Observer() {
-            this.all = [];
+            this.bindings = [];
         }
         Observer.prototype.subscribe = function (binding) {
-            if (this.all.indexOf(binding) < 0) {
-                this.all.push(binding);
+            if (this.bindings.indexOf(binding) < 0) {
+                this.bindings.push(binding);
             }
         };
         Observer.prototype.unsubscribe = function (binding) {
-            var idx = this.all.indexOf(binding);
+            var idx = this.bindings.indexOf(binding);
             if (idx >= 0) {
-                this.all.splice(idx, 1);
+                this.bindings.splice(idx, 1);
             }
         };
         Observer.prototype.update = function () {
-            for (var i = 0; i < this.all.length; i++) {
-                var binding = this.all[i];
+            if (this.bindings.length != Observer['dummy']) {
+                Observer['dummy'] = this.bindings.length;
+                console.log(this.bindings.length);
+            }
+            for (var i = 0; i < this.bindings.length; i++) {
+                var binding = this.bindings[i];
                 binding.notify(this);
             }
         };
@@ -933,13 +964,13 @@ var Xania;
             for (var idx = 0; idx < arr.length; idx++) {
                 var result = arr.itemAt(idx);
                 if (idx < bindings.length) {
-                    bindings[idx].update(result, this.observer);
+                    bindings[idx].update(result, this);
                 }
                 else {
                     var newBinding = tpl.bind(result);
-                    newBinding.notify(this.observer);
                     tpl.children()
                         .reduce(Binder.reduceChild, { context: result, offset: 0, parentBinding: newBinding, binder: this });
+                    newBinding.update(this);
                     var insertAt = startInsertAt + idx;
                     if (insertAt < target.childNodes.length) {
                         var beforeElement = target.childNodes[insertAt];
@@ -971,8 +1002,8 @@ var Xania;
             var parentBinding = prev.parentBinding;
             var binder = prev.binder;
             prev.offset = Util.ready(prev.offset, function (p) {
-                var binding = new ScopeBinding(parentBinding, binder.observer, cur, parentBinding.dom, p);
-                binding.notify(binder.observer);
+                var binding = new ScopeBinding(parentBinding, parentBinding, cur, parentBinding.dom, p);
+                binding.update(parentBinding);
                 return Util.ready(binding.state, function (x) { return p + x.bindings.length; });
             });
             return prev;
@@ -985,7 +1016,7 @@ var Xania;
         Binder.prototype.subscribe = function (tpl, target, offset) {
             if (offset === void 0) { offset = 0; }
             var rootBinding = new ScopeBinding(this, this.observer, tpl, target, offset);
-            rootBinding.notify(this.observer);
+            rootBinding.update(this.observer);
             return rootBinding;
         };
         return Binder;
@@ -1001,3 +1032,4 @@ var Xania;
     Xania.app = app;
     ;
 })(Xania || (Xania = {}));
+//# sourceMappingURL=core.js.map
