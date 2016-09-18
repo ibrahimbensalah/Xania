@@ -13,11 +13,11 @@
                     </span>
                 </td>
                 <!-- Query -->
-                <td data-select="{{ for q in db.lastSample.topFiveQueries }}" class="{{q.elapsedClassName}}">
-                    {{q.formatElapsed}}
+                <td data-select="{{ (for q in db.lastSample.topFiveQueries) -> q }}" class="{{elapsedClassName}}">
+                    {{formatElapsed}}
                     <div class="popover left">
                         <div class="popover-content">
-                            {{q.query}}
+                            {{query}}
                         </div>
                         <div class="arrow"></div>
                     </div>

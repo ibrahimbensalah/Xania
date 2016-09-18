@@ -13,7 +13,9 @@
         execute(context: IContext) {
             return this.value;
         }
-        app(): IExpr { throw new Error("app on const is not supported"); }
+        app(args: IExpr[]): IExpr {
+            return new App(new Const(this.value), args);
+        }
         toString() {
             return `'${this.value}'`;
         }
@@ -82,7 +84,7 @@
             for (var i = 0; i < this.args.length; i++) {
                 str += ` ${this.args[i]}`;
             }
-            return str;
+            return `(${str})`;
         }
     }
 
@@ -112,61 +114,75 @@
         }
     }
 
-    class BinaryExpression implements IExpr {
+    //class BinaryExpression implements IExpr {
+    //    constructor(private left: IExpr, private right: IExpr, private handler) { }
+    //    app(): IExpr { throw new Error("app on binary expression is not supported"); }
 
-        constructor(private left: IExpr, private right: IExpr, private handler) { }
-        app(): IExpr { throw new Error("app on binary expression is not supported"); }
+    //    execute(context: IContext) {
+    //        var x = this.left.execute(context);
+    //        var y = this.right.execute(context);
 
-        execute(context: IContext) {
-            var x = this.left.execute(context);
-            var y = this.right.execute(context);
+    //        return this.handler(x, y);
+    //    }
 
-            return this.handler(x, y);
-        }
-
-        toString() {
-            return `${this.left} = ${this.right}`;
-        }
-    }
+    //    toString() {
+    //        return `${this.left} = ${this.right}`;
+    //    }
+    //}
 
     class BinaryOperator {
-        constructor(private handler) {
+        static equals = (x, y) => x === y;
+        static add = (x, y) => x + y;
+        static substract = (x, y) => x - y;
+        static pipe = (x, y) => x(y);
+    }
+
+    class Selector implements IExpr {
+        private query;
+
+        constructor(private expr: IExpr) {
         }
 
-        app(x: IExpr, y: IExpr): IExpr {
-            return this.handler(x, y);
+        execute(context: IContext) {
+            var list = this.query.execute(context);
+            var selector = this.expr;
+            return {
+                length: list.length,
+                itemAt(idx) {
+                    var ctx = list.itemAt(idx);
+                    var result = selector.execute(ctx);
+                    return !!ctx.scope ? ctx.scope(null, result) : result;
+                },
+                forEach(fn) {
+                    var l = length;
+                    for (let idx = 0; idx < l; idx++) {
+                        fn(this.itemAt(idx), idx);
+                    }
+                }
+            }
         }
 
-        static equals(left: IExpr, right: IExpr): IExpr {
-            return new BinaryExpression(left, right, (x, y) => x === y);
-        }
-
-        static add(left: IExpr, right: IExpr): IExpr {
-            return new BinaryExpression(left, right, (x, y) => x + y);
-        }
-
-        static substract(left: IExpr, right: IExpr): IExpr {
-            return new BinaryExpression(left, right, (x, y) => x - y);
-        }
-
-        static pipe(left: IExpr, right: IExpr): IExpr {
-            return right.app([ left ]);
+        app(args: IExpr[]): IExpr {
+            if (!!this.query) {
+                this.query = this.query.app(args);
+            }
+            else {
+                if (args.length !== 1) {
+                    throw new Error("Expect number of arguments to be 1, but found " + args.length);
+                }
+                this.query = args[0];
+            }
+            return this;
         }
     }
 
     class Query implements IExpr {
-        constructor(public varName: string, public sourceExpr: IExpr, public selectorExpr: IExpr) { }
+        constructor(public varName: string, public sourceExpr: IExpr) { }
 
-        merge(context: IContext, x) {
+        merge(context, x) {
             var item = {};
             item[this.varName] = x.valueOf();
-
-            var result = !!context.extend ? context.extend(item) : Object.assign({}, context, item);
-
-            if (this.selectorExpr !== null)
-                return this.selectorExpr.execute(result);
-
-            return result;
+            return !!context.extend ? context.extend(item) : Object.assign({}, context, item);
         }
 
         execute(context: IContext) {
@@ -187,12 +203,9 @@
                         return result;
                     },
                     forEach(fn) {
-                        var q = query,
-                            r = result,
-                            l = length;
+                        var l = length;
                         for (let idx = 0; idx < l; idx++) {
-                            var merged = q.merge(context, !!r.itemAt ? r.itemAt(idx) : r[idx]);
-                            fn(merged, idx);
+                            fn(query.merge(context, !!result.itemAt ? result.itemAt(idx) : result[idx]), idx);
                         }
                     }
                 }
@@ -203,7 +216,7 @@
         app(): IExpr { throw new Error("app on query is not supported"); }
 
         toString() {
-            return `for ${this.varName} in ${this.sourceExpr}`;
+            return `(for ${this.varName} in ${this.sourceExpr})`;
         }
     }
 
@@ -218,7 +231,7 @@
             if (this.parts.length === 1)
                 return this.executePart(context, this.parts[0]);
 
-            let result = "";
+            var result = "";
             for (var i = 0; i < this.parts.length; i++) {
                 result += this.executePart(context, this.parts[i]);
             }
@@ -245,6 +258,15 @@
         }
     }
 
+    class UnaryOperator implements IExpr {
+        constructor(private handler: Function) {
+        }
+        execute(context: IContext) { }
+        app(args: IExpr[]): IExpr {
+            throw new Error("Not implemented");
+        }
+    }
+
     export class Compiler {
         public patterns = {
             string1: /^"(?:(?:\\\n|\\"|[^"\n]))*?"/g
@@ -266,9 +288,9 @@
         //, square: /^[\[\]]/g
             , navigate: /^\s*\.\s*/g
         // , punct: /^[;.:\?\^%<>=!&|+\-,~]/g
-            , binary: /^(\|>|=|\+|\-)/g
-            , pipe2: /^\|\|>/g
-            , select: /^->/g
+            , operator: /^[\|>=\+\-]+/g
+        // , pipe2: /^\|\|>/g
+        // , select: /^->/g
             , compose: /^compose\b/g
             , eq: /^\s*=\s*/g
         };
@@ -348,11 +370,6 @@
                     throw new SyntaxError(`Expected identifier at ${stream}`);
             }
 
-            var args = this.parseArgs(stream);
-            if (args !== null) {
-                return ident.app(args);
-            }
-
             return ident;
         }
 
@@ -369,18 +386,23 @@
             return null;
         }
 
-        parseBinary(stream): Function {
-            var op = this.parsePattern("binary", stream);
+        parseOperator(stream): IExpr {
+            var op = this.parsePattern("operator", stream);
             if (!!op) {
-                switch(op) {
+                switch (op) {
                     case "=":
-                        return BinaryOperator.equals;
+                        return new Const(BinaryOperator.equals)
+                            .app([this.parseExpr(stream)]);
                     case "+":
-                        return BinaryOperator.add;
+                        return new Const(BinaryOperator.add)
+                            .app([this.parseExpr(stream)]);
                     case "-":
-                        return BinaryOperator.substract;
+                        return new Const(BinaryOperator.substract)
+                            .app([this.parseExpr(stream)]);
                     case "|>":
-                        return BinaryOperator.pipe;
+                        return this.parseExpr(stream);
+                    case "->":
+                        return new Selector(this.parseExpr(stream));
                     default:
                         throw new SyntaxError(`unresolved operator '${op}'`);
                 }
@@ -401,15 +423,7 @@
                 this.ws(stream);
                 var sourceExpr = this.parseExpr(stream);
 
-                var selectorExpr = null;
-                this.ws(stream);
-                if (this.parsePattern("select", stream)) {
-                    this.ws(stream);
-                    selectorExpr = this.parseExpr(stream);
-                    if (selectorExpr === null)
-                        throw new SyntaxError(`expected select expression at: '${stream}'`);
-                }
-                return new Query(varName, sourceExpr, selectorExpr);
+                return new Query(varName, sourceExpr);
             }
             return null;
         }
@@ -435,7 +449,7 @@
         parseExpr(stream): any {
             this.ws(stream);
 
-            const expr =
+            let expr =
                 this.parseConst(stream) ||
                 this.parseParens(stream) ||
                 this.parseQuery(stream) ||
@@ -446,13 +460,20 @@
             }
 
             this.ws(stream);
-            var binary = this.parseBinary(stream);
-            if (!!binary) {
-                var filter = this.parseExpr(stream);
-                if (!filter)
-                    throw new SyntaxError(`Expected filter at: ${stream}`);
+            const operator = this.parseOperator(stream);
+            if (!!operator) {
+                expr = operator.app([expr]);
+                //const right = this.parseExpr(stream);
+                //if (!right)
+                //    throw new SyntaxError(`Expected filter at: ${stream}`);
 
-                return binary(expr, filter);
+                //return binary(
+                //    expr, right);
+            }
+
+            var args = this.parseArgs(stream);
+            if (args !== null) {
+                return expr.app(args);
             }
 
             return expr;

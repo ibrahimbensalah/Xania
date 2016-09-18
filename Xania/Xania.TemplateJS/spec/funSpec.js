@@ -1,8 +1,6 @@
 ﻿/// <reference path="../src/fun.js" />
 "use strict";
 
-require("../src/fun");
-
 var compiler = new Xania.Ast.Compiler();
 
 describe("compiler", function () {
@@ -71,14 +69,15 @@ describe("compiler", function () {
                     return list.filter(function (x) { return x < max; });
                 }
             };
-            var actual = fn.execute(context).map(function(ctx) { return ctx.x + ctx.y });
+            var actual = fn.execute(context).map(function(ctx) { return ctx.x + ctx.y } );
             expect(actual).toEqual([2, 3]);
         });
 
     it("should support query expression with selector",
         function () {
-            var fn = compiler.expr("for x in todos |> math.lt 3 -> math.add 10 x");
+            var fn = compiler.expr("for x in todos |> math.lt 3 -> math.add y x");
             var context = {
+                y: 10,
                 todos: [1, 2, 3],
                 math: {
                     lt: function (max, list) {
@@ -91,6 +90,18 @@ describe("compiler", function () {
             expect(actual.length).toEqual(2);
             expect(actual.itemAt(0)).toEqual(11);
             expect(actual.itemAt(1)).toEqual(12);
+        });
+
+    it("should support query expression with simple selector",
+        function () {
+            var fn = compiler.expr("(for x in numbers) -> x");
+            var context = {
+                numbers: [1, 2]
+            };
+            var actual = fn.execute(context);
+            expect(actual.length).toEqual(2);
+            expect(actual.itemAt(0)).toEqual(1);
+            expect(actual.itemAt(1)).toEqual(2);
         });
 
     it("should support text template",
@@ -107,8 +118,8 @@ describe("compiler", function () {
 
     it("should support eq expression",
         function () {
-            // var ast = compiler.expr("x = 123");
-            // expect(ast.execute({x: 123})).toBe(true);
+             var ast = compiler.expr("x = 123");
+             expect(ast.execute({x: 123})).toBe(true);
         });
 });
 

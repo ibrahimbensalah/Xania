@@ -9,7 +9,9 @@ var Xania;
             Const.prototype.execute = function (context) {
                 return this.value;
             };
-            Const.prototype.app = function () { throw new Error("app on const is not supported"); };
+            Const.prototype.app = function (args) {
+                return new App(new Const(this.value), args);
+            };
             Const.prototype.toString = function () {
                 return "'" + this.value + "'";
             };
@@ -74,7 +76,7 @@ var Xania;
                 for (var i = 0; i < this.args.length; i++) {
                     str += " " + this.args[i];
                 }
-                return str;
+                return "(" + str + ")";
             };
             return App;
         })();
@@ -106,57 +108,60 @@ var Xania;
             };
             return Not;
         })();
-        var BinaryExpression = (function () {
-            function BinaryExpression(left, right, handler) {
-                this.left = left;
-                this.right = right;
-                this.handler = handler;
-            }
-            BinaryExpression.prototype.app = function () { throw new Error("app on binary expression is not supported"); };
-            BinaryExpression.prototype.execute = function (context) {
-                var x = this.left.execute(context);
-                var y = this.right.execute(context);
-                return this.handler(x, y);
-            };
-            BinaryExpression.prototype.toString = function () {
-                return this.left + " = " + this.right;
-            };
-            return BinaryExpression;
-        })();
         var BinaryOperator = (function () {
-            function BinaryOperator(handler) {
-                this.handler = handler;
+            function BinaryOperator() {
             }
-            BinaryOperator.prototype.app = function (x, y) {
-                return this.handler(x, y);
-            };
-            BinaryOperator.equals = function (left, right) {
-                return new BinaryExpression(left, right, function (x, y) { return x === y; });
-            };
-            BinaryOperator.add = function (left, right) {
-                return new BinaryExpression(left, right, function (x, y) { return x + y; });
-            };
-            BinaryOperator.substract = function (left, right) {
-                return new BinaryExpression(left, right, function (x, y) { return x - y; });
-            };
-            BinaryOperator.pipe = function (left, right) {
-                return right.app([left]);
-            };
+            BinaryOperator.equals = function (x, y) { return x === y; };
+            BinaryOperator.add = function (x, y) { return x + y; };
+            BinaryOperator.substract = function (x, y) { return x - y; };
+            BinaryOperator.pipe = function (x, y) { return x(y); };
             return BinaryOperator;
         })();
+        var Selector = (function () {
+            function Selector(expr) {
+                this.expr = expr;
+            }
+            Selector.prototype.execute = function (context) {
+                var list = this.query.execute(context);
+                var selector = this.expr;
+                return {
+                    length: list.length,
+                    itemAt: function (idx) {
+                        var ctx = list.itemAt(idx);
+                        var result = selector.execute(ctx);
+                        return !!ctx.scope ? ctx.scope(null, result) : result;
+                    },
+                    forEach: function (fn) {
+                        var l = length;
+                        for (var idx = 0; idx < l; idx++) {
+                            fn(this.itemAt(idx), idx);
+                        }
+                    }
+                };
+            };
+            Selector.prototype.app = function (args) {
+                if (!!this.query) {
+                    this.query = this.query.app(args);
+                }
+                else {
+                    if (args.length !== 1) {
+                        throw new Error("Expect number of arguments to be 1, but found " + args.length);
+                    }
+                    this.query = args[0];
+                }
+                return this;
+            };
+            return Selector;
+        })();
         var Query = (function () {
-            function Query(varName, sourceExpr, selectorExpr) {
+            function Query(varName, sourceExpr) {
                 this.varName = varName;
                 this.sourceExpr = sourceExpr;
-                this.selectorExpr = selectorExpr;
             }
             Query.prototype.merge = function (context, x) {
                 var item = {};
                 item[this.varName] = x.valueOf();
-                var result = !!context.extend ? context.extend(item) : Object.assign({}, context, item);
-                if (this.selectorExpr !== null)
-                    return this.selectorExpr.execute(result);
-                return result;
+                return !!context.extend ? context.extend(item) : Object.assign({}, context, item);
             };
             Query.prototype.execute = function (context) {
                 var _this = this;
@@ -177,10 +182,9 @@ var Xania;
                             return result;
                         },
                         forEach: function (fn) {
-                            var q = query, r = result, l = length;
+                            var l = length;
                             for (var idx = 0; idx < l; idx++) {
-                                var merged = q.merge(context, !!r.itemAt ? r.itemAt(idx) : r[idx]);
-                                fn(merged, idx);
+                                fn(query.merge(context, !!result.itemAt ? result.itemAt(idx) : result[idx]), idx);
                             }
                         }
                     };
@@ -190,7 +194,7 @@ var Xania;
             };
             Query.prototype.app = function () { throw new Error("app on query is not supported"); };
             Query.prototype.toString = function () {
-                return "for " + this.varName + " in " + this.sourceExpr;
+                return "(for " + this.varName + " in " + this.sourceExpr + ")";
             };
             return Query;
         })();
@@ -228,6 +232,16 @@ var Xania;
             };
             return Template;
         })();
+        var UnaryOperator = (function () {
+            function UnaryOperator(handler) {
+                this.handler = handler;
+            }
+            UnaryOperator.prototype.execute = function (context) { };
+            UnaryOperator.prototype.app = function (args) {
+                throw new Error("Not implemented");
+            };
+            return UnaryOperator;
+        })();
         var Compiler = (function () {
             function Compiler() {
                 this.patterns = {
@@ -242,9 +256,7 @@ var Xania;
                     lbrack: /^\s*\[\s*/g,
                     rbrack: /^\s*\]\s*/g,
                     navigate: /^\s*\.\s*/g,
-                    binary: /^(\|>|=|\+|\-)/g,
-                    pipe2: /^\|\|>/g,
-                    select: /^->/g,
+                    operator: /^[\|>=\+\-]+/g,
                     compose: /^compose\b/g,
                     eq: /^\s*=\s*/g
                 };
@@ -306,10 +318,6 @@ var Xania;
                     else
                         throw new SyntaxError("Expected identifier at " + stream);
                 }
-                var args = this.parseArgs(stream);
-                if (args !== null) {
-                    return ident.app(args);
-                }
                 return ident;
             };
             Compiler.prototype.parseParens = function (stream) {
@@ -323,18 +331,23 @@ var Xania;
                 }
                 return null;
             };
-            Compiler.prototype.parseBinary = function (stream) {
-                var op = this.parsePattern("binary", stream);
+            Compiler.prototype.parseOperator = function (stream) {
+                var op = this.parsePattern("operator", stream);
                 if (!!op) {
                     switch (op) {
                         case "=":
-                            return BinaryOperator.equals;
+                            return new Const(BinaryOperator.equals)
+                                .app([this.parseExpr(stream)]);
                         case "+":
-                            return BinaryOperator.add;
+                            return new Const(BinaryOperator.add)
+                                .app([this.parseExpr(stream)]);
                         case "-":
-                            return BinaryOperator.substract;
+                            return new Const(BinaryOperator.substract)
+                                .app([this.parseExpr(stream)]);
                         case "|>":
-                            return BinaryOperator.pipe;
+                            return this.parseExpr(stream);
+                        case "->":
+                            return new Selector(this.parseExpr(stream));
                         default:
                             throw new SyntaxError("unresolved operator '" + op + "'");
                     }
@@ -351,15 +364,7 @@ var Xania;
                         throw new SyntaxError("expected 'in' keyword at: '" + stream + "'");
                     this.ws(stream);
                     var sourceExpr = this.parseExpr(stream);
-                    var selectorExpr = null;
-                    this.ws(stream);
-                    if (this.parsePattern("select", stream)) {
-                        this.ws(stream);
-                        selectorExpr = this.parseExpr(stream);
-                        if (selectorExpr === null)
-                            throw new SyntaxError("expected select expression at: '" + stream + "'");
-                    }
-                    return new Query(varName, sourceExpr, selectorExpr);
+                    return new Query(varName, sourceExpr);
                 }
                 return null;
             };
@@ -387,12 +392,13 @@ var Xania;
                     return null;
                 }
                 this.ws(stream);
-                var binary = this.parseBinary(stream);
-                if (!!binary) {
-                    var filter = this.parseExpr(stream);
-                    if (!filter)
-                        throw new SyntaxError("Expected filter at: " + stream);
-                    return binary(expr, filter);
+                var operator = this.parseOperator(stream);
+                if (!!operator) {
+                    expr = operator.app([expr]);
+                }
+                var args = this.parseArgs(stream);
+                if (args !== null) {
+                    return expr.app(args);
                 }
                 return expr;
             };

@@ -28,6 +28,8 @@
     <Content Include="Content\jasmine\jasmine.css" />
     <Content Include="Content\jasmine\jasmine_favicon.png" />
     <Content Include="favicon.ico" />
+    <Content Include="index.html" />
+    <Content Include="Scripts\polyfill.js" />
     <Content Include="Scripts\require-config.js" />
     <Content Include="Scripts\r.js" />
     <Content Include="Scripts\require.js" />
@@ -35,6 +37,7 @@
     <Content Include="Scripts\jasmine\console.js" />
     <Content Include="Scripts\jasmine\jasmine-html.js" />
     <Content Include="Scripts\jasmine\jasmine.js" />
+    <Content Include="spec\index.html" />
     <Content Include="src\dom.js" />
     <Content Include="src\sample\css\base.css" />
     <TypeScriptCompile Include="src\sample\dbmon\app.ts" />
@@ -52,6 +55,7 @@
     <Content Include="src\fun.js" />
     <Content Include="src\sample\todo-app.html" />
     <Content Include="web.config" />
+    <TypeScriptCompile Include="test\jasmine.d.ts" />
   </ItemGroup>
   <ItemGroup>
     <TypeScriptCompile Include="app.ts" />

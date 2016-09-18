@@ -319,7 +319,9 @@ var Xania;
                     resolve(name, value, dom);
                 }
             });
-            resolve("class", Util.join(" ", classes), dom);
+            if (classes.length > 0) {
+                resolve("class", Util.join(" ", classes), dom);
+            }
         };
         TagTemplate.prototype.executeEvents = function (context) {
             var result = {}, self = this;
@@ -341,9 +343,9 @@ var Xania;
             return x;
         };
         Util.ready = function (data, resolve) {
-            if (data !== null && data !== undefined && typeof (data.then) === "function")
+            if (data !== null && data !== undefined && !!data.then)
                 return data.then(resolve);
-            if (typeof (resolve.execute) === "function")
+            if (!!resolve.execute)
                 return resolve.execute.call(resolve, data);
             return resolve.call(resolve, data);
         };
@@ -548,7 +550,7 @@ var Xania;
                 };
             }
             else {
-                observer.addDependency(Util.id(object), prop, value);
+                observer.addDependency({ object: Util.id(object), property: prop, value: value });
                 return Util.observe(value, observer);
             }
         };
@@ -594,47 +596,43 @@ var Xania;
             this.context = context;
             this.dependencies = [];
             this.state = undefined;
-            this.id = (new Date().getTime()) + Math.random();
+            this.childBindings = [];
         }
         Binding.prototype.subscribe = function (binding) {
-            if (!this.childBindings)
-                this.childBindings = [binding];
-            else if (this.childBindings.indexOf(binding) < 0) {
+            if (this.childBindings.indexOf(binding) < 0) {
                 this.childBindings.push(binding);
             }
         };
         Binding.prototype.unsubscribe = function (binding) {
-            if (!!this.childBindings) {
-                var idx = this.childBindings.indexOf(binding);
-                if (idx >= 0) {
-                    this.childBindings.splice(idx, 1);
-                }
+            var idx = this.childBindings.indexOf(binding);
+            if (idx >= 0) {
+                this.childBindings.splice(idx, 1);
             }
         };
-        Binding.prototype.addDependency = function (object, property, value) {
-            if (!Object.isFrozen(object)) {
-                if (!!this.dependencies)
-                    this.dependencies.push({ object: object, property: property, value: value });
-                else
-                    this.dependencies = [{ object: object, property: property, value: value }];
-            }
+        Binding.prototype.addDependency = function (dependency) {
+            this.dependencies.push(dependency);
         };
         Binding.prototype.notify = function (observer) {
-            if (this.hasChanges()) {
-                this.update(observer);
-            }
-            for (var i = 0; !!this.childBindings && i < this.childBindings.length; i++) {
-                var child = this.childBindings[i];
-                child.notify(this);
+            var stack = [this];
+            stack[0].observer = observer;
+            while (stack.length > 0) {
+                var binding = stack.pop();
+                if (binding.hasChanges()) {
+                    binding.update(binding.observer);
+                }
+                for (var i = 0; i < binding.childBindings.length; i++) {
+                    var child = binding.childBindings[i];
+                    child.observer = binding;
+                    stack.push(child);
+                }
             }
         };
         Binding.prototype.update = function (observer) {
             var binding = this;
-            if (!!binding.dependencies)
-                binding.dependencies.length = 0;
+            binding.dependencies.length = 0;
             Util.ready(binding.state, function (s) {
                 binding.state = binding.execute(s);
-                if ((!!binding.childBindings && binding.childBindings.length > 0) || binding.dependencies.length > 0)
+                if ((binding.childBindings.length > 0) || (binding.dependencies.length > 0))
                     observer.subscribe(binding);
                 else
                     observer.unsubscribe(binding);
@@ -705,6 +703,9 @@ var Xania;
         TextBinding.prototype.execute = function () {
             var observable = this.context.subscribe(this);
             var newValue = this.tpl.execute(observable).valueOf();
+            this.setText(newValue);
+        };
+        TextBinding.prototype.setText = function (newValue) {
             this.dom.textContent = newValue;
         };
         return TextBinding;
@@ -734,13 +735,16 @@ var Xania;
                 dom.removeAttribute(attrName);
             }
             else {
-                if (typeof oldValue !== "undefined") {
-                    dom[attrName] = newValue;
-                }
-                else {
+                if (typeof oldValue === "undefined") {
                     var domAttr = document.createAttribute(attrName);
                     domAttr.value = newValue;
                     dom.setAttributeNode(domAttr);
+                }
+                else if (attrName === "class") {
+                    dom.className = newValue;
+                }
+                else {
+                    dom[attrName] = newValue;
                 }
             }
             binding.attrs[attrName] = newValue;
@@ -760,7 +764,11 @@ var Xania;
         ObservableFunction.prototype.prop = function (name) {
             var value = this.func[name];
             if (!!this.observer)
-                this.observer.addDependency(this.func, name, !!value ? value.valueOf() : value);
+                this.observer.addDependency({
+                    object: this.func,
+                    property: name,
+                    value: !!value ? value.valueOf() : value
+                });
             return Observable.value(this.func, value, this.observer);
         };
         return ObservableFunction;
@@ -781,7 +789,11 @@ var Xania;
         ObservableArray.prototype.itemAt = function (idx) {
             var item = this.arr[idx];
             if (!!this.observer)
-                this.observer.addDependency(this.arr, idx, item.valueOf());
+                this.observer.addDependency({
+                    object: this.arr,
+                    property: idx,
+                    value: item.valueOf()
+                });
             return Observable.value(this.arr, item, this.observer);
         };
         ObservableArray.prototype.filter = function (fn) {
@@ -790,7 +802,11 @@ var Xania;
             for (var i = 0; i < length; i++) {
                 var item = this.arr[i];
                 if (!!this.observer)
-                    this.observer.addDependency(this.arr, i, item.valueOf());
+                    this.observer.addDependency({
+                        object: this.arr,
+                        property: i,
+                        value: item.valueOf()
+                    });
                 if (!!Util.execute(fn, item))
                     result.push(item);
             }
@@ -801,7 +817,11 @@ var Xania;
             for (var i = this.arr.length - 1; i >= 0; i--) {
                 var item = this.arr[i];
                 if (!!this.observer)
-                    this.observer.addDependency(this.arr, i, item);
+                    this.observer.addDependency({
+                        object: this.arr,
+                        property: i,
+                        value: item
+                    });
                 if (!!Util.execute(fn, item))
                     count++;
             }
@@ -813,7 +833,6 @@ var Xania;
         function ObservableValue(value, observer) {
             this.value = value;
             this.observer = observer;
-            this.$id = Util.id(value);
         }
         Object.defineProperty(ObservableValue.prototype, "length", {
             get: function () {
@@ -825,13 +844,50 @@ var Xania;
         ObservableValue.prototype.prop = function (name) {
             var value = this.value[name].valueOf();
             if (!!this.observer)
-                this.observer.addDependency(this.value, name, value);
+                this.observer.addDependency({
+                    object: this.value,
+                    property: name,
+                    value: value
+                });
             return Observable.value(this.value, value, this.observer);
         };
         ObservableValue.prototype.valueOf = function () {
             return this.value;
         };
+        ObservableValue.prototype.scope = function (object, value) {
+            return Observable.value(object, value, this.observer);
+        };
+        ObservableValue.prototype.itemAt = function (idx) {
+            return this;
+        };
+        ObservableValue.prototype.subscribe = function (observer) {
+            if (this.observer === observer)
+                return this;
+            return new ObservableValue(this.value, observer);
+        };
         return ObservableValue;
+    })();
+    var ImmutableValue = (function () {
+        function ImmutableValue(value) {
+            this.value = value;
+        }
+        Object.defineProperty(ImmutableValue.prototype, "length", {
+            get: function () {
+                return 1;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        ImmutableValue.prototype.prop = function (name) {
+            var value = this.value[name];
+            if (value === null || value === undefined)
+                return value;
+            return new ImmutableValue(value);
+        };
+        ImmutableValue.prototype.valueOf = function () {
+            return this.value;
+        };
+        return ImmutableValue;
     })();
     var ObservableConst = (function () {
         function ObservableConst(value, observer) {
@@ -867,7 +923,11 @@ var Xania;
                 var value = object[name];
                 if (value !== null && value !== undefined) {
                     if (!!this.observer && typeof value !== "function") {
-                        this.observer.addDependency(object, name, value.valueOf());
+                        this.observer.addDependency({
+                            object: object,
+                            property: name,
+                            value: value
+                        });
                     }
                     return Observable.value(object, value, this.observer);
                 }
@@ -886,21 +946,20 @@ var Xania;
             return value;
         };
         Observable.value = function (object, value, observer) {
-            if (!observer.addDependency)
-                throw new TypeError("observer");
-            if (value === null || value === undefined || typeof value === "boolean" || typeof value === "number" || typeof value === "string")
+            if (value === null || value === undefined || typeof value === "boolean" ||
+                typeof value === "number" || typeof value === "string")
                 return value;
             else if (typeof value === "function" ||
                 typeof value.execute === "function" ||
                 typeof value.apply === "function" ||
                 typeof value.call === "function") {
-                return new ObservableFunction(value.valueOf(), object, observer);
+                return new ObservableFunction(value, object, observer);
             }
             else if (Array.isArray(value)) {
-                return new ObservableArray(value.valueOf(), observer);
+                return new ObservableArray(value, observer);
             }
             else {
-                return new ObservableValue(value.valueOf(), observer);
+                return new ObservableValue(value, observer);
             }
         };
         Observable.prototype.itemAt = function () {
@@ -950,7 +1009,7 @@ var Xania;
                 return Util.ready(tpl.modelAccessor.execute(observable), function (model) {
                     if (model === null || model === undefined)
                         return { bindings: [] };
-                    var arr = !!model.forEach ? model : [model];
+                    var arr = !!model.itemAt ? model : [model];
                     return { bindings: _this.executeArray(observable, arr, offset, tpl, target, bindings) };
                 });
             }
