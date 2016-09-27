@@ -129,7 +129,7 @@ var Xania;
                     itemAt: function (idx) {
                         var ctx = list.itemAt(idx);
                         var result = selector.execute(ctx);
-                        return !!ctx.scope ? ctx.scope(null, result) : result;
+                        return result;
                     },
                     forEach: function (fn) {
                         var l = length;

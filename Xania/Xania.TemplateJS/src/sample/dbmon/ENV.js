@@ -161,7 +161,7 @@ var ENV = ENV || (function () {
                 }
                 generateRow(row, keepIdentity, counter);
                 if (keepIdentity) {
-                    Object.freeze(row);
+                    // Object.freeze(row);
                 }
             } else {
                 data[i] = oldData[i];

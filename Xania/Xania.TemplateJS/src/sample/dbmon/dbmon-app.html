@@ -2,7 +2,7 @@
     <table class="table table-striped latest-data">
         <tbody>
             <!-- Database -->
-            <tr data-select="{{ for db in databases }}">
+            <tr data-select="{{ for db in databases }}" >
                 <td class="dbname">
                     {{db.dbname}}
                 </td>
@@ -13,11 +13,11 @@
                     </span>
                 </td>
                 <!-- Query -->
-                <td data-select="{{ (for q in db.lastSample.topFiveQueries) -> q }}" class="{{elapsedClassName}}">
-                    {{formatElapsed}}
+                <td data-select="{{ for q in db.lastSample.topFiveQueries }}" class="{{q.elapsedClassName}}">
+                    {{q.formatElapsed}}
                     <div class="popover left">
                         <div class="popover-content">
-                            {{query}}
+                            {{q.query}}
                         </div>
                         <div class="arrow"></div>
                     </div>

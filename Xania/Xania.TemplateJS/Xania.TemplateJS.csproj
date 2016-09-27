@@ -38,7 +38,6 @@
     <Content Include="Scripts\jasmine\jasmine-html.js" />
     <Content Include="Scripts\jasmine\jasmine.js" />
     <Content Include="spec\index.html" />
-    <Content Include="src\dom.js" />
     <Content Include="src\sample\css\base.css" />
     <TypeScriptCompile Include="src\sample\dbmon\app.ts" />
     <Content Include="src\sample\dbmon\app.js" />
@@ -60,7 +59,6 @@
   <ItemGroup>
     <TypeScriptCompile Include="app.ts" />
     <TypeScriptCompile Include="Scripts\typings\es6-shim\es6-shim.d.ts" />
-    <TypeScriptCompile Include="src\dom.ts" />
     <TypeScriptCompile Include="src\fun.ts" />
     <TypeScriptCompile Include="src\core.ts" />
     <Content Include="test\coretests.js" />
@@ -74,7 +72,6 @@
     <Content Include="package.json" />
     <Content Include="src\core.js.map" />
     <Content Include="src\fun.js.map" />
-    <Content Include="src\dom.js.map" />
     <Content Include="src\sample\dbmon\app.js.map" />
     <None Include="web.Debug.config">
       <DependentUpon>web.config</DependentUpon>

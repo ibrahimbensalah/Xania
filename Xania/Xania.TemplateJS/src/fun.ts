@@ -1,16 +1,12 @@
 ﻿module Xania.Ast {
-    interface IContext {
-        prop(name: string);
-        extend(object);
-    }
     interface IExpr {
-        execute(context: IContext);
+        execute(context);
         app(args: IExpr[]): IExpr;
     }
 
     class Const implements IExpr {
         constructor(public value: any) { }
-        execute(context: IContext) {
+        execute(context) {
             return this.value;
         }
         app(args: IExpr[]): IExpr {
@@ -24,7 +20,7 @@
     class Ident implements IExpr {
         constructor(public id: string) { }
 
-        execute(context: IContext) {
+        execute(context) {
             return !!context.prop ? context.prop(this.id) : context[this.id];
         }
         app(args: IExpr[]): IExpr {
@@ -39,7 +35,7 @@
         constructor(public targetExpr: IExpr, public name: string) {
         }
 
-        execute(context: IContext) {
+        execute(context) {
             const obj = this.targetExpr.execute(context);
             var member = !!obj.prop ? obj.prop(this.name) : obj[this.name];
 
@@ -60,7 +56,7 @@
         constructor(public targetExpr: IExpr, public args: IExpr[]) {
         }
 
-        execute(context: IContext) {
+        execute(context) {
             let args = this.args.map(x => x.execute(context));
 
             const target = this.targetExpr.execute(context);
@@ -89,7 +85,7 @@
     }
 
     class Unit implements IExpr {
-        execute(context: IContext) {
+        execute(context) {
             return undefined;
         }
         static instance = new Unit();
@@ -102,7 +98,7 @@
 
     class Not implements IExpr {
         constructor(public expr) { }
-        execute(context: IContext) {
+        execute(context) {
             return !this.expr.execute(context);
         }
         app(args: IExpr[]): IExpr {
@@ -118,7 +114,7 @@
     //    constructor(private left: IExpr, private right: IExpr, private handler) { }
     //    app(): IExpr { throw new Error("app on binary expression is not supported"); }
 
-    //    execute(context: IContext) {
+    //    execute(context) {
     //        var x = this.left.execute(context);
     //        var y = this.right.execute(context);
 
@@ -143,7 +139,7 @@
         constructor(private expr: IExpr) {
         }
 
-        execute(context: IContext) {
+        execute(context) {
             var list = this.query.execute(context);
             var selector = this.expr;
             return {
@@ -151,7 +147,7 @@
                 itemAt(idx) {
                     var ctx = list.itemAt(idx);
                     var result = selector.execute(ctx);
-                    return !!ctx.scope ? ctx.scope(null, result) : result;
+                    return result;
                 },
                 forEach(fn) {
                     var l = length;
@@ -185,7 +181,7 @@
             return !!context.extend ? context.extend(item) : Object.assign({}, context, item);
         }
 
-        execute(context: IContext) {
+        execute(context) {
             var result = this.sourceExpr.execute(context);
             var length = result.length;
             if (typeof result.length === "number") {
@@ -224,7 +220,7 @@
         constructor(private parts) {
         }
 
-        execute(context: IContext) {
+        execute(context) {
             if (this.parts.length === 0)
                 return "";
 
@@ -238,7 +234,7 @@
             return result;
         }
 
-        executePart(context: IContext, part) {
+        executePart(context, part) {
             if (typeof part === "string")
                 return part;
             else {
@@ -261,7 +257,7 @@
     class UnaryOperator implements IExpr {
         constructor(private handler: Function) {
         }
-        execute(context: IContext) { }
+        execute(context) { }
         app(args: IExpr[]): IExpr {
             throw new Error("Not implemented");
         }
