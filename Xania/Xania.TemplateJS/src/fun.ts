@@ -21,7 +21,7 @@
         constructor(public id: string) { }
 
         execute(context) {
-            return !!context.prop ? context.prop(this.id) : context[this.id];
+            return !!context.get ? context.get(this.id) : context[this.id];
         }
         app(args: IExpr[]): IExpr {
             return new App(this, args);
@@ -37,7 +37,7 @@
 
         execute(context) {
             const obj = this.targetExpr.execute(context);
-            var member = !!obj.prop ? obj.prop(this.name) : obj[this.name];
+            var member = !!obj.get ? obj.get(this.name) : obj[this.name];
 
             if (typeof member === "function")
                 return member.bind(obj);
@@ -110,24 +110,10 @@
         }
     }
 
-    //class BinaryExpression implements IExpr {
-    //    constructor(private left: IExpr, private right: IExpr, private handler) { }
-    //    app(): IExpr { throw new Error("app on binary expression is not supported"); }
-
-    //    execute(context) {
-    //        var x = this.left.execute(context);
-    //        var y = this.right.execute(context);
-
-    //        return this.handler(x, y);
-    //    }
-
-    //    toString() {
-    //        return `${this.left} = ${this.right}`;
-    //    }
-    //}
-
     class BinaryOperator {
-        static equals = (x, y) => x === y;
+        static equals = (x, y) => {
+            return (!!x ? x.valueOf() : x) === (!!y ? y.valueOf() : y);
+        };
         static add = (x, y) => x + y;
         static substract = (x, y) => x - y;
         static pipe = (x, y) => x(y);
@@ -176,9 +162,13 @@
         constructor(public varName: string, public sourceExpr: IExpr) { }
 
         merge(context, x) {
-            var item = {};
-            item[this.varName] = x.valueOf();
-            return !!context.extend ? context.extend(item) : Object.assign({}, context, item);
+            if (!!context.extend) {
+                return context.extend(this.varName, x);
+            } else {
+                var item = {};
+                item[this.varName] = x;
+                return item;
+            }
         }
 
         execute(context) {
@@ -557,7 +547,6 @@ module Xania.Fun {
         static filter(fn, list) {
             if (!list)
                 return [];
-
             return list.filter(fn);
         }
         static map(fn, list) {

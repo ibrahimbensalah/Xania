@@ -1,18 +1,19 @@
 var Todo = (function () {
-    function Todo(title) {
+    function Todo(title, completed) {
+        if (completed === void 0) { completed = false; }
         this.title = title;
-        this.completed = false;
+        this.completed = completed;
     }
     Todo.prototype.toggleCompletion = function () {
         this.completed = !this.completed;
     };
     return Todo;
-})();
+}());
 var TodoStore = (function () {
     function TodoStore() {
         this.todos = [];
-        for (var i = 0; i < 10; i++)
-            this.todos.push(new Todo("todo " + i));
+        for (var i = 0; i < 6; i++)
+            this.todos.push(new Todo("todo " + i, i % 2 === 0));
     }
     TodoStore.prototype.toggleAll = function () {
         var allCompleted = this.todos.every(function (e) { return e.completed; });
@@ -31,7 +32,7 @@ var TodoStore = (function () {
             console.error("todo not found", todo);
     };
     return TodoStore;
-})();
+}());
 var TodoApp = (function () {
     function TodoApp() {
         var _this = this;
@@ -39,8 +40,8 @@ var TodoApp = (function () {
         this.newTodoText = "";
         this.show = new State('all');
         this.addTodo = function () {
-            debugger;
             if (!!_this.newTodoText && _this.newTodoText.length > 0) {
+                console.debug("add todo", _this.newTodoText);
                 _this.store.todos.push(new Todo(_this.newTodoText));
                 _this.newTodoText = "";
             }
@@ -56,29 +57,30 @@ var TodoApp = (function () {
     };
     TodoApp.prototype.todoPredicate = function (value) {
         return function (todo) {
-            switch (value) {
+            var status = value.valueOf();
+            switch (status) {
                 case 'all':
                     return true;
                 default:
-                    return todo.completed === (value === 'completed');
+                    return todo.completed === (status === 'completed');
             }
         };
     };
     return TodoApp;
-})();
+}());
 var State = (function () {
-    function State(value) {
-        this.value = value;
+    function State(id) {
+        this.id = id;
     }
-    State.prototype.apply = function (_, args) {
-        this.value = args[0];
+    State.prototype.execute = function (newValue) {
+        this.id = newValue;
     };
     State.prototype.has = function (value) {
-        return this.value === value;
+        return this.id === value;
     };
     State.prototype.valueOf = function () {
-        return this.value;
+        return this.id;
     };
     return State;
-})();
+}());
 //# sourceMappingURL=todomvc.js.map

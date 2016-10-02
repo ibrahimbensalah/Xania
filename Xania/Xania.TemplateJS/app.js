@@ -14,7 +14,7 @@ var Greeter = (function () {
         clearTimeout(this.timerToken);
     };
     return Greeter;
-})();
+}());
 window.onload = function () {
 };
 //# sourceMappingURL=app.js.map

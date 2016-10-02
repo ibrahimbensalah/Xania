@@ -16,13 +16,13 @@ var Xania;
                 return "'" + this.value + "'";
             };
             return Const;
-        })();
+        }());
         var Ident = (function () {
             function Ident(id) {
                 this.id = id;
             }
             Ident.prototype.execute = function (context) {
-                return !!context.prop ? context.prop(this.id) : context[this.id];
+                return !!context.get ? context.get(this.id) : context[this.id];
             };
             Ident.prototype.app = function (args) {
                 return new App(this, args);
@@ -31,7 +31,7 @@ var Xania;
                 return this.id;
             };
             return Ident;
-        })();
+        }());
         var Member = (function () {
             function Member(targetExpr, name) {
                 this.targetExpr = targetExpr;
@@ -39,7 +39,7 @@ var Xania;
             }
             Member.prototype.execute = function (context) {
                 var obj = this.targetExpr.execute(context);
-                var member = !!obj.prop ? obj.prop(this.name) : obj[this.name];
+                var member = !!obj.get ? obj.get(this.name) : obj[this.name];
                 if (typeof member === "function")
                     return member.bind(obj);
                 return member;
@@ -51,7 +51,7 @@ var Xania;
                 return this.targetExpr + "." + this.name;
             };
             return Member;
-        })();
+        }());
         var App = (function () {
             function App(targetExpr, args) {
                 this.targetExpr = targetExpr;
@@ -79,7 +79,7 @@ var Xania;
                 return "(" + str + ")";
             };
             return App;
-        })();
+        }());
         var Unit = (function () {
             function Unit() {
             }
@@ -92,7 +92,7 @@ var Xania;
             };
             Unit.instance = new Unit();
             return Unit;
-        })();
+        }());
         var Not = (function () {
             function Not(expr) {
                 this.expr = expr;
@@ -107,16 +107,18 @@ var Xania;
                 return "not " + this.expr;
             };
             return Not;
-        })();
+        }());
         var BinaryOperator = (function () {
             function BinaryOperator() {
             }
-            BinaryOperator.equals = function (x, y) { return x === y; };
+            BinaryOperator.equals = function (x, y) {
+                return (!!x ? x.valueOf() : x) === (!!y ? y.valueOf() : y);
+            };
             BinaryOperator.add = function (x, y) { return x + y; };
             BinaryOperator.substract = function (x, y) { return x - y; };
             BinaryOperator.pipe = function (x, y) { return x(y); };
             return BinaryOperator;
-        })();
+        }());
         var Selector = (function () {
             function Selector(expr) {
                 this.expr = expr;
@@ -152,16 +154,21 @@ var Xania;
                 return this;
             };
             return Selector;
-        })();
+        }());
         var Query = (function () {
             function Query(varName, sourceExpr) {
                 this.varName = varName;
                 this.sourceExpr = sourceExpr;
             }
             Query.prototype.merge = function (context, x) {
-                var item = {};
-                item[this.varName] = x.valueOf();
-                return !!context.extend ? context.extend(item) : Object.assign({}, context, item);
+                if (!!context.extend) {
+                    return context.extend(this.varName, x);
+                }
+                else {
+                    var item = {};
+                    item[this.varName] = x;
+                    return item;
+                }
             };
             Query.prototype.execute = function (context) {
                 var _this = this;
@@ -197,7 +204,7 @@ var Xania;
                 return "(for " + this.varName + " in " + this.sourceExpr + ")";
             };
             return Query;
-        })();
+        }());
         var Template = (function () {
             function Template(parts) {
                 this.parts = parts;
@@ -231,7 +238,7 @@ var Xania;
                 return result;
             };
             return Template;
-        })();
+        }());
         var UnaryOperator = (function () {
             function UnaryOperator(handler) {
                 this.handler = handler;
@@ -241,7 +248,7 @@ var Xania;
                 throw new Error("Not implemented");
             };
             return UnaryOperator;
-        })();
+        }());
         var Compiler = (function () {
             function Compiler() {
                 this.patterns = {
@@ -451,7 +458,7 @@ var Xania;
                 return new Template(parts);
             };
             return Compiler;
-        })();
+        }());
         Ast.Compiler = Compiler;
     })(Ast = Xania.Ast || (Xania.Ast = {}));
 })(Xania || (Xania = {}));
@@ -496,7 +503,7 @@ var Xania;
                 return !list && list.reduce(fn, initialValue);
             };
             return List;
-        })();
+        }());
         Fun.List = List;
     })(Fun = Xania.Fun || (Xania.Fun = {}));
 })(Xania || (Xania = {}));

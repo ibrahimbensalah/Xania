@@ -1,10 +1,7 @@
-/// <reference path="../src/core.ts" />
-/// <reference path="../Scripts/typings/es6-shim/es6-shim.d.ts" />
 var __extends = (this && this.__extends) || function (d, b) {
     for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
     function __() { this.constructor = d; }
-    __.prototype = b.prototype;
-    d.prototype = new __();
+    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
 };
 var A = (function () {
     function A() {
@@ -13,7 +10,7 @@ var A = (function () {
         return 0;
     };
     return A;
-})();
+}());
 var Role = (function (_super) {
     __extends(Role, _super);
     function Role(prefix, emp) {
@@ -29,7 +26,7 @@ var Role = (function (_super) {
         configurable: true
     });
     return Role;
-})(A);
+}(A));
 var Employee = (function () {
     function Employee(firstName, lastName) {
         this.firstName = firstName;
@@ -57,7 +54,7 @@ var Employee = (function () {
         return this.fullName;
     };
     return Employee;
-})();
+}());
 var Company = (function (_super) {
     __extends(Company, _super);
     function Company(name, employees) {
@@ -96,7 +93,7 @@ var Company = (function (_super) {
         }
     };
     return Company;
-})(A);
+}(A));
 var Url = (function () {
     function Url() {
     }
@@ -123,7 +120,7 @@ var Url = (function () {
         });
     };
     return Url;
-})();
+}());
 var OrganisationViewModel = (function () {
     function OrganisationViewModel() {
     }
@@ -140,7 +137,7 @@ var OrganisationViewModel = (function () {
         }
     };
     return OrganisationViewModel;
-})();
+}());
 var ObserverHelper = (function () {
     function ObserverHelper() {
         this.reads = new Map();
@@ -179,5 +176,5 @@ var ObserverHelper = (function () {
         return false;
     };
     return ObserverHelper;
-})();
+}());
 //# sourceMappingURL=company.js.map

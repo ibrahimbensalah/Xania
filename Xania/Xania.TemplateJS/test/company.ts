@@ -1,5 +1,4 @@
 ﻿/// <reference path="../src/core.ts" />
-/// <reference path="../Scripts/typings/es6-shim/es6-shim.d.ts" />
 
 class A {
     getZero() {

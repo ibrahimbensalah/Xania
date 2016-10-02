@@ -11,7 +11,7 @@
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <DebugType>full</DebugType>
     <DebugSymbols>true</DebugSymbols>
-    <TypeScriptToolsVersion>1.5</TypeScriptToolsVersion>
+    <TypeScriptToolsVersion>1.8</TypeScriptToolsVersion>
     <UseIISExpress>true</UseIISExpress>
     <IISExpressSSLPort />
     <IISExpressAnonymousAuthentication />
@@ -21,6 +21,7 @@
     <RestorePackages>true</RestorePackages>
     <NuGetPackageImportStamp>5f5b75b6</NuGetPackageImportStamp>
     <TypeScriptExperimentalDecorators>true</TypeScriptExperimentalDecorators>
+    <UseGlobalApplicationHostFile />
   </PropertyGroup>
   <ItemGroup>
     <Content Include="app.css" />
@@ -39,6 +40,7 @@
     <Content Include="Scripts\jasmine\jasmine.js" />
     <Content Include="spec\index.html" />
     <Content Include="src\sample\css\base.css" />
+    <TypeScriptCompile Include="Scripts\typings\es6-shim\es6-shim.d.ts" />
     <TypeScriptCompile Include="src\sample\dbmon\app.ts" />
     <Content Include="src\sample\dbmon\app.js" />
     <Content Include="src\sample\dbmon\ENV.js" />
@@ -58,7 +60,6 @@
   </ItemGroup>
   <ItemGroup>
     <TypeScriptCompile Include="app.ts" />
-    <TypeScriptCompile Include="Scripts\typings\es6-shim\es6-shim.d.ts" />
     <TypeScriptCompile Include="src\fun.ts" />
     <TypeScriptCompile Include="src\core.ts" />
     <Content Include="test\coretests.js" />

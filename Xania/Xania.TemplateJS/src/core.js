@@ -1,17 +1,17 @@
+"use strict";
 var __extends = (this && this.__extends) || function (d, b) {
     for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
     function __() { this.constructor = d; }
-    __.prototype = b.prototype;
-    d.prototype = new __();
+    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
 };
-/// <reference path="../scripts/typings/es6-shim/es6-shim.d.ts" />
 var Xania;
 (function (Xania) {
+    "use strict";
     var Application = (function () {
         function Application(libs) {
             this.libs = libs;
             this.components = new Map();
-            this.observer = new Observer();
+            this.contexts = [];
             this.compiler = new Xania.Ast.Compiler();
             this.compile = this.compiler.template.bind(this.compiler);
         }
@@ -76,7 +76,7 @@ var Xania;
                     if (!!handler) {
                         var observable = binding.context.valueOf();
                         Util.execute(handler, observable);
-                        _this.observer.update();
+                        _this.update();
                     }
                 }
             };
@@ -97,11 +97,14 @@ var Xania;
                 else {
                     onchange(evt);
                 }
-                _this.observer.update();
+                _this.update();
             });
         };
         Application.prototype.update = function () {
-            this.observer.update();
+            for (var i = 0; i < this.contexts.length; i++) {
+                var ctx = this.contexts[i];
+                ctx.update(null);
+            }
         };
         Application.prototype.getComponent = function (node) {
             var name = node.nodeName.replace(/\-/, "").toLowerCase();
@@ -151,13 +154,12 @@ var Xania;
             }
         };
         Application.prototype.bind = function (view, viewModel, target) {
-            // var binder = new Binder(component, this.libs, this.observer);
             var _this = this;
-            var context = new Observable([viewModel], this.libs.reduce(function (x, y) { return Object.assign(x, y); }, {}));
+            var observable = new RootContainer(viewModel, this.libs.reduce(function (x, y) { return Object.assign(x, y); }, {}));
+            this.contexts.push(observable);
             Util.ready(this.import(view), function (dom) {
                 var tpl = _this.parseDom(dom);
-                var rootBinding = new ScopeBinding({ context: context }, tpl, target, 0);
-                rootBinding.update(_this.observer);
+                Binder.executeTemplate(observable, tpl, target, 0);
             });
             return this;
         };
@@ -215,16 +217,6 @@ var Xania;
                 var fn = this.compile(attr.value);
                 tagElement.select(fn);
             }
-            else if (name === "data-mutationid") {
-                tagElement.dataMutationId = this.compile(attr.value);
-            }
-            else if (name === "checked") {
-                var fn = this.compile(attr.value);
-                tagElement.attr(name, function (ctx) {
-                    var result = Util.execute(fn, ctx);
-                    return !!result ? "checked" : null;
-                });
-            }
             else {
                 var tpl = this.compile(attr.value);
                 tagElement.attr(name, tpl || attr.value);
@@ -237,7 +229,35 @@ var Xania;
             }
         };
         return Application;
-    })();
+    }());
+    var RootContainer = (function () {
+        function RootContainer(instance, libs) {
+            this.instance = instance;
+            this.libs = libs;
+            this.properties = {};
+        }
+        RootContainer.prototype.get = function (name) {
+            var existing = this.properties[name];
+            if (!!existing)
+                return existing;
+            return this.properties[name] = new Immutable(this.instance[name]);
+        };
+        RootContainer.prototype.subscribe = function (subscr) { throw new Error("Not implemented"); };
+        RootContainer.prototype.execute = function (args) { throw new Error("Not implemented"); };
+        RootContainer.prototype.update = function () {
+            for (var k in this.properties) {
+                var prop = this.properties[k];
+                prop.update();
+            }
+        };
+        RootContainer.prototype.forEach = function (fn) {
+            fn(this);
+        };
+        RootContainer.prototype.extend = function (name, value) {
+            return new Container(this).add(name, value);
+        };
+        return RootContainer;
+    }());
     var TextTemplate = (function () {
         function TextTemplate(tpl) {
             this.tpl = tpl;
@@ -245,8 +265,8 @@ var Xania;
         TextTemplate.prototype.execute = function (context) {
             return this.tpl.execute(context);
         };
-        TextTemplate.prototype.bind = function (context) {
-            return new TextBinding(this, context);
+        TextTemplate.prototype.bind = function () {
+            return new TextBinding(this);
         };
         TextTemplate.prototype.toString = function () {
             return this.tpl.toString();
@@ -255,13 +275,13 @@ var Xania;
             return [];
         };
         return TextTemplate;
-    })();
+    }());
     var ContentTemplate = (function () {
         function ContentTemplate() {
             this._children = [];
         }
-        ContentTemplate.prototype.bind = function (context) {
-            return new ContentBinding(this, context);
+        ContentTemplate.prototype.bind = function () {
+            return new ContentBinding(this);
         };
         ContentTemplate.prototype.children = function () {
             return this._children;
@@ -271,7 +291,7 @@ var Xania;
             return this;
         };
         return ContentTemplate;
-    })();
+    }());
     var TagTemplate = (function () {
         function TagTemplate(name) {
             this.name = name;
@@ -310,8 +330,13 @@ var Xania;
         TagTemplate.prototype.executeAttributes = function (context, dom, resolve) {
             var classes = [];
             this.attributes.forEach(function attributesForEachBoundFn(tpl, name) {
-                var value = Util.execute(tpl, context);
-                if (name === "class") {
+                var value = Util.execute(tpl, context).valueOf();
+                if (value !== null && value !== undefined && !!value.valueOf)
+                    value = value.valueOf();
+                if (name === "checked") {
+                    resolve(name, !!value ? "checked" : null, dom);
+                }
+                else if (name === "class") {
                     classes.push(value);
                 }
                 else if (name.startsWith("class.")) {
@@ -324,9 +349,7 @@ var Xania;
                     resolve(name, value, dom);
                 }
             });
-            if (classes.length > 0) {
-                resolve("class", Util.join(" ", classes), dom);
-            }
+            resolve("class", classes.length > 0 ? Util.join(" ", classes) : null, dom);
         };
         TagTemplate.prototype.executeEvents = function (context) {
             var result = {}, self = this;
@@ -340,20 +363,40 @@ var Xania;
             return result;
         };
         return TagTemplate;
-    })();
+    }());
     var PropertyDependency = (function () {
         function PropertyDependency(object, property, value) {
             this.object = object;
             this.property = property;
             this.value = value;
+            if (!!value.id) {
+                throw new Error();
+            }
         }
         PropertyDependency.prototype.hasChanges = function () {
             var curValue = this.object[this.property];
-            curValue = !!curValue ? curValue.valueOf() : curValue;
             return curValue !== this.value;
         };
+        PropertyDependency.create = function (object, name, value) {
+            if (!!value && !!value.id)
+                return new IdentifierDependency(object, name, value.id);
+            else
+                return new PropertyDependency(object, name, value);
+        };
         return PropertyDependency;
-    })();
+    }());
+    var IdentifierDependency = (function () {
+        function IdentifierDependency(object, property, value) {
+            this.object = object;
+            this.property = property;
+            this.id = value.id;
+        }
+        IdentifierDependency.prototype.hasChanges = function () {
+            var curValue = this.object[this.property];
+            return curValue === null || curValue === undefined || curValue.id !== this.id;
+        };
+        return IdentifierDependency;
+    }());
     var Util = (function () {
         function Util() {
         }
@@ -455,127 +498,6 @@ var Xania;
             }
             return Util.partialFunc.bind({ context: this, func: func, baseArgs: baseArgs });
         };
-        Util.observe = function (target, observer) {
-            if (!target)
-                return target;
-            if (target.isSpy) {
-                if (target.$observer === observer)
-                    return target;
-                target = target.valueOf();
-            }
-            if (typeof target === "object") {
-                return Array.isArray(target)
-                    ? Util.observeArray(target, observer)
-                    : Util.observeObject(target, observer);
-            }
-            else {
-                return target;
-            }
-        };
-        Util.observeArray = function (arr, observer) {
-            return Util.proxy(arr, {
-                get: function (target, property) {
-                    switch (property) {
-                        case "$id":
-                            return arr;
-                        case "$observer":
-                            return observer;
-                        case "isSpy":
-                            return true;
-                        case "valueOf":
-                            return arr.valueOf.bind(arr);
-                        case "indexOf":
-                            return function (item) {
-                                for (var i = 0; i < arr.length; i++) {
-                                    if (Util.id(item) === Util.id(arr[i]))
-                                        return i;
-                                }
-                                return -1;
-                            };
-                        case "length":
-                            return arr.length;
-                        case "constructor":
-                            return Array;
-                        case "concat":
-                            return function (append) {
-                                return arr.concat(append);
-                            };
-                        case "splice":
-                        case "some":
-                        case "every":
-                        case "slice":
-                        case "filter":
-                        case "map":
-                        case "pop":
-                        case "push":
-                            return Util.observeProperty(arr, property, arr[property], observer);
-                        default:
-                            if (arr.hasOwnProperty(property))
-                                return Util.observeProperty(arr, property, arr[property], observer);
-                            return undefined;
-                    }
-                },
-                set: function (target, property, value) {
-                    if (Util.id(arr[property]) !== Util.id(value)) {
-                        arr[property] = value;
-                        observer.setChange(Util.id(arr), property);
-                    }
-                    return true;
-                }
-            });
-        };
-        Util.observeObject = function (object, observer) {
-            return Util.proxy(object, {
-                get: function (target, property) {
-                    switch (property) {
-                        case "$id":
-                            return object;
-                        case "$observer":
-                            return observer;
-                        case "isSpy":
-                            return true;
-                        case "valueOf":
-                            return function () { return object; };
-                        case "constructor":
-                            return object.constructor;
-                        case "prop":
-                            return function (property) {
-                                return Util.observeProperty(object, property, object[property], observer);
-                            };
-                        default:
-                            return Util.observeProperty(object, property, object[property], observer);
-                    }
-                },
-                set: function (target, property, value) {
-                    if (Util.id(object[property]) !== Util.id(value)) {
-                        object[property] = value;
-                        observer.setChange(Util.id(object), property);
-                    }
-                    return true;
-                }
-            });
-        };
-        Util.observeFunction = function (object, func, observer, args) {
-            var retval = func.apply(object, args);
-            return Util.observe(retval, observer);
-        };
-        Util.observeProperty = function (object, prop, value, observer) {
-            if (typeof value === "function") {
-                var proxy = Util.observe(object, observer);
-                return function () {
-                    return Util.observeFunction(proxy, value, observer, arguments);
-                };
-            }
-            else {
-                observer.addDependency(new PropertyDependency(Util.id(object), prop, value));
-                return Util.observe(value, observer);
-            }
-        };
-        Util.proxy = function (target, config) {
-            if (typeof window["Proxy"] === "undefined")
-                throw new Error("Browser is not supported");
-            return new (window["Proxy"])(target, config);
-        };
         Util.join = function (separator, value) {
             if (Array.isArray(value)) {
                 return value.length > 0 ? value.sort().join(separator) : null;
@@ -585,17 +507,14 @@ var Xania;
         Util.id = function (object) {
             if (object === null || object === undefined)
                 return object;
-            var id = object.$id;
+            var id = object['id'];
             if (id === undefined)
                 return object;
-            if (typeof id === "function")
-                return id();
-            else
-                return id;
+            return id;
         };
         Util.empty = [];
         return Util;
-    })();
+    }());
     var Router = (function () {
         function Router() {
             this.currentAction = null;
@@ -606,104 +525,22 @@ var Xania;
             return this.currentAction = name;
         };
         return Router;
-    })();
+    }());
     var Binding = (function () {
-        function Binding(context) {
-            this.dependencies = [];
-            this.state = undefined;
-            this.childBindings = [];
-            this.shouldUpdate = true;
-            this.context = context.subscribe(this);
+        function Binding() {
         }
-        Binding.prototype.subscribe = function (binding) {
-            if (this.childBindings.indexOf(binding) < 0) {
-                this.childBindings.push(binding);
-            }
-        };
-        Binding.prototype.unsubscribe = function (binding) {
-            var idx = this.childBindings.indexOf(binding);
-            if (idx >= 0) {
-                var deleted = this.childBindings.splice(idx, 1);
-                for (var i = 0; i < deleted.length; i++)
-                    deleted[i].parent = null;
-            }
-        };
-        Binding.prototype.addDependency = function (dependency) {
-            this.dependencies.push(dependency);
-        };
-        Binding.prototype.notify = function (observer) {
-            var stack = [this];
-            if (this.hasChanges())
-                this.update(observer);
-            while (stack.length > 0) {
-                var binding = stack.pop();
-                for (var i = 0; i < binding.childBindings.length; i++) {
-                    var child = binding.childBindings[i];
-                    if (child.hasChanges()) {
-                        child.update(binding);
-                    }
-                    if (child.shouldUpdate) {
-                        stack.push(child);
-                    }
-                }
-            }
-        };
-        Binding.prototype.update = function (observer) {
+        Binding.prototype.update = function (context) {
             var binding = this;
-            binding.dependencies.length = 0;
             Util.ready(binding.state, function (s) {
-                binding.state = binding.execute(s);
-                if ((binding.childBindings.length > 0) || (binding.dependencies.length > 0))
-                    observer.subscribe(binding);
-                else
-                    observer.unsubscribe(binding);
+                binding.state = binding.execute(s, context);
             });
         };
-        Binding.prototype.hasChanges = function () {
-            if (!this.dependencies) {
-                return true;
-            }
-            var deps = this.dependencies;
-            for (var i = deps.length - 1; i >= 0; i--) {
-                var dep = deps[i];
-                if (dep.hasChanges())
-                    return true;
-            }
-            return false;
-        };
         return Binding;
-    })();
-    var Observer = (function () {
-        function Observer() {
-            this.bindings = [];
-        }
-        Observer.prototype.subscribe = function (binding) {
-            if (this.bindings.indexOf(binding) < 0) {
-                this.bindings.push(binding);
-            }
-        };
-        Observer.prototype.unsubscribe = function (binding) {
-            var idx = this.bindings.indexOf(binding);
-            if (idx >= 0) {
-                this.bindings.splice(idx, 1);
-            }
-        };
-        Observer.prototype.update = function () {
-            if (this.bindings.length != Observer['dummy']) {
-                Observer['dummy'] = this.bindings.length;
-                console.log(this.bindings.length);
-            }
-            for (var i = 0; i < this.bindings.length; i++) {
-                var binding = this.bindings[i];
-                binding.notify(this);
-            }
-        };
-        return Observer;
-    })();
+    }());
     var ContentBinding = (function (_super) {
         __extends(ContentBinding, _super);
-        function ContentBinding(tpl, context) {
-            _super.call(this, context);
+        function ContentBinding(tpl) {
+            _super.call(this);
             this.tpl = tpl;
             this.dom = document.createDocumentFragment();
         }
@@ -711,35 +548,35 @@ var Xania;
             return this.dom;
         };
         return ContentBinding;
-    })(Binding);
+    }(Binding));
     var TextBinding = (function (_super) {
         __extends(TextBinding, _super);
-        function TextBinding(tpl, context) {
-            _super.call(this, context);
+        function TextBinding(tpl) {
+            _super.call(this);
             this.tpl = tpl;
             this.dom = document.createTextNode("");
         }
-        TextBinding.prototype.execute = function () {
-            var newValue = this.tpl.execute(this.context).valueOf();
+        TextBinding.prototype.execute = function (state, context) {
+            var newValue = this.tpl.execute(context).valueOf();
             this.setText(newValue);
         };
         TextBinding.prototype.setText = function (newValue) {
             this.dom.textContent = newValue;
         };
         return TextBinding;
-    })(Binding);
+    }(Binding));
     var TagBinding = (function (_super) {
         __extends(TagBinding, _super);
         function TagBinding(tpl, context) {
-            _super.call(this, context);
+            _super.call(this);
             this.tpl = tpl;
             this.attrs = {};
             this.dom = document.createElement(tpl.name);
             this.dom.attributes["__binding"] = this;
         }
-        TagBinding.prototype.execute = function () {
+        TagBinding.prototype.execute = function (state, context) {
             var tpl = this.tpl;
-            tpl.executeAttributes(this.context, this, TagBinding.executeAttribute);
+            tpl.executeAttributes(context, this, TagBinding.executeAttribute);
             return this.dom;
         };
         TagBinding.executeAttribute = function (attrName, newValue, binding) {
@@ -767,246 +604,206 @@ var Xania;
             binding.attrs[attrName] = newValue;
         };
         return TagBinding;
-    })(Binding);
-    var ObservableFunction = (function () {
-        function ObservableFunction(func, context, observer) {
-            this.func = func;
-            this.context = context;
-            this.observer = observer;
+    }(Binding));
+    var Immutable = (function () {
+        function Immutable(value) {
+            this.value = value;
+            this.properties = {};
         }
-        ObservableFunction.prototype.execute = function () {
-            var value = this.func.apply(this.context, arguments);
-            return Observable.value(this.context, value, this.observer);
+        Immutable.prototype.update = function () {
+            var properties = this.properties;
+            for (var n in properties) {
+                if (properties.hasOwnProperty(n)) {
+                    properties[n].update(this.value);
+                }
+            }
         };
-        return ObservableFunction;
-    })();
-    var ObservableArray = (function () {
-        function ObservableArray(arr, observer) {
-            this.arr = arr;
-            this.observer = observer;
-            this.$id = Util.id(arr);
-        }
-        Object.defineProperty(ObservableArray.prototype, "length", {
-            get: function () {
-                return this.arr.length;
-            },
-            enumerable: true,
-            configurable: true
-        });
-        ObservableArray.prototype.itemAt = function (idx) {
-            var item = this.arr[idx];
-            if (!!this.observer)
-                this.observer.addDependency(new PropertyDependency(this.arr, idx, item.valueOf()));
-            return Observable.value(this.arr, item, this.observer);
+        Immutable.prototype.get = function (name) {
+            var existing = this.properties[name];
+            if (!!existing)
+                return existing;
+            return this.properties[name] = new Property(this.value, name);
         };
-        ObservableArray.prototype.filter = function (fn) {
+        Immutable.prototype.valueOf = function () {
+            return this.value;
+        };
+        Immutable.prototype.subscribe = function (subscr) { return false; };
+        Immutable.prototype.hasChanges = function () { return false; };
+        Immutable.prototype.execute = function (args) {
+            return null;
+        };
+        Immutable.prototype.map = function (fn) {
             var result = [];
-            var length = this.arr.length;
-            for (var i = 0; i < length; i++) {
-                var item = this.arr[i];
-                if (!!this.observer)
-                    this.observer.addDependency(new PropertyDependency(this.arr, i, item.valueOf()));
-                if (!!Util.execute(fn, item))
-                    result.push(item);
+            for (var i = 0; i < this.value.length; i++) {
+                var value = this.get(i);
+                result.push(fn(value, i));
             }
-            return new ObservableArray(result, this.observer);
+            return result;
         };
-        ObservableArray.prototype.count = function (fn) {
-            var count = 0;
-            for (var i = this.arr.length - 1; i >= 0; i--) {
-                var item = this.arr[i];
-                if (!!this.observer)
-                    this.observer.addDependency(new PropertyDependency(this.arr, i, item));
-                if (!!Util.execute(fn, item))
-                    count++;
-            }
-            return count;
-        };
-        return ObservableArray;
-    })();
-    var ObservableValue = (function () {
-        function ObservableValue(value, observer) {
-            this.value = value;
-            this.observer = observer;
+        return Immutable;
+    }());
+    var Sequence = (function () {
+        function Sequence(arr) {
+            this.arr = arr;
+            this.subscribers = [];
+            this.length = arr.length;
         }
-        Object.defineProperty(ObservableValue.prototype, "length", {
-            get: function () {
-                return 1;
-            },
-            enumerable: true,
-            configurable: true
-        });
-        ObservableValue.prototype.prop = function (name) {
-            var value = this.value[name].valueOf();
-            if (!!this.observer)
-                this.observer.addDependency(new PropertyDependency(this.value, name, value));
-            return Observable.value(this.value, value, this.observer);
+        Sequence.create = function (value) {
+            return new Sequence(value);
         };
-        ObservableValue.prototype.valueOf = function () {
-            return this.value;
+        Sequence.prototype.get = function (idx) {
+            return this.arr[idx];
         };
-        ObservableValue.prototype.itemAt = function (idx) {
+        Sequence.prototype.subscribe = function (subscr) {
+            if (this.subscribers.indexOf(subscr) < 0)
+                this.subscribers.push(subscr);
+        };
+        Sequence.prototype.execute = function (args) { throw new Error("Not implemented"); };
+        Sequence.prototype.update = function () {
+            for (var i = 0; i < this.arr.length; i++) {
+                this.arr[i].notify();
+            }
+        };
+        Sequence.prototype.hasChanges = function () { return false; };
+        Sequence.prototype.forEach = function (fn) {
+            for (var i = 0; i < this.arr.length; i++) {
+                var item = this.arr[i];
+                fn(item);
+            }
             return this;
         };
-        ObservableValue.prototype.subscribe = function (observer) {
-            if (this.observer === observer)
-                return this;
-            return new ObservableValue(this.value, observer);
-        };
-        ObservableValue.prototype.toString = function () {
-            return this.value;
-        };
-        return ObservableValue;
-    })();
-    var ImmutableValue = (function () {
-        function ImmutableValue(value) {
-            this.value = value;
+        return Sequence;
+    }());
+    var Container = (function () {
+        function Container(parent) {
+            if (parent === void 0) { parent = null; }
+            this.parent = parent;
+            this.map = {};
         }
-        Object.defineProperty(ImmutableValue.prototype, "length", {
-            get: function () {
-                return 1;
-            },
-            enumerable: true,
-            configurable: true
-        });
-        ImmutableValue.prototype.prop = function (name) {
-            var value = this.value[name];
-            if (value === null || value === undefined)
-                return value;
-            return new ImmutableValue(value);
-        };
-        ImmutableValue.prototype.valueOf = function () {
-            return this.value;
-        };
-        return ImmutableValue;
-    })();
-    var Observable = (function () {
-        function Observable(instances, lib, observer) {
-            if (observer === void 0) { observer = null; }
-            this.instances = instances;
-            this.lib = lib;
-            this.observer = observer;
-            this.length = 1;
-            this.cache = {};
-        }
-        Observable.prototype.valueOf = function () {
-            var obj = {};
-            for (var i = 0; i < this.instances.length; i++) {
-                Object.assign(obj, this.instances[i]);
-            }
-            return obj;
-        };
-        Observable.prototype.prop = function (name) {
-            //var x = this.cache[name];
-            //if (x !== undefined)
-            //    return x;
-            for (var i = 0; i < this.instances.length; i++) {
-                var object = this.instances[i];
-                var value = object[name];
-                if (value !== undefined) {
-                    if (!!this.observer && typeof value !== "function") {
-                        this.observer.addDependency(new PropertyDependency(object, name, value));
-                    }
-                    return Observable.value(object, value, this.observer);
-                }
-            }
-            return this.lib[name];
-        };
-        Observable.prototype.set = function (name, value) {
-            for (var i = 0; i < this.instances.length; i++) {
-                var object = this.instances[i];
-                if (object.hasOwnProperty(name)) {
-                    object[name] = value;
-                    break;
-                }
-            }
-            return value;
-        };
-        Observable.value = function (object, value, observer) {
-            if (value === null ||
-                value === undefined ||
-                typeof value === "boolean" ||
-                typeof value === "number" ||
-                typeof value === "string") {
-                return new ObservableValue(value, observer);
-            }
-            else if (typeof value === "function" ||
-                typeof value.execute === "function" ||
-                typeof value.apply === "function" ||
-                typeof value.call === "function") {
-                return new ObservableFunction(value, object, observer);
-            }
-            else if (Array.isArray(value)) {
-                return new ObservableArray(value, observer);
-            }
-            else {
-                return new ObservableValue(value, observer);
-            }
-        };
-        Observable.prototype.itemAt = function () {
+        Container.prototype.add = function (name, value) {
+            this.map[name] = value;
             return this;
         };
-        Observable.prototype.extend = function (object) {
-            if (!object) {
-                return this;
-            }
-            return new Observable([object].concat(this.instances), this.lib, this.observer);
+        Container.prototype.extend = function (name, value) {
+            return new Container().add(name, value);
         };
-        Observable.prototype.subscribe = function (observer) {
-            if (this.observer === observer)
-                return this;
-            return new Observable(this.instances, this.lib, observer);
+        Container.prototype.get = function (name) {
+            return this.map[name];
         };
-        return Observable;
-    })();
-    var ScopeBinding = (function (_super) {
-        __extends(ScopeBinding, _super);
-        function ScopeBinding(scope, tpl, target, offset) {
-            _super.call(this, scope.context);
-            this.scope = scope;
-            this.tpl = tpl;
-            this.target = target;
-            this.offset = offset;
+        Container.prototype.forEach = function (fn) {
+            fn(this, 0);
+        };
+        return Container;
+    }());
+    var Property = (function () {
+        function Property(context, name) {
+            this.name = name;
+            this.subscribers = [];
+            this.properties = {};
+            this.value = context[name];
         }
-        Object.defineProperty(ScopeBinding.prototype, "context", {
-            get: function () {
-                return this.scope.context.subscribe(this);
-            },
-            enumerable: true,
-            configurable: true
-        });
-        ScopeBinding.prototype.execute = function (state) {
-            var _this = this;
-            var observable = this.context;
-            var tpl = this.tpl;
-            var target = this.target;
-            var offset = this.offset;
-            var bindings = !!state ? state.bindings : [];
+        Property.prototype.subscribe = function (subscr) {
+            if (this.subscribers.indexOf(subscr) < 0)
+                this.subscribers.push(subscr);
+        };
+        Property.prototype.update = function (context) {
+            var currentValue = context[this.name];
+            if (this.value !== currentValue) {
+                this.value = currentValue;
+                for (var i = 0; i < this.subscribers.length; i++)
+                    this.subscribers[i].notify(currentValue);
+                this.subscribers.length = 0;
+            }
+            var properties = this.properties;
+            for (var n in properties) {
+                if (properties.hasOwnProperty(n)) {
+                    properties[n].update(currentValue);
+                }
+            }
+        };
+        Property.prototype.get = function (name) {
+            var existing = this.properties[name];
+            if (!!existing)
+                return existing;
+            return this.properties[name] = new Property(this.value, name);
+        };
+        Property.prototype.valueOf = function () {
+            return this.value;
+        };
+        Property.prototype.hasChanges = function () {
+            return this.value !== this.valueOf();
+        };
+        Property.prototype.execute = function (args) {
+            return null;
+        };
+        Property.prototype.forEach = function (fn) {
+            fn(this, 0);
+        };
+        Property.prototype.map = function (fn) {
+            var result = [];
+            for (var i = 0; i < this.value.length; i++) {
+                var item = this.get(i);
+                result.push(fn(item));
+            }
+            return result;
+        };
+        return Property;
+    }());
+    var Binder = (function () {
+        function Binder(viewModel, libs) {
+            this.context = new RootContainer(viewModel, libs.reduce(function (x, y) { return Object.assign(x, y); }, {}));
+        }
+        Binder.removeBindings = function (target, bindings, maxLength) {
+            while (bindings.length > maxLength) {
+                var oldBinding = bindings.pop();
+                target.removeChild(oldBinding.dom);
+            }
+        };
+        Binder.reduceChild = function (prev, cur) {
+            var parentBinding = prev.parentBinding;
+            var context = prev.context;
+            prev.offset = Util.ready(prev.offset, function (p) {
+                var state = Binder.executeTemplate(context, cur, parentBinding.dom, p);
+                return Util.ready(state, function (x) { return p + x.bindings.length; });
+            });
+            return prev;
+        };
+        Binder.find = function (selector) {
+            if (typeof selector === "string")
+                return document.querySelector(selector);
+            return selector;
+        };
+        Binder.executeTemplate = function (observable, tpl, target, offset, state) {
             if (!!tpl.modelAccessor) {
                 return Util.ready(tpl.modelAccessor.execute(observable), function (model) {
                     if (model === null || model === undefined)
-                        return { bindings: [] };
-                    var arr = !!model.itemAt ? model : [model];
-                    return { bindings: _this.executeArray(observable, arr, offset, tpl, target, bindings) };
+                        return { bindings: [], data: model };
+                    var seq = Sequence.create(model);
+                    return {
+                        bindings: Binder.executeArray(seq, offset, tpl, target, state),
+                        data: seq
+                    };
                 });
             }
             else {
-                return { bindings: this.executeArray(observable, observable, offset, tpl, target, bindings) };
+                return {
+                    bindings: Binder.executeArray(observable, offset, tpl, target, state),
+                    data: observable
+                };
             }
         };
-        ScopeBinding.prototype.executeArray = function (context, arr, offset, tpl, target, bindings) {
+        Binder.executeArray = function (arr, offset, tpl, target, state) {
+            var bindings = !!state ? state.bindings : [];
             Binder.removeBindings(target, bindings, arr.length);
             var startInsertAt = offset + bindings.length;
-            for (var idx = 0; idx < arr.length; idx++) {
-                var result = arr.itemAt(idx);
+            arr.forEach(function (result, idx) {
                 if (idx < bindings.length) {
-                    bindings[idx].update(result, this);
                 }
                 else {
-                    var newBinding = tpl.bind(result);
+                    var newBinding = tpl.bind();
                     tpl.children()
                         .reduce(Binder.reduceChild, { context: result, offset: 0, parentBinding: newBinding });
-                    newBinding.update(this);
+                    newBinding.update(result);
                     var insertAt = startInsertAt + idx;
                     if (insertAt < target.childNodes.length) {
                         var beforeElement = target.childNodes[insertAt];
@@ -1017,39 +814,11 @@ var Xania;
                     }
                     bindings.push(newBinding);
                 }
-            }
+            });
             return bindings;
         };
-        return ScopeBinding;
-    })(Binding);
-    var Binder = (function () {
-        function Binder(viewModel, libs, observer) {
-            if (observer === void 0) { observer = new Observer(); }
-            this.observer = observer;
-            this.context = new Observable([viewModel], libs.reduce(function (x, y) { return Object.assign(x, y); }, {}));
-        }
-        Binder.removeBindings = function (target, bindings, maxLength) {
-            while (bindings.length > maxLength) {
-                var oldBinding = bindings.pop();
-                target.removeChild(oldBinding.dom);
-            }
-        };
-        Binder.reduceChild = function (prev, cur) {
-            var parentBinding = prev.parentBinding;
-            prev.offset = Util.ready(prev.offset, function (p) {
-                var binding = new ScopeBinding(parentBinding, cur, parentBinding.dom, p);
-                binding.update(parentBinding);
-                return Util.ready(binding.state, function (x) { return p + x.bindings.length; });
-            });
-            return prev;
-        };
-        Binder.find = function (selector) {
-            if (typeof selector === "string")
-                return document.querySelector(selector);
-            return selector;
-        };
         return Binder;
-    })();
+    }());
     Xania.Binder = Binder;
     function app() {
         var libs = [];

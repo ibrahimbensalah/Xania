@@ -1,8 +1,6 @@
 ﻿class Todo {
-    constructor(public title: string) {
+    constructor(public title: string, public completed = false) {
     }
-
-    public completed = false;
 
     toggleCompletion() {
         this.completed = !this.completed;
@@ -15,8 +13,8 @@ class TodoStore {
     constructor() {
         this.todos = [];
 
-        for (var i = 0; i < 10; i++)
-            this.todos.push(new Todo(`todo ${i}`));
+        for (var i = 0; i < 6; i++)
+            this.todos.push(new Todo(`todo ${i}`, i % 2 === 0));
     }
 
     toggleAll() {
@@ -49,8 +47,8 @@ class TodoApp {
     }
 
     addTodo = () => {
-        debugger;
         if (!!this.newTodoText && this.newTodoText.length > 0) {
+            console.debug("add todo", this.newTodoText);
             this.store.todos.push(new Todo(this.newTodoText));
             this.newTodoText = "";
         }
@@ -66,30 +64,30 @@ class TodoApp {
 
     public todoPredicate(value) {
         return todo => {
-            switch (value) {
+            var status = value.valueOf();
+            switch (status) {
                 case 'all':
                     return true;
                 default:
-                    return todo.completed === (value === 'completed');
+                    return todo.completed === (status === 'completed');
             }
         }
     }
 }
 
 class State {
-    constructor(public value: any) {
+    constructor(public id: any) {
     }
 
-    apply(_, args) {
-        this.value = args[0];
+    execute(newValue) {
+        this.id = newValue;
     }
 
     has(value) {
-        return this.value === value;
+        return this.id === value;
     }
 
     valueOf() {
-        return this.value;
+        return this.id;
     }
 }
-
