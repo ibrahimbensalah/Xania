@@ -21,8 +21,8 @@ var Xania;
             function Ident(id) {
                 this.id = id;
             }
-            Ident.prototype.execute = function (context) {
-                return !!context.get ? context.get(this.id) : context[this.id];
+            Ident.prototype.execute = function (context, provider) {
+                return provider.property(context, this.id);
             };
             Ident.prototype.app = function (args) {
                 return new App(this, args);
@@ -37,9 +37,9 @@ var Xania;
                 this.targetExpr = targetExpr;
                 this.name = name;
             }
-            Member.prototype.execute = function (context) {
-                var obj = this.targetExpr.execute(context);
-                var member = !!obj.get ? obj.get(this.name) : obj[this.name];
+            Member.prototype.execute = function (context, provider) {
+                var obj = this.targetExpr.execute(context, provider);
+                var member = provider.property(obj, this.name);
                 if (typeof member === "function")
                     return member.bind(obj);
                 return member;
@@ -57,9 +57,9 @@ var Xania;
                 this.targetExpr = targetExpr;
                 this.args = args;
             }
-            App.prototype.execute = function (context) {
-                var args = this.args.map(function (x) { return x.execute(context); });
-                var target = this.targetExpr.execute(context);
+            App.prototype.execute = function (context, provider) {
+                var args = this.args.map(function (x) { return x.execute(context, provider); });
+                var target = this.targetExpr.execute(context, provider);
                 if (!target)
                     throw new Error(this.targetExpr.toString() + " is undefined or null.");
                 if (typeof target.execute === "function")
@@ -83,7 +83,7 @@ var Xania;
         var Unit = (function () {
             function Unit() {
             }
-            Unit.prototype.execute = function (context) {
+            Unit.prototype.execute = function () {
                 return undefined;
             };
             Unit.prototype.app = function () { throw new Error("app on unit is not supported"); };
@@ -97,8 +97,8 @@ var Xania;
             function Not(expr) {
                 this.expr = expr;
             }
-            Not.prototype.execute = function (context) {
-                return !this.expr.execute(context);
+            Not.prototype.execute = function (context, provider) {
+                return !this.expr.execute(context, provider);
             };
             Not.prototype.app = function (args) {
                 return new Not(this.expr.app(args));
@@ -123,14 +123,14 @@ var Xania;
             function Selector(expr) {
                 this.expr = expr;
             }
-            Selector.prototype.execute = function (context) {
+            Selector.prototype.execute = function (context, provider) {
                 var list = this.query.execute(context);
                 var selector = this.expr;
                 return {
                     length: list.length,
                     itemAt: function (idx) {
-                        var ctx = list.itemAt(idx);
-                        var result = selector.execute(ctx);
+                        var ctx = provider.itemAt(list, idx);
+                        var result = selector.execute(ctx, provider);
                         return result;
                     },
                     forEach: function (fn) {
@@ -170,16 +170,17 @@ var Xania;
                     return item;
                 }
             };
-            Query.prototype.execute = function (context) {
+            Query.prototype.execute = function (context, provider) {
                 var _this = this;
-                var result = this.sourceExpr.execute(context);
+                var result = this.sourceExpr.execute(context, provider);
                 var length = result.length;
                 if (typeof result.length === "number") {
                     var query = this;
                     return {
                         length: length,
                         itemAt: function (idx) {
-                            return query.merge(context, !!result.itemAt ? result.itemAt(idx) : result[idx]);
+                            var value = provider.itemAt(result, idx);
+                            return query.merge(context, value);
                         },
                         map: function (fn) {
                             var result = [];
@@ -191,13 +192,15 @@ var Xania;
                         forEach: function (fn) {
                             var l = length;
                             for (var idx = 0; idx < l; idx++) {
-                                fn(query.merge(context, !!result.itemAt ? result.itemAt(idx) : result[idx]), idx);
+                                var value = provider.extend(context, this.varName, provider.itemAt(result, idx));
+                                fn(value, idx);
                             }
                         }
                     };
                 }
-                else
-                    return result.map(function (x) { return _this.merge(context, x); });
+                else {
+                    return provider.map(result, function (x) { return _this.merge(context, x); });
+                }
             };
             Query.prototype.app = function () { throw new Error("app on query is not supported"); };
             Query.prototype.toString = function () {
@@ -209,25 +212,24 @@ var Xania;
             function Template(parts) {
                 this.parts = parts;
             }
-            Template.prototype.execute = function (context) {
+            Template.prototype.execute = function (context, provider) {
+                if (provider === void 0) { provider = new DefaultValueProvider(); }
                 if (this.parts.length === 0)
                     return "";
                 if (this.parts.length === 1)
-                    return this.executePart(context, this.parts[0]);
+                    return this.executePart(this.parts[0], context, provider);
                 var result = "";
                 for (var i = 0; i < this.parts.length; i++) {
-                    result += this.executePart(context, this.parts[i]);
+                    result += this.executePart(this.parts[i], context, provider);
                 }
                 return result;
             };
-            Template.prototype.executePart = function (context, part) {
+            Template.prototype.executePart = function (part, context, provider) {
                 if (typeof part === "string")
                     return part;
                 else {
-                    var result = part.execute(context);
-                    if (!!result && typeof result.call === "function")
-                        return result.call(context);
-                    return result;
+                    var result = part.execute(context, provider);
+                    return provider.execute(result, context);
                 }
             };
             Template.prototype.toString = function () {
@@ -248,6 +250,35 @@ var Xania;
                 throw new Error("Not implemented");
             };
             return UnaryOperator;
+        }());
+        var DefaultValueProvider = (function () {
+            function DefaultValueProvider() {
+            }
+            DefaultValueProvider.prototype.itemAt = function (arr, idx) {
+                return !!arr.itemAt ? arr.itemAt(idx) : arr[idx];
+            };
+            DefaultValueProvider.prototype.property = function (obj, name) {
+                return !!obj.get ? obj.get(name) : obj[name];
+            };
+            DefaultValueProvider.prototype.map = function (arr, fun) {
+                return arr.map(fun);
+            };
+            DefaultValueProvider.prototype.execute = function (result, context) {
+                if (!!result && typeof result.call === "function")
+                    return result.call(context);
+                return result;
+            };
+            DefaultValueProvider.prototype.extend = function (context, varName, x) {
+                if (!!context.extend) {
+                    return context.extend(varName, x);
+                }
+                else {
+                    var item = {};
+                    item[varName] = x;
+                    return item;
+                }
+            };
+            return DefaultValueProvider;
         }());
         var Compiler = (function () {
             function Compiler() {

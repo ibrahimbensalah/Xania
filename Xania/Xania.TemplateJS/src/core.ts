@@ -560,153 +560,6 @@
             return Util.partialFunc.bind({ context: this, func, baseArgs });
         }
 
-        //static observe(target, observer: IObserver) {
-        //    // ReSharper disable once InconsistentNaming
-        //    if (!target)
-        //        return target;
-
-        //    if (target.isSpy) {
-        //        if (target.$observer === observer)
-        //            return target;
-        //        target = target.valueOf();
-        //    }
-
-        //    if (typeof target === "object") {
-        //        return Array.isArray(target)
-        //            ? Util.observeArray(target, observer)
-        //            : Util.observeObject(target, observer);
-        //    } else {
-        //        return target;
-        //    }
-        //}
-
-        //static observeArray(arr, observer: IObserver) {
-        //    // ReSharper disable once InconsistentNaming
-        //    return Util.proxy(arr,
-        //        {
-        //            get(target, property) {
-        //                switch (property) {
-        //                    case "$id":
-        //                        return arr;
-        //                    case "$observer":
-        //                        return observer;
-        //                    case "isSpy":
-        //                        return true;
-        //                    case "valueOf":
-        //                        return arr.valueOf.bind(arr);
-        //                    case "indexOf":
-        //                        // observer.addDependency(arr, "length", arr.length);
-        //                        return (item) => {
-        //                            for (var i = 0; i < arr.length; i++) {
-        //                                if (Util.id(item) === Util.id(arr[i]))
-        //                                    return i;
-        //                            }
-        //                            return -1;
-        //                        }
-        //                    case "length":
-        //                        // observer.addDependency(arr, "length", arr.length);
-        //                        return arr.length;
-        //                    case "constructor":
-        //                        return Array;
-        //                    case "concat":
-        //                        return (append) => {
-        //                            // observer.setRead(arr, "length");
-        //                            // observer.setRead(Xania.id(append), "length");
-        //                            return arr.concat(append);
-        //                        };
-        //                    case "splice":
-        //                    case "some":
-        //                    case "every":
-        //                    case "slice":
-        //                    case "filter":
-        //                    case "map":
-        //                    case "pop":
-        //                    case "push":
-        //                        // observer.addDependency(arr, "length", arr.length);
-        //                        return Util.observeProperty(arr, property, arr[property], observer);
-        //                    default:
-        //                        if (arr.hasOwnProperty(property))
-        //                            return Util.observeProperty(arr, property, arr[property], observer);
-        //                        return undefined;
-        //                }
-        //            },
-        //            set(target, property, value) {
-        //                if (Util.id(arr[property]) !== Util.id(value)) {
-        //                    //var length = arr.length;
-
-        //                    arr[property] = value;
-        //                    observer.setChange(Util.id(arr), property);
-
-        //                    // if (arr.length !== length)
-        //                    // observer.setChange(Util.id(arr), "length");
-        //                }
-
-        //                return true;
-        //            }
-        //        });
-        //}
-
-        //static observeObject(object, observer: IObserver) {
-        //    return Util.proxy(object,
-        //        {
-        //            get(target, property) {
-        //                switch (property) {
-        //                    case "$id":
-        //                        return object;
-        //                    case "$observer":
-        //                        return observer;
-        //                    case "isSpy":
-        //                        return true;
-        //                    case "valueOf":
-        //                        return () => object;
-        //                    case "constructor":
-        //                        return object.constructor;
-        //                    case "prop":
-        //                        return property => {
-        //                            return Util.observeProperty(object, property, object[property], observer);
-        //                        };
-        //                    default:
-        //                        // ReSharper disable once SuspiciousThisUsage
-        //                        return Util.observeProperty(object, property, object[property], observer);
-        //                }
-        //            },
-        //            set(target, property, value) {
-        //                if (Util.id(object[property]) !== Util.id(value)) {
-        //                    object[property] = value;
-        //                    observer.setChange(Util.id(object), property);
-        //                }
-
-        //                return true;
-        //            }
-        //        });
-        //}
-
-        //static observeFunction(object, func, observer, args) {
-        //    var retval = func.apply(object, args);
-
-        //    return Util.observe(retval, observer);
-        //}
-
-        //static observeProperty(object, prop, value, observer: IObserver) {
-        //    if (typeof value === "function") {
-        //        var proxy = Util.observe(object, observer);
-        //        return function () {
-        //            return Util.observeFunction(proxy, value, observer, arguments);
-        //        }
-        //        // return this.observeFunction.bind({ object: proxy, func: propertyValue, observer });
-        //    } else {
-        //        observer.addDependency(new PropertyDependency(object, prop, value));
-        //        return Util.observe(value, observer);
-        //    }
-        //}
-        //
-        //static proxy(target, config) {
-        //    if (typeof window["Proxy"] === "undefined")
-        //        throw new Error("Browser is not supported");
-
-        //    return new (window["Proxy"])(target, config);
-        //}
-
         static join(separator: string, value) {
             if (Array.isArray(value)) {
                 return value.length > 0 ? value.sort().join(separator) : null;
@@ -795,16 +648,11 @@
 
         constructor(private tpl: TagTemplate, context) {
             super();
-            // this.context = context;
-
             this.dom = document.createElement(tpl.name);
             this.dom.attributes["__binding"] = this;
         }
 
         execute(state, context) {
-            //if (context !== this.context)
-            //    debugger;
-
             const tpl = this.tpl;
 
             tpl.executeAttributes(context, this, TagBinding.executeAttribute);

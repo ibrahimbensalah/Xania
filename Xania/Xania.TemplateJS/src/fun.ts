@@ -1,6 +1,6 @@
 ﻿module Xania.Ast {
     interface IExpr {
-        execute(context);
+        execute(context: any, provider: IValueProvider);
         app(args: IExpr[]): IExpr;
     }
 
@@ -20,8 +20,8 @@
     class Ident implements IExpr {
         constructor(public id: string) { }
 
-        execute(context) {
-            return !!context.get ? context.get(this.id) : context[this.id];
+        execute(context, provider: IValueProvider) {
+            return provider.property(context, this.id);
         }
         app(args: IExpr[]): IExpr {
             return new App(this, args);
@@ -35,9 +35,9 @@
         constructor(public targetExpr: IExpr, public name: string) {
         }
 
-        execute(context) {
-            const obj = this.targetExpr.execute(context);
-            var member = !!obj.get ? obj.get(this.name) : obj[this.name];
+        execute(context, provider: IValueProvider) {
+            const obj = this.targetExpr.execute(context, provider);
+            var member = provider.property(obj, this.name);
 
             if (typeof member === "function")
                 return member.bind(obj);
@@ -56,20 +56,20 @@
         constructor(public targetExpr: IExpr, public args: IExpr[]) {
         }
 
-        execute(context) {
-            let args = this.args.map(x => x.execute(context));
+        execute(context, provider: IValueProvider) {
+            let args = this.args.map(x => x.execute(context, provider));
 
-            const target = this.targetExpr.execute(context);
+            const target = this.targetExpr.execute(context, provider);
 
             if (!target)
-                throw new Error(`${this.targetExpr.toString() } is undefined or null.`);
+                throw new Error(`${this.targetExpr.toString()} is undefined or null.`);
 
             if (typeof target.execute === "function")
                 return target.execute.apply(target, args);
             else if (typeof target.apply === "function")
                 return target.apply(this, args);
 
-            throw new Error(`${this.targetExpr.toString() } is not a function`);
+            throw new Error(`${this.targetExpr.toString()} is not a function`);
         }
         app(args: IExpr[]): IExpr {
             return new App(this.targetExpr, this.args.concat(args));
@@ -85,7 +85,7 @@
     }
 
     class Unit implements IExpr {
-        execute(context) {
+        execute() {
             return undefined;
         }
         static instance = new Unit();
@@ -97,9 +97,9 @@
     }
 
     class Not implements IExpr {
-        constructor(public expr) { }
-        execute(context) {
-            return !this.expr.execute(context);
+        constructor(public expr: IExpr) { }
+        execute(context, provider: IValueProvider) {
+            return !this.expr.execute(context, provider);
         }
         app(args: IExpr[]): IExpr {
             return new Not(this.expr.app(args));
@@ -125,14 +125,14 @@
         constructor(private expr: IExpr) {
         }
 
-        execute(context) {
+        execute(context, provider: IValueProvider) {
             var list = this.query.execute(context);
             var selector = this.expr;
             return {
                 length: list.length,
                 itemAt(idx) {
-                    var ctx = list.itemAt(idx);
-                    var result = selector.execute(ctx);
+                    var ctx = provider.itemAt(list, idx);
+                    var result = selector.execute(ctx, provider);
                     return result;
                 },
                 forEach(fn) {
@@ -171,15 +171,16 @@
             }
         }
 
-        execute(context) {
-            var result = this.sourceExpr.execute(context);
+        execute(context, provider: IValueProvider) {
+            var result = this.sourceExpr.execute(context, provider);
             var length = result.length;
             if (typeof result.length === "number") {
                 var query = this;
                 return {
                     length,
                     itemAt(idx) {
-                        return query.merge(context, !!result.itemAt ? result.itemAt(idx) : result[idx]);
+                        var value = provider.itemAt(result, idx);
+                        return query.merge(context, value);
                     },
                     map(fn) {
                         var result = [];
@@ -191,13 +192,14 @@
                     forEach(fn) {
                         var l = length;
                         for (let idx = 0; idx < l; idx++) {
-                            fn(query.merge(context, !!result.itemAt ? result.itemAt(idx) : result[idx]), idx);
+                            var value = provider.extend(context, this.varName, provider.itemAt(result, idx));
+                            fn(value, idx);
                         }
                     }
                 }
+            } else {
+                return provider.map(result, x => this.merge(context, x));
             }
-            else
-                return result.map(x => this.merge(context, x));
         }
         app(): IExpr { throw new Error("app on query is not supported"); }
 
@@ -206,32 +208,38 @@
         }
     }
 
+    interface IValueProvider {
+        itemAt(arr: any, idx: number): any;
+        property(obj: any, name: string): any;
+        map(arr: any, fun: Function): any;
+        execute(result, context);
+        extend(context, varName: string, x: any);
+    }
+
     class Template {
-        constructor(private parts) {
+        constructor(private parts: IExpr[]) {
         }
 
-        execute(context) {
+        execute(context, provider: IValueProvider = new DefaultValueProvider()) {
             if (this.parts.length === 0)
                 return "";
 
             if (this.parts.length === 1)
-                return this.executePart(context, this.parts[0]);
+                return this.executePart(this.parts[0], context, provider);
 
             var result = "";
             for (var i = 0; i < this.parts.length; i++) {
-                result += this.executePart(context, this.parts[i]);
+                result += this.executePart(this.parts[i], context, provider);
             }
             return result;
         }
 
-        executePart(context, part) {
+        executePart(part: IExpr | string, context, provider: IValueProvider) {
             if (typeof part === "string")
                 return part;
             else {
-                var result = part.execute(context);
-                if (!!result && typeof result.call === "function")
-                    return result.call(context);
-                return result;
+                var result = part.execute(context, provider);
+                return provider.execute(result, context);
             }
         }
 
@@ -253,30 +261,56 @@
         }
     }
 
+    class DefaultValueProvider implements IValueProvider {
+        itemAt(arr, idx: number) {
+            return !!arr.itemAt ? arr.itemAt(idx) : arr[idx];
+        }
+        property(obj, name: string) {
+            return !!obj.get ? obj.get(name) : obj[name];
+        }
+        map(arr, fun: Function) {
+            return arr.map(fun);
+        }
+        execute(result, context) {
+            if (!!result && typeof result.call === "function")
+                return result.call(context);
+            return result;
+        }
+        extend(context, varName: string, x: any) {
+            if (!!context.extend) {
+                return context.extend(varName, x);
+            } else {
+                var item = {};
+                item[varName] = x;
+                return item;
+            }
+        }
+    }
+
     export class Compiler {
         public patterns = {
             string1: /^"(?:(?:\\\n|\\"|[^"\n]))*?"/g
             , string2: /^'(?:(?:\\\n|\\'|[^'\n]))*?'/g
-        //, comment1: /\/\*[\s\S]*?\*\//
-        //, comment2: /\/\/.*?\n/
+            //, comment1: /\/\*[\s\S]*?\*\//
+            //, comment2: /\/\/.*?\n/
             , whitespace: /^\s+/g
-        // , keyword: /\b(?:var|let|for|if|else|in|class|function|return|with|case|break|switch|export|new|while|do|throw|catch)\b/
-        // , regexp: /^\/(?:(?:\\\/|[^\n\/]))*?\//g
+            // , keyword: /\b(?:var|let|for|if|else|in|class|function|return|with|case|break|switch|export|new|while|do|throw|catch)\b/
+            // , regexp: /^\/(?:(?:\\\/|[^\n\/]))*?\//g
             , ident: /^[a-zA-Z_\$][a-zA-Z_\$0-9]*\b/g
             , number: /^\d+(?:\.\d+)?(?:e[+-]?\d+)?/g
             , boolean: /^(?:true|false)/g
-        // , parens: /^[\(\)]/g
+            // , parens: /^[\(\)]/g
             , lparen: /^\s*\(\s*/g
             , rparen: /^\s*\)\s*/g
             , lbrack: /^\s*\[\s*/g
             , rbrack: /^\s*\]\s*/g
-        //, curly: /^[{}]/g
-        //, square: /^[\[\]]/g
+            //, curly: /^[{}]/g
+            //, square: /^[\[\]]/g
             , navigate: /^\s*\.\s*/g
-        // , punct: /^[;.:\?\^%<>=!&|+\-,~]/g
+            // , punct: /^[;.:\?\^%<>=!&|+\-,~]/g
             , operator: /^[\|>=\+\-]+/g
-        // , pipe2: /^\|\|>/g
-        // , select: /^->/g
+            // , pipe2: /^\|\|>/g
+            // , select: /^->/g
             , compose: /^compose\b/g
             , eq: /^\s*=\s*/g
         };
