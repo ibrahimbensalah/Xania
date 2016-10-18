@@ -1,4 +1,3 @@
-"use strict";
 var __extends = (this && this.__extends) || function (d, b) {
     for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
     function __() { this.constructor = d; }
@@ -531,9 +530,7 @@ var Xania;
         }
         Binding.prototype.update = function (context) {
             var binding = this;
-            Util.ready(binding.state, function (s) {
-                binding.state = binding.execute(s, context);
-            });
+            binding.state = binding.execute(binding.state, context);
         };
         return Binding;
     }());
@@ -745,7 +742,7 @@ var Xania;
                 var item = this.get(i);
                 result.push(fn(item));
             }
-            return result;
+            return Sequence.create(result);
         };
         return Property;
     }());
@@ -776,12 +773,9 @@ var Xania;
         Binder.executeTemplate = function (observable, tpl, target, offset, state) {
             if (!!tpl.modelAccessor) {
                 return Util.ready(tpl.modelAccessor.execute(observable), function (model) {
-                    if (model === null || model === undefined)
-                        return { bindings: [], data: model };
-                    var seq = Sequence.create(model);
                     return {
-                        bindings: Binder.executeArray(seq, offset, tpl, target, state),
-                        data: seq
+                        bindings: Binder.executeArray(model, offset, tpl, target, state),
+                        data: model
                     };
                 });
             }

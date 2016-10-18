@@ -1,6 +1,4 @@
-﻿"use strict";
-
-module Xania {
+﻿module Xania {
 
     "use strict";
 
@@ -744,12 +742,14 @@ module Xania {
         public state;
 
         update(context) {
-            var binding = <any>this;
+            var binding = this as any;
 
-            Util.ready(binding.state,
-                s => {
-                    binding.state = binding.execute(s, context);
-                });
+            binding.state = binding.execute(binding.state, context);
+
+            //Util.ready(binding.state,
+            //    s => {
+            //    binding.state = binding.execute(s, context);
+            //});
         }
     }
 
@@ -1202,7 +1202,8 @@ module Xania {
                 var item = this.get(i);
                 result.push(fn(item));
             }
-            return result;
+
+            return Sequence.create(result);
         }
     }
 
@@ -1390,14 +1391,9 @@ module Xania {
             if (!!tpl.modelAccessor) {
                 return Util.ready(tpl.modelAccessor.execute(observable),
                     model => {
-                        if (model === null || model === undefined)
-                            return { bindings: [], data: model };
-
-                        var seq = Sequence.create(model);
-
                         return {
-                            bindings: Binder.executeArray(seq, offset, tpl, target, state),
-                            data: <any>seq
+                            bindings: Binder.executeArray(model, offset, tpl, target, state),
+                            data: <any>model
                         };
                     });
             } else {
@@ -1425,7 +1421,9 @@ module Xania {
                         .reduce(Binder.reduceChild,
                         { context: result, offset: 0, parentBinding: newBinding });
 
+                    // result.subscribe(newBinding);
                     newBinding.update(result);
+
                     var insertAt = startInsertAt + idx;
                     if (insertAt < target.childNodes.length) {
                         var beforeElement = target.childNodes[insertAt];
