@@ -6,7 +6,7 @@
 
     class Const implements IExpr {
         constructor(public value: any) { }
-        execute(context) {
+        execute() {
             return this.value;
         }
         app(args: IExpr[]): IExpr {
@@ -126,7 +126,7 @@
         }
 
         execute(context, provider: IValueProvider) {
-            var list = this.query.execute(context);
+            var list = this.query.execute(context, provider);
             var selector = this.expr;
             return {
                 length: list.length,
@@ -161,26 +161,14 @@
     class Query implements IExpr {
         constructor(public varName: string, public sourceExpr: IExpr) { }
 
-        merge(context, x) {
-            if (!!context.extend) {
-                return context.extend(this.varName, x);
-            } else {
-                var item = {};
-                item[this.varName] = x;
-                return item;
-            }
-        }
-
         execute(context, provider: IValueProvider) {
             var result = this.sourceExpr.execute(context, provider);
             var length = result.length;
             if (typeof result.length === "number") {
-                var query = this;
                 return {
                     length,
                     itemAt(idx) {
-                        var value = provider.itemAt(result, idx);
-                        return query.merge(context, value);
+                        return provider.extend(context, this.varName, provider.itemAt(result, idx));
                     },
                     map(fn) {
                         var result = [];
@@ -192,13 +180,12 @@
                     forEach(fn) {
                         var l = length;
                         for (let idx = 0; idx < l; idx++) {
-                            var value = provider.extend(context, this.varName, provider.itemAt(result, idx));
-                            fn(value, idx);
+                            fn(this.itemAt(idx), idx);
                         }
                     }
                 }
             } else {
-                return provider.map(result, x => this.merge(context, x));
+                return result.map(x => provider.extend(context, this.varName, x));
             }
         }
         app(): IExpr { throw new Error("app on query is not supported"); }
@@ -211,8 +198,6 @@
     interface IValueProvider {
         itemAt(arr: any, idx: number): any;
         property(obj: any, name: string): any;
-        map(arr: any, fun: Function): any;
-        execute(result, context);
         extend(context, varName: string, x: any);
     }
 
@@ -238,8 +223,11 @@
             if (typeof part === "string")
                 return part;
             else {
-                var result = part.execute(context, provider);
-                return provider.execute(result, context);
+                var fn = part.execute(context, provider);
+
+                if (!!fn && typeof fn.call === "function")
+                    return fn.call(context);
+                return fn;
             }
         }
 
@@ -255,26 +243,23 @@
     class UnaryOperator implements IExpr {
         constructor(private handler: Function) {
         }
-        execute(context) { }
+        execute() { }
         app(args: IExpr[]): IExpr {
             throw new Error("Not implemented");
         }
     }
 
+    interface IObserver {
+
+    }
+
     class DefaultValueProvider implements IValueProvider {
+
         itemAt(arr, idx: number) {
             return !!arr.itemAt ? arr.itemAt(idx) : arr[idx];
         }
         property(obj, name: string) {
             return !!obj.get ? obj.get(name) : obj[name];
-        }
-        map(arr, fun: Function) {
-            return arr.map(fun);
-        }
-        execute(result, context) {
-            if (!!result && typeof result.call === "function")
-                return result.call(context);
-            return result;
         }
         extend(context, varName: string, x: any) {
             if (!!context.extend) {

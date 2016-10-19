@@ -261,8 +261,8 @@ var Xania;
         function TextTemplate(tpl) {
             this.tpl = tpl;
         }
-        TextTemplate.prototype.execute = function (context) {
-            return this.tpl.execute(context);
+        TextTemplate.prototype.execute = function (context, binding) {
+            return this.tpl.execute(context, binding);
         };
         TextTemplate.prototype.bind = function () {
             return new TextBinding(this);
@@ -326,14 +326,14 @@ var Xania;
             this.modelAccessor = modelAccessor;
             return this;
         };
-        TagTemplate.prototype.executeAttributes = function (context, dom, resolve) {
+        TagTemplate.prototype.executeAttributes = function (context, binding, resolve) {
             var classes = [];
             this.attributes.forEach(function attributesForEachBoundFn(tpl, name) {
                 var value = Util.execute(tpl, context).valueOf();
                 if (value !== null && value !== undefined && !!value.valueOf)
                     value = value.valueOf();
                 if (name === "checked") {
-                    resolve(name, !!value ? "checked" : null, dom);
+                    resolve(name, !!value ? "checked" : null, binding);
                 }
                 else if (name === "class") {
                     classes.push(value);
@@ -345,10 +345,10 @@ var Xania;
                     }
                 }
                 else {
-                    resolve(name, value, dom);
+                    resolve(name, value, binding);
                 }
             });
-            resolve("class", classes.length > 0 ? Util.join(" ", classes) : null, dom);
+            resolve("class", classes.length > 0 ? Util.join(" ", classes) : null, binding);
         };
         TagTemplate.prototype.executeEvents = function (context) {
             var result = {}, self = this;
@@ -530,7 +530,22 @@ var Xania;
         }
         Binding.prototype.update = function (context) {
             var binding = this;
-            binding.state = binding.execute(binding.state, context);
+            Util.ready(binding.state, function (s) {
+                binding.state = binding.execute(s, context);
+            });
+        };
+        Binding.prototype.itemAt = function (arr, idx) {
+            return arr.itemAt(idx);
+        };
+        Binding.prototype.property = function (obj, name) {
+            var result = obj.get(name);
+            result.subscribe(this);
+            return result;
+        };
+        Binding.prototype.extend = function (context, varName, x) {
+            return context.extend(varName, x);
+        };
+        Binding.prototype.notify = function (context) {
         };
         return Binding;
     }());
@@ -554,11 +569,14 @@ var Xania;
             this.dom = document.createTextNode("");
         }
         TextBinding.prototype.execute = function (state, context) {
-            var newValue = this.tpl.execute(context).valueOf();
+            var newValue = this.tpl.execute(context, this).valueOf();
             this.setText(newValue);
         };
         TextBinding.prototype.setText = function (newValue) {
             this.dom.textContent = newValue;
+        };
+        TextBinding.prototype.notify = function (context) {
+            this.setText(context);
         };
         return TextBinding;
     }(Binding));
@@ -696,7 +714,7 @@ var Xania;
         function Property(context, name) {
             this.name = name;
             this.subscribers = [];
-            this.properties = {};
+            this.properties = [];
             this.value = context[name];
         }
         Property.prototype.subscribe = function (subscr) {
@@ -704,25 +722,31 @@ var Xania;
                 this.subscribers.push(subscr);
         };
         Property.prototype.update = function (context) {
-            var currentValue = context[this.name];
-            if (this.value !== currentValue) {
-                this.value = currentValue;
-                for (var i = 0; i < this.subscribers.length; i++)
-                    this.subscribers[i].notify(currentValue);
-                this.subscribers.length = 0;
-            }
-            var properties = this.properties;
-            for (var n in properties) {
-                if (properties.hasOwnProperty(n)) {
-                    properties[n].update(currentValue);
+            var stack = [{ property: this, context: context }];
+            var dirty = new Set();
+            while (stack.length > 0) {
+                var cur = stack.pop();
+                var currentValue = cur.context[cur.property.name];
+                if (cur.property.value !== currentValue) {
+                    cur.property.value = currentValue;
+                    for (var n = 0; n < cur.property.subscribers.length; n++)
+                        dirty.add(cur.property.subscribers[n]);
+                }
+                var properties = cur.property.properties;
+                for (var i = 0; i < properties.length; i++) {
+                    stack.push({ property: properties[i], context: currentValue });
                 }
             }
         };
         Property.prototype.get = function (name) {
-            var existing = this.properties[name];
-            if (!!existing)
-                return existing;
-            return this.properties[name] = new Property(this.value, name);
+            for (var i = 0; i < this.properties.length; i++) {
+                var property = this.properties[i];
+                if (property.name === name)
+                    return property;
+            }
+            var result = new Property(this.value, name);
+            this.properties.push(result);
+            return result;
         };
         Property.prototype.valueOf = function () {
             return this.value;

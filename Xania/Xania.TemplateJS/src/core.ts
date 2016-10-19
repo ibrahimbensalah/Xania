@@ -256,13 +256,13 @@
             return this.properties[name] = new Immutable(this.instance[name]);
         }
 
-        subscribe(subscr: ISubscriber) { throw new Error("Not implemented");}
+        subscribe(subscr: ISubscriber) { throw new Error("Not implemented"); }
 
-        execute(args: any[]) { throw new Error("Not implemented");}
+        execute(args: any[]) { throw new Error("Not implemented"); }
 
         update() {
             for (let k in this.properties) {
-                const prop:Immutable = this.properties[k];
+                const prop: Immutable = this.properties[k];
                 prop.update();
             }
         }
@@ -291,8 +291,8 @@
         modelAccessor;
         constructor(private tpl) {
         }
-        execute(context) {
-            return this.tpl.execute(context);
+        execute(context, binding: TextBinding) {
+            return this.tpl.execute(context, binding);
         }
         bind() {
             return new TextBinding(this);
@@ -372,7 +372,7 @@
 
         public dataMutationId;
 
-        public executeAttributes(context, dom, resolve) {
+        public executeAttributes(context, binding, resolve) {
             var classes = [];
 
             this.attributes.forEach(function attributesForEachBoundFn(tpl, name) {
@@ -381,7 +381,7 @@
                 if (value !== null && value !== undefined && !!value.valueOf)
                     value = value.valueOf();
                 if (name === "checked") {
-                    resolve(name, !!value ? "checked" : null, dom);
+                    resolve(name, !!value ? "checked" : null, binding);
                 } else if (name === "class") {
                     classes.push(value);
                 } else if (name.startsWith("class.")) {
@@ -390,11 +390,11 @@
                         classes.push(className);
                     }
                 } else {
-                    resolve(name, value, dom);
+                    resolve(name, value, binding);
                 }
             });
 
-            resolve("class", classes.length > 0 ? Util.join(" ", classes) : null, dom);
+            resolve("class", classes.length > 0 ? Util.join(" ", classes) : null, binding);
         }
 
         public executeEvents(context) {
@@ -419,7 +419,7 @@
     }
 
     class PropertyDependency implements IDependency {
-        constructor(private object: any, private property: string|number, private value: any) {
+        constructor(private object: any, private property: string | number, private value: any) {
             if (!!value.id) {
                 throw new Error();
             }
@@ -441,7 +441,7 @@
     class IdentifierDependency implements IDependency {
         private id;
 
-        constructor(private object: any, private property: string|number, value: any) {
+        constructor(private object: any, private property: string | number, value: any) {
             this.id = value.id;
         }
 
@@ -591,18 +591,33 @@
         }
     }
 
-    class Binding {
+    class Binding implements ISubscriber {
         public state;
 
         update(context) {
             var binding = this as any;
 
-            binding.state = binding.execute(binding.state, context);
+            // binding.state = binding.execute(binding.state, context);
 
-            //Util.ready(binding.state,
-            //    s => {
-            //    binding.state = binding.execute(s, context);
-            //});
+            Util.ready(binding.state,
+                s => {
+                    binding.state = binding.execute(s, context);
+                });
+        }
+
+        itemAt(arr: any, idx: number): any {
+            return arr.itemAt(idx);
+        }
+        property(obj: IValue, name: string): any {
+            var result = obj.get(name);
+            result.subscribe(this);
+            return result;
+        }
+        extend(context, varName: string, x: any) {
+            return context.extend(varName, x);
+        }
+
+        notify(context) {
         }
     }
 
@@ -632,13 +647,18 @@
         }
 
         execute(state, context) {
-            var newValue = this.tpl.execute(context).valueOf();
+            const newValue = this.tpl.execute(context, this).valueOf();
             this.setText(newValue);
         }
 
         setText(newValue) {
             this.dom.textContent = newValue;
         }
+
+        notify(context) {
+            this.setText(context);
+        }
+
     }
 
     class TagBinding extends Binding {
@@ -688,7 +708,7 @@
         private properties = {};
 
         constructor(private value) {
-            
+
         }
 
         update() {
@@ -729,185 +749,6 @@
             return result;
         }
     }
-
-    //class ObservableArray {
-    //    constructor(private value: IValue, private observer: IObserver) {
-    //    }
-
-    //    get length() {
-    //        return this.value.length;
-    //    }
-
-    //    itemAt(idx) {
-    //        var item = this.value.get(idx);
-    //        if (!!this.observer)
-    //            this.observer.addDependency(this.value);
-
-    //        return Observable.create(item, this.observer);
-    //    }
-
-    //    filter(fn) {
-    //        var arr = this.value;
-    //        const result = [];
-    //        var length = arr.length;
-    //        for (var i = 0; i < length; i++) {
-    //            var item = arr.get(i);
-    //            if (!!this.observer)
-    //                this.observer.addDependency(PropertyDependency.create(arr, i, item.valueOf()));
-
-    //            var b = Util.execute(fn, item);
-    //            if (b !== null && b !== undefined && b.valueOf())
-    //                result.push(item);
-    //        }
-    //        return new ObservableArray(new Immutable(result), this.observer);
-    //    }
-
-    //    count(fn) {
-    //        var arr = this.value;
-    //        var count = 0;
-    //        for (var i = arr.length - 1; i >= 0; i--) {
-    //            var item = arr.get(i);
-    //            if (!!this.observer)
-    //                this.observer.addDependency(arr);
-
-    //            if (!!Util.execute(fn, item))
-    //                count++;
-    //        }
-    //        return count;
-    //    }
-    //}
-
-    //class ObservableValue {
-    //    private subscriptions = [];
-
-    //    constructor(private value: IValue, private observer: IObserver) {
-    //    }
-
-    //    get length() {
-    //        return 1;
-    //    }
-
-    //    prop(name): any {
-    //        var value = this.value.get(name);
-    //        if (!!this.observer) {
-    //            this.subscriptions.push({ name, subscriber: this.observer });
-    //            this.observer.addDependency(value);
-    //        }
-
-    //        return Observable.create(value, this.observer);
-    //    }
-
-    //    valueOf() {
-    //        return this.value.valueOf();
-    //    }
-
-    //    itemAt(idx) {
-    //        return this;
-    //    }
-
-    //    execute(...args) {
-    //        return Observable.create(this.value.execute(args), this.observer);
-    //        //const func = () => this.value.apply(this.context, args);
-    //        //var value = func();
-    //        //return Observable.create(null, func, value, this.observer);
-    //    }
-
-    //    subscribe(observer: IObserver) {
-    //        if (this.observer === observer)
-    //            return this;
-
-    //        return new ObservableValue(this.value, observer);
-    //    }
-
-    //    toString() {
-    //        return this.value;
-    //    }
-    //}
-
-    //class ObservableFunction {
-    //    constructor(private value: IValue, private observer: IObserver) {
-    //    }
-
-    //    execute(...args) {
-    //        return Observable.create(this.value.execute(args), this.observer);
-    //        //var func = () => this.func.apply(this.context, args);
-    //        //var value = func();
-    //        //return Observable.value(this.context, func, value, this.observer);
-    //    }
-
-    //    //prop(name): any {
-    //    //    var value = this.func[name];
-    //    //    if (!!this.observer)
-    //    //        this.observer.addDependency({
-    //    //            object: this.func,
-    //    //            property: name,
-    //    //            value: !!value ? value.valueOf() : value
-    //    //        });
-
-    //    //    return Observable.value(this.func, value, this.observer);
-    //    //}
-    //}
-
-    //interface IExecutionContext {
-    //    get(name): IValue;
-    //    notify();
-    //}
-
-    //class RootContext implements IExecutionContext {
-
-    //    constructor(private statics) {
-    //    }
-
-    //    variable(name) {
-    //        return this.statics[name];
-    //    }
-
-    //    extend(instance) {
-    //        return new ExecutionContext(instance, this);
-    //    }
-
-    //    update() {}
-    //}
-
-    //class ExecutionContext implements IExecutionContext {
-    //    private variables = {};
-
-    //    constructor(private instance: any, private parent: IExecutionContext) {
-    //        if (instance.constructor !== Value)
-    //            throw new Error("");
-    //    }
-
-    //    private existing(name: string) {
-    //        return this.variables[name];
-    //    }
-
-    //    public get(name: string) {
-    //        var existing = this.existing(name);
-    //        if (!!existing)
-    //            return existing;
-            
-    //        var value = this.instance[name];
-    //        if (value !== undefined) {
-    //            var v = new Value(this.instance, name, value);
-    //            this.variables[name] = v;
-    //            return v;
-    //        }
-    //        if (!!this.parent)
-    //            return this.parent.get(name);
-
-    //        return undefined;
-    //    }
-
-    //    notify() {
-    //        let variables = this.variables;
-    //        for (var n in variables) {
-    //            if (variables.hasOwnProperty(n)) {
-    //                variables[n].notify();
-    //            }
-    //        }
-    //    }
-    //}
-
     interface IValue {
         get(idx): IValue;
         valueOf(): any;
@@ -966,7 +807,7 @@
         private map = {};
 
         constructor(private parent: IProvider = null) {
-            
+
         }
 
         add(name, value: IValue) {
@@ -989,42 +830,52 @@
 
     class Property implements IValue {
         private subscribers: ISubscriber[] = [];
-        private properties = {};
+        private properties = [];
         private value;
 
         constructor(context: any, public name: string | number) {
             this.value = context[name];
         }
-        
+
         subscribe(subscr: ISubscriber) {
             if (this.subscribers.indexOf(subscr) < 0)
                 this.subscribers.push(subscr);
         }
 
         update(context) {
-            var currentValue = context[this.name];
+            var stack = [{ property: this, context }];
 
-            if (this.value !== currentValue) {
-                this.value = currentValue;
-                for (var i = 0; i < this.subscribers.length; i++)
-                    this.subscribers[i].notify(currentValue);
-                this.subscribers.length = 0;
-            }
+            var dirty = new Set();
 
-            let properties = this.properties;
-            for (var n in properties) {
-                if (properties.hasOwnProperty(n)) {
-                    properties[n].update(currentValue);
+            while (stack.length > 0) {
+                var cur = stack.pop();
+
+                const currentValue = cur.context[cur.property.name];
+                if (cur.property.value !== currentValue) {
+                    cur.property.value = currentValue;
+
+                    for (var n = 0; n < cur.property.subscribers.length; n++)
+                        dirty.add(cur.property.subscribers[n]);
+                     // this.subscribers.length = 0;
+                }
+
+                let properties = cur.property.properties;
+                for (var i = 0; i < properties.length; i++) {
+                    stack.push({ property: properties[i], context: currentValue });
                 }
             }
         }
 
         get(name) {
-            var existing = this.properties[name];
-            if (!!existing)
-                return existing;
+            for (var i = 0; i < this.properties.length; i++) {
+                var property = this.properties[i];
+                if (property.name === name)
+                    return property;
+            }
 
-            return this.properties[name] = new Property(this.value, name);
+            var result = new Property(this.value, name);
+            this.properties.push(result);
+            return result;
         }
 
         valueOf() {
@@ -1053,154 +904,9 @@
 
             return Sequence.create(result);
         }
+
+        id;
     }
-
-    //class Observable implements IProvider {
-    //    public length = 1;
-
-    //    private children: Observable[] = [];
-
-    //    constructor(private container: IProvider, private lib: any, private observer: IObserver = null) {
-    //        //if (value.length !== undefined)
-    //        //    throw new Error("array not allowed");
-    //    }
-
-    //    hasChanges() {
-    //        return true; // this.context.hasChanges();
-    //    }
-
-    //    //notify() {
-    //    //    for (var name in properties) {
-    //    //        if (properties.hasOwnProperty(name)) {
-    //    //            var prop = properties[name];
-    //    //            prop.notify();
-    //    //        }
-    //    //    }
-    //    //    return false;
-    //    //}
-
-    //    valueOf(): any {
-    //        // return this.value.valueOf();
-    //        throw new Error("");
-    //    }
-    //    //valueOf() {
-    //    //    var obj = {};
-    //    //    for (var i = 0; i < this.instances.length; i++) {
-    //    //        Object.assign(obj, this.instances[i]);
-    //    //    }
-    //    //    return obj;
-    //    //}
-
-    //    //private property(name) {
-
-    //    //    for (let i = 0; i < this.instances.length; i++) {
-    //    //        const object = this.instances[i];
-    //    //        const value = object[name];
-    //    //        if (value !== undefined) {
-    //    //            property = new ObjectProperty(object, name, value);
-    //    //            this.properties[name] = property;
-    //    //            return property;
-    //    //        }
-    //    //    }
-    //    //    return null;
-    //    //}
-
-    //    get(name) {
-    //        var value = this.container.get(name);
-
-    //        if (!value)
-    //            return this.lib[name];
-
-    //        if (!!this.observer) {
-    //            // value.subscribe(<any>this.observer);
-    //            // this.observer.addDependency(value);
-    //        }
-
-    //        return new Observable(value, this.observer);
-    //    }
-
-    //    //prop(name) {
-    //    //    return this.get(name);
-    //    //    //var value = this.context.get(name);
-
-    //    //    //if (!value)
-    //    //    //    return this.lib[name];
-
-    //    //    //if (!!this.observer) {
-    //    //    //    value.subscribe(<any>this.observer);
-
-    //    //    //    this.observer.addDependency(value);
-    //    //    //}
-
-    //    //    //return Observable.create(value, this.observer);
-    //    //}
-
-    //    //set(name, value) {
-    //    //    for (let i = 0; i < this.instances.length; i++) {
-    //    //        const object = this.instances[i];
-    //    //        if (object.hasOwnProperty(name)) {
-    //    //            object[name] = value;
-    //    //            break;
-    //    //        }
-    //    //    }
-
-    //    //    return value;
-    //    //}
-
-    //    //static create(variable: IValue, observer: IObserver): any {
-    //    //    var value = variable.valueOf();
-
-    //    //    if (value === null ||
-    //    //        value === undefined ||
-    //    //        typeof value === "boolean" ||
-    //    //        typeof value === "number" ||
-    //    //        typeof value === "string") {
-    //    //        return new Observable(variable, observer);
-    //    //    }
-    //    //    else if (typeof value === "function") {
-    //    //        return new ObservableFunction(variable, observer);
-    //    //    } else if (Array.isArray(value)) {
-    //    //        return new ObservableArray(variable, observer);
-    //    //        //} else if (!!value.lastMutationId) {
-    //    //        //    observer.addDependency({ object: value, property: "lastMutationId", value: value.lastMutationId });
-    //    //        //    return value;
-    //    //    } else {
-    //    //        return new Observable(variable, observer);
-    //    //    }
-    //    //}
-
-    //    itemAt(idx) {
-    //        //if (this.value.length === undefined && idx === 0)
-    //        //    return this;
-
-    //        return new Observable(this.container.get(idx), this.observer);
-    //    }
-
-    //    //extend(object): Observable {
-    //    //    if (!object) {
-    //    //        return this;
-    //    //    }
-
-    //    //    return new Observable(new ExecutionContext(object, this.context), this.lib, this.observer);
-    //    //}
-
-    //    extendArray(arr) {
-    //        return {
-    //            length: arr.length,
-    //            itemAt(idx) {
-    //                return arr.itemAt(idx);
-    //                // return new Observable(item, base.lib, base.observer);
-    //            }
-    //        }
-    //    }
-
-    //    subscribe(observer: IObserver) {
-    //        if (this.observer === observer)
-    //            return this;
-
-    //        return new Observable(this.container, this.lib, observer);
-    //    }
-    //}
 
     export class Binder {
         private context: RootContainer;

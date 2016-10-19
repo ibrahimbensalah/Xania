@@ -6,7 +6,7 @@ var Xania;
             function Const(value) {
                 this.value = value;
             }
-            Const.prototype.execute = function (context) {
+            Const.prototype.execute = function () {
                 return this.value;
             };
             Const.prototype.app = function (args) {
@@ -124,7 +124,7 @@ var Xania;
                 this.expr = expr;
             }
             Selector.prototype.execute = function (context, provider) {
-                var list = this.query.execute(context);
+                var list = this.query.execute(context, provider);
                 var selector = this.expr;
                 return {
                     length: list.length,
@@ -160,27 +160,15 @@ var Xania;
                 this.varName = varName;
                 this.sourceExpr = sourceExpr;
             }
-            Query.prototype.merge = function (context, x) {
-                if (!!context.extend) {
-                    return context.extend(this.varName, x);
-                }
-                else {
-                    var item = {};
-                    item[this.varName] = x;
-                    return item;
-                }
-            };
             Query.prototype.execute = function (context, provider) {
                 var _this = this;
                 var result = this.sourceExpr.execute(context, provider);
                 var length = result.length;
                 if (typeof result.length === "number") {
-                    var query = this;
                     return {
                         length: length,
                         itemAt: function (idx) {
-                            var value = provider.itemAt(result, idx);
-                            return query.merge(context, value);
+                            return provider.extend(context, this.varName, provider.itemAt(result, idx));
                         },
                         map: function (fn) {
                             var result = [];
@@ -192,14 +180,13 @@ var Xania;
                         forEach: function (fn) {
                             var l = length;
                             for (var idx = 0; idx < l; idx++) {
-                                var value = provider.extend(context, this.varName, provider.itemAt(result, idx));
-                                fn(value, idx);
+                                fn(this.itemAt(idx), idx);
                             }
                         }
                     };
                 }
                 else {
-                    return provider.map(result, function (x) { return _this.merge(context, x); });
+                    return result.map(function (x) { return provider.extend(context, _this.varName, x); });
                 }
             };
             Query.prototype.app = function () { throw new Error("app on query is not supported"); };
@@ -228,8 +215,10 @@ var Xania;
                 if (typeof part === "string")
                     return part;
                 else {
-                    var result = part.execute(context, provider);
-                    return provider.execute(result, context);
+                    var fn = part.execute(context, provider);
+                    if (!!fn && typeof fn.call === "function")
+                        return fn.call(context);
+                    return fn;
                 }
             };
             Template.prototype.toString = function () {
@@ -245,7 +234,7 @@ var Xania;
             function UnaryOperator(handler) {
                 this.handler = handler;
             }
-            UnaryOperator.prototype.execute = function (context) { };
+            UnaryOperator.prototype.execute = function () { };
             UnaryOperator.prototype.app = function (args) {
                 throw new Error("Not implemented");
             };
@@ -259,14 +248,6 @@ var Xania;
             };
             DefaultValueProvider.prototype.property = function (obj, name) {
                 return !!obj.get ? obj.get(name) : obj[name];
-            };
-            DefaultValueProvider.prototype.map = function (arr, fun) {
-                return arr.map(fun);
-            };
-            DefaultValueProvider.prototype.execute = function (result, context) {
-                if (!!result && typeof result.call === "function")
-                    return result.call(context);
-                return result;
             };
             DefaultValueProvider.prototype.extend = function (context, varName, x) {
                 if (!!context.extend) {

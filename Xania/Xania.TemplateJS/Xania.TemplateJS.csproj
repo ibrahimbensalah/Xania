@@ -55,7 +55,9 @@
     <Content Include="src\core.js" />
     <Content Include="src\fun.js" />
     <Content Include="src\sample\todo-app.html" />
+    <Content Include="src\track.js" />
     <Content Include="web.config" />
+    <TypeScriptCompile Include="src\track.ts" />
     <TypeScriptCompile Include="test\jasmine.d.ts" />
   </ItemGroup>
   <ItemGroup>
@@ -74,6 +76,7 @@
     <Content Include="src\core.js.map" />
     <Content Include="src\fun.js.map" />
     <Content Include="src\sample\dbmon\app.js.map" />
+    <Content Include="src\track.js.map" />
     <None Include="web.Debug.config">
       <DependentUpon>web.config</DependentUpon>
     </None>
