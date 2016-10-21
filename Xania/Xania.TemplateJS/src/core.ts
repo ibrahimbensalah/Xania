@@ -261,10 +261,38 @@
         execute(args: any[]) { throw new Error("Not implemented"); }
 
         update() {
+            var stack: { property: any, context: any }[] = [];
+
             for (let k in this.properties) {
-                const prop: Immutable = this.properties[k];
-                prop.update();
+                const property: Immutable = this.properties[k];
+                stack.push({ property, context: null });
             }
+
+            var dirty: Set<ISubscriber> = new Set<ISubscriber>();
+
+            while (stack.length > 0) {
+                var { property, context } = stack.pop();
+
+                if (property.update(context)) {
+                    var subscribers = property.subscribers;
+                    const length = subscribers.length;
+                    for (var n = 0; n < length; n++) {
+                        dirty.add(subscribers[n]);
+                    }
+                    subscribers.length = 0;
+                }
+
+                let properties = property.properties;
+                const length = properties.length;
+                for (var i = 0; i < length; i++) {
+                    var child = properties[i];
+                    stack.push({ property: child, context: property.value });
+                }
+            }
+
+            dirty.forEach(d => {
+                d.notify();
+            });
         }
 
         forEach(fn) {
@@ -274,7 +302,6 @@
         extend(name, value) {
             return new Container(this).add(name, value);
         }
-
     }
 
     interface IPromise {
@@ -704,27 +731,26 @@
     }
 
     class Immutable implements IValue {
-        private properties = {};
+        private properties = [];
 
         constructor(private value) {
 
         }
 
         update() {
-            let properties = this.properties;
-            for (var n in properties) {
-                if (properties.hasOwnProperty(n)) {
-                    properties[n].update(this.value);
-                }
-            }
+            return false;
         }
 
         get(name): IValue {
-            var existing = this.properties[name];
-            if (!!existing)
-                return existing;
+            for (var i = 0; i < this.properties.length; i++) {
+                var property = this.properties[i];
+                if (property.name === name)
+                    return property;
+            }
 
-            return this.properties[name] = new Property(this.value, name);
+            var result = new Property(this.value, name);
+            this.properties.push(result);
+            return result;
         }
 
         valueOf() {
@@ -842,37 +868,13 @@
         }
 
         update(context) {
-            var stack = [{ property: this, context }];
+            const currentValue = context[this.name];
 
-            var dirty = new Set<ISubscriber>();
-            var hits = 0; 
-
-            while (stack.length > 0) {
-                var cur = stack.pop();
-
-                const currentValue = cur.context[cur.property.name];
-                if (cur.property.value !== currentValue) {
-                    cur.property.value = currentValue;
-
-                    for (var n = 0; n < cur.property.subscribers.length; n++) {
-                        var subscr = cur.property.subscribers[n];
-                        if (dirty.has(subscr)) {
-                            hits++;
-                        }
-                        dirty.add(subscr);
-                    }
-                    // this.subscribers.length = 0;
-                }
-
-                let properties = cur.property.properties;
-                for (var i = 0; i < properties.length; i++) {
-                    stack.push({ property: properties[i], context: currentValue });
-                }
+            if (this.value !== currentValue) {
+                this.value = currentValue;
+                return true;
             }
-
-            dirty.forEach(d => {
-                d.notify();
-            });
+            return false;
         }
 
         get(name) {

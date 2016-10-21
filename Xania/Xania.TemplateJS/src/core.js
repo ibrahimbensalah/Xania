@@ -244,10 +244,32 @@ var Xania;
         RootContainer.prototype.subscribe = function (subscr) { throw new Error("Not implemented"); };
         RootContainer.prototype.execute = function (args) { throw new Error("Not implemented"); };
         RootContainer.prototype.update = function () {
+            var stack = [];
             for (var k in this.properties) {
-                var prop = this.properties[k];
-                prop.update();
+                var property_1 = this.properties[k];
+                stack.push({ property: property_1, context: null });
             }
+            var dirty = new Set();
+            while (stack.length > 0) {
+                var _a = stack.pop(), property = _a.property, context = _a.context;
+                if (property.update(context)) {
+                    var subscribers = property.subscribers;
+                    var length_1 = subscribers.length;
+                    for (var n = 0; n < length_1; n++) {
+                        dirty.add(subscribers[n]);
+                    }
+                    subscribers.length = 0;
+                }
+                var properties = property.properties;
+                var length_2 = properties.length;
+                for (var i = 0; i < length_2; i++) {
+                    var child = properties[i];
+                    stack.push({ property: child, context: property.value });
+                }
+            }
+            dirty.forEach(function (d) {
+                d.notify();
+            });
         };
         RootContainer.prototype.forEach = function (fn) {
             fn(this);
@@ -622,21 +644,20 @@ var Xania;
     var Immutable = (function () {
         function Immutable(value) {
             this.value = value;
-            this.properties = {};
+            this.properties = [];
         }
         Immutable.prototype.update = function () {
-            var properties = this.properties;
-            for (var n in properties) {
-                if (properties.hasOwnProperty(n)) {
-                    properties[n].update(this.value);
-                }
-            }
+            return false;
         };
         Immutable.prototype.get = function (name) {
-            var existing = this.properties[name];
-            if (!!existing)
-                return existing;
-            return this.properties[name] = new Property(this.value, name);
+            for (var i = 0; i < this.properties.length; i++) {
+                var property = this.properties[i];
+                if (property.name === name)
+                    return property;
+            }
+            var result = new Property(this.value, name);
+            this.properties.push(result);
+            return result;
         };
         Immutable.prototype.valueOf = function () {
             return this.value;
@@ -721,30 +742,12 @@ var Xania;
                 this.subscribers.push(subscr);
         };
         Property.prototype.update = function (context) {
-            var stack = [{ property: this, context: context }];
-            var dirty = new Set();
-            var hits = 0;
-            while (stack.length > 0) {
-                var cur = stack.pop();
-                var currentValue = cur.context[cur.property.name];
-                if (cur.property.value !== currentValue) {
-                    cur.property.value = currentValue;
-                    for (var n = 0; n < cur.property.subscribers.length; n++) {
-                        var subscr = cur.property.subscribers[n];
-                        if (dirty.has(subscr)) {
-                            hits++;
-                        }
-                        dirty.add(subscr);
-                    }
-                }
-                var properties = cur.property.properties;
-                for (var i = 0; i < properties.length; i++) {
-                    stack.push({ property: properties[i], context: currentValue });
-                }
+            var currentValue = context[this.name];
+            if (this.value !== currentValue) {
+                this.value = currentValue;
+                return true;
             }
-            dirty.forEach(function (d) {
-                d.notify();
-            });
+            return false;
         };
         Property.prototype.get = function (name) {
             for (var i = 0; i < this.properties.length; i++) {
