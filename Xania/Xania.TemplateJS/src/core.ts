@@ -593,8 +593,10 @@
 
     class Binding implements ISubscriber {
         public state;
+        private context;
 
         update(context) {
+            this.context = context;
             var binding = this as any;
 
             // binding.state = binding.execute(binding.state, context);
@@ -617,12 +619,13 @@
             return context.extend(varName, x);
         }
 
-        notify(context) {
+        notify() {
+            this.update(this.context);
         }
     }
 
     interface ISubscriber {
-        notify(context: any);
+        notify();
     }
 
     class ContentBinding extends Binding {
@@ -653,10 +656,6 @@
 
         setText(newValue) {
             this.dom.textContent = newValue;
-        }
-
-        notify(context) {
-            this.setText(context);
         }
 
     }
@@ -845,7 +844,8 @@
         update(context) {
             var stack = [{ property: this, context }];
 
-            var dirty = new Set();
+            var dirty = new Set<ISubscriber>();
+            var hits = 0; 
 
             while (stack.length > 0) {
                 var cur = stack.pop();
@@ -854,9 +854,14 @@
                 if (cur.property.value !== currentValue) {
                     cur.property.value = currentValue;
 
-                    for (var n = 0; n < cur.property.subscribers.length; n++)
-                        dirty.add(cur.property.subscribers[n]);
-                     // this.subscribers.length = 0;
+                    for (var n = 0; n < cur.property.subscribers.length; n++) {
+                        var subscr = cur.property.subscribers[n];
+                        if (dirty.has(subscr)) {
+                            hits++;
+                        }
+                        dirty.add(subscr);
+                    }
+                    // this.subscribers.length = 0;
                 }
 
                 let properties = cur.property.properties;
@@ -864,6 +869,10 @@
                     stack.push({ property: properties[i], context: currentValue });
                 }
             }
+
+            dirty.forEach(d => {
+                d.notify();
+            });
         }
 
         get(name) {

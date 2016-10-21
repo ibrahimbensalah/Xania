@@ -529,6 +529,7 @@ var Xania;
         function Binding() {
         }
         Binding.prototype.update = function (context) {
+            this.context = context;
             var binding = this;
             Util.ready(binding.state, function (s) {
                 binding.state = binding.execute(s, context);
@@ -545,7 +546,8 @@ var Xania;
         Binding.prototype.extend = function (context, varName, x) {
             return context.extend(varName, x);
         };
-        Binding.prototype.notify = function (context) {
+        Binding.prototype.notify = function () {
+            this.update(this.context);
         };
         return Binding;
     }());
@@ -574,9 +576,6 @@ var Xania;
         };
         TextBinding.prototype.setText = function (newValue) {
             this.dom.textContent = newValue;
-        };
-        TextBinding.prototype.notify = function (context) {
-            this.setText(context);
         };
         return TextBinding;
     }(Binding));
@@ -724,19 +723,28 @@ var Xania;
         Property.prototype.update = function (context) {
             var stack = [{ property: this, context: context }];
             var dirty = new Set();
+            var hits = 0;
             while (stack.length > 0) {
                 var cur = stack.pop();
                 var currentValue = cur.context[cur.property.name];
                 if (cur.property.value !== currentValue) {
                     cur.property.value = currentValue;
-                    for (var n = 0; n < cur.property.subscribers.length; n++)
-                        dirty.add(cur.property.subscribers[n]);
+                    for (var n = 0; n < cur.property.subscribers.length; n++) {
+                        var subscr = cur.property.subscribers[n];
+                        if (dirty.has(subscr)) {
+                            hits++;
+                        }
+                        dirty.add(subscr);
+                    }
                 }
                 var properties = cur.property.properties;
                 for (var i = 0; i < properties.length; i++) {
                     stack.push({ property: properties[i], context: currentValue });
                 }
             }
+            dirty.forEach(function (d) {
+                d.notify();
+            });
         };
         Property.prototype.get = function (name) {
             for (var i = 0; i < this.properties.length; i++) {
