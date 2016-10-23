@@ -64,12 +64,7 @@
             if (!target)
                 throw new Error(`${this.targetExpr.toString()} is undefined or null.`);
 
-            if (typeof target.execute === "function")
-                return target.execute.apply(target, args);
-            else if (typeof target.apply === "function")
-                return target.apply(this, args);
-
-            throw new Error(`${this.targetExpr.toString()} is not a function`);
+            return provider.invoke(target, args);
         }
         app(args: IExpr[]): IExpr {
             return new App(this.targetExpr, this.args.concat(args));
@@ -199,6 +194,7 @@
         itemAt(arr: any, idx: number): any;
         property(obj: any, name: string): any;
         extend(context, varName: string, x: any);
+        invoke(invokable, args: any[]);
     }
 
     class Template {
@@ -269,6 +265,17 @@
                 item[varName] = x;
                 return item;
             }
+        }
+
+        invoke(invokable, args: any[]) {
+            debugger;
+            //if (typeof target.execute === "function")
+            //    return provider.invoke(target, args);
+            //// return target.execute.apply(target, args);
+            //else if (typeof target.apply === "function")
+            //    return target.apply(this, args);
+
+            //throw new Error(`${this.targetExpr.toString()} is not a function`);
         }
     }
 

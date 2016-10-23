@@ -233,7 +233,7 @@
                 // conventions
                 if (!!tagElement.name.match(/^input$/i) &&
                     !!attr.name.match(/^name$/i) &&
-                    !tagElement.hasAttribute("value")) {
+                    !tagElement.getAttribute("value")) {
                     const valueAccessor = this.compile(`{{ ${attr.value} }}`);
                     tagElement.attr("value", valueAccessor);
                 }
@@ -243,38 +243,53 @@
     }
 
     class RootContainer implements IValue {
-        private properties = {};
+        private properties: {name: string; value: IValue }[] = [];
 
         constructor(private instance: any, private libs) {
         }
 
         get(name): IValue {
-            var existing = this.properties[name];
-            if (!!existing)
-                return existing;
+            for (let i = 0; i < this.properties.length; i++) {
+                const existing = this.properties[i];
+                if (existing.name === name)
+                    return existing.value;
+            }
 
-            return this.properties[name] = new Immutable(this.instance[name]);
+            var raw = this.instance[name];
+            if (raw !== undefined) {
+                var instval = new Immutable(raw);
+                this.properties.push({ name, value: instval });
+                return instval;
+            }
+
+            raw = this.libs[name];
+            if (raw === undefined)
+                throw new Error("Could not resolve " + name);
+
+            var gval = new Global(raw);
+            this.properties.push({ name, value: gval });
+            return gval;
         }
 
         subscribe(subscr: ISubscriber) { throw new Error("Not implemented"); }
 
-        execute(args: any[]) { throw new Error("Not implemented"); }
+        invoke(args: any[]) { throw new Error("Not implemented"); }
 
         update() {
-            var stack: { property: any, context: any }[] = [];
+            var stack: { value: any, context: any }[] = [];
 
-            for (let k in this.properties) {
-                const property: Immutable = this.properties[k];
-                stack.push({ property, context: null });
+            for (let i = 0; i < this.properties.length; i++) {
+                const property = this.properties[i];
+                stack.push({ value: property.value, context: null });
             }
 
-            var dirty: Set<ISubscriber> = new Set<ISubscriber>();
+            var dirty = new Set<ISubscriber>();
 
             while (stack.length > 0) {
-                var { property, context } = stack.pop();
+                var { value, context } = stack.pop();
 
-                if (property.update(context)) {
-                    var subscribers = property.subscribers;
+                if (value.update(context)) {
+                    var subscribers = value.subscribers;
                     const length = subscribers.length;
                     for (var n = 0; n < length; n++) {
                         dirty.add(subscribers[n]);
@@ -282,11 +297,11 @@
                     subscribers.length = 0;
                 }
 
-                let properties = property.properties;
+                let properties = value.properties;
                 const length = properties.length;
-                for (var i = 0; i < length; i++) {
-                    var child = properties[i];
-                    stack.push({ property: child, context: property.value });
+                for (let i = 0; i < length; i++) {
+                    const child = properties[i];
+                    stack.push({ value: child, context: value.valueOf() });
                 }
             }
 
@@ -352,7 +367,7 @@
     }
 
     class TagTemplate implements IDomTemplate {
-        private attributes = new Map<string, any>();
+        private attributes: { name: string; tpl }[] = [];
         private events = new Map<string, any>();
         // ReSharper disable once InconsistentNaming
         private _children: IDomTemplate[] = [];
@@ -370,13 +385,20 @@
         }
 
         public addAttribute(name: string, tpl: any) {
-            this.attributes.set(name.toLowerCase(), tpl);
+            var attr = this.getAttribute(name);
+            if (!attr)
+                this.attributes.push({ name: name.toLowerCase(), tpl });
             return this;
         }
 
-        public hasAttribute(name: string) {
+        public getAttribute(name: string) {
             var key = name.toLowerCase();
-            return this.attributes.has(key);
+            for (var i = 0; i < this.attributes.length; i++) {
+                var attr = this.attributes[i];
+                if (attr.name === key)
+                    return attr;
+            }
+            return null;
         }
 
         public addEvent(name, callback) {
@@ -388,8 +410,8 @@
             return this;
         }
 
-        public bind(context) {
-            return new TagBinding(this, context);
+        public bind() {
+            return new TagBinding(this);
         }
 
         public select(modelAccessor) {
@@ -402,13 +424,16 @@
         public executeAttributes(context, binding, resolve) {
             var classes = [];
 
-            this.attributes.forEach(function attributesForEachBoundFn(tpl, name) {
-                var value = Util.execute(tpl, context).valueOf();
+            const attrs = this.attributes;
+            const length = attrs.length;
+            for (var i = 0; i < length; i++) {
+                var { tpl, name } = attrs[i];
+                var value = tpl.execute(context, binding);
 
                 if (value !== null && value !== undefined && !!value.valueOf)
                     value = value.valueOf();
                 if (name === "checked") {
-                    resolve(name, !!value ? "checked" : null, binding);
+                    resolve(name, !!value ? "checked" : null);
                 } else if (name === "class") {
                     classes.push(value);
                 } else if (name.startsWith("class.")) {
@@ -417,18 +442,19 @@
                         classes.push(className);
                     }
                 } else {
-                    resolve(name, value, binding);
+                    resolve(name, value);
                 }
-            });
+            };
 
-            resolve("class", classes.length > 0 ? Util.join(" ", classes) : null, binding);
+            resolve("class", classes.length > 0 ? Util.join(" ", classes) : null);
         }
 
         public executeEvents(context) {
             var result: any = {}, self = this;
 
             if (this.name.toUpperCase() === "INPUT") {
-                var name = this.attributes.get("name")(context);
+                var { tpl } = this.getAttribute("name");
+                var name = tpl(context);
                 result.update = new Function("value", `with (this) { ${name} = value; }`).bind(context);
             }
 
@@ -620,17 +646,15 @@
 
     class Binding implements ISubscriber {
         public state;
-        private context;
+        protected context;
 
         update(context) {
             this.context = context;
             var binding = this as any;
 
-            // binding.state = binding.execute(binding.state, context);
-
-            Util.ready(binding.state,
+            return Util.ready(binding.state,
                 s => {
-                    binding.state = binding.execute(s, context);
+                    return binding.state = binding.execute(s, context);
                 });
         }
 
@@ -644,6 +668,17 @@
         }
         extend(context, varName: string, x: any) {
             return context.extend(varName, x);
+        }
+        invoke(invokable, args: any[]) {
+            var xs = args.map(x => x.valueOf());
+            return invokable.invoke(xs);
+            //if (typeof target.execute === "function")
+            //    return provider.invoke(target, args);
+            //// return target.execute.apply(target, args);
+            //else if (typeof target.apply === "function")
+            //    return target.apply(this, args);
+
+            //throw new Error(`${this.targetExpr.toString()} is not a function`);
         }
 
         notify() {
@@ -692,7 +727,7 @@
         protected attrs = {};
         private mutationId;
 
-        constructor(private tpl: TagTemplate, context) {
+        constructor(private tpl: TagTemplate) {
             super();
             this.dom = document.createElement(tpl.name);
             this.dom.attributes["__binding"] = this;
@@ -700,34 +735,48 @@
 
         execute(state, context) {
             const tpl = this.tpl;
+            const binding = this;
 
-            tpl.executeAttributes(context, this, TagBinding.executeAttribute);
+            tpl.executeAttributes(context, this, function executeAttribute(attrName: string, newValue) {
+                if (binding.attrs[attrName] === newValue)
+                    return;
+                var oldValue = binding.attrs[attrName];
+
+                var dom = binding.dom;
+                if (typeof newValue === "undefined" || newValue === null) {
+                    dom[attrName] = undefined;
+                    dom.removeAttribute(attrName);
+                } else {
+                    if (typeof oldValue === "undefined") {
+                        var domAttr = document.createAttribute(attrName);
+                        domAttr.value = newValue;
+                        dom.setAttributeNode(domAttr);
+                    } else if (attrName === "class") {
+                        dom.className = newValue;
+                    } else {
+                        dom[attrName] = newValue;
+                    }
+                }
+                binding.attrs[attrName] = newValue;
+            });
 
             return this.dom;
         }
+    }
 
-        static executeAttribute(attrName: string, newValue, binding: TagBinding) {
-            if (binding.attrs[attrName] === newValue)
-                return;
-            var oldValue = binding.attrs[attrName];
-
-            var dom = binding.dom;
-            if (typeof newValue === "undefined" || newValue === null) {
-                dom[attrName] = undefined;
-                dom.removeAttribute(attrName);
-            } else {
-                if (typeof oldValue === "undefined") {
-                    var domAttr = document.createAttribute(attrName);
-                    domAttr.value = newValue;
-                    dom.setAttributeNode(domAttr);
-                } else if (attrName === "class") {
-                    dom.className = newValue;
-                } else {
-                    dom[attrName] = newValue;
-                }
-            }
-            binding.attrs[attrName] = newValue;
+    class Global implements IValue {
+        constructor(private value) {
         }
+
+        get(idx): IValue { throw new Error("Not implemented"); }
+
+        subscribe(subscr: ISubscriber) {}
+
+        invoke(args: any[]) {
+            return this.value.apply(null, args);
+        }
+
+        update(context) {}
     }
 
     class Immutable implements IValue {
@@ -761,7 +810,7 @@
 
         hasChanges(): boolean { return false; }
 
-        execute(args: any[]) {
+        invoke(args: any[]) {
             return null;
         }
 
@@ -778,7 +827,7 @@
         get(idx): IValue;
         valueOf(): any;
         subscribe(subscr: ISubscriber);
-        execute(args: any[]);
+        invoke(args: any[]);
         update(context: any);
     }
 
@@ -802,7 +851,7 @@
                 this.subscribers.push(subscr);
         }
 
-        execute(args: any[]) { throw new Error("Not implemented"); }
+        invoke(args: any[]) { throw new Error("Not implemented"); }
 
         update() {
             for (var i = 0; i < this.arr.length; i++) {
@@ -898,7 +947,7 @@
             return this.value !== this.valueOf();
         }
 
-        execute(args: any[]) {
+        invoke(args: any[]) {
             return null;
         }
 
@@ -917,6 +966,16 @@
         }
 
         id;
+    }
+
+    class ModelAccessorBinding extends Binding {
+        constructor(private modelAccessor, private handler: (model: any) => { bindings }) {
+            super();
+        }
+
+        execute(state, context) {
+            return Util.ready(this.modelAccessor.execute(context, this), this.handler);
+        }
     }
 
     export class Binder {
@@ -954,17 +1013,16 @@
 
         static executeTemplate(observable, tpl, target, offset, state?) {
             if (!!tpl.modelAccessor) {
-                return Util.ready(tpl.modelAccessor.execute(observable),
+                var binding = new ModelAccessorBinding(tpl.modelAccessor,
                     model => {
                         return {
-                            bindings: Binder.executeArray(model, offset, tpl, target, state),
-                            data: <any>model
+                            bindings: Binder.executeArray(model, offset, tpl, target, state)
                         };
                     });
+                return binding.update(observable);
             } else {
                 return {
-                    bindings: Binder.executeArray(observable, offset, tpl, target, state),
-                    data: observable
+                    bindings: Binder.executeArray(observable, offset, tpl, target, state)
                 };
             }
         }

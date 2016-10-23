@@ -62,11 +62,7 @@ var Xania;
                 var target = this.targetExpr.execute(context, provider);
                 if (!target)
                     throw new Error(this.targetExpr.toString() + " is undefined or null.");
-                if (typeof target.execute === "function")
-                    return target.execute.apply(target, args);
-                else if (typeof target.apply === "function")
-                    return target.apply(this, args);
-                throw new Error(this.targetExpr.toString() + " is not a function");
+                return provider.invoke(target, args);
             };
             App.prototype.app = function (args) {
                 return new App(this.targetExpr, this.args.concat(args));
@@ -258,6 +254,9 @@ var Xania;
                     item[varName] = x;
                     return item;
                 }
+            };
+            DefaultValueProvider.prototype.invoke = function (invokable, args) {
+                debugger;
             };
             return DefaultValueProvider;
         }());
