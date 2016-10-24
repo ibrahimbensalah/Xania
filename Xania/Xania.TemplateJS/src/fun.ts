@@ -20,7 +20,7 @@
     class Ident implements IExpr {
         constructor(public id: string) { }
 
-        execute(context, provider: IValueProvider) {
+        execute(context, provider: IValueProvider = DefaultValueProvider) {
             return provider.property(context, this.id);
         }
         app(args: IExpr[]): IExpr {
@@ -35,7 +35,7 @@
         constructor(public targetExpr: IExpr, public name: string) {
         }
 
-        execute(context, provider: IValueProvider) {
+        execute(context, provider: IValueProvider = DefaultValueProvider) {
             const obj = this.targetExpr.execute(context, provider);
             var member = provider.property(obj, this.name);
 
@@ -56,7 +56,7 @@
         constructor(public targetExpr: IExpr, public args: IExpr[]) {
         }
 
-        execute(context, provider: IValueProvider) {
+        execute(context, provider: IValueProvider = DefaultValueProvider) {
             let args = this.args.map(x => x.execute(context, provider));
 
             const target = this.targetExpr.execute(context, provider);
@@ -93,7 +93,7 @@
 
     class Not implements IExpr {
         constructor(public expr: IExpr) { }
-        execute(context, provider: IValueProvider) {
+        execute(context, provider: IValueProvider = DefaultValueProvider) {
             return !this.expr.execute(context, provider);
         }
         app(args: IExpr[]): IExpr {
@@ -120,7 +120,7 @@
         constructor(private expr: IExpr) {
         }
 
-        execute(context, provider: IValueProvider) {
+        execute(context, provider: IValueProvider = DefaultValueProvider) {
             var list = this.query.execute(context, provider);
             var selector = this.expr;
             return {
@@ -156,31 +156,18 @@
     class Query implements IExpr {
         constructor(public varName: string, public sourceExpr: IExpr) { }
 
-        execute(context, provider: IValueProvider) {
+        execute(context, provider: IValueProvider = DefaultValueProvider) {
             var result = this.sourceExpr.execute(context, provider);
-            var length = result.length;
-            if (typeof result.length === "number") {
-                return {
-                    length,
-                    itemAt(idx) {
-                        return provider.extend(context, this.varName, provider.itemAt(result, idx));
-                    },
-                    map(fn) {
-                        var result = [];
-                        this.forEach(item => {
-                            result.push(fn(item));
-                        });
-                        return result;
-                    },
-                    forEach(fn) {
-                        var l = length;
-                        for (let idx = 0; idx < l; idx++) {
-                            fn(this.itemAt(idx), idx);
-                        }
-                    }
+            return {
+                varName: this.varName,
+                context,
+                provider,
+                extend(x) {
+                    return this.provider.extend(this.context, this.varName, x);
+                },
+                forEach(fn) {
+                    return this.provider.forEach(result, (x, idx) => fn(this.extend(x), idx));
                 }
-            } else {
-                return result.map(x => provider.extend(context, this.varName, x));
             }
         }
         app(): IExpr { throw new Error("app on query is not supported"); }
@@ -195,13 +182,14 @@
         property(obj: any, name: string): any;
         extend(context, varName: string, x: any);
         invoke(invokable, args: any[]);
+        forEach(context, fn);
     }
 
     class Template {
         constructor(private parts: IExpr[]) {
         }
 
-        execute(context, provider: IValueProvider = new DefaultValueProvider()) {
+        execute(context, provider: IValueProvider = DefaultValueProvider) {
             if (this.parts.length === 0)
                 return "";
 
@@ -219,11 +207,7 @@
             if (typeof part === "string")
                 return part;
             else {
-                var fn = part.execute(context, provider);
-
-                if (!!fn && typeof fn.call === "function")
-                    return fn.call(context);
-                return fn;
+                return part.execute(context, provider);
             }
         }
 
@@ -249,15 +233,15 @@
 
     }
 
-    class DefaultValueProvider implements IValueProvider {
+    class DefaultValueProvider {
 
-        itemAt(arr, idx: number) {
+        static itemAt(arr, idx: number) {
             return !!arr.itemAt ? arr.itemAt(idx) : arr[idx];
         }
-        property(obj, name: string) {
+        static property(obj, name: string) {
             return !!obj.get ? obj.get(name) : obj[name];
         }
-        extend(context, varName: string, x: any) {
+        static extend(context, varName: string, x: any) {
             if (!!context.extend) {
                 return context.extend(varName, x);
             } else {
@@ -266,8 +250,11 @@
                 return item;
             }
         }
+        static forEach(context, fn) {
+            return context.forEach(fn);
+        }
 
-        invoke(invokable, args: any[]) {
+        static invoke(invokable, args: any[]) {
             debugger;
             //if (typeof target.execute === "function")
             //    return provider.invoke(target, args);

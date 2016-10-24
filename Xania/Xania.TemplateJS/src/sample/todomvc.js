@@ -12,7 +12,7 @@ var Todo = (function () {
 var TodoStore = (function () {
     function TodoStore() {
         this.todos = [];
-        for (var i = 0; i < 6; i++)
+        for (var i = 0; i < 2; i++)
             this.todos.push(new Todo("todo " + i, i % 2 === 0));
     }
     TodoStore.prototype.toggleAll = function () {

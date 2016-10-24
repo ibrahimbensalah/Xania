@@ -72,12 +72,9 @@
             var eventHandler = (target, name) => {
                 var binding = target.attributes["__binding"];
                 if (!!binding) {
-                    var handler = binding.tpl.events.get(name);
-                    if (!!handler) {
-                        const observable = binding.context.valueOf();
-                        Util.execute(handler, observable);
-                        this.update();
-                    }
+                    binding.trigger(name);
+
+                    this.update();
                 }
             };
 
@@ -243,7 +240,7 @@
     }
 
     class RootContainer implements IValue {
-        private properties: {name: string; value: IValue }[] = [];
+        private properties: { name: string; value: IValue }[] = [];
 
         constructor(private instance: any, private libs) {
         }
@@ -257,7 +254,7 @@
 
             var raw = this.instance[name];
             if (raw !== undefined) {
-                var instval = new Immutable(raw);
+                var instval = new Property(this.instance, name);
                 this.properties.push({ name, value: instval });
                 return instval;
             }
@@ -271,6 +268,10 @@
             return gval;
         }
 
+        set(name, value) {
+            this.instance[name] = value;
+        }
+
         subscribe(subscr: ISubscriber) { throw new Error("Not implemented"); }
 
         invoke(args: any[]) { throw new Error("Not implemented"); }
@@ -280,7 +281,7 @@
 
             for (let i = 0; i < this.properties.length; i++) {
                 const property = this.properties[i];
-                stack.push({ value: property.value, context: null });
+                stack.push({ value: property.value, context: this.instance });
             }
 
             var dirty = new Set<ISubscriber>();
@@ -401,6 +402,10 @@
             return null;
         }
 
+        getEvent(name) {
+            return this.events.get(name);
+        }
+
         public addEvent(name, callback) {
             this.events.set(name, callback);
         }
@@ -464,7 +469,6 @@
 
             return result;
         }
-
     }
 
     interface IDependency {
@@ -659,7 +663,9 @@
         }
 
         itemAt(arr: any, idx: number): any {
-            return arr.itemAt(idx);
+            var result = arr.itemAt(idx);
+            result.subscribe(this);
+            return result;
         }
         property(obj: IValue, name: string): any {
             var result = obj.get(name);
@@ -671,18 +677,27 @@
         }
         invoke(invokable, args: any[]) {
             var xs = args.map(x => x.valueOf());
-            return invokable.invoke(xs);
-            //if (typeof target.execute === "function")
-            //    return provider.invoke(target, args);
-            //// return target.execute.apply(target, args);
-            //else if (typeof target.apply === "function")
-            //    return target.apply(this, args);
 
-            //throw new Error(`${this.targetExpr.toString()} is not a function`);
+            var value;
+            if (!!invokable.invoke)
+                value = invokable.invoke(xs);
+            else
+                value = invokable.apply(null, xs);
+
+            return new Immutable(value);
+        }
+        forEach(context, fn) {
+            return context.forEach((x, i) => {
+                x.subscribe(this);
+                fn(x, i);
+            });
         }
 
         notify() {
             this.update(this.context);
+        }
+
+        trigger(name) {
         }
     }
 
@@ -762,21 +777,33 @@
 
             return this.dom;
         }
+
+        trigger(name) {
+            var handler = this.tpl.getEvent(name);
+            if (!!handler) {
+                var result = handler.execute(this.context, this);
+
+                if (typeof result.value === "function")
+                    result.invoke();
+            }
+        }
     }
 
     class Global implements IValue {
+        private properties = [];
+
         constructor(private value) {
         }
 
         get(idx): IValue { throw new Error("Not implemented"); }
 
-        subscribe(subscr: ISubscriber) {}
+        subscribe(subscr: ISubscriber) { }
 
         invoke(args: any[]) {
             return this.value.apply(null, args);
         }
 
-        update(context) {}
+        update(context) { }
     }
 
     class Immutable implements IValue {
@@ -821,6 +848,13 @@
                 result.push(fn(value, i));
             }
             return result;
+        }
+
+        forEach(fn) {
+            for (let i = 0; i < this.value.length; i++) {
+                var value = this.get(i);
+                fn(value, i);
+            }
         }
     }
     interface IValue {
@@ -894,7 +928,11 @@
         }
 
         get(name): IValue {
-            return this.map[name];
+            var retval = this.map[name];
+            if (retval === undefined)
+                retval = this.parent.get(name);
+
+            return retval;
         }
 
         forEach(fn) {
@@ -906,9 +944,13 @@
         private subscribers: ISubscriber[] = [];
         private properties = [];
         private value;
+        private id;
 
-        constructor(context: any, public name: string | number) {
+        constructor(private context: any, public name: string | number) {
             this.value = context[name];
+            this.id = this.value;
+            if (!!this.value && this.value.id !== undefined)
+                this.id = this.value.id;
         }
 
         subscribe(subscr: ISubscriber) {
@@ -918,11 +960,16 @@
 
         update(context) {
             const currentValue = context[this.name];
+            var currentId = currentValue;
+            if (!!currentValue && currentValue.id !== undefined)
+                currentId = currentValue.id;
 
-            if (this.value !== currentValue) {
+            if (this.id !== currentId) {
                 this.value = currentValue;
+                this.id = currentId;
                 return true;
             }
+
             return false;
         }
 
@@ -940,7 +987,6 @@
 
         valueOf() {
             return this.value;
-            // return this.instance.value[this.name];
         }
 
         hasChanges(): boolean {
@@ -948,11 +994,18 @@
         }
 
         invoke(args: any[]) {
-            return null;
+            if (this.value === void 0 || this.value === null)
+                throw new TypeError("undefined is not invocable");
+            if (!!this.value.execute)
+                return this.value.execute.apply(this.value, args);
+            return this.value.apply(this.context, args);
         }
 
         forEach(fn) {
-            fn(this, 0);
+            for (let i = 0; i < this.value.length; i++) {
+                var value = this.get(i);
+                fn(value, i);
+            }
         }
 
         map(fn) {
@@ -964,8 +1017,6 @@
 
             return Sequence.create(result);
         }
-
-        id;
     }
 
     class ModelAccessorBinding extends Binding {

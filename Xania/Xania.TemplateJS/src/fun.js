@@ -22,6 +22,7 @@ var Xania;
                 this.id = id;
             }
             Ident.prototype.execute = function (context, provider) {
+                if (provider === void 0) { provider = DefaultValueProvider; }
                 return provider.property(context, this.id);
             };
             Ident.prototype.app = function (args) {
@@ -38,6 +39,7 @@ var Xania;
                 this.name = name;
             }
             Member.prototype.execute = function (context, provider) {
+                if (provider === void 0) { provider = DefaultValueProvider; }
                 var obj = this.targetExpr.execute(context, provider);
                 var member = provider.property(obj, this.name);
                 if (typeof member === "function")
@@ -58,6 +60,7 @@ var Xania;
                 this.args = args;
             }
             App.prototype.execute = function (context, provider) {
+                if (provider === void 0) { provider = DefaultValueProvider; }
                 var args = this.args.map(function (x) { return x.execute(context, provider); });
                 var target = this.targetExpr.execute(context, provider);
                 if (!target)
@@ -94,6 +97,7 @@ var Xania;
                 this.expr = expr;
             }
             Not.prototype.execute = function (context, provider) {
+                if (provider === void 0) { provider = DefaultValueProvider; }
                 return !this.expr.execute(context, provider);
             };
             Not.prototype.app = function (args) {
@@ -120,6 +124,7 @@ var Xania;
                 this.expr = expr;
             }
             Selector.prototype.execute = function (context, provider) {
+                if (provider === void 0) { provider = DefaultValueProvider; }
                 var list = this.query.execute(context, provider);
                 var selector = this.expr;
                 return {
@@ -157,33 +162,20 @@ var Xania;
                 this.sourceExpr = sourceExpr;
             }
             Query.prototype.execute = function (context, provider) {
-                var _this = this;
+                if (provider === void 0) { provider = DefaultValueProvider; }
                 var result = this.sourceExpr.execute(context, provider);
-                var length = result.length;
-                if (typeof result.length === "number") {
-                    return {
-                        length: length,
-                        itemAt: function (idx) {
-                            return provider.extend(context, this.varName, provider.itemAt(result, idx));
-                        },
-                        map: function (fn) {
-                            var result = [];
-                            this.forEach(function (item) {
-                                result.push(fn(item));
-                            });
-                            return result;
-                        },
-                        forEach: function (fn) {
-                            var l = length;
-                            for (var idx = 0; idx < l; idx++) {
-                                fn(this.itemAt(idx), idx);
-                            }
-                        }
-                    };
-                }
-                else {
-                    return result.map(function (x) { return provider.extend(context, _this.varName, x); });
-                }
+                return {
+                    varName: this.varName,
+                    context: context,
+                    provider: provider,
+                    extend: function (x) {
+                        return this.provider.extend(this.context, this.varName, x);
+                    },
+                    forEach: function (fn) {
+                        var _this = this;
+                        return this.provider.forEach(result, function (x, idx) { return fn(_this.extend(x), idx); });
+                    }
+                };
             };
             Query.prototype.app = function () { throw new Error("app on query is not supported"); };
             Query.prototype.toString = function () {
@@ -196,7 +188,7 @@ var Xania;
                 this.parts = parts;
             }
             Template.prototype.execute = function (context, provider) {
-                if (provider === void 0) { provider = new DefaultValueProvider(); }
+                if (provider === void 0) { provider = DefaultValueProvider; }
                 if (this.parts.length === 0)
                     return "";
                 if (this.parts.length === 1)
@@ -211,10 +203,7 @@ var Xania;
                 if (typeof part === "string")
                     return part;
                 else {
-                    var fn = part.execute(context, provider);
-                    if (!!fn && typeof fn.call === "function")
-                        return fn.call(context);
-                    return fn;
+                    return part.execute(context, provider);
                 }
             };
             Template.prototype.toString = function () {
@@ -239,13 +228,13 @@ var Xania;
         var DefaultValueProvider = (function () {
             function DefaultValueProvider() {
             }
-            DefaultValueProvider.prototype.itemAt = function (arr, idx) {
+            DefaultValueProvider.itemAt = function (arr, idx) {
                 return !!arr.itemAt ? arr.itemAt(idx) : arr[idx];
             };
-            DefaultValueProvider.prototype.property = function (obj, name) {
+            DefaultValueProvider.property = function (obj, name) {
                 return !!obj.get ? obj.get(name) : obj[name];
             };
-            DefaultValueProvider.prototype.extend = function (context, varName, x) {
+            DefaultValueProvider.extend = function (context, varName, x) {
                 if (!!context.extend) {
                     return context.extend(varName, x);
                 }
@@ -255,7 +244,10 @@ var Xania;
                     return item;
                 }
             };
-            DefaultValueProvider.prototype.invoke = function (invokable, args) {
+            DefaultValueProvider.forEach = function (context, fn) {
+                return context.forEach(fn);
+            };
+            DefaultValueProvider.invoke = function (invokable, args) {
                 debugger;
             };
             return DefaultValueProvider;
