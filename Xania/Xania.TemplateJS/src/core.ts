@@ -312,7 +312,7 @@
         }
 
         forEach(fn) {
-            fn(this);
+            fn(this, 0);
         }
 
         extend(name, value) {
@@ -658,7 +658,7 @@
 
             return Util.ready(binding.state,
                 s => {
-                    return binding.state = binding.execute(s, context);
+                    return binding.state = binding.render(context, s);
                 });
         }
 
@@ -687,10 +687,7 @@
             return new Immutable(value);
         }
         forEach(context, fn) {
-            return context.forEach((x, i) => {
-                x.subscribe(this);
-                fn(x, i);
-            });
+            return context.forEach(fn);
         }
 
         notify() {
@@ -713,7 +710,7 @@
             this.dom = document.createDocumentFragment();
         }
 
-        execute() {
+        render() {
             return this.dom;
         }
     }
@@ -726,7 +723,7 @@
             this.dom = document.createTextNode("");
         }
 
-        execute(state, context) {
+        render(context) {
             const newValue = this.tpl.execute(context, this).valueOf();
             this.setText(newValue);
         }
@@ -748,7 +745,7 @@
             this.dom.attributes["__binding"] = this;
         }
 
-        execute(state, context) {
+        render(context) {
             const tpl = this.tpl;
             const binding = this;
 
@@ -995,7 +992,7 @@
 
         invoke(args: any[]) {
             if (this.value === void 0 || this.value === null)
-                throw new TypeError("undefined is not invocable");
+                throw new TypeError(this.name + " is not invocable");
             if (!!this.value.execute)
                 return this.value.execute.apply(this.value, args);
             return this.value.apply(this.context, args);
@@ -1019,13 +1016,60 @@
         }
     }
 
-    class ModelAccessorBinding extends Binding {
-        constructor(private modelAccessor, private handler: (model: any) => { bindings }) {
+    class ReactiveBinding extends Binding {
+        private bindings = [];
+        private stream;
+        private next;
+
+        constructor(private tpl, private target, private offset) {
             super();
+
+            this.next = 0;
         }
 
-        execute(state, context) {
-            return Util.ready(this.modelAccessor.execute(context, this), this.handler);
+        render(context) {
+            var { bindings, target, tpl } = this;
+            this.next = 0;
+            if (!!this.tpl.modelAccessor) {
+                var stream = tpl.modelAccessor.execute(context, this);
+                stream.forEach((ctx) => this.execute(ctx));
+            } else {
+                this.execute(context);
+            }
+
+            while (bindings.length > this.next) {
+                const oldBinding = bindings.pop();
+                target.removeChild(oldBinding.dom);
+            }
+
+            return this;
+        }
+
+        execute(result) {
+            var { offset, tpl, target, bindings, next } = this;
+            var insertAt = offset + next;
+
+            if (next < bindings.length) {
+                bindings[next].update(result);
+            } else {
+                const newBinding = tpl.bind();
+
+                tpl.children()
+                    .reduce(Binder.reduceChild,
+                        { context: result, offset: 0, parentBinding: newBinding });
+
+                // result.subscribe(newBinding);
+                newBinding.update(result);
+
+                if (insertAt < target.childNodes.length) {
+                    var beforeElement = target.childNodes[insertAt];
+                    target.insertBefore(newBinding.dom, beforeElement);
+                } else {
+                    target.appendChild(newBinding.dom);
+                }
+                bindings.push(newBinding);
+            }
+            this.next++;
         }
     }
 
@@ -1034,13 +1078,6 @@
 
         constructor(viewModel, libs: any[]) {
             this.context = new RootContainer(viewModel, libs.reduce((x, y) => Object.assign(x, y), {}));
-        }
-
-        static removeBindings(target, bindings, maxLength) {
-            while (bindings.length > maxLength) {
-                const oldBinding = bindings.pop();
-                target.removeChild(oldBinding.dom);
-            }
         }
 
         static reduceChild(prev, cur) {
@@ -1062,55 +1099,11 @@
             return selector;
         }
 
-        static executeTemplate(observable, tpl, target, offset, state?) {
-            if (!!tpl.modelAccessor) {
-                var binding = new ModelAccessorBinding(tpl.modelAccessor,
-                    model => {
-                        return {
-                            bindings: Binder.executeArray(model, offset, tpl, target, state)
-                        };
-                    });
-                return binding.update(observable);
-            } else {
-                return {
-                    bindings: Binder.executeArray(observable, offset, tpl, target, state)
-                };
-            }
+        static executeTemplate(observable, tpl, target, offset) {
+            var binding = new ReactiveBinding(tpl, target, offset);
+            return binding.update(observable);
         }
 
-        static executeArray(arr, offset, tpl, target, state) {
-            const bindings = !!state ? state.bindings : [];
-
-            Binder.removeBindings(target, bindings, arr.length);
-
-            var startInsertAt = offset + bindings.length;
-
-            arr.forEach((result, idx) => {
-                if (idx < bindings.length) {
-                    // bindings[idx].update(result);
-                } else {
-                    const newBinding = tpl.bind();
-
-                    tpl.children()
-                        .reduce(Binder.reduceChild,
-                        { context: result, offset: 0, parentBinding: newBinding });
-
-                    // result.subscribe(newBinding);
-                    newBinding.update(result);
-
-                    var insertAt = startInsertAt + idx;
-                    if (insertAt < target.childNodes.length) {
-                        var beforeElement = target.childNodes[insertAt];
-                        target.insertBefore(newBinding.dom, beforeElement);
-                    } else {
-                        target.appendChild(newBinding.dom);
-                    }
-                    bindings.push(newBinding);
-                }
-            });
-
-            return bindings;
-        }
     }
 
     export function app(...libs: any[]) {

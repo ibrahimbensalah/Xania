@@ -26,7 +26,7 @@ var Monitoring = Monitoring || (function() {
     msText.innerHTML= 'Repaint rate: 0/sec';
     msDiv.appendChild( msText );
 
-    var bucketSize = 20;
+    var bucketSize = 400;
     var bucket = [];
     var lastTime  = Date.now();
     return {

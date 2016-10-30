@@ -284,7 +284,7 @@ var Xania;
             });
         };
         RootContainer.prototype.forEach = function (fn) {
-            fn(this);
+            fn(this, 0);
         };
         RootContainer.prototype.extend = function (name, value) {
             return new Container(this).add(name, value);
@@ -581,7 +581,7 @@ var Xania;
             this.context = context;
             var binding = this;
             return Util.ready(binding.state, function (s) {
-                return binding.state = binding.execute(s, context);
+                return binding.state = binding.render(context, s);
             });
         };
         Binding.prototype.itemAt = function (arr, idx) {
@@ -607,11 +607,7 @@ var Xania;
             return new Immutable(value);
         };
         Binding.prototype.forEach = function (context, fn) {
-            var _this = this;
-            return context.forEach(function (x, i) {
-                x.subscribe(_this);
-                fn(x, i);
-            });
+            return context.forEach(fn);
         };
         Binding.prototype.notify = function () {
             this.update(this.context);
@@ -627,7 +623,7 @@ var Xania;
             this.tpl = tpl;
             this.dom = document.createDocumentFragment();
         }
-        ContentBinding.prototype.execute = function () {
+        ContentBinding.prototype.render = function () {
             return this.dom;
         };
         return ContentBinding;
@@ -639,7 +635,7 @@ var Xania;
             this.tpl = tpl;
             this.dom = document.createTextNode("");
         }
-        TextBinding.prototype.execute = function (state, context) {
+        TextBinding.prototype.render = function (context) {
             var newValue = this.tpl.execute(context, this).valueOf();
             this.setText(newValue);
         };
@@ -657,7 +653,7 @@ var Xania;
             this.dom = document.createElement(tpl.name);
             this.dom.attributes["__binding"] = this;
         }
-        TagBinding.prototype.execute = function (state, context) {
+        TagBinding.prototype.render = function (context) {
             var tpl = this.tpl;
             var binding = this;
             tpl.executeAttributes(context, this, function executeAttribute(attrName, newValue) {
@@ -852,7 +848,7 @@ var Xania;
         };
         Property.prototype.invoke = function (args) {
             if (this.value === void 0 || this.value === null)
-                throw new TypeError("undefined is not invocable");
+                throw new TypeError(this.name + " is not invocable");
             if (!!this.value.execute)
                 return this.value.execute.apply(this.value, args);
             return this.value.apply(this.context, args);
@@ -873,28 +869,61 @@ var Xania;
         };
         return Property;
     }());
-    var ModelAccessorBinding = (function (_super) {
-        __extends(ModelAccessorBinding, _super);
-        function ModelAccessorBinding(modelAccessor, handler) {
+    var ReactiveBinding = (function (_super) {
+        __extends(ReactiveBinding, _super);
+        function ReactiveBinding(tpl, target, offset) {
             _super.call(this);
-            this.modelAccessor = modelAccessor;
-            this.handler = handler;
+            this.tpl = tpl;
+            this.target = target;
+            this.offset = offset;
+            this.bindings = [];
+            this.next = 0;
         }
-        ModelAccessorBinding.prototype.execute = function (state, context) {
-            return Util.ready(this.modelAccessor.execute(context, this), this.handler);
+        ReactiveBinding.prototype.render = function (context) {
+            var _this = this;
+            var _a = this, bindings = _a.bindings, target = _a.target, tpl = _a.tpl;
+            this.next = 0;
+            if (!!this.tpl.modelAccessor) {
+                var stream = tpl.modelAccessor.execute(context, this);
+                stream.forEach(function (ctx) { return _this.execute(ctx); });
+            }
+            else {
+                this.execute(context);
+            }
+            while (bindings.length > this.next) {
+                var oldBinding = bindings.pop();
+                target.removeChild(oldBinding.dom);
+            }
+            return this;
         };
-        return ModelAccessorBinding;
+        ReactiveBinding.prototype.execute = function (result) {
+            var _a = this, offset = _a.offset, tpl = _a.tpl, target = _a.target, bindings = _a.bindings, next = _a.next;
+            var insertAt = offset + next;
+            if (next < bindings.length) {
+                bindings[next].update(result);
+            }
+            else {
+                var newBinding = tpl.bind();
+                tpl.children()
+                    .reduce(Binder.reduceChild, { context: result, offset: 0, parentBinding: newBinding });
+                newBinding.update(result);
+                if (insertAt < target.childNodes.length) {
+                    var beforeElement = target.childNodes[insertAt];
+                    target.insertBefore(newBinding.dom, beforeElement);
+                }
+                else {
+                    target.appendChild(newBinding.dom);
+                }
+                bindings.push(newBinding);
+            }
+            this.next++;
+        };
+        return ReactiveBinding;
     }(Binding));
     var Binder = (function () {
         function Binder(viewModel, libs) {
             this.context = new RootContainer(viewModel, libs.reduce(function (x, y) { return Object.assign(x, y); }, {}));
         }
-        Binder.removeBindings = function (target, bindings, maxLength) {
-            while (bindings.length > maxLength) {
-                var oldBinding = bindings.pop();
-                target.removeChild(oldBinding.dom);
-            }
-        };
         Binder.reduceChild = function (prev, cur) {
             var parentBinding = prev.parentBinding;
             var context = prev.context;
@@ -909,45 +938,9 @@ var Xania;
                 return document.querySelector(selector);
             return selector;
         };
-        Binder.executeTemplate = function (observable, tpl, target, offset, state) {
-            if (!!tpl.modelAccessor) {
-                var binding = new ModelAccessorBinding(tpl.modelAccessor, function (model) {
-                    return {
-                        bindings: Binder.executeArray(model, offset, tpl, target, state)
-                    };
-                });
-                return binding.update(observable);
-            }
-            else {
-                return {
-                    bindings: Binder.executeArray(observable, offset, tpl, target, state)
-                };
-            }
-        };
-        Binder.executeArray = function (arr, offset, tpl, target, state) {
-            var bindings = !!state ? state.bindings : [];
-            Binder.removeBindings(target, bindings, arr.length);
-            var startInsertAt = offset + bindings.length;
-            arr.forEach(function (result, idx) {
-                if (idx < bindings.length) {
-                }
-                else {
-                    var newBinding = tpl.bind();
-                    tpl.children()
-                        .reduce(Binder.reduceChild, { context: result, offset: 0, parentBinding: newBinding });
-                    newBinding.update(result);
-                    var insertAt = startInsertAt + idx;
-                    if (insertAt < target.childNodes.length) {
-                        var beforeElement = target.childNodes[insertAt];
-                        target.insertBefore(newBinding.dom, beforeElement);
-                    }
-                    else {
-                        target.appendChild(newBinding.dom);
-                    }
-                    bindings.push(newBinding);
-                }
-            });
-            return bindings;
+        Binder.executeTemplate = function (observable, tpl, target, offset) {
+            var binding = new ReactiveBinding(tpl, target, offset);
+            return binding.update(observable);
         };
         return Binder;
     }());

@@ -22,7 +22,7 @@ var Xania;
                 this.id = id;
             }
             Ident.prototype.execute = function (context, provider) {
-                if (provider === void 0) { provider = DefaultValueProvider; }
+                if (provider === void 0) { provider = DefaultRuntimeProvider; }
                 return provider.property(context, this.id);
             };
             Ident.prototype.app = function (args) {
@@ -39,7 +39,7 @@ var Xania;
                 this.name = name;
             }
             Member.prototype.execute = function (context, provider) {
-                if (provider === void 0) { provider = DefaultValueProvider; }
+                if (provider === void 0) { provider = DefaultRuntimeProvider; }
                 var obj = this.targetExpr.execute(context, provider);
                 var member = provider.property(obj, this.name);
                 if (typeof member === "function")
@@ -60,7 +60,7 @@ var Xania;
                 this.args = args;
             }
             App.prototype.execute = function (context, provider) {
-                if (provider === void 0) { provider = DefaultValueProvider; }
+                if (provider === void 0) { provider = DefaultRuntimeProvider; }
                 var args = this.args.map(function (x) { return x.execute(context, provider); });
                 var target = this.targetExpr.execute(context, provider);
                 if (!target)
@@ -97,7 +97,7 @@ var Xania;
                 this.expr = expr;
             }
             Not.prototype.execute = function (context, provider) {
-                if (provider === void 0) { provider = DefaultValueProvider; }
+                if (provider === void 0) { provider = DefaultRuntimeProvider; }
                 return !this.expr.execute(context, provider);
             };
             Not.prototype.app = function (args) {
@@ -124,7 +124,7 @@ var Xania;
                 this.expr = expr;
             }
             Selector.prototype.execute = function (context, provider) {
-                if (provider === void 0) { provider = DefaultValueProvider; }
+                if (provider === void 0) { provider = DefaultRuntimeProvider; }
                 var list = this.query.execute(context, provider);
                 var selector = this.expr;
                 return {
@@ -162,7 +162,7 @@ var Xania;
                 this.sourceExpr = sourceExpr;
             }
             Query.prototype.execute = function (context, provider) {
-                if (provider === void 0) { provider = DefaultValueProvider; }
+                if (provider === void 0) { provider = DefaultRuntimeProvider; }
                 var result = this.sourceExpr.execute(context, provider);
                 return {
                     varName: this.varName,
@@ -188,7 +188,7 @@ var Xania;
                 this.parts = parts;
             }
             Template.prototype.execute = function (context, provider) {
-                if (provider === void 0) { provider = DefaultValueProvider; }
+                if (provider === void 0) { provider = DefaultRuntimeProvider; }
                 if (this.parts.length === 0)
                     return "";
                 if (this.parts.length === 1)
@@ -225,16 +225,16 @@ var Xania;
             };
             return UnaryOperator;
         }());
-        var DefaultValueProvider = (function () {
-            function DefaultValueProvider() {
+        var DefaultRuntimeProvider = (function () {
+            function DefaultRuntimeProvider() {
             }
-            DefaultValueProvider.itemAt = function (arr, idx) {
+            DefaultRuntimeProvider.itemAt = function (arr, idx) {
                 return !!arr.itemAt ? arr.itemAt(idx) : arr[idx];
             };
-            DefaultValueProvider.property = function (obj, name) {
+            DefaultRuntimeProvider.property = function (obj, name) {
                 return !!obj.get ? obj.get(name) : obj[name];
             };
-            DefaultValueProvider.extend = function (context, varName, x) {
+            DefaultRuntimeProvider.extend = function (context, varName, x) {
                 if (!!context.extend) {
                     return context.extend(varName, x);
                 }
@@ -244,13 +244,13 @@ var Xania;
                     return item;
                 }
             };
-            DefaultValueProvider.forEach = function (context, fn) {
-                return context.forEach(fn);
+            DefaultRuntimeProvider.forEach = function (arr, fn) {
+                return arr.forEach(fn);
             };
-            DefaultValueProvider.invoke = function (invokable, args) {
+            DefaultRuntimeProvider.invoke = function (invokable, args) {
                 debugger;
             };
-            return DefaultValueProvider;
+            return DefaultRuntimeProvider;
         }());
         var Compiler = (function () {
             function Compiler() {

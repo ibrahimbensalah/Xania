@@ -1,6 +1,6 @@
 ﻿module Xania.Ast {
     interface IExpr {
-        execute(context: any, provider: IValueProvider);
+        execute(context: any, provider: IRuntimeProvider);
         app(args: IExpr[]): IExpr;
     }
 
@@ -20,7 +20,7 @@
     class Ident implements IExpr {
         constructor(public id: string) { }
 
-        execute(context, provider: IValueProvider = DefaultValueProvider) {
+        execute(context, provider: IRuntimeProvider = DefaultRuntimeProvider) {
             return provider.property(context, this.id);
         }
         app(args: IExpr[]): IExpr {
@@ -35,7 +35,7 @@
         constructor(public targetExpr: IExpr, public name: string) {
         }
 
-        execute(context, provider: IValueProvider = DefaultValueProvider) {
+        execute(context, provider: IRuntimeProvider = DefaultRuntimeProvider) {
             const obj = this.targetExpr.execute(context, provider);
             var member = provider.property(obj, this.name);
 
@@ -56,7 +56,7 @@
         constructor(public targetExpr: IExpr, public args: IExpr[]) {
         }
 
-        execute(context, provider: IValueProvider = DefaultValueProvider) {
+        execute(context, provider: IRuntimeProvider = DefaultRuntimeProvider) {
             let args = this.args.map(x => x.execute(context, provider));
 
             const target = this.targetExpr.execute(context, provider);
@@ -93,7 +93,7 @@
 
     class Not implements IExpr {
         constructor(public expr: IExpr) { }
-        execute(context, provider: IValueProvider = DefaultValueProvider) {
+        execute(context, provider: IRuntimeProvider = DefaultRuntimeProvider) {
             return !this.expr.execute(context, provider);
         }
         app(args: IExpr[]): IExpr {
@@ -120,7 +120,7 @@
         constructor(private expr: IExpr) {
         }
 
-        execute(context, provider: IValueProvider = DefaultValueProvider) {
+        execute(context, provider: IRuntimeProvider = DefaultRuntimeProvider) {
             var list = this.query.execute(context, provider);
             var selector = this.expr;
             return {
@@ -156,7 +156,7 @@
     class Query implements IExpr {
         constructor(public varName: string, public sourceExpr: IExpr) { }
 
-        execute(context, provider: IValueProvider = DefaultValueProvider) {
+        execute(context, provider: IRuntimeProvider = DefaultRuntimeProvider) {
             var result = this.sourceExpr.execute(context, provider);
             return {
                 varName: this.varName,
@@ -177,7 +177,7 @@
         }
     }
 
-    interface IValueProvider {
+    interface IRuntimeProvider {
         itemAt(arr: any, idx: number): any;
         property(obj: any, name: string): any;
         extend(context, varName: string, x: any);
@@ -189,7 +189,7 @@
         constructor(private parts: IExpr[]) {
         }
 
-        execute(context, provider: IValueProvider = DefaultValueProvider) {
+        execute(context, provider: IRuntimeProvider = DefaultRuntimeProvider) {
             if (this.parts.length === 0)
                 return "";
 
@@ -203,7 +203,7 @@
             return result;
         }
 
-        executePart(part: IExpr | string, context, provider: IValueProvider) {
+        executePart(part: IExpr | string, context, provider: IRuntimeProvider) {
             if (typeof part === "string")
                 return part;
             else {
@@ -233,7 +233,7 @@
 
     }
 
-    class DefaultValueProvider {
+    class DefaultRuntimeProvider {
 
         static itemAt(arr, idx: number) {
             return !!arr.itemAt ? arr.itemAt(idx) : arr[idx];
@@ -250,8 +250,8 @@
                 return item;
             }
         }
-        static forEach(context, fn) {
-            return context.forEach(fn);
+        static forEach(arr, fn) {
+            return arr.forEach(fn);
         }
 
         static invoke(invokable, args: any[]) {
