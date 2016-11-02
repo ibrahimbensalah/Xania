@@ -230,6 +230,7 @@ var Xania;
             this.instance = instance;
             this.libs = libs;
             this.properties = [];
+            this.extensions = [];
         }
         RootContainer.prototype.get = function (name) {
             for (var i = 0; i < this.properties.length; i++) {
@@ -286,8 +287,15 @@ var Xania;
         RootContainer.prototype.forEach = function (fn) {
             fn(this, 0);
         };
-        RootContainer.prototype.extend = function (name, value) {
-            return new Container(this).add(name, value);
+        RootContainer.prototype.extend2 = function (name, value) {
+            for (var i = 0; i < this.extensions.length; i++) {
+                var ext = this.extensions[i];
+                if (ext.name === name && ext.id === value.id)
+                    return ext.container;
+            }
+            var container = new Container(this).add(name, value);
+            this.extensions.push({ name: name, id: value.id, container: container });
+            return container;
         };
         return RootContainer;
     }());
@@ -595,7 +603,7 @@ var Xania;
             return result;
         };
         Binding.prototype.extend = function (context, varName, x) {
-            return context.extend(varName, x);
+            return context.extend2(varName, x);
         };
         Binding.prototype.invoke = function (invokable, args) {
             var xs = args.map(function (x) { return x.valueOf(); });
@@ -784,13 +792,21 @@ var Xania;
             if (parent === void 0) { parent = null; }
             this.parent = parent;
             this.map = {};
+            this.extensions = [];
         }
         Container.prototype.add = function (name, value) {
             this.map[name] = value;
             return this;
         };
-        Container.prototype.extend = function (name, value) {
-            return new Container().add(name, value);
+        Container.prototype.extend2 = function (name, value) {
+            for (var i = 0; i < this.extensions.length; i++) {
+                var ext = this.extensions[i];
+                if (ext.name === name && ext.id === value.id)
+                    return ext.container;
+            }
+            var container = new Container(this).add(name, value);
+            this.extensions.push({ name: name, id: value.id, container: container });
+            return container;
         };
         Container.prototype.get = function (name) {
             var retval = this.map[name];
@@ -826,6 +842,10 @@ var Xania;
             if (this.id !== currentId) {
                 this.value = currentValue;
                 this.id = currentId;
+                for (var i = 0; i < this.properties.length; i++) {
+                    var prop = this.properties[i];
+                    prop.context = this.value;
+                }
                 return true;
             }
             return false;
@@ -885,10 +905,23 @@ var Xania;
             this.next = 0;
             if (!!this.tpl.modelAccessor) {
                 var stream = tpl.modelAccessor.execute(context, this);
-                stream.forEach(function (ctx) { return _this.execute(ctx); });
+                stream.forEach(function (ctx, idx) {
+                    _this.next = idx + 1;
+                    for (var i = 0; i < bindings.length; i++) {
+                        var binding = bindings[i];
+                        if (binding.context === ctx) {
+                            if (i !== idx) {
+                                bindings[i] = bindings[idx];
+                                bindings[idx] = binding;
+                            }
+                            return;
+                        }
+                    }
+                    _this.execute(ctx, idx);
+                });
             }
             else {
-                this.execute(context);
+                this.execute(context, 0);
             }
             while (bindings.length > this.next) {
                 var oldBinding = bindings.pop();
@@ -896,11 +929,11 @@ var Xania;
             }
             return this;
         };
-        ReactiveBinding.prototype.execute = function (result) {
-            var _a = this, offset = _a.offset, tpl = _a.tpl, target = _a.target, bindings = _a.bindings, next = _a.next;
-            var insertAt = offset + next;
-            if (next < bindings.length) {
-                bindings[next].update(result);
+        ReactiveBinding.prototype.execute = function (result, idx) {
+            var _a = this, offset = _a.offset, tpl = _a.tpl, target = _a.target, bindings = _a.bindings;
+            var insertAt = offset + idx;
+            if (idx < bindings.length) {
+                throw new Error();
             }
             else {
                 var newBinding = tpl.bind();

@@ -315,8 +315,17 @@
             fn(this, 0);
         }
 
-        extend(name, value) {
-            return new Container(this).add(name, value);
+        private extensions: { name; id; container }[] = [];
+        extend2(name, value) {
+            for (var i = 0; i < this.extensions.length; i++) {
+                var ext = this.extensions[i];
+                if (ext.name === name && ext.id === value.id)
+                    return ext.container;
+            }
+
+            var container = new Container(this).add(name, value);
+            this.extensions.push({ name, id: value.id, container });
+            return container;
         }
     }
 
@@ -673,7 +682,7 @@
             return result;
         }
         extend(context, varName: string, x: any) {
-            return context.extend(varName, x);
+            return context.extend2(varName, x);
         }
         invoke(invokable, args: any[]) {
             var xs = args.map(x => x.valueOf());
@@ -920,8 +929,17 @@
             return this;
         }
 
-        extend(name, value) {
-            return new Container().add(name, value);
+        private extensions: { name; id; container }[] = [];
+        extend2(name, value) {
+            for (var i = 0; i < this.extensions.length; i++) {
+                var ext = this.extensions[i];
+                if (ext.name === name && ext.id === value.id)
+                    return ext.container;
+            }
+
+            var container = new Container(this).add(name, value);
+            this.extensions.push({ name, id: value.id, container });
+            return container;
         }
 
         get(name): IValue {
@@ -964,6 +982,11 @@
             if (this.id !== currentId) {
                 this.value = currentValue;
                 this.id = currentId;
+
+                for (var i = 0; i < this.properties.length; i++) {
+                    var prop = this.properties[i];
+                    prop.context = this.value;
+                }
                 return true;
             }
 
@@ -1032,9 +1055,22 @@
             this.next = 0;
             if (!!this.tpl.modelAccessor) {
                 var stream = tpl.modelAccessor.execute(context, this);
-                stream.forEach((ctx) => this.execute(ctx));
+                stream.forEach((ctx, idx) => {
+                    this.next = idx + 1;
+                    for (var i = 0; i < bindings.length; i++) {
+                        var binding = bindings[i];
+                        if (binding.context === ctx) {
+                            if (i !== idx) {
+                                bindings[i] = bindings[idx];
+                                bindings[idx] = binding;
+                            }
+                            return;
+                        }
+                    }
+                    this.execute(ctx, idx);
+                });
             } else {
-                this.execute(context);
+                this.execute(context, 0);
             }
 
             while (bindings.length > this.next) {
@@ -1045,18 +1081,19 @@
             return this;
         }
 
-        execute(result) {
-            var { offset, tpl, target, bindings, next } = this;
-            var insertAt = offset + next;
+        execute(result, idx) {
+            var { offset, tpl, target, bindings } = this;
+            var insertAt = offset + idx;
 
-            if (next < bindings.length) {
-                bindings[next].update(result);
+            if (idx < bindings.length) {
+                throw new Error();
+                // bindings[idx].update(result);
             } else {
                 const newBinding = tpl.bind();
 
                 tpl.children()
                     .reduce(Binder.reduceChild,
-                        { context: result, offset: 0, parentBinding: newBinding });
+                    { context: result, offset: 0, parentBinding: newBinding });
 
                 // result.subscribe(newBinding);
                 newBinding.update(result);
