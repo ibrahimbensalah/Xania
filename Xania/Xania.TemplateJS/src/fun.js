@@ -492,6 +492,7 @@ var Xania;
             List.filter = function (fn, list) {
                 if (!list)
                     return [];
+                debugger;
                 return list.filter(fn);
             };
             List.map = function (fn, list) {
@@ -510,4 +511,3 @@ var Xania;
         Fun.List = List;
     })(Fun = Xania.Fun || (Xania.Fun = {}));
 })(Xania || (Xania = {}));
-//# sourceMappingURL=fun.js.map

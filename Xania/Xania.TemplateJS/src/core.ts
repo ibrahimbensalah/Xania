@@ -73,7 +73,7 @@
                 var binding = target.attributes["__binding"];
                 if (!!binding) {
                     binding.trigger(name);
-
+                    binding.context.update();
                     this.update();
                 }
             };
@@ -86,6 +86,7 @@
                     const nameAttr = evt.target.attributes["name"];
                     if (!!nameAttr) {
                         binding.context.set(nameAttr.value, evt.target.value);
+                        binding.context.update();
                     }
                 }
             };
@@ -242,7 +243,7 @@
     class RootContainer implements IValue {
         private properties: { name: string; value: IValue }[] = [];
 
-        constructor(private instance: any, private libs) {
+        constructor(private value: any, private libs) {
         }
 
         get(name): IValue {
@@ -252,9 +253,9 @@
                     return existing.value;
             }
 
-            var raw = this.instance[name];
+            var raw = this.value[name];
             if (raw !== undefined) {
-                var instval = new Property(this.instance, name);
+                var instval = new Property(this.value, name);
                 this.properties.push({ name, value: instval });
                 return instval;
             }
@@ -269,7 +270,7 @@
         }
 
         set(name, value) {
-            this.instance[name] = value;
+            this.value[name] = value;
         }
 
         subscribe(subscr: ISubscriber) { throw new Error("Not implemented"); }
@@ -277,12 +278,20 @@
         invoke(args: any[]) { throw new Error("Not implemented"); }
 
         update() {
-            var stack: { value: any, context: any }[] = [];
-
             for (let i = 0; i < this.properties.length; i++) {
                 const property = this.properties[i];
-                stack.push({ value: property.value, context: this.instance });
+
+                RootContainer.updateValue(property.value, this.value);
             }
+        }
+
+        static updateValue(rootValue, rootContext) {
+            let length, stack: { value: any, context: any }[] = [{ value: rootValue, context: rootContext }];
+
+            //for (let i = 0; i < root.properties.length; i++) {
+            //    const property = root.properties[i];
+            //    stack.push({ value: property, context: root.value.valueOf() });
+            //}
 
             var dirty = new Set<ISubscriber>();
 
@@ -291,7 +300,7 @@
 
                 if (value.update(context)) {
                     var subscribers = value.subscribers;
-                    const length = subscribers.length;
+                    length = subscribers.length;
                     for (var n = 0; n < length; n++) {
                         dirty.add(subscribers[n]);
                     }
@@ -299,7 +308,7 @@
                 }
 
                 let properties = value.properties;
-                const length = properties.length;
+                length = properties.length;
                 for (let i = 0; i < length; i++) {
                     const child = properties[i];
                     stack.push({ value: child, context: value.valueOf() });
@@ -809,7 +818,9 @@
             return this.value.apply(null, args);
         }
 
-        update(context) { }
+        update(context) {
+            debugger;
+        }
     }
 
     class Immutable implements IValue {
@@ -953,6 +964,15 @@
         forEach(fn) {
             fn(this, 0);
         }
+
+        update() {
+            var map = this.map;
+            for (var k in map) {
+                if (map.hasOwnProperty(k)) {
+                    RootContainer.updateValue(map[k], map[k].context);
+                }
+            }
+        }
     }
 
     class Property implements IValue {
@@ -975,6 +995,7 @@
 
         update(context) {
             const currentValue = context[this.name];
+
             var currentId = currentValue;
             if (!!currentValue && currentValue.id !== undefined)
                 currentId = currentValue.id;
@@ -1042,21 +1063,20 @@
     class ReactiveBinding extends Binding {
         private bindings = [];
         private stream;
-        private next;
+        private length;
 
         constructor(private tpl, private target, private offset) {
             super();
-
-            this.next = 0;
         }
 
         render(context) {
             var { bindings, target, tpl } = this;
-            this.next = 0;
             if (!!this.tpl.modelAccessor) {
                 var stream = tpl.modelAccessor.execute(context, this);
+                this.length = 0;
+
                 stream.forEach((ctx, idx) => {
-                    this.next = idx + 1;
+                    this.length = idx + 1;
                     for (var i = 0; i < bindings.length; i++) {
                         var binding = bindings[i];
                         if (binding.context === ctx) {
@@ -1071,9 +1091,10 @@
                 });
             } else {
                 this.execute(context, 0);
+                this.length = 1;
             }
 
-            while (bindings.length > this.next) {
+            while (bindings.length > this.length) {
                 const oldBinding = bindings.pop();
                 target.removeChild(oldBinding.dom);
             }
@@ -1085,28 +1106,23 @@
             var { offset, tpl, target, bindings } = this;
             var insertAt = offset + idx;
 
-            if (idx < bindings.length) {
-                throw new Error();
-                // bindings[idx].update(result);
+            const newBinding = tpl.bind();
+
+            tpl.children()
+                .reduce(Binder.reduceChild,
+                { context: result, offset: 0, parentBinding: newBinding });
+
+            // result.subscribe(newBinding);
+            newBinding.update(result);
+
+            if (insertAt < target.childNodes.length) {
+                var beforeElement = target.childNodes[insertAt];
+                target.insertBefore(newBinding.dom, beforeElement);
             } else {
-                const newBinding = tpl.bind();
-
-                tpl.children()
-                    .reduce(Binder.reduceChild,
-                    { context: result, offset: 0, parentBinding: newBinding });
-
-                // result.subscribe(newBinding);
-                newBinding.update(result);
-
-                if (insertAt < target.childNodes.length) {
-                    var beforeElement = target.childNodes[insertAt];
-                    target.insertBefore(newBinding.dom, beforeElement);
-                } else {
-                    target.appendChild(newBinding.dom);
-                }
-                bindings.push(newBinding);
+                target.appendChild(newBinding.dom);
             }
-            this.next++;
+
+            bindings.splice(idx, 0, newBinding);
         }
     }
 

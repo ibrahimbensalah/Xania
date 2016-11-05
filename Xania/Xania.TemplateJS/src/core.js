@@ -72,6 +72,7 @@ var Xania;
                 var binding = target.attributes["__binding"];
                 if (!!binding) {
                     binding.trigger(name);
+                    binding.context.update();
                     _this.update();
                 }
             };
@@ -82,6 +83,7 @@ var Xania;
                     var nameAttr = evt.target.attributes["name"];
                     if (!!nameAttr) {
                         binding.context.set(nameAttr.value, evt.target.value);
+                        binding.context.update();
                     }
                 }
             };
@@ -226,8 +228,8 @@ var Xania;
         return Application;
     }());
     var RootContainer = (function () {
-        function RootContainer(instance, libs) {
-            this.instance = instance;
+        function RootContainer(value, libs) {
+            this.value = value;
             this.libs = libs;
             this.properties = [];
             this.extensions = [];
@@ -238,9 +240,9 @@ var Xania;
                 if (existing.name === name)
                     return existing.value;
             }
-            var raw = this.instance[name];
+            var raw = this.value[name];
             if (raw !== undefined) {
-                var instval = new Property(this.instance, name);
+                var instval = new Property(this.value, name);
                 this.properties.push({ name: name, value: instval });
                 return instval;
             }
@@ -252,30 +254,32 @@ var Xania;
             return gval;
         };
         RootContainer.prototype.set = function (name, value) {
-            this.instance[name] = value;
+            this.value[name] = value;
         };
         RootContainer.prototype.subscribe = function (subscr) { throw new Error("Not implemented"); };
         RootContainer.prototype.invoke = function (args) { throw new Error("Not implemented"); };
         RootContainer.prototype.update = function () {
-            var stack = [];
             for (var i = 0; i < this.properties.length; i++) {
                 var property = this.properties[i];
-                stack.push({ value: property.value, context: this.instance });
+                RootContainer.updateValue(property.value, this.value);
             }
+        };
+        RootContainer.updateValue = function (rootValue, rootContext) {
+            var length, stack = [{ value: rootValue, context: rootContext }];
             var dirty = new Set();
             while (stack.length > 0) {
                 var _a = stack.pop(), value = _a.value, context = _a.context;
                 if (value.update(context)) {
                     var subscribers = value.subscribers;
-                    var length_1 = subscribers.length;
-                    for (var n = 0; n < length_1; n++) {
+                    length = subscribers.length;
+                    for (var n = 0; n < length; n++) {
                         dirty.add(subscribers[n]);
                     }
                     subscribers.length = 0;
                 }
                 var properties = value.properties;
-                var length_2 = properties.length;
-                for (var i = 0; i < length_2; i++) {
+                length = properties.length;
+                for (var i = 0; i < length; i++) {
                     var child = properties[i];
                     stack.push({ value: child, context: value.valueOf() });
                 }
@@ -710,7 +714,9 @@ var Xania;
         Global.prototype.invoke = function (args) {
             return this.value.apply(null, args);
         };
-        Global.prototype.update = function (context) { };
+        Global.prototype.update = function (context) {
+            debugger;
+        };
         return Global;
     }());
     var Immutable = (function () {
@@ -817,6 +823,14 @@ var Xania;
         Container.prototype.forEach = function (fn) {
             fn(this, 0);
         };
+        Container.prototype.update = function () {
+            var map = this.map;
+            for (var k in map) {
+                if (map.hasOwnProperty(k)) {
+                    RootContainer.updateValue(map[k], map[k].context);
+                }
+            }
+        };
         return Container;
     }());
     var Property = (function () {
@@ -897,16 +911,15 @@ var Xania;
             this.target = target;
             this.offset = offset;
             this.bindings = [];
-            this.next = 0;
         }
         ReactiveBinding.prototype.render = function (context) {
             var _this = this;
             var _a = this, bindings = _a.bindings, target = _a.target, tpl = _a.tpl;
-            this.next = 0;
             if (!!this.tpl.modelAccessor) {
                 var stream = tpl.modelAccessor.execute(context, this);
+                this.length = 0;
                 stream.forEach(function (ctx, idx) {
-                    _this.next = idx + 1;
+                    _this.length = idx + 1;
                     for (var i = 0; i < bindings.length; i++) {
                         var binding = bindings[i];
                         if (binding.context === ctx) {
@@ -922,8 +935,9 @@ var Xania;
             }
             else {
                 this.execute(context, 0);
+                this.length = 1;
             }
-            while (bindings.length > this.next) {
+            while (bindings.length > this.length) {
                 var oldBinding = bindings.pop();
                 target.removeChild(oldBinding.dom);
             }
@@ -932,24 +946,18 @@ var Xania;
         ReactiveBinding.prototype.execute = function (result, idx) {
             var _a = this, offset = _a.offset, tpl = _a.tpl, target = _a.target, bindings = _a.bindings;
             var insertAt = offset + idx;
-            if (idx < bindings.length) {
-                throw new Error();
+            var newBinding = tpl.bind();
+            tpl.children()
+                .reduce(Binder.reduceChild, { context: result, offset: 0, parentBinding: newBinding });
+            newBinding.update(result);
+            if (insertAt < target.childNodes.length) {
+                var beforeElement = target.childNodes[insertAt];
+                target.insertBefore(newBinding.dom, beforeElement);
             }
             else {
-                var newBinding = tpl.bind();
-                tpl.children()
-                    .reduce(Binder.reduceChild, { context: result, offset: 0, parentBinding: newBinding });
-                newBinding.update(result);
-                if (insertAt < target.childNodes.length) {
-                    var beforeElement = target.childNodes[insertAt];
-                    target.insertBefore(newBinding.dom, beforeElement);
-                }
-                else {
-                    target.appendChild(newBinding.dom);
-                }
-                bindings.push(newBinding);
+                target.appendChild(newBinding.dom);
             }
-            this.next++;
+            bindings.splice(idx, 0, newBinding);
         };
         return ReactiveBinding;
     }(Binding));
@@ -988,4 +996,3 @@ var Xania;
     Xania.app = app;
     ;
 })(Xania || (Xania = {}));
-//# sourceMappingURL=core.js.map

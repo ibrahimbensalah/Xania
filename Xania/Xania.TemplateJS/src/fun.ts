@@ -560,6 +560,7 @@ module Xania.Fun {
         static filter(fn, list) {
             if (!list)
                 return [];
+            debugger;
             return list.filter(fn);
         }
         static map(fn, list) {
