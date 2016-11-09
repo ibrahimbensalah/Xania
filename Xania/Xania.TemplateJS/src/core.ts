@@ -73,7 +73,7 @@
                 var binding = target.attributes["__binding"];
                 if (!!binding) {
                     binding.trigger(name);
-                    binding.context.update();
+                    // binding.context.update();
                     this.update();
                 }
             };
@@ -86,7 +86,8 @@
                     const nameAttr = evt.target.attributes["name"];
                     if (!!nameAttr) {
                         binding.context.set(nameAttr.value, evt.target.value);
-                        binding.context.update();
+                        // binding.context.update();
+                        this.update();
                     }
                 }
             };
@@ -702,6 +703,9 @@
             else
                 value = invokable.apply(null, xs);
 
+            if (!!value && value.subscribe)
+                return value;
+
             return new Immutable(value);
         }
         forEach(context, fn) {
@@ -815,11 +819,70 @@
         subscribe(subscr: ISubscriber) { }
 
         invoke(args: any[]) {
-            return this.value.apply(null, args);
+            var inv = new Invocation(this.value, args);
+            this.properties.push(inv);
+            return inv;
         }
 
         update(context) {
-            debugger;
+        }
+    }
+
+    class Invocation implements IValue {
+
+        private value;
+        private properties = [];
+        private subscribers = [];
+
+        constructor(private fn, private args) {
+            this.update(null);
+        }
+
+        valueOf() {
+            return this.value;
+        }
+
+        get(name): IValue {
+            for (var i = 0; i < this.properties.length; i++) {
+                var property = this.properties[i];
+                if (property.name === name)
+                    return property;
+            }
+
+            var result = new Property(this.value, name);
+            this.properties.push(result);
+            return result;
+        }
+
+        subscribe(subscr: ISubscriber) { return false; }
+
+        invoke(args: any[]) {
+            return null;
+        }
+
+        update(context) {
+            var currentValue = this.fn.apply(context, this.args);
+            if (this.value === currentValue)
+                return false;
+
+            this.value = currentValue;
+            return true;
+        }
+
+        map(fn) {
+            var result = [];
+            for (let i = 0; i < this.value.length; i++) {
+                var value = this.get(i);
+                result.push(fn(value, i));
+            }
+            return result;
+        }
+
+        forEach(fn) {
+            for (let i = 0; i < this.value.length; i++) {
+                var value = this.get(i);
+                fn(value, i);
+            }
         }
     }
 
@@ -851,8 +914,6 @@
         }
 
         subscribe(subscr: ISubscriber) { return false; }
-
-        hasChanges(): boolean { return false; }
 
         invoke(args: any[]) {
             return null;
@@ -995,6 +1056,7 @@
 
         update(context) {
             const currentValue = context[this.name];
+            this.context = context;
 
             var currentId = currentValue;
             if (!!currentValue && currentValue.id !== undefined)
@@ -1003,11 +1065,6 @@
             if (this.id !== currentId) {
                 this.value = currentValue;
                 this.id = currentId;
-
-                for (var i = 0; i < this.properties.length; i++) {
-                    var prop = this.properties[i];
-                    prop.context = this.value;
-                }
                 return true;
             }
 

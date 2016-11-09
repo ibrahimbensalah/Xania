@@ -72,7 +72,6 @@ var Xania;
                 var binding = target.attributes["__binding"];
                 if (!!binding) {
                     binding.trigger(name);
-                    binding.context.update();
                     _this.update();
                 }
             };
@@ -83,7 +82,7 @@ var Xania;
                     var nameAttr = evt.target.attributes["name"];
                     if (!!nameAttr) {
                         binding.context.set(nameAttr.value, evt.target.value);
-                        binding.context.update();
+                        _this.update();
                     }
                 }
             };
@@ -616,6 +615,8 @@ var Xania;
                 value = invokable.invoke(xs);
             else
                 value = invokable.apply(null, xs);
+            if (!!value && value.subscribe)
+                return value;
             return new Immutable(value);
         };
         Binding.prototype.forEach = function (context, fn) {
@@ -712,12 +713,61 @@ var Xania;
         Global.prototype.get = function (idx) { throw new Error("Not implemented"); };
         Global.prototype.subscribe = function (subscr) { };
         Global.prototype.invoke = function (args) {
-            return this.value.apply(null, args);
+            var inv = new Invocation(this.value, args);
+            this.properties.push(inv);
+            return inv;
         };
         Global.prototype.update = function (context) {
-            debugger;
         };
         return Global;
+    }());
+    var Invocation = (function () {
+        function Invocation(fn, args) {
+            this.fn = fn;
+            this.args = args;
+            this.properties = [];
+            this.subscribers = [];
+            this.update(null);
+        }
+        Invocation.prototype.valueOf = function () {
+            return this.value;
+        };
+        Invocation.prototype.get = function (name) {
+            for (var i = 0; i < this.properties.length; i++) {
+                var property = this.properties[i];
+                if (property.name === name)
+                    return property;
+            }
+            var result = new Property(this.value, name);
+            this.properties.push(result);
+            return result;
+        };
+        Invocation.prototype.subscribe = function (subscr) { return false; };
+        Invocation.prototype.invoke = function (args) {
+            return null;
+        };
+        Invocation.prototype.update = function (context) {
+            var currentValue = this.fn.apply(context, this.args);
+            if (this.value === currentValue)
+                return false;
+            this.value = currentValue;
+            return true;
+        };
+        Invocation.prototype.map = function (fn) {
+            var result = [];
+            for (var i = 0; i < this.value.length; i++) {
+                var value = this.get(i);
+                result.push(fn(value, i));
+            }
+            return result;
+        };
+        Invocation.prototype.forEach = function (fn) {
+            for (var i = 0; i < this.value.length; i++) {
+                var value = this.get(i);
+                fn(value, i);
+            }
+        };
+        return Invocation;
     }());
     var Immutable = (function () {
         function Immutable(value) {
@@ -741,7 +791,6 @@ var Xania;
             return this.value;
         };
         Immutable.prototype.subscribe = function (subscr) { return false; };
-        Immutable.prototype.hasChanges = function () { return false; };
         Immutable.prototype.invoke = function (args) {
             return null;
         };
@@ -850,16 +899,13 @@ var Xania;
         };
         Property.prototype.update = function (context) {
             var currentValue = context[this.name];
+            this.context = context;
             var currentId = currentValue;
             if (!!currentValue && currentValue.id !== undefined)
                 currentId = currentValue.id;
             if (this.id !== currentId) {
                 this.value = currentValue;
                 this.id = currentId;
-                for (var i = 0; i < this.properties.length; i++) {
-                    var prop = this.properties[i];
-                    prop.context = this.value;
-                }
                 return true;
             }
             return false;
@@ -996,3 +1042,4 @@ var Xania;
     Xania.app = app;
     ;
 })(Xania || (Xania = {}));
+//# sourceMappingURL=core.js.map
