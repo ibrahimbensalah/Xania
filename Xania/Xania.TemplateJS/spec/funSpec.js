@@ -1,4 +1,6 @@
-﻿/// <reference path="../src/fun.js" />
+﻿/// <reference path="../src/core.js" />
+/// <reference path="../src/fun.js" />
+
 "use strict";
 
 var compiler = new Xania.Ast.Compiler();
@@ -69,40 +71,40 @@ describe("compiler", function () {
                     return list.filter(function (x) { return x < max; });
                 }
             };
-            var actual = fn.execute(context).map(function(ctx) { return ctx.x + ctx.y } );
+            var actual = fn.execute(context).map(function (ctx) { return ctx.x + ctx.y });
             expect(actual).toEqual([2, 3]);
         });
 
-    it("should support query expression with selector",
-        function () {
-            var fn = compiler.expr("for x in todos |> math.lt 3 -> math.add y x");
-            var context = {
-                y: 10,
-                todos: [1, 2, 3],
-                math: {
-                    lt: function (max, list) {
-                        return list.filter(function (x) { return x < max; });
-                    },
-                    add: function (x, y) { return x + y; }
-                }
-            };
-            var actual = fn.execute(context);
-            expect(actual.length).toEqual(2);
-            expect(actual.itemAt(0)).toEqual(11);
-            expect(actual.itemAt(1)).toEqual(12);
-        });
+    //it("should support query expression with selector",
+    //    function () {
+    //        var fn = compiler.expr("for x in todos |> math.lt 3 -> math.add y x");
+    //        var context = {
+    //            y: 10,
+    //            todos: [1, 2, 3],
+    //            math: {
+    //                lt: function (max, list) {
+    //                    return list.filter(function (x) { return x < max; });
+    //                },
+    //                add: function (x, y) { return x + y; }
+    //            }
+    //        };
+    //        var actual = fn.execute(context);
+    //        expect(actual.length).toEqual(2);
+    //        expect(actual.itemAt(0)).toEqual(11);
+    //        expect(actual.itemAt(1)).toEqual(12);
+    //    });
 
-    it("should support query expression with simple selector",
-        function () {
-            var fn = compiler.expr("(for x in numbers) -> x");
-            var context = {
-                numbers: [1, 2]
-            };
-            var actual = fn.execute(context);
-            expect(actual.length).toEqual(2);
-            expect(actual.itemAt(0)).toEqual(1);
-            expect(actual.itemAt(1)).toEqual(2);
-        });
+    //it("should support query expression with simple selector",
+    //    function () {
+    //        var fn = compiler.expr("(for x in numbers) -> x");
+    //        var context = {
+    //            numbers: [1, 2]
+    //        };
+    //        var actual = fn.execute(context);
+    //        expect(actual.length).toEqual(2);
+    //        expect(actual.itemAt(0)).toEqual(1);
+    //        expect(actual.itemAt(1)).toEqual(2);
+    //    });
 
     it("should support text template",
         function () {
@@ -118,9 +120,49 @@ describe("compiler", function () {
 
     it("should support eq expression",
         function () {
-             var ast = compiler.expr("x = 123");
-             expect(ast.execute({x: 123})).toBe(true);
+            var ast = compiler.expr("x = 123");
+            expect(ast.execute({ x: 123 })).toBe(true);
         });
+});
+
+describe("reactive", function () {
+
+    it("broadcast value", function () {
+        var raw = { numbers: [1, 2, 3, 4, 5, 6].map(function (x) { return { value: x }; }), skip: 3 };
+        var root = new Xania.RootContainer(raw, {});
+        var skip = root.get("skip");
+        var numbers = root.get("numbers");
+
+        var invocation = new Xania.Invocation(function (list, skip) { return list.slice(skip, skip + skip) }, [numbers, skip]);
+
+        var items = [];
+        invocation.forEach(function (item, idx) {
+            items[idx] = item;
+            items.length = idx + 1;
+        });
+        console.log(skip.valueOf(), items.map(function(x) { return x.value; }));
+        // expect(invocation.properties.length).toBe(3);
+
+        console.log("=====================================");
+        root.set("skip", 1);
+        console.log(skip.valueOf(), items.map(function (x) { return x.value; }));
+        // expect(invocation.properties.length).toBe(1);
+
+        console.log("=====================================");
+        root.set("skip", 2);
+        console.log(skip.valueOf(), items.map(function (x) { return x.value; }));
+
+        // expect(invocation.properties.length).toBe(3);
+        // invocation.update(null);
+
+        //expect(property.value).toBe(root.numbers);
+
+        //property.update(root);
+        //expect(property.value).toBe(root.numbers);
+
+        //property.forEach(function(x) { console.log(x.value); });
+    });
+
 });
 
 var Test = (function () {

@@ -171,6 +171,10 @@ var Xania;
                     extend: function (x) {
                         return this.provider.extend(this.context, this.varName, x);
                     },
+                    map: function (fn) {
+                        var _this = this;
+                        return this.provider.map(result, function (x, idx) { return fn(_this.extend(x), idx); });
+                    },
                     forEach: function (fn) {
                         var _this = this;
                         return this.provider.forEach(result, function (x, idx) { return fn(_this.extend(x), idx); });
@@ -241,14 +245,17 @@ var Xania;
                 else {
                     var item = {};
                     item[varName] = x;
-                    return item;
+                    return Object.assign(item, context);
                 }
             };
             DefaultRuntimeProvider.forEach = function (arr, fn) {
                 return arr.forEach(fn);
             };
-            DefaultRuntimeProvider.invoke = function (invokable, args) {
-                debugger;
+            DefaultRuntimeProvider.map = function (arr, fn) {
+                return arr.map(fn);
+            };
+            DefaultRuntimeProvider.invoke = function (invocable, args) {
+                return invocable.apply(this, args);
             };
             return DefaultRuntimeProvider;
         }());

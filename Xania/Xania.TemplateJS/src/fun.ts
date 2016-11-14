@@ -165,6 +165,9 @@
                 extend(x) {
                     return this.provider.extend(this.context, this.varName, x);
                 },
+                map(fn) {
+                    return this.provider.map(result, (x, idx) => fn(this.extend(x), idx));
+                },
                 forEach(fn) {
                     return this.provider.forEach(result, (x, idx) => fn(this.extend(x), idx));
                 }
@@ -181,8 +184,9 @@
         itemAt(arr: any, idx: number): any;
         property(obj: any, name: string): any;
         extend(context, varName: string, x: any);
-        invoke(invokable, args: any[]);
-        forEach(context, fn);
+        invoke(invocable, args: any[]);
+        forEach(data, fn);
+        map(data, fn);
     }
 
     class Template {
@@ -247,15 +251,17 @@
             } else {
                 var item = {};
                 item[varName] = x;
-                return item;
+                return Object.assign(item, context);
             }
         }
         static forEach(arr, fn) {
             return arr.forEach(fn);
         }
-
-        static invoke(invokable, args: any[]) {
-            debugger;
+        static map(arr, fn) {
+            return arr.map(fn);
+        }
+        static invoke(invocable, args: any[]) {
+            return invocable.apply(this, args);
             //if (typeof target.execute === "function")
             //    return provider.invoke(target, args);
             //// return target.execute.apply(target, args);

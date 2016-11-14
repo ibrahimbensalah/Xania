@@ -254,6 +254,7 @@ var Xania;
         };
         RootContainer.prototype.set = function (name, value) {
             this.value[name] = value;
+            this.update();
         };
         RootContainer.prototype.subscribe = function (subscr) { throw new Error("Not implemented"); };
         RootContainer.prototype.invoke = function (args) { throw new Error("Not implemented"); };
@@ -276,11 +277,14 @@ var Xania;
                     }
                     subscribers.length = 0;
                 }
-                var properties = value.properties;
-                length = properties.length;
-                for (var i = 0; i < length; i++) {
-                    var child = properties[i];
-                    stack.push({ value: child, context: value.valueOf() });
+                var childContext = value.valueOf();
+                if (childContext !== undefined) {
+                    var properties = value.properties;
+                    length = properties.length;
+                    for (var i = 0; i < length; i++) {
+                        var child = properties[i];
+                        stack.push({ value: child, context: childContext });
+                    }
                 }
             }
             dirty.forEach(function (d) {
@@ -302,6 +306,7 @@ var Xania;
         };
         return RootContainer;
     }());
+    Xania.RootContainer = RootContainer;
     var TextTemplate = (function () {
         function TextTemplate(tpl) {
             this.tpl = tpl;
@@ -609,10 +614,15 @@ var Xania;
             return context.extend2(varName, x);
         };
         Binding.prototype.invoke = function (invokable, args) {
-            var xs = args.map(function (x) { return x.valueOf(); });
+            var _this = this;
+            var xs = args.map(function (x) {
+                if (!!x.subscribe)
+                    x.subscribe(_this);
+                return x.valueOf();
+            });
             var value;
             if (!!invokable.invoke)
-                value = invokable.invoke(xs);
+                value = invokable.invoke(args);
             else
                 value = invokable.apply(null, xs);
             if (!!value && value.subscribe)
@@ -713,9 +723,23 @@ var Xania;
         Global.prototype.get = function (idx) { throw new Error("Not implemented"); };
         Global.prototype.subscribe = function (subscr) { };
         Global.prototype.invoke = function (args) {
-            var inv = new Invocation(this.value, args);
-            this.properties.push(inv);
-            return inv;
+            for (var i = 0; i < this.properties.length; i++) {
+                var item = this.properties[i];
+                if (item.fn === this.value && args.length === item.args.length) {
+                    var b = true;
+                    for (var e = 0; e < args.length; e++) {
+                        if (item.args[e] !== args[e]) {
+                            b = false;
+                            break;
+                        }
+                    }
+                    if (b)
+                        return item;
+                }
+            }
+            var invocation = new Invocation(this.value, args);
+            this.properties.push(invocation);
+            return invocation;
         };
         Global.prototype.update = function (context) {
         };
@@ -725,50 +749,47 @@ var Xania;
         function Invocation(fn, args) {
             this.fn = fn;
             this.args = args;
-            this.properties = [];
             this.subscribers = [];
-            this.update(null);
+            this.observers = [];
+            this.fns = [];
+            this.update();
         }
-        Invocation.prototype.valueOf = function () {
-            return this.value;
-        };
-        Invocation.prototype.get = function (name) {
-            for (var i = 0; i < this.properties.length; i++) {
-                var property = this.properties[i];
-                if (property.name === name)
-                    return property;
-            }
-            var result = new Property(this.value, name);
-            this.properties.push(result);
-            return result;
-        };
-        Invocation.prototype.subscribe = function (subscr) { return false; };
-        Invocation.prototype.invoke = function (args) {
-            return null;
-        };
-        Invocation.prototype.update = function (context) {
-            var currentValue = this.fn.apply(context, this.args);
-            if (this.value === currentValue)
+        Invocation.prototype.update = function () {
+            var _this = this;
+            var currentValue = this.fn.apply(null, this.args.map(function (x) {
+                x.subscribe(_this);
+                return x.valueOf();
+            }));
+            if (this.value === currentValue) {
                 return false;
+            }
             this.value = currentValue;
             return true;
         };
-        Invocation.prototype.map = function (fn) {
-            var result = [];
-            for (var i = 0; i < this.value.length; i++) {
-                var value = this.get(i);
-                result.push(fn(value, i));
-            }
-            return result;
-        };
         Invocation.prototype.forEach = function (fn) {
+            this.fns[0] = fn;
+            this.signal(fn);
+        };
+        Invocation.prototype.signal = function (fn) {
             for (var i = 0; i < this.value.length; i++) {
-                var value = this.get(i);
+                var value = this.value[i];
                 fn(value, i);
+            }
+        };
+        Invocation.prototype.notify = function () {
+            if (this.update()) {
+                for (var i = 0; i < this.value.length; i++) {
+                    var value = this.value[i];
+                    for (var e = 0; e < this.fns.length; e++) {
+                        var fn = this.fns[e];
+                        fn(value, i, this.value);
+                    }
+                }
             }
         };
         return Invocation;
     }());
+    Xania.Invocation = Invocation;
     var Immutable = (function () {
         function Immutable(value) {
             this.value = value;
@@ -949,6 +970,7 @@ var Xania;
         };
         return Property;
     }());
+    Xania.Property = Property;
     var ReactiveBinding = (function (_super) {
         __extends(ReactiveBinding, _super);
         function ReactiveBinding(tpl, target, offset) {

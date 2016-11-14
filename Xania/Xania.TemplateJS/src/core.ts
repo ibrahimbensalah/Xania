@@ -241,7 +241,7 @@
 
     }
 
-    class RootContainer implements IValue {
+    export class RootContainer implements IValue {
         private properties: { name: string; value: IValue }[] = [];
 
         constructor(private value: any, private libs) {
@@ -272,6 +272,7 @@
 
         set(name, value) {
             this.value[name] = value;
+            this.update();
         }
 
         subscribe(subscr: ISubscriber) { throw new Error("Not implemented"); }
@@ -308,11 +309,14 @@
                     subscribers.length = 0;
                 }
 
-                let properties = value.properties;
-                length = properties.length;
-                for (let i = 0; i < length; i++) {
-                    const child = properties[i];
-                    stack.push({ value: child, context: value.valueOf() });
+                var childContext = value.valueOf();
+                if (childContext !== undefined) {
+                    let properties = value.properties;
+                    length = properties.length;
+                    for (let i = 0; i < length; i++) {
+                        const child = properties[i];
+                        stack.push({ value: child, context: childContext });
+                    }
                 }
             }
 
@@ -527,9 +531,8 @@
         }
     }
 
-    interface IObserver extends ISubscriber {
-        addDependency(dependency: IDependency);
-        setChange(obj: any, prop: any);
+    interface IObserver {
+        onNext(item);
     }
 
     class Util {
@@ -680,7 +683,6 @@
                     return binding.state = binding.render(context, s);
                 });
         }
-
         itemAt(arr: any, idx: number): any {
             var result = arr.itemAt(idx);
             result.subscribe(this);
@@ -695,11 +697,16 @@
             return context.extend2(varName, x);
         }
         invoke(invokable, args: any[]) {
-            var xs = args.map(x => x.valueOf());
+            var xs = args.map(x => {
+                if (!!x.subscribe)
+                    x.subscribe(this);
+
+                return x.valueOf();
+            });
 
             var value;
             if (!!invokable.invoke)
-                value = invokable.invoke(xs);
+                value = invokable.invoke(args);
             else
                 value = invokable.apply(null, xs);
 
@@ -819,69 +826,129 @@
         subscribe(subscr: ISubscriber) { }
 
         invoke(args: any[]) {
-            var inv = new Invocation(this.value, args);
-            this.properties.push(inv);
-            return inv;
+            for (var i = 0; i < this.properties.length; i++) {
+                var item = this.properties[i];
+                if (item.fn === this.value && args.length === item.args.length) {
+                    var b = true;
+                    for (var e = 0; e < args.length; e++) {
+                        if (item.args[e] !== args[e]) {
+                            b = false;
+                            break;
+                        }
+                    }
+                    if (b)
+                        return item;
+                }
+            }
+            var invocation = new Invocation(this.value, args);
+            this.properties.push(invocation);
+            return invocation;
         }
 
         update(context) {
         }
     }
 
-    class Invocation implements IValue {
+    export class Invocation {
 
         private value;
-        private properties = [];
+        //private properties = [];
         private subscribers = [];
+        private observers = [];
 
-        constructor(private fn, private args) {
-            this.update(null);
+        constructor(private fn, private args: IValue[]) {
+            this.update();
         }
 
-        valueOf() {
-            return this.value;
-        }
+        //valueOf() {
+        //    return this.value;
+        //}
 
-        get(name): IValue {
-            for (var i = 0; i < this.properties.length; i++) {
-                var property = this.properties[i];
-                if (property.name === name)
-                    return property;
+        //get(name): IValue {
+        //    for (var i = 0; i < this.properties.length; i++) {
+        //        var property = this.properties[i];
+        //        if (property.name === name)
+        //            return property;
+        //    }
+
+        //    var result = new Property(this.value, name);
+        //    this.properties.push(result);
+        //    return result;
+        //}
+
+        //subscribe(observer: IObserver) {
+        //    for (var i = 0; i < this.observers.length; i++) {
+        //        if (this.observers[i] === observer)
+        //            return false;
+        //    }
+        //    this.observers.push(observer);
+        //    return true;
+        //}
+
+        //invoke(args: any[]) {
+        //    return null;
+        //}
+
+        update() {
+            var currentValue = this.fn.apply(null, this.args.map(x => {
+                x.subscribe(this);
+                return x.valueOf();
+            }));
+            if (this.value === currentValue) {
+                // this.stream();
+                return false;
             }
 
-            var result = new Property(this.value, name);
-            this.properties.push(result);
-            return result;
-        }
-
-        subscribe(subscr: ISubscriber) { return false; }
-
-        invoke(args: any[]) {
-            return null;
-        }
-
-        update(context) {
-            var currentValue = this.fn.apply(context, this.args);
-            if (this.value === currentValue)
-                return false;
+            //for (var i = this.properties.length - 1; i >= 0; i--) {
+            //    var prop = this.properties[i];
+            //    if (prop.update(currentValue) && prop.value === undefined) {
+            //        this.properties.splice(i, 1);
+            //    }
+            //}
 
             this.value = currentValue;
             return true;
         }
 
-        map(fn) {
-            var result = [];
-            for (let i = 0; i < this.value.length; i++) {
-                var value = this.get(i);
-                result.push(fn(value, i));
-            }
-            return result;
-        }
+        //map(fn) {
+        //    var result = [];
+        //    for (let i = 0; i < this.value.length; i++) {
+        //        var value = this.value[i];
+        //        result.push(fn(value, i));
+        //    }
+        //    return result;
+        //}
+
+        private fns = [];
 
         forEach(fn) {
+            this.fns[0] = fn;
+            //for (var i = 0; i < this.fns.length; i++) {
+            //    if (this.fns[i] === fn)
+            //        return;
+            //}
+            //this.fns.push(fn);
+            // this.notify();
+            this.signal(fn);
+        }
+
+        private signal(fn) {
             for (let i = 0; i < this.value.length; i++) {
-                var value = this.get(i);
+                var value = this.value[i];
                 fn(value, i);
+            }
+        }
+
+        notify() {
+            if (this.update()) {
+                for (let i = 0; i < this.value.length; i++) {
+
+                    var value = this.value[i];
+                    for (var e = 0; e < this.fns.length; e++) {
+                        var fn = this.fns[e];
+                        fn(value, i, this.value);
+                    }
+                }
             }
         }
     }
@@ -1036,7 +1103,7 @@
         }
     }
 
-    class Property implements IValue {
+    export class Property implements IValue {
         private subscribers: ISubscriber[] = [];
         private properties = [];
         private value;
@@ -1121,6 +1188,7 @@
         private bindings = [];
         private stream;
         private length;
+
 
         constructor(private tpl, private target, private offset) {
             super();
