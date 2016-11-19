@@ -1,5 +1,6 @@
 ﻿/// <reference path="../src/core.js" />
 /// <reference path="../src/fun.js" />
+/// <reference path="../Scripts/jasmine/jasmine.js" />
 
 "use strict";
 
@@ -133,24 +134,30 @@ describe("reactive", function () {
         var skip = root.get("skip");
         var numbers = root.get("numbers");
 
-        var invocation = new Xania.Invocation(function (list, skip) { return list.slice(skip, skip + skip) }, [numbers, skip]);
+        var invocation = new Xania.Invocation(function (list, skip) { return list.slice(skip, skip + skip) }, [numbers.valueOf(), skip.valueOf()]);
+        var observer = {
+            items: [],
+            notify: function (items) {
+                this.items = items;
+            }
+        }
+        invocation.subscribe(observer);
+        invocation.notify();
 
-        var items = [];
-        invocation.forEach(function (item, idx) {
-            items[idx] = item;
-            items.length = idx + 1;
-        });
-        console.log(skip.valueOf(), items.map(function(x) { return x.value; }));
-        // expect(invocation.properties.length).toBe(3);
+        console.log(skip.valueOf(), observer.items.map(function(x) { return x.value; }));
+        expect(observer.items.length).toBe(3); 
 
         console.log("=====================================");
         root.set("skip", 1);
-        console.log(skip.valueOf(), items.map(function (x) { return x.value; }));
-        // expect(invocation.properties.length).toBe(1);
+        invocation.notify();
+        console.log(skip.valueOf(), observer.items.map(function (x) { return x.value; }));
+        expect(observer.items.length).toBe(1);
 
         console.log("=====================================");
         root.set("skip", 2);
-        console.log(skip.valueOf(), items.map(function (x) { return x.value; }));
+        invocation.notify();
+        console.log(skip.valueOf(), observer.items.map(function (x) { return x.value; }));
+        expect(observer.items.length).toBe(2);
 
         // expect(invocation.properties.length).toBe(3);
         // invocation.update(null);

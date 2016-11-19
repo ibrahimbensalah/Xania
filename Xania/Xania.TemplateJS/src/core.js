@@ -271,9 +271,9 @@ var Xania;
                 var _a = stack.pop(), value = _a.value, context = _a.context;
                 if (value.update(context)) {
                     var subscribers = value.subscribers;
-                    length = subscribers.length;
-                    for (var n = 0; n < length; n++) {
-                        dirty.add(subscribers[n]);
+                    for (var n = 0; n < subscribers.length; n++) {
+                        var s = subscribers[n];
+                        dirty.add(s);
                     }
                     subscribers.length = 0;
                 }
@@ -613,7 +613,7 @@ var Xania;
         Binding.prototype.extend = function (context, varName, x) {
             return context.extend2(varName, x);
         };
-        Binding.prototype.invoke = function (invokable, args) {
+        Binding.prototype.invoke = function (context, invokable, args) {
             var _this = this;
             var xs = args.map(function (x) {
                 if (!!x.subscribe)
@@ -621,8 +621,9 @@ var Xania;
                 return x.valueOf();
             });
             var value;
-            if (!!invokable.invoke)
-                value = invokable.invoke(args);
+            if (!!invokable.invoke) {
+                value = invokable.invoke(xs);
+            }
             else
                 value = invokable.apply(null, xs);
             if (!!value && value.subscribe)
@@ -723,25 +724,10 @@ var Xania;
         Global.prototype.get = function (idx) { throw new Error("Not implemented"); };
         Global.prototype.subscribe = function (subscr) { };
         Global.prototype.invoke = function (args) {
-            for (var i = 0; i < this.properties.length; i++) {
-                var item = this.properties[i];
-                if (item.fn === this.value && args.length === item.args.length) {
-                    var b = true;
-                    for (var e = 0; e < args.length; e++) {
-                        if (item.args[e] !== args[e]) {
-                            b = false;
-                            break;
-                        }
-                    }
-                    if (b)
-                        return item;
-                }
-            }
-            var invocation = new Invocation(this.value, args);
-            this.properties.push(invocation);
-            return invocation;
+            return new Invocation(this.value, args);
         };
         Global.prototype.update = function (context) {
+            return false;
         };
         return Global;
     }());
@@ -749,42 +735,19 @@ var Xania;
         function Invocation(fn, args) {
             this.fn = fn;
             this.args = args;
+            this.properties = [];
             this.subscribers = [];
-            this.observers = [];
-            this.fns = [];
-            this.update();
+            this.value = this.fn.apply(null, this.args);
         }
-        Invocation.prototype.update = function () {
-            var _this = this;
-            var currentValue = this.fn.apply(null, this.args.map(function (x) {
-                x.subscribe(_this);
-                return x.valueOf();
-            }));
-            if (this.value === currentValue) {
-                return false;
-            }
-            this.value = currentValue;
-            return true;
+        Invocation.prototype.valueOf = function () {
+            return this.value;
+        };
+        Invocation.prototype.subscribe = function (subscr) {
         };
         Invocation.prototype.forEach = function (fn) {
-            this.fns[0] = fn;
-            this.signal(fn);
-        };
-        Invocation.prototype.signal = function (fn) {
             for (var i = 0; i < this.value.length; i++) {
-                var value = this.value[i];
+                var value = new Property(this.value, i);
                 fn(value, i);
-            }
-        };
-        Invocation.prototype.notify = function () {
-            if (this.update()) {
-                for (var i = 0; i < this.value.length; i++) {
-                    var value = this.value[i];
-                    for (var e = 0; e < this.fns.length; e++) {
-                        var fn = this.fns[e];
-                        fn(value, i, this.value);
-                    }
-                }
             }
         };
         return Invocation;
@@ -927,6 +890,10 @@ var Xania;
             if (this.id !== currentId) {
                 this.value = currentValue;
                 this.id = currentId;
+                return true;
+            }
+            if (this.length !== currentValue.length) {
+                this.length = currentValue.length;
                 return true;
             }
             return false;

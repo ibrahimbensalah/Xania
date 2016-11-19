@@ -64,7 +64,7 @@
             if (!target)
                 throw new Error(`${this.targetExpr.toString()} is undefined or null.`);
 
-            return provider.invoke(target, args);
+            return provider.invoke(context, target, args);
         }
         app(args: IExpr[]): IExpr {
             return new App(this.targetExpr, this.args.concat(args));
@@ -184,7 +184,7 @@
         itemAt(arr: any, idx: number): any;
         property(obj: any, name: string): any;
         extend(context, varName: string, x: any);
-        invoke(invocable, args: any[]);
+        invoke(context, invocable, args: any[]);
         forEach(data, fn);
         map(data, fn);
     }
@@ -260,8 +260,8 @@
         static map(arr, fn) {
             return arr.map(fn);
         }
-        static invoke(invocable, args: any[]) {
-            return invocable.apply(this, args);
+        static invoke(context, invocable, args: any[]) {
+            return invocable.apply(context, args);
             //if (typeof target.execute === "function")
             //    return provider.invoke(target, args);
             //// return target.execute.apply(target, args);

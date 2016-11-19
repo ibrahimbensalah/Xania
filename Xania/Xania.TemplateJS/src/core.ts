@@ -302,9 +302,9 @@
 
                 if (value.update(context)) {
                     var subscribers = value.subscribers;
-                    length = subscribers.length;
-                    for (var n = 0; n < length; n++) {
-                        dirty.add(subscribers[n]);
+                    for (var n = 0; n < subscribers.length; n++) {
+                        var s = subscribers[n];
+                        dirty.add(s);
                     }
                     subscribers.length = 0;
                 }
@@ -531,10 +531,6 @@
         }
     }
 
-    interface IObserver {
-        onNext(item);
-    }
-
     class Util {
 
         private static lut;
@@ -696,7 +692,7 @@
         extend(context, varName: string, x: any) {
             return context.extend2(varName, x);
         }
-        invoke(invokable, args: any[]) {
+        invoke(context, invokable, args: any[]) {
             var xs = args.map(x => {
                 if (!!x.subscribe)
                     x.subscribe(this);
@@ -705,9 +701,9 @@
             });
 
             var value;
-            if (!!invokable.invoke)
-                value = invokable.invoke(args);
-            else
+            if (!!invokable.invoke) {
+                value = invokable.invoke(xs);
+            } else
                 value = invokable.apply(null, xs);
 
             if (!!value && value.subscribe)
@@ -728,7 +724,7 @@
     }
 
     interface ISubscriber {
-        notify();
+        notify(context?);
     }
 
     class ContentBinding extends Binding {
@@ -826,129 +822,37 @@
         subscribe(subscr: ISubscriber) { }
 
         invoke(args: any[]) {
-            for (var i = 0; i < this.properties.length; i++) {
-                var item = this.properties[i];
-                if (item.fn === this.value && args.length === item.args.length) {
-                    var b = true;
-                    for (var e = 0; e < args.length; e++) {
-                        if (item.args[e] !== args[e]) {
-                            b = false;
-                            break;
-                        }
-                    }
-                    if (b)
-                        return item;
-                }
-            }
-            var invocation = new Invocation(this.value, args);
-            this.properties.push(invocation);
-            return invocation;
+            return new Invocation(this.value, args);
         }
 
         update(context) {
+            return false;
         }
     }
 
     export class Invocation {
 
         private value;
-        //private properties = [];
+        private properties = [];
         private subscribers = [];
-        private observers = [];
 
         constructor(private fn, private args: IValue[]) {
-            this.update();
+            this.value = this.fn.apply(null, this.args);
         }
 
-        //valueOf() {
-        //    return this.value;
-        //}
-
-        //get(name): IValue {
-        //    for (var i = 0; i < this.properties.length; i++) {
-        //        var property = this.properties[i];
-        //        if (property.name === name)
-        //            return property;
-        //    }
-
-        //    var result = new Property(this.value, name);
-        //    this.properties.push(result);
-        //    return result;
-        //}
-
-        //subscribe(observer: IObserver) {
-        //    for (var i = 0; i < this.observers.length; i++) {
-        //        if (this.observers[i] === observer)
-        //            return false;
-        //    }
-        //    this.observers.push(observer);
-        //    return true;
-        //}
-
-        //invoke(args: any[]) {
-        //    return null;
-        //}
-
-        update() {
-            var currentValue = this.fn.apply(null, this.args.map(x => {
-                x.subscribe(this);
-                return x.valueOf();
-            }));
-            if (this.value === currentValue) {
-                // this.stream();
-                return false;
-            }
-
-            //for (var i = this.properties.length - 1; i >= 0; i--) {
-            //    var prop = this.properties[i];
-            //    if (prop.update(currentValue) && prop.value === undefined) {
-            //        this.properties.splice(i, 1);
-            //    }
-            //}
-
-            this.value = currentValue;
-            return true;
+        valueOf() {
+            return this.value;
         }
 
-        //map(fn) {
-        //    var result = [];
-        //    for (let i = 0; i < this.value.length; i++) {
-        //        var value = this.value[i];
-        //        result.push(fn(value, i));
-        //    }
-        //    return result;
-        //}
-
-        private fns = [];
+        subscribe(subscr: ISubscriber) {
+            //if (this.subscribers.indexOf(subscr) < 0)
+            //    this.subscribers.push(subscr);
+        }
 
         forEach(fn) {
-            this.fns[0] = fn;
-            //for (var i = 0; i < this.fns.length; i++) {
-            //    if (this.fns[i] === fn)
-            //        return;
-            //}
-            //this.fns.push(fn);
-            // this.notify();
-            this.signal(fn);
-        }
-
-        private signal(fn) {
             for (let i = 0; i < this.value.length; i++) {
-                var value = this.value[i];
+                var value = new Property(this.value, i);
                 fn(value, i);
-            }
-        }
-
-        notify() {
-            if (this.update()) {
-                for (let i = 0; i < this.value.length; i++) {
-
-                    var value = this.value[i];
-                    for (var e = 0; e < this.fns.length; e++) {
-                        var fn = this.fns[e];
-                        fn(value, i, this.value);
-                    }
-                }
             }
         }
     }
@@ -1108,6 +1012,7 @@
         private properties = [];
         private value;
         private id;
+        private length;
 
         constructor(private context: any, public name: string | number) {
             this.value = context[name];
@@ -1132,6 +1037,11 @@
             if (this.id !== currentId) {
                 this.value = currentValue;
                 this.id = currentId;
+                return true;
+            }
+
+            if (this.length !== currentValue.length) {
+                this.length = currentValue.length;
                 return true;
             }
 
@@ -1200,6 +1110,13 @@
                 var stream = tpl.modelAccessor.execute(context, this);
                 this.length = 0;
 
+                //if (stream.subscribe) {}
+                //    //stream.subscribe({
+                //    //    notify() {
+                //    //        console.debug("notify stream");
+                //    //    }
+                //    //});
+                //else
                 stream.forEach((ctx, idx) => {
                     this.length = idx + 1;
                     for (var i = 0; i < bindings.length; i++) {

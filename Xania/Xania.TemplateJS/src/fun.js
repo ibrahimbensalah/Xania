@@ -65,7 +65,7 @@ var Xania;
                 var target = this.targetExpr.execute(context, provider);
                 if (!target)
                     throw new Error(this.targetExpr.toString() + " is undefined or null.");
-                return provider.invoke(target, args);
+                return provider.invoke(context, target, args);
             };
             App.prototype.app = function (args) {
                 return new App(this.targetExpr, this.args.concat(args));
@@ -254,8 +254,8 @@ var Xania;
             DefaultRuntimeProvider.map = function (arr, fn) {
                 return arr.map(fn);
             };
-            DefaultRuntimeProvider.invoke = function (invocable, args) {
-                return invocable.apply(this, args);
+            DefaultRuntimeProvider.invoke = function (context, invocable, args) {
+                return invocable.apply(context, args);
             };
             return DefaultRuntimeProvider;
         }());
