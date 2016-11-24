@@ -288,19 +288,18 @@
         }
 
         static updateValue(rootValue, rootContext) {
-            let length, stack: { value: any, context: any }[] = [{ value: rootValue, context: rootContext }];
-
-            //for (let i = 0; i < root.properties.length; i++) {
-            //    const property = root.properties[i];
-            //    stack.push({ value: property, context: root.value.valueOf() });
-            //}
+            let length, stack: { value: any, context: any, parent }[] = [{ value: rootValue, context: rootContext, parent: null }];
 
             var dirty = new Set<ISubscriber>();
 
             while (stack.length > 0) {
-                var { value, context } = stack.pop();
+                var { value, context, parent } = stack.pop();
 
                 if (value.update(context)) {
+                    if (value.value === undefined) {
+                        parent.properties.splice(parent.properties.indexOf(value), 1);
+                        continue;
+                    }
                     var subscribers = value.subscribers;
                     for (var n = 0; n < subscribers.length; n++) {
                         var s = subscribers[n];
@@ -315,7 +314,7 @@
                     length = properties.length;
                     for (let i = 0; i < length; i++) {
                         const child = properties[i];
-                        stack.push({ value: child, context: childContext });
+                        stack.push({ value: child, context: childContext, parent: value });
                     }
                 }
             }
@@ -694,10 +693,15 @@
         }
         invoke(context, invokable, args: any[]) {
             var xs = args.map(x => {
-                if (!!x.subscribe)
+                if (!!x.subscribe) {
                     x.subscribe(this);
+                    // if (x.isProxy)
+                    //    throw new Error("proxy of proxy");
+                    // return x.transparentProxy(this);
+                    return x.valueOf();
+                }
 
-                return x.valueOf();
+                return x;
             });
 
             var value;
@@ -706,8 +710,11 @@
             } else
                 value = invokable.apply(null, xs);
 
-            if (!!value && value.subscribe)
+            // if (value && value[0] && value[0].isProxy)
+
+            if (!!value && value.subscribe) {
                 return value;
+            }
 
             return new Immutable(value);
         }
@@ -837,7 +844,12 @@
         private subscribers = [];
 
         constructor(private fn, private args: IValue[]) {
+            if (typeof fn !== "function")
+                throw new Error("argument fn is not a function");
+
             this.value = this.fn.apply(null, this.args);
+            if (this.value[0] && this.value[0].isProxy)
+                throw new Error("array with proxies");
         }
 
         valueOf() {
@@ -854,6 +866,15 @@
                 var value = new Property(this.value, i);
                 fn(value, i);
             }
+        }
+
+        transparentProxy(subscriber: ISubscriber) {
+            return Property.proxy(this.value, {
+                subscriber,
+                apply(target, thisArg, args) {
+                    return target.apply(thisArg, args);
+                }
+            });
         }
     }
 
@@ -1015,10 +1036,62 @@
         private length;
 
         constructor(private context: any, public name: string | number) {
+            if (context.isProxy)
+                throw new Error("proxy is not allowed as context");
+
             this.value = context[name];
+
+            if (this.value.isProxy)
+                throw new Error("proxy is not allowed as value");
+
             this.id = this.value;
+            this.length = this.value.length;
             if (!!this.value && this.value.id !== undefined)
                 this.id = this.value.id;
+        }
+
+        static proxy(target, config) {
+            if (typeof window["Proxy"] === "undefined")
+                throw new Error("Browser is not supported");
+
+            return new (window["Proxy"])(target, config);
+        }
+
+        transparentProxy(subscriber: ISubscriber) {
+
+            var type = typeof this.value;
+            if (type === "undefined" || type === "number" || type === "boolean" || type === "string")
+                return this.value;
+
+            if (type === "function")
+                return Property.proxy(this.value, {
+                    subscriber,
+                    apply(target, thisArg, args) {
+                        return target.apply(thisArg, args);
+                    }
+                });
+            else
+                return Property.proxy(this, {
+                    subscriber,
+                    has(target, name) {
+                        return target.value[name] !== undefined;
+                        // console.error("not implemented", arguments);
+                    },
+                    get(target, name) {
+                        switch (name) {
+                            case "length":
+                                return target.length;
+                            case "isProxy":
+                                return true;
+                            case "valueOf":
+                                return target.valueOf.bind(target);
+                            default:
+                                return target.get(name).transparentProxy(this.subscriber);
+                        }
+                        //console.error("property " + name + " is not supported.", target);
+                        //throw new Error("property " + name + " is not supported.");
+                    }
+                });
         }
 
         subscribe(subscr: ISubscriber) {
@@ -1028,6 +1101,9 @@
 
         update(context) {
             const currentValue = context[this.name];
+            if (currentValue === undefined)
+                return true;
+
             this.context = context;
 
             var currentId = currentValue;
@@ -1037,6 +1113,7 @@
             if (this.id !== currentId) {
                 this.value = currentValue;
                 this.id = currentId;
+                this.length = currentValue.length;
                 return true;
             }
 

@@ -28,7 +28,7 @@ class TodoStore {
     }
 
     remove(todo) {
-        var idx = this.todos.indexOf(todo);
+        var idx = this.todos.indexOf(todo.valueOf());
         console.debug("remove todo ", idx);
         if (idx >= 0)
             this.todos.splice(idx, 1);

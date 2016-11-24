@@ -24,7 +24,7 @@ var TodoStore = (function () {
         this.todos = this.todos.filter(function (t) { return !t.completed; });
     };
     TodoStore.prototype.remove = function (todo) {
-        var idx = this.todos.indexOf(todo);
+        var idx = this.todos.indexOf(todo.valueOf());
         console.debug("remove todo ", idx);
         if (idx >= 0)
             this.todos.splice(idx, 1);

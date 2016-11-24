@@ -482,8 +482,6 @@ var Xania;
             List.count = function (fn, list) {
                 if (!list)
                     return 0;
-                if (!!list.count)
-                    return list.count(fn);
                 var result = 0;
                 for (var i = 0; i < list.length; i++)
                     if (fn(list[i]))
@@ -497,9 +495,14 @@ var Xania;
                 return List.count(fn, list) === list.length;
             };
             List.filter = function (fn, list) {
-                if (!list)
-                    return [];
-                return list.filter(fn);
+                var retval = [];
+                for (var i = 0; i < list.length; i++) {
+                    var item = list[i];
+                    if (!!fn(item)) {
+                        retval.push(item.valueOf());
+                    }
+                }
+                return retval;
             };
             List.map = function (fn, list) {
                 if (!list)

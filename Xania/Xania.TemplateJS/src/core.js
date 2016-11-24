@@ -265,11 +265,15 @@ var Xania;
             }
         };
         RootContainer.updateValue = function (rootValue, rootContext) {
-            var length, stack = [{ value: rootValue, context: rootContext }];
+            var length, stack = [{ value: rootValue, context: rootContext, parent: null }];
             var dirty = new Set();
             while (stack.length > 0) {
-                var _a = stack.pop(), value = _a.value, context = _a.context;
+                var _a = stack.pop(), value = _a.value, context = _a.context, parent = _a.parent;
                 if (value.update(context)) {
+                    if (value.value === undefined) {
+                        parent.properties.splice(parent.properties.indexOf(value), 1);
+                        continue;
+                    }
                     var subscribers = value.subscribers;
                     for (var n = 0; n < subscribers.length; n++) {
                         var s = subscribers[n];
@@ -283,7 +287,7 @@ var Xania;
                     length = properties.length;
                     for (var i = 0; i < length; i++) {
                         var child = properties[i];
-                        stack.push({ value: child, context: childContext });
+                        stack.push({ value: child, context: childContext, parent: value });
                     }
                 }
             }
@@ -616,9 +620,11 @@ var Xania;
         Binding.prototype.invoke = function (context, invokable, args) {
             var _this = this;
             var xs = args.map(function (x) {
-                if (!!x.subscribe)
+                if (!!x.subscribe) {
                     x.subscribe(_this);
-                return x.valueOf();
+                    return x.valueOf();
+                }
+                return x;
             });
             var value;
             if (!!invokable.invoke) {
@@ -626,8 +632,9 @@ var Xania;
             }
             else
                 value = invokable.apply(null, xs);
-            if (!!value && value.subscribe)
+            if (!!value && value.subscribe) {
                 return value;
+            }
             return new Immutable(value);
         };
         Binding.prototype.forEach = function (context, fn) {
@@ -737,7 +744,11 @@ var Xania;
             this.args = args;
             this.properties = [];
             this.subscribers = [];
+            if (typeof fn !== "function")
+                throw new Error("argument fn is not a function");
             this.value = this.fn.apply(null, this.args);
+            if (this.value[0] && this.value[0].isProxy)
+                throw new Error("array with proxies");
         }
         Invocation.prototype.valueOf = function () {
             return this.value;
@@ -749,6 +760,14 @@ var Xania;
                 var value = new Property(this.value, i);
                 fn(value, i);
             }
+        };
+        Invocation.prototype.transparentProxy = function (subscriber) {
+            return Property.proxy(this.value, {
+                subscriber: subscriber,
+                apply: function (target, thisArg, args) {
+                    return target.apply(thisArg, args);
+                }
+            });
         };
         return Invocation;
     }());
@@ -872,17 +891,60 @@ var Xania;
             this.name = name;
             this.subscribers = [];
             this.properties = [];
+            if (context.isProxy)
+                throw new Error("proxy is not allowed as context");
             this.value = context[name];
+            if (this.value.isProxy)
+                throw new Error("proxy is not allowed as value");
             this.id = this.value;
+            this.length = this.value.length;
             if (!!this.value && this.value.id !== undefined)
                 this.id = this.value.id;
         }
+        Property.proxy = function (target, config) {
+            if (typeof window["Proxy"] === "undefined")
+                throw new Error("Browser is not supported");
+            return new (window["Proxy"])(target, config);
+        };
+        Property.prototype.transparentProxy = function (subscriber) {
+            var type = typeof this.value;
+            if (type === "undefined" || type === "number" || type === "boolean" || type === "string")
+                return this.value;
+            if (type === "function")
+                return Property.proxy(this.value, {
+                    subscriber: subscriber,
+                    apply: function (target, thisArg, args) {
+                        return target.apply(thisArg, args);
+                    }
+                });
+            else
+                return Property.proxy(this, {
+                    subscriber: subscriber,
+                    has: function (target, name) {
+                        return target.value[name] !== undefined;
+                    },
+                    get: function (target, name) {
+                        switch (name) {
+                            case "length":
+                                return target.length;
+                            case "isProxy":
+                                return true;
+                            case "valueOf":
+                                return target.valueOf.bind(target);
+                            default:
+                                return target.get(name).transparentProxy(this.subscriber);
+                        }
+                    }
+                });
+        };
         Property.prototype.subscribe = function (subscr) {
             if (this.subscribers.indexOf(subscr) < 0)
                 this.subscribers.push(subscr);
         };
         Property.prototype.update = function (context) {
             var currentValue = context[this.name];
+            if (currentValue === undefined)
+                return true;
             this.context = context;
             var currentId = currentValue;
             if (!!currentValue && currentValue.id !== undefined)
@@ -890,6 +952,7 @@ var Xania;
             if (this.id !== currentId) {
                 this.value = currentValue;
                 this.id = currentId;
+                this.length = currentValue.length;
                 return true;
             }
             if (this.length !== currentValue.length) {
