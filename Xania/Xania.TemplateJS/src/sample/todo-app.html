@@ -7,7 +7,7 @@
         <section class="main" class.hidden="{{ store.todos |> empty }}">
             <input class="toggle-all" type="checkbox" checked="{{ store.todos |> all completed }}" click="{{ store.toggleAll }}">
             <ul class="todo-list">
-                <li data-select="{{ for todo in store.todos |> filter (todoPredicate show.id) }}" class.completed="{{ todo.completed }}" >
+                <li data-select="{{ for todo in store.todos |> filter (todoPredicate show) }}" class.completed="{{ todo.completed }}" >
                     <div class="view">
                         <input class="toggle" type="checkbox" click="{{ todo.toggleCompletion }}" checked="{{ todo.completed }}">
                         <label dblclick="editTodo(todo)">{{ todo.title }}</label>

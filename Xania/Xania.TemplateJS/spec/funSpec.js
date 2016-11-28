@@ -1,5 +1,6 @@
 ﻿/// <reference path="../src/core.js" />
 /// <reference path="../src/fun.js" />
+/// <reference path="../src/zone.js" />
 /// <reference path="../Scripts/jasmine/jasmine.js" />
 
 "use strict";
@@ -126,102 +127,17 @@ describe("compiler", function () {
         });
 });
 
-describe("tranparant proxy", function () {
-
-    it("keeps track of used properties",
-        function () {
-            var raw = { store: { numbers: [1] } };
-            var subscriber = {};
-
-            var property = new Xania.Property(raw, "store");
-
-            var proxy = property.transparentProxy(subscriber);
-
-            expect(proxy.numbers.isProxy).toBe(true);
-            expect(0 < proxy.numbers.length).toBe(true);
-            expect(1 < proxy.numbers.length).toBe(false);
-
-            for (var i = 0; i < proxy.numbers.length; i++) {
-                expect(proxy.numbers[i]).toBe(raw.store.numbers[i]);
-                expect(property.properties.length).toBe(1);
-            }
-        });
-
-    it("should be invocable when underlying value is a function",
-        function () {
-            var raw = { add1: function (x) { return x + 1; } };
-            var proxyAdd1 = new Xania.Property(raw, "add1").transparentProxy();
-
-            var result = proxyAdd1(1);
-            expect(result).toBe(2);
-        });
-
-
-    it("support array operators",
-        function () {
-            var raw = { numbers: [1, 2, 3, 4, 5] };
-            var numbers = new Xania.Property(raw, "numbers").transparentProxy();
-
-            var result = numbers.filter(function (x) { return x % 2 === 0; });
-            expect(result).toEqual([2, 4]);
-        });
-
-});
-
 describe("tranparant tracking", function () {
 
-    function createZone() {
-        return {
-            $reads: [],
-            $cache: new Map(),
-            $target: Symbol("target"),
-            $track: function (object) {
-                var type = typeof object;
-                if (object === null || object === undefined || type === "boolean" || type === "number" || type === "string")
-                    return object;
-
-                var proxy = this.$cache.get(object);
-                if (!proxy) {
-                    proxy = this.$proxy(object);
-                    this.$cache.set(object, proxy);
-                }
-
-                return proxy;
-            },
-            $unwrap: function (value) {
-                return (!!value && value[this.$target]) || value;
-            },
-            $proxy: function (object) {
-                var proxy = new Proxy(object, {
-                    zone: this,
-                    get: function (target, name) {
-                        if (name === this.zone.$target)
-                            return target;
-                        var value = target[name];
-                        if (typeof value === "function")
-                            return value;
-                        this.zone.$reads.push({ object: target, property: name });
-                        return this.zone.$track(value);
-                    },
-                    set: function (target, name, value) {
-                        target[name] = this.zone.$unwrap(value);
-                        return true;
-                    }
-                });
-
-                return proxy;
-            },
-            fork: function (func, context) {
-                var args = [];
-                for (var i = 2; i < arguments.length; i++) {
-                    args.push(this.$track(arguments[i]));
-                }
-
-                var ctx = this.$track(context);
-                var result = func.apply(ctx, args);
-
-                return this.$unwrap(result);
-            }
+    var defaultRuntime = {
+        get: function (object, name) {
+            return object[name];
+        },
+        set: function (object, name, value) {
+            object[name] = value;
+        },
+        apply: function (target, thisArg, args) {
+            return target.apply(thisArg, args);
         }
     };
 
@@ -233,42 +149,38 @@ describe("tranparant tracking", function () {
 
             var input = {};
 
-            var x = createZone().fork(equals, null, input, input);
+            var x = new Xania.Zone(defaultRuntime).run(equals, null, [input, input]);
             expect(x).toBe(true);
         });
 
     it("tracks property access",
         function () {
-            var zone = createZone();
+            var zone = new Xania.Zone(defaultRuntime);
             function getName() {
                 return this.name;
             };
 
             var person = { name: "me" };
-            var name = zone.fork(getName, person);
+            var name = zone.run(getName, person);
             expect(name).toBe("me");
-
-            var read = zone.$reads[0];
-            expect(read.object).toBe(person);
-            expect(read.property).toBe("name");
         });
 
     it("object setter set value outside the zone.",
         function () {
-            var zone = createZone();
+            var zone = new Xania.Zone(defaultRuntime);
             function addPerson(list, person) {
                 list.push(person);
             };
 
             var list = [];
             var person = { name: "me" };
-            zone.fork(addPerson, null, list, person);
+            zone.run(addPerson, null, [list, person]);
             expect(list[0]).toBe(person);
         });
 
     it("finds element in list.",
         function () {
-            var zone = createZone();
+            var zone = new Xania.Zone(defaultRuntime);
 
             function containsToko(todo) {
                 var idx = this.todos.indexOf(todo);
@@ -277,13 +189,13 @@ describe("tranparant tracking", function () {
 
             var todo = { title: "todo 1" };
             var store = { todos: [todo] };
-            var result = zone.fork(containsToko, store, todo);
+            var result = zone.run(containsToko, store, [todo]);
             expect(result).toBe(true);
         });
 
     it("iterates over list.",
         function () {
-            var zone = createZone();
+            var zone = new Xania.Zone(defaultRuntime);
 
             function planTime() {
                 var totalTime = 0;
@@ -297,26 +209,26 @@ describe("tranparant tracking", function () {
             var todo2 = { title: "todo 2", time: 2 };
             var store = { todos: [todo1, todo2] };
 
-            var result = zone.fork(planTime, store);
+            var result = zone.run(planTime, store);
             console.log(result);
             expect(result).toBe(3);
         });
 
     it("does not expose proxies outside the zone.",
         function () {
-            var zone = createZone();
+            var zone = new Xania.Zone(defaultRuntime);
 
             function createObject() {
                 return {};
             }
 
-            var result = zone.fork(createObject, null);
+            var result = zone.run(createObject, null);
             expect(result[zone.$target]).toBeUndefined();
         });
 
     it("extends behavior passed nested methods.",
         function () {
-            var zone = createZone();
+            var zone = new Xania.Zone(defaultRuntime);
             function designWorld(world) {
                 world.addPerson("me");
 
@@ -324,12 +236,91 @@ describe("tranparant tracking", function () {
             }
 
             var world = new World();
-            var result = zone.fork(designWorld, null, world);
+            var result = zone.run(designWorld, null, [world]);
 
             expect(world).toBe(result);
             expect(world[zone.$target]).toBeUndefined();
             expect(world.persons[zone.$target]).toBeUndefined();
         });
+
+    it("supports alternative object model.",
+        function () {
+            var binding = {
+                result: [],
+                context: null,
+                get: function (object, name) {
+                    var result = object.get(name);
+
+                    if (!!result.subscribe) {
+                        result.subscribe(this);
+
+                        var type = typeof result.value;
+                        if (result.value === null ||
+                            type === "function" ||
+                            type === "undefined" ||
+                            type === "boolean" ||
+                            type === "number" ||
+                            type === "string")
+                            return result.value;
+                    }
+
+                    return result;
+                },
+                set: function (object, name, value) {
+                    object.set(name, value);
+                    return true;
+                },
+                update(context) {
+                    this.context = context;
+
+                    function designWorld(world) {
+                        return world.persons.map(function (x) { return x.name; });
+                    }
+
+                    var zone = new Xania.Zone(binding);
+                    this.result = zone.run(designWorld, null, [this.context]);
+
+                    return this.result;
+                },
+                notify: function () {
+                    this.update(this.context);
+                }
+            };
+
+            var world = new World();
+            binding.update(new Xania.Property({ world }, "world"));
+            //var result = zone.run(designWorld, null, world);
+
+
+            expect([]).toEqual(binding.result);
+            world.addPerson("ibrahim");
+            expect([]).toEqual(binding.result);
+            Xania.RootContainer.updateValue(binding.context);
+            expect(["ibrahim"]).toEqual(binding.result);
+            world.addPerson("abeer");
+            expect(["ibrahim"]).toEqual(binding.result);
+            Xania.RootContainer.updateValue(binding.context);
+            expect(["ibrahim", "abeer"]).toEqual(binding.result);
+        });
+
+    it("state dual behavior", function () {
+
+        function State(undefined) {
+            var state = undefined;
+
+            return function(x) {
+                if (x !== undefined)
+                    state = x;
+
+                return state;
+            };
+        };
+
+        var show = State();
+
+        show(1);
+        expect(show()).toBe(1);
+    });
 });
 
 var Test = (function () {
@@ -357,7 +348,7 @@ var World = (function () {
         this.persons = [];
     }
     World.prototype.addPerson = function (name) {
-        this.persons.push(new Person("me"));
+        this.persons.push(new Person(name));
     };
     return World;
 }());

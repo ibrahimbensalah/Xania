@@ -10,7 +10,7 @@ var Xania;
                 return this.value;
             };
             Const.prototype.app = function (args) {
-                return new App(new Const(this.value), args);
+                return new App(this, args);
             };
             Const.prototype.toString = function () {
                 return "'" + this.value + "'";
@@ -23,7 +23,7 @@ var Xania;
             }
             Ident.prototype.execute = function (context, provider) {
                 if (provider === void 0) { provider = DefaultRuntimeProvider; }
-                return provider.property(context, this.id);
+                return provider.get(context, this.id);
             };
             Ident.prototype.app = function (args) {
                 return new App(this, args);
@@ -41,10 +41,7 @@ var Xania;
             Member.prototype.execute = function (context, provider) {
                 if (provider === void 0) { provider = DefaultRuntimeProvider; }
                 var obj = this.targetExpr.execute(context, provider);
-                var member = provider.property(obj, this.name);
-                if (typeof member === "function")
-                    return member.bind(obj);
-                return member;
+                return provider.get(obj, this.name);
             };
             Member.prototype.app = function (args) {
                 return new App(this, args);
@@ -235,7 +232,7 @@ var Xania;
             DefaultRuntimeProvider.itemAt = function (arr, idx) {
                 return !!arr.itemAt ? arr.itemAt(idx) : arr[idx];
             };
-            DefaultRuntimeProvider.property = function (obj, name) {
+            DefaultRuntimeProvider.get = function (obj, name) {
                 return !!obj.get ? obj.get(name) : obj[name];
             };
             DefaultRuntimeProvider.extend = function (context, varName, x) {

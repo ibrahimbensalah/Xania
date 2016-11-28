@@ -58,6 +58,7 @@
     <Content Include="src\track.js" />
     <Content Include="web.config" />
     <TypeScriptCompile Include="src\track.ts" />
+    <TypeScriptCompile Include="src\zone.ts" />
     <TypeScriptCompile Include="test\jasmine.d.ts" />
   </ItemGroup>
   <ItemGroup>

@@ -256,7 +256,7 @@
 
             var raw = this.value[name];
             if (raw !== undefined) {
-                var instval = new Property(this.value, name);
+                var instval = new Property(this, name);
                 this.properties.push({ name, value: instval });
                 return instval;
             }
@@ -265,9 +265,9 @@
             if (raw === undefined)
                 throw new Error("Could not resolve " + name);
 
-            var gval = new Global(raw);
-            this.properties.push({ name, value: gval });
-            return gval;
+            var gv = new Global(raw);
+            this.properties.push({ name, value: gv });
+            return gv;
         }
 
         set(name, value) {
@@ -678,45 +678,65 @@
                     return binding.state = binding.render(context, s);
                 });
         }
-        itemAt(arr: any, idx: number): any {
-            var result = arr.itemAt(idx);
-            result.subscribe(this);
-            return result;
-        }
-        property(obj: IValue, name: string): any {
+        get(obj: IValue, name: string): any {
             var result = obj.get(name);
-            result.subscribe(this);
+            if (!!result && !!result.subscribe)
+                result.subscribe(this);
+
             return result;
         }
         extend(context, varName: string, x: any) {
             return context.extend2(varName, x);
         }
-        invoke(context, invokable, args: any[]) {
-            var xs = args.map(x => {
-                if (!!x.subscribe) {
-                    x.subscribe(this);
-                    // if (x.isProxy)
-                    //    throw new Error("proxy of proxy");
-                    // return x.transparentProxy(this);
-                    return x.valueOf();
+        invoke(root, invocable, args: any[]) {
+
+            var runtime = {
+                binding: this,
+                get(target, name) {
+                    var result = target.get(name);
+                    if (!!result && !!result.subscribe)
+                        result.subscribe(this.binding);
+
+                    var value = result.valueOf();
+                    var type = typeof value;
+                    if (value === null ||
+                        type === "function" ||
+                        type === "undefined" ||
+                        type === "boolean" ||
+                        type === "number" ||
+                        type === "string")
+                        return value;
+
+                    return result;
+                },
+                set(target, name, value) {
+
                 }
+            };
+            var zone = new Xania.Zone(runtime);
 
-                return x;
+            var arr = args.map(result => {
+                var type = typeof result.value;
+                if (result.value === null ||
+                    type === "function" ||
+                    type === "boolean" ||
+                    type === "number" ||
+                    type === "string")
+                    return result.value;
+
+                return result;
             });
+            var result = zone.run(invocable, null, arr);
+            // value = invokable.apply(null, xs);
 
-            var value;
-            if (!!invokable.invoke) {
-                value = invokable.invoke(xs);
-            } else
-                value = invokable.apply(null, xs);
 
             // if (value && value[0] && value[0].isProxy)
 
-            if (!!value && value.subscribe) {
-                return value;
+            if (!!result && result.subscribe) {
+                return result;
             }
 
-            return new Immutable(value);
+            return new Immutable(result);
         }
         forEach(context, fn) {
             return context.forEach(fn);
@@ -824,12 +844,14 @@
         constructor(private value) {
         }
 
-        get(idx): IValue { throw new Error("Not implemented"); }
+        get(name): IValue {
+            return this[name];
+        }
 
         subscribe(subscr: ISubscriber) { }
 
         invoke(args: any[]) {
-            return new Invocation(this.value, args);
+            return this.value.apply(null, args);
         }
 
         update(context) {
@@ -863,7 +885,7 @@
 
         forEach(fn) {
             for (let i = 0; i < this.value.length; i++) {
-                var value = new Property(this.value, i);
+                var value = new Property(this, i);
                 fn(value, i);
             }
         }
@@ -896,7 +918,7 @@
                     return property;
             }
 
-            var result = new Property(this.value, name);
+            var result = new Property(this, name);
             this.properties.push(result);
             return result;
         }
@@ -1033,19 +1055,11 @@
         private properties = [];
         private value;
         private id;
-        private length;
 
         constructor(private context: any, public name: string | number) {
-            if (context.isProxy)
-                throw new Error("proxy is not allowed as context");
-
-            this.value = context[name];
-
-            if (this.value.isProxy)
-                throw new Error("proxy is not allowed as value");
-
+            this.value = context.value[name];
             this.id = this.value;
-            this.length = this.value.length;
+
             if (!!this.value && this.value.id !== undefined)
                 this.id = this.value.id;
         }
@@ -1075,7 +1089,6 @@
                     subscriber,
                     has(target, name) {
                         return target.value[name] !== undefined;
-                        // console.error("not implemented", arguments);
                     },
                     get(target, name) {
                         switch (name) {
@@ -1099,12 +1112,12 @@
                 this.subscribers.push(subscr);
         }
 
-        update(context) {
-            const currentValue = context[this.name];
+        update() {
+            // this.context = context === undefined ? this.context : context;
+
+            const currentValue = this.context.value[this.name];
             if (currentValue === undefined)
                 return true;
-
-            this.context = context;
 
             var currentId = currentValue;
             if (!!currentValue && currentValue.id !== undefined)
@@ -1113,12 +1126,6 @@
             if (this.id !== currentId) {
                 this.value = currentValue;
                 this.id = currentId;
-                this.length = currentValue.length;
-                return true;
-            }
-
-            if (this.length !== currentValue.length) {
-                this.length = currentValue.length;
                 return true;
             }
 
@@ -1132,9 +1139,13 @@
                     return property;
             }
 
-            var result = new Property(this.value, name);
+            var result = new Property(this, name);
             this.properties.push(result);
             return result;
+        }
+
+        set(name, value) {
+            this.value[name] = value;
         }
 
         valueOf() {
@@ -1146,11 +1157,12 @@
         }
 
         invoke(args: any[]) {
-            if (this.value === void 0 || this.value === null)
+            var value = this.value;
+            if (value === void 0 || value === null)
                 throw new TypeError(this.name + " is not invocable");
-            if (!!this.value.execute)
-                return this.value.execute.apply(this.value, args);
-            return this.value.apply(this.context, args);
+            if (!!value.execute)
+                return value.execute.apply(value, args);
+            return value.apply(this.context.value, args);
         }
 
         forEach(fn) {

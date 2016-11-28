@@ -24,7 +24,7 @@ var TodoStore = (function () {
         this.todos = this.todos.filter(function (t) { return !t.completed; });
     };
     TodoStore.prototype.remove = function (todo) {
-        var idx = this.todos.indexOf(todo.valueOf());
+        var idx = this.todos.indexOf(todo);
         console.debug("remove todo ", idx);
         if (idx >= 0)
             this.todos.splice(idx, 1);
@@ -38,7 +38,7 @@ var TodoApp = (function () {
         var _this = this;
         this.store = new TodoStore();
         this.newTodoText = "";
-        this.show = new State('all');
+        this.show = State('all');
         this.addTodo = function () {
             if (!!_this.newTodoText && _this.newTodoText.length > 0) {
                 console.debug("add todo", _this.newTodoText);
@@ -57,7 +57,7 @@ var TodoApp = (function () {
     };
     TodoApp.todoPredicate = function (value) {
         return function (todo) {
-            var status = value.valueOf();
+            var status = value();
             switch (status) {
                 case 'all':
                     return true;
@@ -68,19 +68,15 @@ var TodoApp = (function () {
     };
     return TodoApp;
 }());
-var State = (function () {
-    function State(id) {
-        this.id = id;
-    }
-    State.prototype.execute = function (newValue) {
-        this.id = newValue;
+function State(initialValue) {
+    var fn = function (x) {
+        if (x !== undefined)
+            fn['id'] = x;
+        return fn['id'];
     };
-    State.prototype.has = function (value) {
-        return this.id === value;
-    };
-    State.prototype.valueOf = function () {
-        return this.id;
-    };
-    return State;
-}());
+    fn['id'] = initialValue;
+    fn['valueOf'] = function () { return initialValue; };
+    return fn;
+}
+;
 //# sourceMappingURL=todomvc.js.map

@@ -10,7 +10,7 @@
             return this.value;
         }
         app(args: IExpr[]): IExpr {
-            return new App(new Const(this.value), args);
+            return new App(this, args);
         }
         toString() {
             return `'${this.value}'`;
@@ -21,7 +21,7 @@
         constructor(public id: string) { }
 
         execute(context, provider: IRuntimeProvider = DefaultRuntimeProvider) {
-            return provider.property(context, this.id);
+            return provider.get(context, this.id);
         }
         app(args: IExpr[]): IExpr {
             return new App(this, args);
@@ -37,12 +37,7 @@
 
         execute(context, provider: IRuntimeProvider = DefaultRuntimeProvider) {
             const obj = this.targetExpr.execute(context, provider);
-            var member = provider.property(obj, this.name);
-
-            if (typeof member === "function")
-                return member.bind(obj);
-
-            return member;
+            return provider.get(obj, this.name);
         }
         app(args: IExpr[]): IExpr {
             return new App(this, args);
@@ -182,7 +177,7 @@
 
     interface IRuntimeProvider {
         itemAt(arr: any, idx: number): any;
-        property(obj: any, name: string): any;
+        get(obj: any, name: string): any;
         extend(context, varName: string, x: any);
         invoke(context, invocable, args: any[]);
         forEach(data, fn);
@@ -242,7 +237,7 @@
         static itemAt(arr, idx: number) {
             return !!arr.itemAt ? arr.itemAt(idx) : arr[idx];
         }
-        static property(obj, name: string) {
+        static get(obj, name: string) {
             return !!obj.get ? obj.get(name) : obj[name];
         }
         static extend(context, varName: string, x: any) {
@@ -587,3 +582,4 @@ module Xania.Fun {
         }
     }
 }
+

@@ -241,16 +241,16 @@ var Xania;
             }
             var raw = this.value[name];
             if (raw !== undefined) {
-                var instval = new Property(this.value, name);
+                var instval = new Property(this, name);
                 this.properties.push({ name: name, value: instval });
                 return instval;
             }
             raw = this.libs[name];
             if (raw === undefined)
                 throw new Error("Could not resolve " + name);
-            var gval = new Global(raw);
-            this.properties.push({ name: name, value: gval });
-            return gval;
+            var gv = new Global(raw);
+            this.properties.push({ name: name, value: gv });
+            return gv;
         };
         RootContainer.prototype.set = function (name, value) {
             this.value[name] = value;
@@ -604,38 +604,52 @@ var Xania;
                 return binding.state = binding.render(context, s);
             });
         };
-        Binding.prototype.itemAt = function (arr, idx) {
-            var result = arr.itemAt(idx);
-            result.subscribe(this);
-            return result;
-        };
-        Binding.prototype.property = function (obj, name) {
+        Binding.prototype.get = function (obj, name) {
             var result = obj.get(name);
-            result.subscribe(this);
+            if (!!result && !!result.subscribe)
+                result.subscribe(this);
             return result;
         };
         Binding.prototype.extend = function (context, varName, x) {
             return context.extend2(varName, x);
         };
-        Binding.prototype.invoke = function (context, invokable, args) {
-            var _this = this;
-            var xs = args.map(function (x) {
-                if (!!x.subscribe) {
-                    x.subscribe(_this);
-                    return x.valueOf();
+        Binding.prototype.invoke = function (root, invocable, args) {
+            var runtime = {
+                binding: this,
+                get: function (target, name) {
+                    var result = target.get(name);
+                    if (!!result && !!result.subscribe)
+                        result.subscribe(this.binding);
+                    var value = result.valueOf();
+                    var type = typeof value;
+                    if (value === null ||
+                        type === "function" ||
+                        type === "undefined" ||
+                        type === "boolean" ||
+                        type === "number" ||
+                        type === "string")
+                        return value;
+                    return result;
+                },
+                set: function (target, name, value) {
                 }
-                return x;
+            };
+            var zone = new Xania.Zone(runtime);
+            var arr = args.map(function (result) {
+                var type = typeof result.value;
+                if (result.value === null ||
+                    type === "function" ||
+                    type === "boolean" ||
+                    type === "number" ||
+                    type === "string")
+                    return result.value;
+                return result;
             });
-            var value;
-            if (!!invokable.invoke) {
-                value = invokable.invoke(xs);
+            var result = zone.run(invocable, null, arr);
+            if (!!result && result.subscribe) {
+                return result;
             }
-            else
-                value = invokable.apply(null, xs);
-            if (!!value && value.subscribe) {
-                return value;
-            }
-            return new Immutable(value);
+            return new Immutable(result);
         };
         Binding.prototype.forEach = function (context, fn) {
             return context.forEach(fn);
@@ -728,10 +742,12 @@ var Xania;
             this.value = value;
             this.properties = [];
         }
-        Global.prototype.get = function (idx) { throw new Error("Not implemented"); };
+        Global.prototype.get = function (name) {
+            return this[name];
+        };
         Global.prototype.subscribe = function (subscr) { };
         Global.prototype.invoke = function (args) {
-            return new Invocation(this.value, args);
+            return this.value.apply(null, args);
         };
         Global.prototype.update = function (context) {
             return false;
@@ -757,7 +773,7 @@ var Xania;
         };
         Invocation.prototype.forEach = function (fn) {
             for (var i = 0; i < this.value.length; i++) {
-                var value = new Property(this.value, i);
+                var value = new Property(this, i);
                 fn(value, i);
             }
         };
@@ -786,7 +802,7 @@ var Xania;
                 if (property.name === name)
                     return property;
             }
-            var result = new Property(this.value, name);
+            var result = new Property(this, name);
             this.properties.push(result);
             return result;
         };
@@ -891,13 +907,8 @@ var Xania;
             this.name = name;
             this.subscribers = [];
             this.properties = [];
-            if (context.isProxy)
-                throw new Error("proxy is not allowed as context");
-            this.value = context[name];
-            if (this.value.isProxy)
-                throw new Error("proxy is not allowed as value");
+            this.value = context.value[name];
             this.id = this.value;
-            this.length = this.value.length;
             if (!!this.value && this.value.id !== undefined)
                 this.id = this.value.id;
         }
@@ -941,22 +952,16 @@ var Xania;
             if (this.subscribers.indexOf(subscr) < 0)
                 this.subscribers.push(subscr);
         };
-        Property.prototype.update = function (context) {
-            var currentValue = context[this.name];
+        Property.prototype.update = function () {
+            var currentValue = this.context.value[this.name];
             if (currentValue === undefined)
                 return true;
-            this.context = context;
             var currentId = currentValue;
             if (!!currentValue && currentValue.id !== undefined)
                 currentId = currentValue.id;
             if (this.id !== currentId) {
                 this.value = currentValue;
                 this.id = currentId;
-                this.length = currentValue.length;
-                return true;
-            }
-            if (this.length !== currentValue.length) {
-                this.length = currentValue.length;
                 return true;
             }
             return false;
@@ -967,9 +972,12 @@ var Xania;
                 if (property.name === name)
                     return property;
             }
-            var result = new Property(this.value, name);
+            var result = new Property(this, name);
             this.properties.push(result);
             return result;
+        };
+        Property.prototype.set = function (name, value) {
+            this.value[name] = value;
         };
         Property.prototype.valueOf = function () {
             return this.value;
@@ -978,11 +986,12 @@ var Xania;
             return this.value !== this.valueOf();
         };
         Property.prototype.invoke = function (args) {
-            if (this.value === void 0 || this.value === null)
+            var value = this.value;
+            if (value === void 0 || value === null)
                 throw new TypeError(this.name + " is not invocable");
-            if (!!this.value.execute)
-                return this.value.execute.apply(this.value, args);
-            return this.value.apply(this.context, args);
+            if (!!value.execute)
+                return value.execute.apply(value, args);
+            return value.apply(this.context.value, args);
         };
         Property.prototype.forEach = function (fn) {
             for (var i = 0; i < this.value.length; i++) {

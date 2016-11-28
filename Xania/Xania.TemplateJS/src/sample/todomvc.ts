@@ -28,7 +28,7 @@ class TodoStore {
     }
 
     remove(todo) {
-        var idx = this.todos.indexOf(todo.valueOf());
+        var idx = this.todos.indexOf(todo);
         console.debug("remove todo ", idx);
         if (idx >= 0)
             this.todos.splice(idx, 1);
@@ -41,7 +41,7 @@ class TodoStore {
 class TodoApp {
     public store = new TodoStore();
     public newTodoText: string = "";
-    public show = new State('all');
+    public show = State('all');
 
     start() {
     }
@@ -64,7 +64,7 @@ class TodoApp {
 
     static todoPredicate(value) {
         return todo => {
-            var status = value.valueOf();
+            var status = value ();
             switch (status) {
                 case 'all':
                     return true;
@@ -75,19 +75,32 @@ class TodoApp {
     }
 }
 
-class State {
-    constructor(public id: any) {
-    }
+function State(initialValue) {
+    var fn = function(x) {
+        if (x !== undefined)
+            fn['id'] = x;
 
-    execute(newValue) {
-        this.id = newValue;
-    }
+        return fn['id'];
+    };
+    fn['id'] = initialValue;
+    fn['valueOf'] = () => initialValue;
 
-    has(value) {
-        return this.id === value;
-    }
+    return fn;
+};
 
-    valueOf() {
-        return this.id;
-    }
-}
+//class State {
+//    constructor(public id: any) {
+//    }
+
+//    execute(newValue) {
+//        this.id = newValue;
+//    }
+
+//    has(value) {
+//        return this.id === value;
+//    }
+
+//    valueOf() {
+//        return this.id;
+//    }
+//}
