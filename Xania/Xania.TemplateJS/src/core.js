@@ -265,12 +265,13 @@ var Xania;
             }
         };
         RootContainer.updateValue = function (rootValue, rootContext) {
-            var length, stack = [{ value: rootValue, context: rootContext, parent: null }];
+            var length, stack = [rootValue];
             var dirty = new Set();
             while (stack.length > 0) {
-                var _a = stack.pop(), value = _a.value, context = _a.context, parent = _a.parent;
-                if (value.update(context)) {
+                var value = stack.pop();
+                if (value.update()) {
                     if (value.value === undefined) {
+                        var parent = value.parent;
                         parent.properties.splice(parent.properties.indexOf(value), 1);
                         continue;
                     }
@@ -281,14 +282,11 @@ var Xania;
                     }
                     subscribers.length = 0;
                 }
-                var childContext = value.valueOf();
-                if (childContext !== undefined) {
-                    var properties = value.properties;
-                    length = properties.length;
-                    for (var i = 0; i < length; i++) {
-                        var child = properties[i];
-                        stack.push({ value: child, context: childContext, parent: value });
-                    }
+                var properties = value.properties;
+                length = properties.length;
+                for (var i = 0; i < length; i++) {
+                    var child = properties[i];
+                    stack.push(child);
                 }
             }
             dirty.forEach(function (d) {
@@ -632,6 +630,7 @@ var Xania;
                     return result;
                 },
                 set: function (target, name, value) {
+                    target.set(name, value);
                 }
             };
             var zone = new Xania.Zone(runtime);
@@ -902,12 +901,12 @@ var Xania;
         return Container;
     }());
     var Property = (function () {
-        function Property(context, name) {
-            this.context = context;
+        function Property(parent, name) {
+            this.parent = parent;
             this.name = name;
             this.subscribers = [];
             this.properties = [];
-            this.value = context.value[name];
+            this.value = parent.value[name];
             this.id = this.value;
             if (!!this.value && this.value.id !== undefined)
                 this.id = this.value.id;
@@ -953,7 +952,7 @@ var Xania;
                 this.subscribers.push(subscr);
         };
         Property.prototype.update = function () {
-            var currentValue = this.context.value[this.name];
+            var currentValue = this.parent.value[this.name];
             if (currentValue === undefined)
                 return true;
             var currentId = currentValue;
@@ -991,7 +990,7 @@ var Xania;
                 throw new TypeError(this.name + " is not invocable");
             if (!!value.execute)
                 return value.execute.apply(value, args);
-            return value.apply(this.context.value, args);
+            return value.apply(this.parent.value, args);
         };
         Property.prototype.forEach = function (fn) {
             for (var i = 0; i < this.value.length; i++) {

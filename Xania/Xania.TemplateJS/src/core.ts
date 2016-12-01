@@ -288,15 +288,16 @@
         }
 
         static updateValue(rootValue, rootContext) {
-            let length, stack: { value: any, context: any, parent }[] = [{ value: rootValue, context: rootContext, parent: null }];
+            let length, stack: any[] = [rootValue];
 
             var dirty = new Set<ISubscriber>();
 
             while (stack.length > 0) {
-                var { value, context, parent } = stack.pop();
+                var value = stack.pop();
 
-                if (value.update(context)) {
+                if (value.update()) {
                     if (value.value === undefined) {
+                        var parent = value.parent;
                         parent.properties.splice(parent.properties.indexOf(value), 1);
                         continue;
                     }
@@ -308,14 +309,11 @@
                     subscribers.length = 0;
                 }
 
-                var childContext = value.valueOf();
-                if (childContext !== undefined) {
-                    let properties = value.properties;
-                    length = properties.length;
-                    for (let i = 0; i < length; i++) {
-                        const child = properties[i];
-                        stack.push({ value: child, context: childContext, parent: value });
-                    }
+                let properties = value.properties;
+                length = properties.length;
+                for (let i = 0; i < length; i++) {
+                    const child = properties[i];
+                    stack.push(child);
                 }
             }
 
@@ -710,7 +708,7 @@
                     return result;
                 },
                 set(target, name, value) {
-
+                    target.set(name, value);
                 }
             };
             var zone = new Xania.Zone(runtime);
@@ -1056,8 +1054,8 @@
         private value;
         private id;
 
-        constructor(private context: any, public name: string | number) {
-            this.value = context.value[name];
+        constructor(private parent: any, public name: string | number) {
+            this.value = parent.value[name];
             this.id = this.value;
 
             if (!!this.value && this.value.id !== undefined)
@@ -1115,7 +1113,7 @@
         update() {
             // this.context = context === undefined ? this.context : context;
 
-            const currentValue = this.context.value[this.name];
+            const currentValue = this.parent.value[this.name];
             if (currentValue === undefined)
                 return true;
 
@@ -1162,7 +1160,7 @@
                 throw new TypeError(this.name + " is not invocable");
             if (!!value.execute)
                 return value.execute.apply(value, args);
-            return value.apply(this.context.value, args);
+            return value.apply(this.parent.value, args);
         }
 
         forEach(fn) {

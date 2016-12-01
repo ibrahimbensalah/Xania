@@ -302,25 +302,6 @@ describe("tranparant tracking", function () {
             Xania.RootContainer.updateValue(binding.context);
             expect(["ibrahim", "abeer"]).toEqual(binding.result);
         });
-
-    it("state dual behavior", function () {
-
-        function State(undefined) {
-            var state = undefined;
-
-            return function(x) {
-                if (x !== undefined)
-                    state = x;
-
-                return state;
-            };
-        };
-
-        var show = State();
-
-        show(1);
-        expect(show()).toBe(1);
-    });
 });
 
 var Test = (function () {
