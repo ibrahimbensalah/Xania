@@ -334,8 +334,8 @@
                     return ext.container;
             }
 
-            var container = new Container(this).add(name, value);
-            this.extensions.push({ name, id: value.id, container });
+            var container = new Extension(this, name, value);
+            // this.extensions.push({ name, id: value.id, container });
             return container;
         }
     }
@@ -666,6 +666,7 @@
     class Binding implements ISubscriber {
         public state;
         protected context;
+        private subscriptions = [];
 
         update(context) {
             this.context = context;
@@ -678,8 +679,10 @@
         }
         get(obj: IValue, name: string): any {
             var result = obj.get(name);
-            if (!!result && !!result.subscribe)
-                result.subscribe(this);
+            if (!!result && !!result.subscribe) {
+                var subscription = result.subscribe(this);
+                this.subscriptions.push(subscription);
+            }
 
             return result;
         }
@@ -711,7 +714,7 @@
                     target.set(name, value);
                 }
             };
-            var zone = new Xania.Zone(runtime);
+            var zone = new Zone(runtime);
 
             var arr = args.map(result => {
                 var type = typeof result.value;
@@ -725,10 +728,6 @@
                 return result;
             });
             var result = zone.run(invocable, null, arr);
-            // value = invokable.apply(null, xs);
-
-
-            // if (value && value[0] && value[0].isProxy)
 
             if (!!result && result.subscribe) {
                 return result;
@@ -828,9 +827,17 @@
         trigger(name) {
             var handler = this.tpl.getEvent(name);
             if (!!handler) {
-                var result = handler.execute(this.context, this);
+                var result = handler.execute(this.context, {
+                    get(value, name) {
+                        return value.get(name);
+                    }, 
+                    invoke(_, fn, args) {
+                        var xs = args.map(x => x.valueOf());
+                        fn.invoke(xs);
+                    }
+                });
 
-                if (typeof result.value === "function")
+                if (!!result && typeof result.value === "function")
                     result.invoke();
             }
         }
@@ -857,52 +864,12 @@
         }
     }
 
-    export class Invocation {
-
-        private value;
-        private properties = [];
-        private subscribers = [];
-
-        constructor(private fn, private args: IValue[]) {
-            if (typeof fn !== "function")
-                throw new Error("argument fn is not a function");
-
-            this.value = this.fn.apply(null, this.args);
-            if (this.value[0] && this.value[0].isProxy)
-                throw new Error("array with proxies");
-        }
-
-        valueOf() {
-            return this.value;
-        }
-
-        subscribe(subscr: ISubscriber) {
-            //if (this.subscribers.indexOf(subscr) < 0)
-            //    this.subscribers.push(subscr);
-        }
-
-        forEach(fn) {
-            for (let i = 0; i < this.value.length; i++) {
-                var value = new Property(this, i);
-                fn(value, i);
-            }
-        }
-
-        transparentProxy(subscriber: ISubscriber) {
-            return Property.proxy(this.value, {
-                subscriber,
-                apply(target, thisArg, args) {
-                    return target.apply(thisArg, args);
-                }
-            });
-        }
-    }
-
     class Immutable implements IValue {
         private properties = [];
 
         constructor(private value) {
-
+            if (!!value.$target)
+                throw new Error("proxy is not allowed");
         }
 
         update() {
@@ -916,7 +883,8 @@
                     return property;
             }
 
-            var result = new Property(this, name);
+            var value = this.value[name];
+            var result = (value instanceof Property) ? value: new Property(this, name);
             this.properties.push(result);
             return result;
         }
@@ -955,7 +923,7 @@
         update(context: any);
     }
 
-    class Sequence implements IValue {
+    class Sequence123 implements IValue {
         private subscribers: ISubscriber[] = [];
 
         constructor(private arr) {
@@ -963,7 +931,7 @@
         }
 
         static create(value) {
-            return new Sequence(value);
+            return new Sequence123(value);
         }
 
         get(idx): IValue {
@@ -997,41 +965,35 @@
         }
     }
 
-    interface IProvider {
-        get(name): IProvider;
+    interface IValueProvider {
+        get(name: string | number): IValue;
     }
 
-    class Container implements IProvider {
-        private map = {};
-
-        constructor(private parent: IProvider = null) {
+    class Extension implements IValueProvider {
+        constructor(private parent: IValueProvider, private name, private value) {
 
         }
 
-        add(name, value: IValue) {
-            this.map[name] = value;
-            return this;
-        }
-
-        private extensions: { name; id; container }[] = [];
+        // private extensions: { name; id; container }[] = [];
         extend2(name, value) {
-            for (var i = 0; i < this.extensions.length; i++) {
-                var ext = this.extensions[i];
-                if (ext.name === name && ext.id === value.id)
-                    return ext.container;
-            }
+            //for (var i = 0; i < this.extensions.length; i++) {
+            //    var ext = this.extensions[i];
+            //    if (ext.name === name && ext.id === value.id)
+            //        return ext.container;
+            //}
 
-            var container = new Container(this).add(name, value);
-            this.extensions.push({ name, id: value.id, container });
+            var container = new Extension(this, name, value);
             return container;
         }
 
         get(name): IValue {
-            var retval = this.map[name];
-            if (retval === undefined)
-                retval = this.parent.get(name);
+            if (name === this.name)
+                return this.value;
 
-            return retval;
+            if (this.parent !== null)
+                return this.parent.get(name);
+
+            return undefined;
         }
 
         forEach(fn) {
@@ -1039,12 +1001,14 @@
         }
 
         update() {
-            var map = this.map;
-            for (var k in map) {
-                if (map.hasOwnProperty(k)) {
-                    RootContainer.updateValue(map[k], map[k].context);
-                }
-            }
+            var value = this.value;
+            RootContainer.updateValue(value, value.context);
+            //var map = this.map;
+            //for (var k in map) {
+            //    if (map.hasOwnProperty(k)) {
+            //        RootContainer.updateValue(map[k], map[k].context);
+            //    }
+            //}
         }
     }
 
@@ -1055,54 +1019,13 @@
         private id;
 
         constructor(private parent: any, public name: string | number) {
-            this.value = parent.value[name];
-            this.id = this.value;
+            var value = parent.value[name];
+
+            this.value = value;
+            this.id = value;
 
             if (!!this.value && this.value.id !== undefined)
                 this.id = this.value.id;
-        }
-
-        static proxy(target, config) {
-            if (typeof window["Proxy"] === "undefined")
-                throw new Error("Browser is not supported");
-
-            return new (window["Proxy"])(target, config);
-        }
-
-        transparentProxy(subscriber: ISubscriber) {
-
-            var type = typeof this.value;
-            if (type === "undefined" || type === "number" || type === "boolean" || type === "string")
-                return this.value;
-
-            if (type === "function")
-                return Property.proxy(this.value, {
-                    subscriber,
-                    apply(target, thisArg, args) {
-                        return target.apply(thisArg, args);
-                    }
-                });
-            else
-                return Property.proxy(this, {
-                    subscriber,
-                    has(target, name) {
-                        return target.value[name] !== undefined;
-                    },
-                    get(target, name) {
-                        switch (name) {
-                            case "length":
-                                return target.length;
-                            case "isProxy":
-                                return true;
-                            case "valueOf":
-                                return target.valueOf.bind(target);
-                            default:
-                                return target.get(name).transparentProxy(this.subscriber);
-                        }
-                        //console.error("property " + name + " is not supported.", target);
-                        //throw new Error("property " + name + " is not supported.");
-                    }
-                });
         }
 
         subscribe(subscr: ISubscriber) {
@@ -1170,15 +1093,15 @@
             }
         }
 
-        map(fn) {
-            var result = [];
-            for (var i = 0; i < this.value.length; i++) {
-                var item = this.get(i);
-                result.push(fn(item));
-            }
+        //map(fn) {
+        //    var result = [];
+        //    for (var i = 0; i < this.value.length; i++) {
+        //        var item = this.get(i);
+        //        result.push(fn(item));
+        //    }
 
-            return Sequence.create(result);
-        }
+        //    return Sequence.create(result);
+        //}
     }
 
     class ReactiveBinding extends Binding {
@@ -1197,18 +1120,11 @@
                 var stream = tpl.modelAccessor.execute(context, this);
                 this.length = 0;
 
-                //if (stream.subscribe) {}
-                //    //stream.subscribe({
-                //    //    notify() {
-                //    //        console.debug("notify stream");
-                //    //    }
-                //    //});
-                //else
                 stream.forEach((ctx, idx) => {
                     this.length = idx + 1;
                     for (var i = 0; i < bindings.length; i++) {
                         var binding = bindings[i];
-                        if (binding.context === ctx) {
+                        if (binding.context.value === ctx.value) {
                             if (i !== idx) {
                                 bindings[i] = bindings[idx];
                                 bindings[idx] = binding;

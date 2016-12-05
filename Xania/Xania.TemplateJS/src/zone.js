@@ -18,12 +18,28 @@ var Xania;
             return proxy;
         };
         Zone.prototype.$unwrap = function (value) {
-            return (!!value && value[this.$target]) || value;
+            var type = typeof value;
+            if (type !== "object")
+                return value;
+            var target = value[this.$target];
+            if (!!target) {
+                return target;
+            }
+            if (Array.isArray(value)) {
+                for (var i = 0; i < value.length; i++) {
+                    value[i] = this.$unwrap(value[i]);
+                }
+            }
+            return value;
         };
         Zone.prototype.has = function (target, name) {
             return true;
         };
         Zone.prototype.get = function (target, name) {
+            if (name === "$handler")
+                return this;
+            if (name === "$target")
+                return target;
             if (name === this.$target)
                 return target;
             if (name === (window["Symbol"]).toPrimitive)

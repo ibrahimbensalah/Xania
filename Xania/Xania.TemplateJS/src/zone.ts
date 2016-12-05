@@ -20,12 +20,31 @@
             return proxy;
         }
         $unwrap(value) {
-            return (!!value && value[this.$target]) || value;
+            var type = typeof value;
+            if (type !== "object")
+                return value;
+
+            var target = value[this.$target];
+            if (!!target) {
+                return target;
+            }
+
+            if (Array.isArray(value)) {
+                for (var i = 0; i < value.length; i++) {
+                    // TODO, refactor .value
+                    value[i] = this.$unwrap(value[i]);
+                }
+            }
+            return value;
         }
         has(target, name) {
             return true;
         }
         get(target, name) {
+            if (name === "$handler")
+                return this;
+            if (name === "$target")
+                return target;
             if (name === this.$target)
                 return target;
             if (name === (window["Symbol"]).toPrimitive)

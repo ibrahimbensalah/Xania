@@ -302,8 +302,7 @@ var Xania;
                 if (ext.name === name && ext.id === value.id)
                     return ext.container;
             }
-            var container = new Container(this).add(name, value);
-            this.extensions.push({ name: name, id: value.id, container: container });
+            var container = new Extension(this, name, value);
             return container;
         };
         return RootContainer;
@@ -594,6 +593,7 @@ var Xania;
     }());
     var Binding = (function () {
         function Binding() {
+            this.subscriptions = [];
         }
         Binding.prototype.update = function (context) {
             this.context = context;
@@ -604,8 +604,10 @@ var Xania;
         };
         Binding.prototype.get = function (obj, name) {
             var result = obj.get(name);
-            if (!!result && !!result.subscribe)
-                result.subscribe(this);
+            if (!!result && !!result.subscribe) {
+                var subscription = result.subscribe(this);
+                this.subscriptions.push(subscription);
+            }
             return result;
         };
         Binding.prototype.extend = function (context, varName, x) {
@@ -729,8 +731,16 @@ var Xania;
         TagBinding.prototype.trigger = function (name) {
             var handler = this.tpl.getEvent(name);
             if (!!handler) {
-                var result = handler.execute(this.context, this);
-                if (typeof result.value === "function")
+                var result = handler.execute(this.context, {
+                    get: function (value, name) {
+                        return value.get(name);
+                    },
+                    invoke: function (_, fn, args) {
+                        var xs = args.map(function (x) { return x.valueOf(); });
+                        fn.invoke(xs);
+                    }
+                });
+                if (!!result && typeof result.value === "function")
                     result.invoke();
             }
         };
@@ -753,44 +763,12 @@ var Xania;
         };
         return Global;
     }());
-    var Invocation = (function () {
-        function Invocation(fn, args) {
-            this.fn = fn;
-            this.args = args;
-            this.properties = [];
-            this.subscribers = [];
-            if (typeof fn !== "function")
-                throw new Error("argument fn is not a function");
-            this.value = this.fn.apply(null, this.args);
-            if (this.value[0] && this.value[0].isProxy)
-                throw new Error("array with proxies");
-        }
-        Invocation.prototype.valueOf = function () {
-            return this.value;
-        };
-        Invocation.prototype.subscribe = function (subscr) {
-        };
-        Invocation.prototype.forEach = function (fn) {
-            for (var i = 0; i < this.value.length; i++) {
-                var value = new Property(this, i);
-                fn(value, i);
-            }
-        };
-        Invocation.prototype.transparentProxy = function (subscriber) {
-            return Property.proxy(this.value, {
-                subscriber: subscriber,
-                apply: function (target, thisArg, args) {
-                    return target.apply(thisArg, args);
-                }
-            });
-        };
-        return Invocation;
-    }());
-    Xania.Invocation = Invocation;
     var Immutable = (function () {
         function Immutable(value) {
             this.value = value;
             this.properties = [];
+            if (!!value.$target)
+                throw new Error("proxy is not allowed");
         }
         Immutable.prototype.update = function () {
             return false;
@@ -801,7 +779,8 @@ var Xania;
                 if (property.name === name)
                     return property;
             }
-            var result = new Property(this, name);
+            var value = this.value[name];
+            var result = (value instanceof Property) ? value : new Property(this, name);
             this.properties.push(result);
             return result;
         };
@@ -828,77 +807,63 @@ var Xania;
         };
         return Immutable;
     }());
-    var Sequence = (function () {
-        function Sequence(arr) {
+    var Sequence123 = (function () {
+        function Sequence123(arr) {
             this.arr = arr;
             this.subscribers = [];
             this.length = arr.length;
         }
-        Sequence.create = function (value) {
-            return new Sequence(value);
+        Sequence123.create = function (value) {
+            return new Sequence123(value);
         };
-        Sequence.prototype.get = function (idx) {
+        Sequence123.prototype.get = function (idx) {
             return this.arr[idx];
         };
-        Sequence.prototype.subscribe = function (subscr) {
+        Sequence123.prototype.subscribe = function (subscr) {
             if (this.subscribers.indexOf(subscr) < 0)
                 this.subscribers.push(subscr);
         };
-        Sequence.prototype.invoke = function (args) { throw new Error("Not implemented"); };
-        Sequence.prototype.update = function () {
+        Sequence123.prototype.invoke = function (args) { throw new Error("Not implemented"); };
+        Sequence123.prototype.update = function () {
             for (var i = 0; i < this.arr.length; i++) {
                 this.arr[i].notify();
             }
         };
-        Sequence.prototype.hasChanges = function () { return false; };
-        Sequence.prototype.forEach = function (fn) {
+        Sequence123.prototype.hasChanges = function () { return false; };
+        Sequence123.prototype.forEach = function (fn) {
             for (var i = 0; i < this.arr.length; i++) {
                 var item = this.arr[i];
                 fn(item);
             }
             return this;
         };
-        return Sequence;
+        return Sequence123;
     }());
-    var Container = (function () {
-        function Container(parent) {
-            if (parent === void 0) { parent = null; }
+    var Extension = (function () {
+        function Extension(parent, name, value) {
             this.parent = parent;
-            this.map = {};
-            this.extensions = [];
+            this.name = name;
+            this.value = value;
         }
-        Container.prototype.add = function (name, value) {
-            this.map[name] = value;
-            return this;
-        };
-        Container.prototype.extend2 = function (name, value) {
-            for (var i = 0; i < this.extensions.length; i++) {
-                var ext = this.extensions[i];
-                if (ext.name === name && ext.id === value.id)
-                    return ext.container;
-            }
-            var container = new Container(this).add(name, value);
-            this.extensions.push({ name: name, id: value.id, container: container });
+        Extension.prototype.extend2 = function (name, value) {
+            var container = new Extension(this, name, value);
             return container;
         };
-        Container.prototype.get = function (name) {
-            var retval = this.map[name];
-            if (retval === undefined)
-                retval = this.parent.get(name);
-            return retval;
+        Extension.prototype.get = function (name) {
+            if (name === this.name)
+                return this.value;
+            if (this.parent !== null)
+                return this.parent.get(name);
+            return undefined;
         };
-        Container.prototype.forEach = function (fn) {
+        Extension.prototype.forEach = function (fn) {
             fn(this, 0);
         };
-        Container.prototype.update = function () {
-            var map = this.map;
-            for (var k in map) {
-                if (map.hasOwnProperty(k)) {
-                    RootContainer.updateValue(map[k], map[k].context);
-                }
-            }
+        Extension.prototype.update = function () {
+            var value = this.value;
+            RootContainer.updateValue(value, value.context);
         };
-        return Container;
+        return Extension;
     }());
     var Property = (function () {
         function Property(parent, name) {
@@ -906,47 +871,12 @@ var Xania;
             this.name = name;
             this.subscribers = [];
             this.properties = [];
-            this.value = parent.value[name];
-            this.id = this.value;
+            var value = parent.value[name];
+            this.value = value;
+            this.id = value;
             if (!!this.value && this.value.id !== undefined)
                 this.id = this.value.id;
         }
-        Property.proxy = function (target, config) {
-            if (typeof window["Proxy"] === "undefined")
-                throw new Error("Browser is not supported");
-            return new (window["Proxy"])(target, config);
-        };
-        Property.prototype.transparentProxy = function (subscriber) {
-            var type = typeof this.value;
-            if (type === "undefined" || type === "number" || type === "boolean" || type === "string")
-                return this.value;
-            if (type === "function")
-                return Property.proxy(this.value, {
-                    subscriber: subscriber,
-                    apply: function (target, thisArg, args) {
-                        return target.apply(thisArg, args);
-                    }
-                });
-            else
-                return Property.proxy(this, {
-                    subscriber: subscriber,
-                    has: function (target, name) {
-                        return target.value[name] !== undefined;
-                    },
-                    get: function (target, name) {
-                        switch (name) {
-                            case "length":
-                                return target.length;
-                            case "isProxy":
-                                return true;
-                            case "valueOf":
-                                return target.valueOf.bind(target);
-                            default:
-                                return target.get(name).transparentProxy(this.subscriber);
-                        }
-                    }
-                });
-        };
         Property.prototype.subscribe = function (subscr) {
             if (this.subscribers.indexOf(subscr) < 0)
                 this.subscribers.push(subscr);
@@ -998,14 +928,6 @@ var Xania;
                 fn(value, i);
             }
         };
-        Property.prototype.map = function (fn) {
-            var result = [];
-            for (var i = 0; i < this.value.length; i++) {
-                var item = this.get(i);
-                result.push(fn(item));
-            }
-            return Sequence.create(result);
-        };
         return Property;
     }());
     Xania.Property = Property;
@@ -1028,7 +950,7 @@ var Xania;
                     _this.length = idx + 1;
                     for (var i = 0; i < bindings.length; i++) {
                         var binding = bindings[i];
-                        if (binding.context === ctx) {
+                        if (binding.context.value === ctx.value) {
                             if (i !== idx) {
                                 bindings[i] = bindings[idx];
                                 bindings[idx] = binding;

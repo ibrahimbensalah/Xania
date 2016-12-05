@@ -243,6 +243,23 @@ describe("tranparant tracking", function () {
             expect(world.persons[zone.$target]).toBeUndefined();
         });
 
+    it("unwraps array elements.",
+        function () {
+            function copy(list) {
+                var result = [];
+                for (var i = 0; i < list.length; i++) {
+                    result.push(list[i]);
+                }
+                return result;
+            }
+            var zone = new Xania.Zone(defaultRuntime);
+            var list = [{ id: 1 }, { id: 2 }];
+            var result = zone.run(copy, null, [list]);
+
+            expect(result[0]).toBe(list[0]);
+        });
+
+
     it("supports alternative object model.",
         function () {
             var binding = {
