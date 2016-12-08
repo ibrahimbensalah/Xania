@@ -9,49 +9,17 @@ var Xania;
     var Application = (function () {
         function Application(libs) {
             this.libs = libs;
-            this.components = new Map();
             this.contexts = [];
             this.compiler = new Xania.Ast.Compiler();
             this.compile = this.compiler.template.bind(this.compiler);
+            this.viewModelProvider = new ComponentContainer();
         }
-        Application.prototype.component = function () {
-            var _this = this;
-            var args = [];
-            for (var _i = 0; _i < arguments.length; _i++) {
-                args[_i - 0] = arguments[_i];
-            }
-            if (args.length === 1 && typeof args[0] === "function") {
-                var component = args[0];
-                if (this.register(component, null)) {
-                    return function (component) {
-                        _this.unregister(component);
-                        _this.register(component, args);
-                    };
-                }
-            }
-            return function (component) {
-                _this.register(component, args);
-            };
-        };
-        Application.prototype.unregister = function (componentType) {
-            var key = componentType.name.toLowerCase();
-            var decl = componentType.get(key);
-            if (decl.Type === componentType)
-                this.components.delete(key);
-        };
-        Application.prototype.register = function (componentType, args) {
-            var key = componentType.name.toLowerCase();
-            if (this.components.has(key))
-                return false;
-            this.components.set(key, { Type: componentType, Args: args });
-            return true;
-        };
         Application.prototype.start = function (root) {
             if (root === void 0) { root = document.body; }
             var stack = [root];
             while (stack.length > 0) {
                 var dom = stack.pop();
-                var component = this.getComponent(dom);
+                var component = this.viewModelProvider.get(dom);
                 if (component === false) {
                     for (var i = 0; i < dom.childNodes.length; i++) {
                         var child = dom.childNodes[i];
@@ -101,21 +69,6 @@ var Xania;
                 var ctx = this.contexts[i];
                 ctx.update(null);
             }
-        };
-        Application.prototype.getComponent = function (node) {
-            var name = node.nodeName.replace(/\-/, "").toLowerCase();
-            if (!this.components.has(name)) {
-                return false;
-            }
-            var decl = this.components.get(name);
-            var comp = !!decl.Args
-                ? Reflect.construct(decl.Type, decl.Args)
-                : new decl.Type;
-            for (var i = 0; i < node.attributes.length; i++) {
-                var attr = node.attributes.item(i);
-                comp[attr.name] = eval(attr.value);
-            }
-            return comp;
         };
         Application.prototype.import = function (view) {
             var args = [];
@@ -226,6 +179,74 @@ var Xania;
         };
         return Application;
     }());
+    var ComponentContainer = (function () {
+        function ComponentContainer() {
+            this.components = new Map();
+        }
+        ComponentContainer.prototype.get = function (node) {
+            var name = node.nodeName.replace(/\-/, "").toLowerCase();
+            var comp;
+            if (this.components.has(name)) {
+                var decl = this.components.get(name);
+                comp = !!decl.Args
+                    ? Reflect.construct(decl.Type, decl.Args)
+                    : new decl.Type;
+            }
+            else {
+                comp = this.global(name);
+            }
+            if (!comp)
+                return false;
+            for (var i = 0; i < node.attributes.length; i++) {
+                var attr = node.attributes.item(i);
+                comp[attr.name] = eval(attr.value);
+            }
+            return comp;
+        };
+        ComponentContainer.prototype.global = function (name) {
+            for (var k in window) {
+                if (name === k.toLowerCase()) {
+                    var v = window[k];
+                    if (typeof v === "function")
+                        return new v();
+                }
+            }
+            return null;
+        };
+        ComponentContainer.prototype.component = function () {
+            var _this = this;
+            var args = [];
+            for (var _i = 0; _i < arguments.length; _i++) {
+                args[_i - 0] = arguments[_i];
+            }
+            if (args.length === 1 && typeof args[0] === "function") {
+                var component = args[0];
+                if (this.register(component, null)) {
+                    return function (component) {
+                        _this.unregister(component);
+                        _this.register(component, args);
+                    };
+                }
+            }
+            return function (component) {
+                _this.register(component, args);
+            };
+        };
+        ComponentContainer.prototype.unregister = function (componentType) {
+            var key = componentType.name.toLowerCase();
+            var decl = componentType.get(key);
+            if (decl.Type === componentType)
+                this.components.delete(key);
+        };
+        ComponentContainer.prototype.register = function (componentType, args) {
+            var key = componentType.name.toLowerCase();
+            if (this.components.has(key))
+                return false;
+            this.components.set(key, { Type: componentType, Args: args });
+            return true;
+        };
+        return ComponentContainer;
+    }());
     var RootContainer = (function () {
         function RootContainer(value, libs) {
             this.value = value;
@@ -245,7 +266,7 @@ var Xania;
                 this.properties.push({ name: name, value: instval });
                 return instval;
             }
-            raw = this.libs[name];
+            raw = this.value.constructor[name] || this.libs[name];
             if (raw === undefined)
                 throw new Error("Could not resolve " + name);
             var gv = new Global(raw);

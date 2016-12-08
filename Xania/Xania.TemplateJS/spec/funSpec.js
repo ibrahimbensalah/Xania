@@ -77,6 +77,20 @@ describe("compiler", function () {
             expect(actual).toEqual([2, 3]);
         });
 
+    it("should support property selector",
+        function () {
+            var fn = compiler.expr("map firstName persons");
+            var context = {
+                map: Xania.Fun.List.map,
+                persons: [
+                    { firstName: "Ibrahim", lastName: "ben Salah" },
+                    { firstName: "Ramy", lastName: "ben Salah" }
+                ]
+            };
+            var actual = fn.execute(context);
+            expect(actual).toEqual(["Ibrahim", "Ramy"]);
+        });
+
     //it("should support query expression with selector",
     //    function () {
     //        var fn = compiler.expr("for x in todos |> math.lt 3 -> math.add y x");

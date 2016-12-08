@@ -3,46 +3,15 @@
     "use strict";
 
     class Application {
-        private components = new Map<string, any>();
         private compile: Function;
         private compiler: Ast.Compiler;
         private contexts: IValue[] = [];
+        private viewModelProvider: IComponentProvider;
 
         constructor(private libs: any[]) {
             this.compiler = new Ast.Compiler();
             this.compile = this.compiler.template.bind(this.compiler);
-        }
-
-        component(...args: any[]) {
-            if (args.length === 1 && typeof args[0] === "function") {
-                const component = args[0];
-                if (this.register(component, null)) {
-                    return (component: Function) => {
-                        this.unregister(component);
-                        this.register(component, args);
-                    };
-                }
-            }
-
-            return (component: Function) => {
-                this.register(component, args);
-            };
-        }
-
-        unregister(componentType) {
-            var key = componentType.name.toLowerCase();
-            var decl = componentType.get(key);
-            if (decl.Type === componentType)
-                this.components.delete(key);
-        }
-
-        register(componentType, args) {
-            var key = componentType.name.toLowerCase();
-            if (this.components.has(key))
-                return false;
-
-            this.components.set(key, { Type: componentType, Args: args });
-            return true;
+            this.viewModelProvider = new ComponentContainer();
         }
 
         start(root = document.body) {
@@ -52,7 +21,7 @@
             while (stack.length > 0) {
                 var dom = stack.pop();
 
-                var component = this.getComponent(dom);
+                var component = this.viewModelProvider.get(dom);
                 if (component === false) {
                     for (var i = 0; i < dom.childNodes.length; i++) {
                         var child = dom.childNodes[i];
@@ -107,24 +76,6 @@
                 var ctx = this.contexts[i];
                 ctx.update(null);
             }
-        }
-
-        getComponent(node: Node) {
-            var name = node.nodeName.replace(/\-/, "").toLowerCase();
-            if (!this.components.has(name)) {
-                return false;
-            }
-            var decl = this.components.get(name);
-            var comp = !!decl.Args
-                ? Reflect.construct(decl.Type, decl.Args)
-                : new decl.Type;
-
-            for (var i = 0; i < node.attributes.length; i++) {
-                var attr = node.attributes.item(i);
-                comp[attr.name] = eval(attr.value);
-            }
-
-            return comp;
         }
 
         import(view, ...args): any {
@@ -240,6 +191,81 @@
         }
 
     }
+    interface IComponentProvider {
+        get(node: Node): any;
+    }
+
+    class ComponentContainer implements IComponentProvider {
+        private components = new Map<string, any>();
+
+        get(node): any {
+            var name = node.nodeName.replace(/\-/, "").toLowerCase();
+
+            var comp;
+            if (this.components.has(name)) {
+                var decl = this.components.get(name);
+                comp = !!decl.Args
+                    ? Reflect.construct(decl.Type, decl.Args)
+                    : new decl.Type;
+            } else {
+                comp = this.global(name);
+            }
+
+            if (!comp)
+                return false;
+
+            for (var i = 0; i < node.attributes.length; i++) {
+                var attr = node.attributes.item(i);
+                comp[attr.name] = eval(attr.value);
+            }
+
+            return comp;
+        }
+
+        private global(name: string) {
+            for (let k in window) {
+                if (name === k.toLowerCase()) {
+                    var v: any = window[k];
+                    if (typeof v === "function")
+                        return new v();
+                }
+            }
+
+            return null;
+        }
+
+        component(...args: any[]) {
+            if (args.length === 1 && typeof args[0] === "function") {
+                const component = args[0];
+                if (this.register(component, null)) {
+                    return (component: Function) => {
+                        this.unregister(component);
+                        this.register(component, args);
+                    };
+                }
+            }
+
+            return (component: Function) => {
+                this.register(component, args);
+            };
+        }
+
+        unregister(componentType) {
+            var key = componentType.name.toLowerCase();
+            var decl = componentType.get(key);
+            if (decl.Type === componentType)
+                this.components.delete(key);
+        }
+
+        register(componentType, args) {
+            var key = componentType.name.toLowerCase();
+            if (this.components.has(key))
+                return false;
+
+            this.components.set(key, { Type: componentType, Args: args });
+            return true;
+        }
+    }
 
     export class RootContainer implements IValue {
         private properties: { name: string; value: IValue }[] = [];
@@ -261,9 +287,11 @@
                 return instval;
             }
 
-            raw = this.libs[name];
+            raw = this.value.constructor[name] || this.libs[name];
             if (raw === undefined)
                 throw new Error("Could not resolve " + name);
+
+
 
             var gv = new Global(raw);
             this.properties.push({ name, value: gv });
