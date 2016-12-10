@@ -41,6 +41,7 @@
     <Content Include="spec\index.html" />
     <Content Include="src\sample\css\base.css" />
     <TypeScriptCompile Include="Scripts\typings\es6-shim\es6-shim.d.ts" />
+    <TypeScriptCompile Include="src\boot.ts" />
     <TypeScriptCompile Include="src\sample\dbmon\app.ts" />
     <Content Include="src\sample\dbmon\app.js" />
     <Content Include="src\sample\dbmon\ENV.js" />

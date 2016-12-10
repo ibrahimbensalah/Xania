@@ -43,9 +43,6 @@ class TodoApp {
     public newTodoText: string = "";
     public show = State('all');
 
-    start() {
-    }
-
     addTodo = () => {
         if (!!this.newTodoText && this.newTodoText.length > 0) {
             console.debug("add todo", this.newTodoText);

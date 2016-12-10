@@ -8,24 +8,13 @@
     <title>dbmon (template js)</title>
     <script src="../../fun.js"></script>
     <script src="../../core.js"></script>
+    <script src="../../boot.js"></script>
 </head>
 <body>
-    <dbmon-app databases="{{ ENV.generateData(true).toArray() }}"></dbmon-app>
+    <dbmon-app></dbmon-app>
     <script src="ENV.js"></script>
     <script src="memory-stats.js"></script>
     <script src="monitor.js"></script>
     <script src="app.js"></script>
-<script>
-    var app = Xania.app();
-    app.start();
-
-    var load = function() {
-        ENV.generateData(true);
-        app.update();
-        Monitoring.renderRate.ping();
-        window.setTimeout(load, ENV.timeout);
-    };
-    load();
-</script>
 </body>
 </html>

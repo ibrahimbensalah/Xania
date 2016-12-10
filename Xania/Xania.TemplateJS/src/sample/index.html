@@ -8,19 +8,21 @@
 
     <script src="../fun.js"></script>
     <script src="../core.js"></script>
+    <script src="../boot.js"></script>
     <script src="../zone.js"></script>
     <script src="todomvc.js"></script>
 </head>
 <body>
-<div style="display: block; clear: both; overflow: hidden; width: 100%;">
-    <todo-app></todo-app>
-    <!--<div data-model="TodoApp">
-        {{ newTodoText }}
-    </div>-->
-    <!--<div style="float: left; width: 33%;" id="panel1"></div>
-    <div style="float: left; width: 33%;" id="panel2"></div>
-    <div style="float: left; width: 33%;" id="panel3"></div>-->
-</div>
+    <div style="display: block; clear: both; overflow: hidden; width: 60%; margin: 0 auto; min-width: 600px;">
+        <todo-app></todo-app>
+        
+        <!--<div data-model="TodoApp">
+            {{ newTodoText }}
+        </div>-->
+        <!--<div style="float: left; width: 33%;" id="panel1"></div>
+        <div style="float: left; width: 33%;" id="panel2"></div>
+        <div style="float: left; width: 33%;" id="panel3"></div>-->
+    </div>
     <footer class="info">
         <p>Double-click to edit a todo</p>
         <p>
@@ -30,9 +32,5 @@
             Powered by <a href="http://github.com/ibrahimbensalah/xania">Xania JS</a>
         </p>
     </footer>
-    <script>
-        Xania.app(Xania.Fun.List)
-            .start();
-    </script>
 </body>
 </html>

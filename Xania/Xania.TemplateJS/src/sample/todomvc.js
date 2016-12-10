@@ -47,8 +47,6 @@ var TodoApp = (function () {
             }
         };
     }
-    TodoApp.prototype.start = function () {
-    };
     TodoApp.prototype.active = function (todo) {
         return todo.completed === false;
     };
