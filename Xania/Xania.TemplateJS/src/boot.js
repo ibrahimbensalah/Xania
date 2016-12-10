@@ -37,6 +37,10 @@ var Xania;
                 }
                 _this.update();
             });
+            target.addEventListener("mouseover", function (evt) {
+                eventHandler(evt.target, "mouseover");
+                _this.update();
+            });
         };
         Application.prototype.update = function () {
             for (var i = 0; i < this.contexts.length; i++) {
@@ -133,7 +137,7 @@ var Xania;
         };
         Application.prototype.parseAttr = function (tagElement, attr) {
             var name = attr.name;
-            if (name === "click" || name.match(/keyup\./)) {
+            if (name === "click" || name.match(/keyup\./) || name === "mouseover") {
                 var fn = this.compile(attr.value);
                 tagElement.addEvent(name, fn);
             }
@@ -242,7 +246,7 @@ var Xania;
             }
             else {
                 var target = document.createElement("div");
-                dom.appendChild(target);
+                dom.parentNode.insertBefore(target, dom);
                 app.bind(dom.nodeName + ".html", component, target);
                 app.listen(target);
                 for (var i = 0; i < dom.attributes.length; i++) {

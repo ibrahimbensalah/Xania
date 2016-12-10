@@ -45,6 +45,12 @@ module Xania {
                     }
                     this.update();
                 });
+            target.addEventListener("mouseover",
+                evt => {
+                    eventHandler(evt.target, "mouseover");
+                    this.update();
+                }
+            );
         }
 
         public update() {
@@ -148,7 +154,7 @@ module Xania {
 
         parseAttr(tagElement: TagTemplate, attr: Attr) {
             const name = attr.name;
-            if (name === "click" || name.match(/keyup\./)) {
+            if (name === "click" || name.match(/keyup\./) || name === "mouseover") {
                 const fn = this.compile(attr.value);
                 tagElement.addEvent(name, fn);
             } else if (name === "data-select" || name === "data-from") {
@@ -268,7 +274,7 @@ module Xania {
                 }
             } else {
                 var target = document.createElement("div");
-                dom.appendChild(target);
+                dom.parentNode.insertBefore(target, dom);
                 app.bind(dom.nodeName + ".html", component, target);
 
                 app.listen(target);

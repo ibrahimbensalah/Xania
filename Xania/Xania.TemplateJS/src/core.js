@@ -544,6 +544,9 @@ var Xania;
         Global.prototype.update = function (context) {
             return false;
         };
+        Global.prototype.forEach = function (fn) {
+            return this.value.forEach(fn);
+        };
         return Global;
     }());
     var Immutable = (function () {

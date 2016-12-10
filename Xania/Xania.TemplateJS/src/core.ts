@@ -623,6 +623,10 @@
         update(context) {
             return false;
         }
+
+        forEach(fn) {
+            return this.value.forEach(fn);
+        }
     }
 
     class Immutable implements IValue {

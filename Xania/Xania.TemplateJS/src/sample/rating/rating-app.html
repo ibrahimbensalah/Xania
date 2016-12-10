@@ -1,0 +1,22 @@
+﻿<template>
+    <div class="example-container">
+        <p data-ractive-css="{2}" class="current-rating">
+            current rating: <strong>{{ rating }}</strong>
+        </p>
+        <div data-ractive-css="{2}" class="ratings">
+            <h3>Clickable Rating</h3>
+            <div class="rating" >
+                <span class="star" data-select="{{ for r in RATINGS }}" 
+                      class.selected="{{ lessThanOrEqual r rating }}" 
+                      class.highlighted="{{ lessThanOrEqual r highlighted }}" 
+                      mouseover="{{ hover r }}"
+                      click="{{ select r }}">★</span>
+            </div>
+            <h3>Readonly rating</h3>
+            <div class="rating readonly">
+                <span class="star" data-select="{{ for r in RATINGS }}"
+                      class.selected="{{ lessThanOrEqual r rating }}" >★</span>
+            </div>
+        </div>
+    </div>
+</template>
