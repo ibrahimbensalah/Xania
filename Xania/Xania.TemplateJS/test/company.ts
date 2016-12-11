@@ -1,4 +1,4 @@
-﻿/// <reference path="../src/core.ts" />
+﻿/// <reference path="../src/binding.ts" />
 
 class A {
     getZero() {

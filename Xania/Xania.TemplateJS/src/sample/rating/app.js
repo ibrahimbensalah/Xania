@@ -5,9 +5,8 @@ var RatingApp = (function () {
     }
     RatingApp.prototype.select = function (rating) {
         this.rating = rating;
-        console.debug("rating", rating);
     };
-    RatingApp.prototype.hover = function (rating) {
+    RatingApp.prototype.highlight = function (rating) {
         this.highlighted = rating;
     };
     RatingApp.lessThanOrEqual = function (rating, max) {

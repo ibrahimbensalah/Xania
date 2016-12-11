@@ -1,12 +1,13 @@
-﻿/// <reference path="core.ts" />
+﻿/// <reference path="binding.ts" />
 
 module Xania {
-    "use strict";
+    import Value = Bind.IValue;
+    import RootContainer = Bind.RootContainer;
 
-    class Application {
+    class Binder {
         private compile: Function;
         private compiler: Ast.Compiler;
-        private contexts: IValue[] = [];
+        private contexts: Value[] = [];
 
         constructor(private libs: any[]) {
             this.compiler = new Ast.Compiler();
@@ -43,12 +44,15 @@ module Xania {
                     } else {
                         onchange(evt);
                     }
-                    this.update();
                 });
             target.addEventListener("mouseover",
                 evt => {
                     eventHandler(evt.target, "mouseover");
-                    this.update();
+                }
+            );
+            target.addEventListener("mouseout",
+                evt => {
+                    eventHandler(evt.target, "mouseout");
                 }
             );
         }
@@ -91,20 +95,18 @@ module Xania {
         bind(view, viewModel, target: Node) {
             var observable = new RootContainer(viewModel, this.libs.reduce((x, y) => Object.assign(x, y), {}));
 
-            console.debug("bind", { view, viewModel, target });
-
             this.contexts.push(observable);
 
-            Util.ready(this.import(view),
+            Xania.ready(this.import(view),
                 dom => {
                     var tpl = this.parseDom(dom);
-                    Binder.executeTemplate(observable, tpl, target, 0);
+                    Bind.executeTemplate(observable, tpl, target, 0);
                 });
 
             return this;
         }
 
-        parseDom(rootDom: HTMLElement): TagTemplate {
+        parseDom(rootDom: HTMLElement): Dom.TagTemplate {
             const stack = [];
             let i: number;
             var rootTpl;
@@ -121,15 +123,15 @@ module Xania {
                 const push = cur.push;
 
                 if (!!node["content"]) {
-                    const content = <HTMLElement>node["content"];
-                    var template = new ContentTemplate();
-                    for (i = content.childNodes.length - 1; i >= 0; i--) {
-                        stack.push({ node: content.childNodes[i], push: template.addChild.bind(template) });
+                    const elt = <HTMLElement>node["content"];
+                    var template = new Dom.ContentTemplate();
+                    for (i = elt.childNodes.length - 1; i >= 0; i--) {
+                        stack.push({ node: elt.childNodes[i], push: template.addChild.bind(template) });
                     }
                     push(template);
                 } else if (node.nodeType === 1) {
                     const elt = <HTMLElement>node;
-                    const template = new TagTemplate(elt.tagName);
+                    const template = new Dom.TagTemplate(elt.tagName);
 
                     for (i = 0; !!elt.attributes && i < elt.attributes.length; i++) {
                         var attribute = elt.attributes[i];
@@ -144,7 +146,7 @@ module Xania {
                     var textContent = node.textContent;
                     if (textContent.trim().length > 0) {
                         const tpl = this.compile(textContent);
-                        push(new TextTemplate(tpl || node.textContent));
+                        push(new Dom.TextTemplate(tpl || node.textContent));
                     }
                 }
             }
@@ -152,9 +154,9 @@ module Xania {
             return rootTpl;
         }
 
-        parseAttr(tagElement: TagTemplate, attr: Attr) {
+        parseAttr(tagElement: Dom.TagTemplate, attr: Attr) {
             const name = attr.name;
-            if (name === "click" || name.match(/keyup\./) || name === "mouseover") {
+            if (name === "click" || name.match(/keyup\./) || name === "mouseover" || name === "mouseout") {
                 const fn = this.compile(attr.value);
                 tagElement.addEvent(name, fn);
             } else if (name === "data-select" || name === "data-from") {
@@ -203,10 +205,12 @@ module Xania {
         }
 
         private global(name: string) {
+            // ReSharper disable once MissingHasOwnPropertyInForeach
             for (let k in window) {
                 if (name === k.toLowerCase()) {
                     var v: any = window[k];
                     if (typeof v === "function")
+                        // ReSharper disable once InconsistentNaming
                         return new v();
                 }
             }
@@ -247,7 +251,7 @@ module Xania {
         }
     }
 
-    function ready(fn) {
+    function domReady(fn) {
         if (document.readyState !== "loading") {
             fn();
         } else {
@@ -255,8 +259,8 @@ module Xania {
         }
     }
 
-    ready(() => {
-        var app = new Application([Fun.List]);
+    domReady(() => {
+        var app = new Binder([Fun.List]);
         var components = new ComponentContainer();
 
         // Find top level components and bind

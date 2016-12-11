@@ -35,6 +35,14 @@ class TodoStore {
         else
             console.error("todo not found", todo);
     }
+
+    orderByTitle() {
+        this.todos = this.todos.sort((x, y) => x.title.localeCompare(y.title));
+    }
+
+    orderByTitleDesc() {
+        this.todos = this.todos.sort((x, y) => y.title.localeCompare(x.title));
+    }
 }
 
 

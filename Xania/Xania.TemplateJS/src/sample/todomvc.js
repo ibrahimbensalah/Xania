@@ -31,6 +31,12 @@ var TodoStore = (function () {
         else
             console.error("todo not found", todo);
     };
+    TodoStore.prototype.orderByTitle = function () {
+        this.todos = this.todos.sort(function (x, y) { return x.title.localeCompare(y.title); });
+    };
+    TodoStore.prototype.orderByTitleDesc = function () {
+        this.todos = this.todos.sort(function (x, y) { return y.title.localeCompare(x.title); });
+    };
     return TodoStore;
 }());
 var TodoApp = (function () {

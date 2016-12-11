@@ -9,8 +9,8 @@
 
 @font-face {
   font-family: 'Voltaire';
-  src: url("Voltaire.eot");
-  src: url("Voltaire.eot?#iefix") format("embedded-opentype"), url("Voltaire.woff") format("woff"), url("Voltaire.ttf") format("truetype"), url("Voltaire.svg#webfont") format("svg"); }
+  src: url("assets/Voltaire.eot");
+  src: url("Voltaire.eot?#iefix") format("embedded-opentype"), url("assets/Voltaire.woff") format("woff"), url("assets/Voltaire.ttf") format("truetype"), url("assets/Voltaire.svg#webfont") format("svg"); }
 
 body {
   font-family: 'Source Sans Pro', 'Arial', sans-serif;

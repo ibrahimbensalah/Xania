@@ -129,9 +129,9 @@ describe("Template Engine", function () {
         });
     //it("should compile supports filter expression",
     //    function () {
-    //        var tpl = compile("@items |> contains x");
+    //        var modelAccessor = compile("@items |> contains x");
 
-    //        var result = tpl({
+    //        var result = modelAccessor({
     //            items: [1, 2, 3, 4, 5],
     //            contains: function (a, arr) {
 

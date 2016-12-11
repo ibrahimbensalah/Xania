@@ -1,14 +1,14 @@
 var Xania;
 (function (Xania) {
-    "use strict";
-    var Application = (function () {
-        function Application(libs) {
+    var RootContainer = Xania.Bind.RootContainer;
+    var Binder = (function () {
+        function Binder(libs) {
             this.libs = libs;
             this.contexts = [];
             this.compiler = new Xania.Ast.Compiler();
             this.compile = this.compiler.template.bind(this.compiler);
         }
-        Application.prototype.listen = function (target) {
+        Binder.prototype.listen = function (target) {
             var _this = this;
             var eventHandler = function (target, name) {
                 var binding = target.attributes["__binding"];
@@ -35,20 +35,21 @@ var Xania;
                 else {
                     onchange(evt);
                 }
-                _this.update();
             });
             target.addEventListener("mouseover", function (evt) {
                 eventHandler(evt.target, "mouseover");
-                _this.update();
+            });
+            target.addEventListener("mouseout", function (evt) {
+                eventHandler(evt.target, "mouseout");
             });
         };
-        Application.prototype.update = function () {
+        Binder.prototype.update = function () {
             for (var i = 0; i < this.contexts.length; i++) {
                 var ctx = this.contexts[i];
                 ctx.update(null);
             }
         };
-        Application.prototype.import = function (view) {
+        Binder.prototype.import = function (view) {
             var args = [];
             for (var _i = 1; _i < arguments.length; _i++) {
                 args[_i - 1] = arguments[_i];
@@ -80,18 +81,17 @@ var Xania;
                 throw new Error("view type is not supported");
             }
         };
-        Application.prototype.bind = function (view, viewModel, target) {
+        Binder.prototype.bind = function (view, viewModel, target) {
             var _this = this;
-            var observable = new Xania.RootContainer(viewModel, this.libs.reduce(function (x, y) { return Object.assign(x, y); }, {}));
-            console.debug("bind", { view: view, viewModel: viewModel, target: target });
+            var observable = new RootContainer(viewModel, this.libs.reduce(function (x, y) { return Object.assign(x, y); }, {}));
             this.contexts.push(observable);
-            Xania.Util.ready(this.import(view), function (dom) {
+            Xania.ready(this.import(view), function (dom) {
                 var tpl = _this.parseDom(dom);
-                Xania.Binder.executeTemplate(observable, tpl, target, 0);
+                Xania.Bind.executeTemplate(observable, tpl, target, 0);
             });
             return this;
         };
-        Application.prototype.parseDom = function (rootDom) {
+        Binder.prototype.parseDom = function (rootDom) {
             var stack = [];
             var i;
             var rootTpl;
@@ -106,16 +106,16 @@ var Xania;
                 var node = cur.node;
                 var push = cur.push;
                 if (!!node["content"]) {
-                    var content = node["content"];
-                    var template = new Xania.ContentTemplate();
-                    for (i = content.childNodes.length - 1; i >= 0; i--) {
-                        stack.push({ node: content.childNodes[i], push: template.addChild.bind(template) });
+                    var elt = node["content"];
+                    var template = new Xania.Dom.ContentTemplate();
+                    for (i = elt.childNodes.length - 1; i >= 0; i--) {
+                        stack.push({ node: elt.childNodes[i], push: template.addChild.bind(template) });
                     }
                     push(template);
                 }
                 else if (node.nodeType === 1) {
                     var elt = node;
-                    var template_1 = new Xania.TagTemplate(elt.tagName);
+                    var template_1 = new Xania.Dom.TagTemplate(elt.tagName);
                     for (i = 0; !!elt.attributes && i < elt.attributes.length; i++) {
                         var attribute = elt.attributes[i];
                         this.parseAttr(template_1, attribute);
@@ -129,15 +129,15 @@ var Xania;
                     var textContent = node.textContent;
                     if (textContent.trim().length > 0) {
                         var tpl = this.compile(textContent);
-                        push(new Xania.TextTemplate(tpl || node.textContent));
+                        push(new Xania.Dom.TextTemplate(tpl || node.textContent));
                     }
                 }
             }
             return rootTpl;
         };
-        Application.prototype.parseAttr = function (tagElement, attr) {
+        Binder.prototype.parseAttr = function (tagElement, attr) {
             var name = attr.name;
-            if (name === "click" || name.match(/keyup\./) || name === "mouseover") {
+            if (name === "click" || name.match(/keyup\./) || name === "mouseover" || name === "mouseout") {
                 var fn = this.compile(attr.value);
                 tagElement.addEvent(name, fn);
             }
@@ -156,7 +156,7 @@ var Xania;
                 }
             }
         };
-        return Application;
+        return Binder;
     }());
     var ComponentContainer = (function () {
         function ComponentContainer() {
@@ -222,7 +222,7 @@ var Xania;
         };
         return ComponentContainer;
     }());
-    function ready(fn) {
+    function domReady(fn) {
         if (document.readyState !== "loading") {
             fn();
         }
@@ -230,8 +230,8 @@ var Xania;
             document.addEventListener("DOMContentLoaded", fn);
         }
     }
-    ready(function () {
-        var app = new Application([Xania.Fun.List]);
+    domReady(function () {
+        var app = new Binder([Xania.Fun.List]);
         var components = new ComponentContainer();
         var stack = [document.body];
         while (stack.length > 0) {
