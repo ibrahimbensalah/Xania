@@ -5,7 +5,7 @@
             <input class="new-todo" placeholder="What needs to be done?" autofocus="" name="newTodoText" keyup.enter="{{ addTodo }}">
         </header>
         <section class="main" class.hidden="{{ store.todos |> empty }}">
-            <input class="toggle-all" type="checkbox" checked="{{ store.todos |> all completed }}" click="{{ store.toggleAll }}">
+            <input class="toggle-all" type="checkbox" checked="{{ store.todos |> all (.completed) }}" click="{{ store.toggleAll }}">
             <ul class="todo-list">
                 <li data-select="{{ for todo in store.todos |> filter (todoPredicate show) }}" class.completed="{{ todo.completed }}" >
                     <div class="view">

@@ -56,9 +56,6 @@ var TodoApp = (function () {
     TodoApp.prototype.active = function (todo) {
         return todo.completed === false;
     };
-    TodoApp.prototype.completed = function (todo) {
-        return todo.completed === true;
-    };
     TodoApp.todoPredicate = function (value) {
         return function (todo) {
             var status = value();

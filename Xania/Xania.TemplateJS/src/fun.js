@@ -114,6 +114,11 @@ var Xania;
             BinaryOperator.add = function (x, y) { return x + y; };
             BinaryOperator.substract = function (x, y) { return x - y; };
             BinaryOperator.pipe = function (x, y) { return x(y); };
+            BinaryOperator.member = function (name) {
+                return function (obj) {
+                    return obj[name];
+                };
+            };
             return BinaryOperator;
         }());
         var Selector = (function () {
@@ -230,20 +235,15 @@ var Xania;
             function DefaultRuntimeProvider() {
             }
             DefaultRuntimeProvider.itemAt = function (arr, idx) {
-                return !!arr.itemAt ? arr.itemAt(idx) : arr[idx];
+                return arr[idx];
             };
             DefaultRuntimeProvider.get = function (obj, name) {
-                return !!obj.get ? obj.get(name) : obj[name];
+                return obj[name];
             };
             DefaultRuntimeProvider.extend = function (context, varName, x) {
-                if (!!context.extend) {
-                    return context.extend(varName, x);
-                }
-                else {
-                    var item = {};
-                    item[varName] = x;
-                    return Object.assign(item, context);
-                }
+                var item = {};
+                item[varName] = x;
+                return Object.assign(item, context);
             };
             DefaultRuntimeProvider.forEach = function (arr, fn) {
                 return arr.forEach(fn);
@@ -270,7 +270,7 @@ var Xania;
                     lbrack: /^\s*\[\s*/g,
                     rbrack: /^\s*\]\s*/g,
                     navigate: /^\s*\.\s*/g,
-                    operator: /^[\|>=\+\-]+/g,
+                    operator: /^[\|>=\+\-\.]+/g,
                     compose: /^compose\b/g,
                     eq: /^\s*=\s*/g
                 };
@@ -349,6 +349,9 @@ var Xania;
                 var op = this.parsePattern("operator", stream);
                 if (!!op) {
                     switch (op) {
+                        case ".":
+                            return new Const(BinaryOperator.member)
+                                .app([new Const(this.parsePattern("ident", stream))]);
                         case "=":
                             return new Const(BinaryOperator.equals)
                                 .app([this.parseExpr(stream)]);
@@ -401,7 +404,8 @@ var Xania;
                 var expr = this.parseConst(stream) ||
                     this.parseParens(stream) ||
                     this.parseQuery(stream) ||
-                    this.parseIdent(stream);
+                    this.parseIdent(stream) ||
+                    this.parseOperator(stream);
                 if (!expr) {
                     return null;
                 }

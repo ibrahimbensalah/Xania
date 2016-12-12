@@ -79,7 +79,7 @@ describe("compiler", function () {
 
     it("should support property selector",
         function () {
-            var fn = compiler.expr("map firstName persons");
+            var fn = compiler.expr("map (.firstName) persons");
             var context = {
                 map: Xania.Fun.List.map,
                 persons: [

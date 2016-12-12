@@ -63,10 +63,6 @@ class TodoApp {
         return todo.completed === false;
     }
 
-    public completed(todo) {
-        return todo.completed === true;
-    }
-
     static todoPredicate(value) {
         return todo => {
             var status = value ();

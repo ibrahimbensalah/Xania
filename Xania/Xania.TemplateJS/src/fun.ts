@@ -107,6 +107,11 @@
         static add = (x, y) => x + y;
         static substract = (x, y) => x - y;
         static pipe = (x, y) => x(y);
+        static member = (name) => {
+            return obj => {
+                return obj[name];
+            };
+        };
     }
 
     class Selector implements IExpr {
@@ -233,21 +238,16 @@
     }
 
     class DefaultRuntimeProvider {
-
         static itemAt(arr, idx: number) {
-            return !!arr.itemAt ? arr.itemAt(idx) : arr[idx];
+            return arr[idx];
         }
         static get(obj, name: string) {
-            return !!obj.get ? obj.get(name) : obj[name];
+            return obj[name];
         }
         static extend(context, varName: string, x: any) {
-            if (!!context.extend) {
-                return context.extend(varName, x);
-            } else {
-                var item = {};
-                item[varName] = x;
-                return Object.assign(item, context);
-            }
+            var item = {};
+            item[varName] = x;
+            return Object.assign(item, context);
         }
         static forEach(arr, fn) {
             return arr.forEach(fn);
@@ -288,7 +288,7 @@
             //, square: /^[\[\]]/g
             , navigate: /^\s*\.\s*/g
             // , punct: /^[;.:\?\^%<>=!&|+\-,~]/g
-            , operator: /^[\|>=\+\-]+/g
+            , operator: /^[\|>=\+\-\.]+/g
             // , pipe2: /^\|\|>/g
             // , select: /^->/g
             , compose: /^compose\b/g
@@ -390,6 +390,9 @@
             var op = this.parsePattern("operator", stream);
             if (!!op) {
                 switch (op) {
+                    case ".":
+                        return new Const(BinaryOperator.member)
+                            .app([new Const(this.parsePattern("ident", stream))]);
                     case "=":
                         return new Const(BinaryOperator.equals)
                             .app([this.parseExpr(stream)]);
@@ -453,7 +456,8 @@
                 this.parseConst(stream) ||
                 this.parseParens(stream) ||
                 this.parseQuery(stream) ||
-                this.parseIdent(stream);
+                this.parseIdent(stream) ||
+                this.parseOperator(stream);
 
             if (!expr) {
                 return null;
