@@ -268,7 +268,7 @@
     }
 
     export class Compiler {
-        public patterns = {
+        public static patterns = {
             string1: /^"(?:(?:\\\n|\\"|[^"\n]))*?"/g
             , string2: /^'(?:(?:\\\n|\\'|[^'\n]))*?'/g
             //, comment1: /\/\*[\s\S]*?\*\//
@@ -278,7 +278,7 @@
             // , regexp: /^\/(?:(?:\\\/|[^\n\/]))*?\//g
             , ident: /^[a-zA-Z_\$][a-zA-Z_\$0-9]*\b/g
             , number: /^\d+(?:\.\d+)?(?:e[+-]?\d+)?/g
-            , boolean: /^(?:true|false)/g
+            , booleanOrNull: /^(?:true|false|null)/g // /^(?:true|false|null)/g
             // , parens: /^[\(\)]/g
             , lparen: /^\s*\(\s*/g
             , rparen: /^\s*\)\s*/g
@@ -289,19 +289,20 @@
             , navigate: /^\s*\.\s*/g
             // , punct: /^[;.:\?\^%<>=!&|+\-,~]/g
             , operator: /^[\|>=\+\-\.]+/g
-            // , pipe2: /^\|\|>/g
+            , range: /^(\d+)\s*\.\.\s*(\d+)/g
             // , select: /^->/g
             , compose: /^compose\b/g
             , eq: /^\s*=\s*/g
         };
 
         parsePattern(type, stream): string {
-            if (!this.patterns.hasOwnProperty(type))
+            if (!Compiler.patterns.hasOwnProperty(type))
                 throw new Error(`pattern '${type}' is not defined`);
 
-            const regex: RegExp = this.patterns[type];
+            const regex: RegExp = Compiler.patterns[type];
 
-            return this.parseRegex(regex, stream);
+            var m = this.parseRegex(regex, stream);
+            return !!m ? m[0] : m;
         }
 
         parseRegex(regex, stream): string {
@@ -312,7 +313,7 @@
             if (m !== null) {
                 var token = m[0];
                 stream.consume(token.length);
-                return token;
+                return m;
             }
 
             return null;
@@ -326,7 +327,7 @@
             const token = this.parsePattern("string1", stream) ||
                 this.parsePattern("string2", stream) ||
                 this.parsePattern("number", stream) ||
-                this.parseRegex(/^(?:true|false|null)/g, stream);
+                this.parsePattern("booleanOrNull", stream);
 
             if (!token)
                 return null;
@@ -335,12 +336,12 @@
         }
 
         parseBoolean(stream): IExpr {
-            const token = this.parseRegex(/^(?:true|false)/g, stream);
+            const match = this.parseRegex(/^(?:true|false)/g, stream);
 
-            if (!token)
+            if (!match)
                 return null;
 
-            return new Const(token === "true");
+            return new Const(match[0] === "true");
         }
 
         parseIdent(stream): IExpr {
@@ -449,6 +450,31 @@
             return null;
         }
 
+        parseArray(stream): any {
+            if (!this.parsePattern("lbrack", stream)) {
+                return null;
+            }
+
+            this.ws(stream);
+            const token = this.parseRegex(Compiler.patterns.range, stream);
+            if (token === null) {
+                throw new SyntaxError(`expected range at: '${stream}'`);
+            }
+
+            this.ws(stream);
+            if (!this.parsePattern("rbrack", stream))
+                throw new SyntaxError(`expected ')' at: '${stream}'`);
+
+            var begin = parseInt(token[1]);
+            var end = parseInt(token[2]);
+
+            var arr = [];
+            for (var i = begin; i <= end; i++) {
+                arr.push(i);
+            }
+            return new Const(arr);
+        }
+
         parseExpr(stream): any {
             this.ws(stream);
 
@@ -457,7 +483,8 @@
                 this.parseParens(stream) ||
                 this.parseQuery(stream) ||
                 this.parseIdent(stream) ||
-                this.parseOperator(stream);
+                this.parseOperator(stream) ||
+                this.parseArray(stream);
 
             if (!expr) {
                 return null;
@@ -542,7 +569,13 @@
     }
 }
 
-module Xania.Fun {
+module Xania.Core {
+    export class Math {
+        static le(rating, max) {
+            return rating <= max;
+        }
+    }
+
     export class List {
         static count(fn, list) {
             if (!list)
@@ -554,12 +587,15 @@ module Xania.Fun {
 
             return result;
         }
+
         static any(fn, list) {
             return List.count(fn, list) > 0;
         }
+
         static all(fn, list) {
             return List.count(fn, list) === list.length;
         }
+
         static filter(fn, list) {
             var retval = [];
 
@@ -572,18 +608,20 @@ module Xania.Fun {
 
             return retval;
         }
+
         static map(fn, list) {
             if (!list)
                 return [];
 
             return list.map(fn);
         }
+
         static empty(list) {
             return !list || list.length === 0;
         }
+
         static reduce(fn, initialValue, list) {
             return !list && list.reduce(fn, initialValue);
         }
     }
 }
-

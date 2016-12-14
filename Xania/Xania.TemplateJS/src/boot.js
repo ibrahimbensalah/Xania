@@ -231,7 +231,7 @@ var Xania;
         }
     }
     domReady(function () {
-        var app = new Binder([Xania.Fun.List]);
+        var app = new Binder([Xania.Core.Math, Xania.Core.List]);
         var components = new ComponentContainer();
         var stack = [document.body];
         while (stack.length > 0) {

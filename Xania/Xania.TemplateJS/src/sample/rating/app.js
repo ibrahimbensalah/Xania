@@ -9,10 +9,6 @@ var RatingApp = (function () {
     RatingApp.prototype.highlight = function (rating) {
         this.highlighted = rating;
     };
-    RatingApp.lessThanOrEqual = function (rating, max) {
-        return rating <= max;
-    };
-    RatingApp.RATINGS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
     return RatingApp;
 }());
 //# sourceMappingURL=app.js.map

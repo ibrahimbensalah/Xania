@@ -258,28 +258,13 @@ var Xania;
         }());
         var Compiler = (function () {
             function Compiler() {
-                this.patterns = {
-                    string1: /^"(?:(?:\\\n|\\"|[^"\n]))*?"/g,
-                    string2: /^'(?:(?:\\\n|\\'|[^'\n]))*?'/g,
-                    whitespace: /^\s+/g,
-                    ident: /^[a-zA-Z_\$][a-zA-Z_\$0-9]*\b/g,
-                    number: /^\d+(?:\.\d+)?(?:e[+-]?\d+)?/g,
-                    boolean: /^(?:true|false)/g,
-                    lparen: /^\s*\(\s*/g,
-                    rparen: /^\s*\)\s*/g,
-                    lbrack: /^\s*\[\s*/g,
-                    rbrack: /^\s*\]\s*/g,
-                    navigate: /^\s*\.\s*/g,
-                    operator: /^[\|>=\+\-\.]+/g,
-                    compose: /^compose\b/g,
-                    eq: /^\s*=\s*/g
-                };
             }
             Compiler.prototype.parsePattern = function (type, stream) {
-                if (!this.patterns.hasOwnProperty(type))
+                if (!Compiler.patterns.hasOwnProperty(type))
                     throw new Error("pattern '" + type + "' is not defined");
-                var regex = this.patterns[type];
-                return this.parseRegex(regex, stream);
+                var regex = Compiler.patterns[type];
+                var m = this.parseRegex(regex, stream);
+                return !!m ? m[0] : m;
             };
             Compiler.prototype.parseRegex = function (regex, stream) {
                 if (!stream.available())
@@ -289,7 +274,7 @@ var Xania;
                 if (m !== null) {
                     var token = m[0];
                     stream.consume(token.length);
-                    return token;
+                    return m;
                 }
                 return null;
             };
@@ -300,16 +285,16 @@ var Xania;
                 var token = this.parsePattern("string1", stream) ||
                     this.parsePattern("string2", stream) ||
                     this.parsePattern("number", stream) ||
-                    this.parseRegex(/^(?:true|false|null)/g, stream);
+                    this.parsePattern("booleanOrNull", stream);
                 if (!token)
                     return null;
                 return new Const(eval(token));
             };
             Compiler.prototype.parseBoolean = function (stream) {
-                var token = this.parseRegex(/^(?:true|false)/g, stream);
-                if (!token)
+                var match = this.parseRegex(/^(?:true|false)/g, stream);
+                if (!match)
                     return null;
-                return new Const(token === "true");
+                return new Const(match[0] === "true");
             };
             Compiler.prototype.parseIdent = function (stream) {
                 var token = this.parsePattern("ident", stream);
@@ -399,13 +384,34 @@ var Xania;
                     return args;
                 return null;
             };
+            Compiler.prototype.parseArray = function (stream) {
+                if (!this.parsePattern("lbrack", stream)) {
+                    return null;
+                }
+                this.ws(stream);
+                var token = this.parseRegex(Compiler.patterns.range, stream);
+                if (token === null) {
+                    throw new SyntaxError("expected range at: '" + stream + "'");
+                }
+                this.ws(stream);
+                if (!this.parsePattern("rbrack", stream))
+                    throw new SyntaxError("expected ')' at: '" + stream + "'");
+                var begin = parseInt(token[1]);
+                var end = parseInt(token[2]);
+                var arr = [];
+                for (var i = begin; i <= end; i++) {
+                    arr.push(i);
+                }
+                return new Const(arr);
+            };
             Compiler.prototype.parseExpr = function (stream) {
                 this.ws(stream);
                 var expr = this.parseConst(stream) ||
                     this.parseParens(stream) ||
                     this.parseQuery(stream) ||
                     this.parseIdent(stream) ||
-                    this.parseOperator(stream);
+                    this.parseOperator(stream) ||
+                    this.parseArray(stream);
                 if (!expr) {
                     return null;
                 }
@@ -468,6 +474,23 @@ var Xania;
                 }
                 return new Template(parts);
             };
+            Compiler.patterns = {
+                string1: /^"(?:(?:\\\n|\\"|[^"\n]))*?"/g,
+                string2: /^'(?:(?:\\\n|\\'|[^'\n]))*?'/g,
+                whitespace: /^\s+/g,
+                ident: /^[a-zA-Z_\$][a-zA-Z_\$0-9]*\b/g,
+                number: /^\d+(?:\.\d+)?(?:e[+-]?\d+)?/g,
+                booleanOrNull: /^(?:true|false|null)/g,
+                lparen: /^\s*\(\s*/g,
+                rparen: /^\s*\)\s*/g,
+                lbrack: /^\s*\[\s*/g,
+                rbrack: /^\s*\]\s*/g,
+                navigate: /^\s*\.\s*/g,
+                operator: /^[\|>=\+\-\.]+/g,
+                range: /^(\d+)\s*\.\.\s*(\d+)/g,
+                compose: /^compose\b/g,
+                eq: /^\s*=\s*/g
+            };
             return Compiler;
         }());
         Ast.Compiler = Compiler;
@@ -475,8 +498,17 @@ var Xania;
 })(Xania || (Xania = {}));
 var Xania;
 (function (Xania) {
-    var Fun;
-    (function (Fun) {
+    var Core;
+    (function (Core) {
+        var Math = (function () {
+            function Math() {
+            }
+            Math.le = function (rating, max) {
+                return rating <= max;
+            };
+            return Math;
+        }());
+        Core.Math = Math;
         var List = (function () {
             function List() {
             }
@@ -518,7 +550,7 @@ var Xania;
             };
             return List;
         }());
-        Fun.List = List;
-    })(Fun = Xania.Fun || (Xania.Fun = {}));
+        Core.List = List;
+    })(Core = Xania.Core || (Xania.Core = {}));
 })(Xania || (Xania = {}));
 //# sourceMappingURL=fun.js.map
