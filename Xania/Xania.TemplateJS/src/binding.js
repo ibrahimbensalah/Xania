@@ -382,8 +382,8 @@ var Xania;
                 this.properties.push(result);
                 return result;
             };
-            Property.prototype.set = function (name, value) {
-                this.value[name] = value;
+            Property.prototype.set = function (value) {
+                this.parent.value[this.name] = value;
             };
             Property.prototype.valueOf = function () {
                 return this.value;

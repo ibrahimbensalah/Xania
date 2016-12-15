@@ -452,8 +452,8 @@
                 return result;
             }
 
-            set(name, value) {
-                this.value[name] = value;
+            set(value) {
+                this.parent.value[this.name] = value;
             }
 
             valueOf() {

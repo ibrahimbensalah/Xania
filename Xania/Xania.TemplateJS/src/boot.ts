@@ -31,8 +31,14 @@ module Xania {
                 if (binding != null) {
                     const nameAttr = evt.target.attributes["name"];
                     if (!!nameAttr) {
-                        binding.context.set(nameAttr.value, evt.target.value);
-                        // binding.context.update();
+                        var arr = nameAttr.value.split('.');
+                        var context = binding.context;
+                        for (var i = 0; i < arr.length; i++) {
+                            var p = arr[i];
+                            context = context.get(p);
+                        }
+                        context.set(evt.target.value);
+
                         this.update();
                     }
                 }

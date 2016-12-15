@@ -81,7 +81,7 @@ describe("compiler", function () {
         function () {
             var fn = compiler.expr("map (.firstName) persons");
             var context = {
-                map: Xania.Fun.List.map,
+                map: Xania.Core.List.map,
                 persons: [
                     { firstName: "Ibrahim", lastName: "ben Salah" },
                     { firstName: "Ramy", lastName: "ben Salah" }

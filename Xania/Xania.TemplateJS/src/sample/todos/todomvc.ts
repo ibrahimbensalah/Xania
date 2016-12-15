@@ -49,7 +49,7 @@ class TodoStore {
 class TodoApp {
     public store = new TodoStore();
     public newTodoText: string = "";
-    public show = State('all');
+    public show = Xania.Core.State('all');
 
     addTodo = () => {
         if (!!this.newTodoText && this.newTodoText.length > 0) {
@@ -75,19 +75,6 @@ class TodoApp {
         }
     }
 }
-
-function State(initialValue) {
-    var fn = function(x) {
-        if (x !== undefined)
-            fn['id'] = x;
-
-        return fn['id'];
-    };
-    fn['id'] = initialValue;
-    fn['valueOf'] = () => initialValue;
-
-    return fn;
-};
 
 //class State {
 //    constructor(public id: any) {

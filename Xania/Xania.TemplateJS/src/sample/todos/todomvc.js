@@ -44,7 +44,7 @@ var TodoApp = (function () {
         var _this = this;
         this.store = new TodoStore();
         this.newTodoText = "";
-        this.show = State('all');
+        this.show = Xania.Core.State('all');
         this.addTodo = function () {
             if (!!_this.newTodoText && _this.newTodoText.length > 0) {
                 console.debug("add todo", _this.newTodoText);
@@ -69,15 +69,4 @@ var TodoApp = (function () {
     };
     return TodoApp;
 }());
-function State(initialValue) {
-    var fn = function (x) {
-        if (x !== undefined)
-            fn['id'] = x;
-        return fn['id'];
-    };
-    fn['id'] = initialValue;
-    fn['valueOf'] = function () { return initialValue; };
-    return fn;
-}
-;
 //# sourceMappingURL=todomvc.js.map

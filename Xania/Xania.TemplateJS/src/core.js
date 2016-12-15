@@ -2,6 +2,18 @@ var Xania;
 (function (Xania) {
     var Core;
     (function (Core) {
+        function State(initialValue) {
+            var fn = function (x) {
+                if (x !== undefined)
+                    fn['id'] = x;
+                return fn['id'];
+            };
+            fn['id'] = initialValue;
+            fn['valueOf'] = function () { return initialValue; };
+            return fn;
+        }
+        Core.State = State;
+        ;
         var Math = (function () {
             function Math() {
             }

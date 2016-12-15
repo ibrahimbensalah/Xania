@@ -1,4 +1,17 @@
 ﻿module Xania.Core {
+    export function State(initialValue) {
+        var fn = function (x) {
+            if (x !== undefined)
+                fn['id'] = x;
+
+            return fn['id'];
+        };
+        fn['id'] = initialValue;
+        fn['valueOf'] = () => initialValue;
+
+        return fn;
+    };
+
     export class Math {
         static le(rating, max) {
             return rating <= max;
