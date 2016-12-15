@@ -138,11 +138,6 @@ interface String {
     "_es6-shim iterator_"(): IterableIteratorShim<string>;
 }
 
-interface ArrayLike<T> {
-    length: number;
-    [n: number]: T;
-}
-
 interface ArrayConstructor {
     /**
       * Creates an array from an array-like object.

@@ -260,7 +260,7 @@ module Xania {
     }
 
     domReady(() => {
-        var app = new Binder([Fun.List]);
+        var app = new Binder([Core.List, Core.Math]);
         var components = new ComponentContainer();
 
         // Find top level components and bind

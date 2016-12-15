@@ -39,12 +39,16 @@
     <Content Include="Scripts\jasmine\console.js" />
     <Content Include="Scripts\jasmine\jasmine-html.js" />
     <Content Include="Scripts\jasmine\jasmine.js" />
+    <Content Include="spec\ast\astSpec.js" />
+    <Content Include="spec\ast\index.html" />
     <Content Include="spec\index.html" />
     <Content Include="src\binding.js" />
     <Content Include="src\boot.js" />
     <Content Include="src\sample\css\base.css" />
     <TypeScriptCompile Include="Scripts\typings\es6-shim\es6-shim.d.ts" />
+    <TypeScriptCompile Include="spec\ast\ast.ts" />
     <TypeScriptCompile Include="src\boot.ts" />
+    <TypeScriptCompile Include="src\core.ts" />
     <TypeScriptCompile Include="src\sample\dbmon\app.ts" />
     <Content Include="src\sample\dbmon\app.js" />
     <Content Include="src\sample\dbmon\ENV.js" />
