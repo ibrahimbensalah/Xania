@@ -44,10 +44,7 @@
     <Content Include="spec\index.html" />
     <Content Include="src\binding.js" />
     <Content Include="src\boot.js" />
-    <Content Include="src\sample\timesheet\css\base.css" />
-    <Content Include="src\sample\timesheet\css\index.css" />
-    <Content Include="src\sample\timesheet\index.html" />
-    <Content Include="src\sample\timesheet\time-app.html" />
+    <Content Include="src\sample\rating\time-app.html" />
     <Content Include="src\sample\todos\css\base.css" />
     <TypeScriptCompile Include="Scripts\typings\es6-shim\es6-shim.d.ts" />
     <TypeScriptCompile Include="spec\ast\ast.ts" />
@@ -76,7 +73,6 @@
     <Content Include="web.config" />
     <TypeScriptCompile Include="src\sample\rating\app.ts" />
     <TypeScriptCompile Include="src\dom.ts" />
-    <TypeScriptCompile Include="src\sample\timesheet\app.ts" />
     <TypeScriptCompile Include="src\zone.ts" />
     <TypeScriptCompile Include="test\jasmine.d.ts" />
   </ItemGroup>

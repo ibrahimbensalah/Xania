@@ -86,9 +86,9 @@ var Xania;
             Unit.prototype.toString = function () {
                 return "unit";
             };
-            Unit.instance = new Unit();
             return Unit;
         }());
+        Unit.instance = new Unit();
         var Not = (function () {
             function Not(expr) {
                 this.expr = expr;
@@ -108,19 +108,19 @@ var Xania;
         var BinaryOperator = (function () {
             function BinaryOperator() {
             }
-            BinaryOperator.equals = function (x, y) {
-                return (!!x ? x.valueOf() : x) === (!!y ? y.valueOf() : y);
-            };
-            BinaryOperator.add = function (x, y) { return x + y; };
-            BinaryOperator.substract = function (x, y) { return x - y; };
-            BinaryOperator.pipe = function (x, y) { return x(y); };
-            BinaryOperator.member = function (name) {
-                return function (obj) {
-                    return obj[name];
-                };
-            };
             return BinaryOperator;
         }());
+        BinaryOperator.equals = function (x, y) {
+            return (!!x ? x.valueOf() : x) === (!!y ? y.valueOf() : y);
+        };
+        BinaryOperator.add = function (x, y) { return x + y; };
+        BinaryOperator.substract = function (x, y) { return x - y; };
+        BinaryOperator.pipe = function (x, y) { return x(y); };
+        BinaryOperator.member = function (name) {
+            return function (obj) {
+                return obj[name];
+            };
+        };
         var Selector = (function () {
             function Selector(expr) {
                 this.expr = expr;
@@ -474,25 +474,25 @@ var Xania;
                 }
                 return new Template(parts);
             };
-            Compiler.patterns = {
-                string1: /^"(?:(?:\\\n|\\"|[^"\n]))*?"/g,
-                string2: /^'(?:(?:\\\n|\\'|[^'\n]))*?'/g,
-                whitespace: /^\s+/g,
-                ident: /^[a-zA-Z_\$][a-zA-Z_\$0-9]*\b/g,
-                number: /^\d+(?:\.\d+)?(?:e[+-]?\d+)?/g,
-                booleanOrNull: /^(?:true|false|null)/g,
-                lparen: /^\s*\(\s*/g,
-                rparen: /^\s*\)\s*/g,
-                lbrack: /^\s*\[\s*/g,
-                rbrack: /^\s*\]\s*/g,
-                navigate: /^\s*\.\s*/g,
-                operator: /^[\|>=\+\-\.]+/g,
-                range: /^(\d+)\s*\.\.\s*(\d+)/g,
-                compose: /^compose\b/g,
-                eq: /^\s*=\s*/g
-            };
             return Compiler;
         }());
+        Compiler.patterns = {
+            string1: /^"(?:(?:\\\n|\\"|[^"\n]))*?"/g,
+            string2: /^'(?:(?:\\\n|\\'|[^'\n]))*?'/g,
+            whitespace: /^\s+/g,
+            ident: /^[a-zA-Z_\$][a-zA-Z_\$0-9]*\b/g,
+            number: /^\d+(?:\.\d+)?(?:e[+-]?\d+)?/g,
+            booleanOrNull: /^(?:true|false|null)/g,
+            lparen: /^\s*\(\s*/g,
+            rparen: /^\s*\)\s*/g,
+            lbrack: /^\s*\[\s*/g,
+            rbrack: /^\s*\]\s*/g,
+            navigate: /^\s*\.\s*/g,
+            operator: /^[\|>=\+\-\.]+/g,
+            range: /^(\d+)\s*\.\.\s*(\d+)/g,
+            compose: /^compose\b/g,
+            eq: /^\s*=\s*/g
+        };
         Ast.Compiler = Compiler;
     })(Ast = Xania.Ast || (Xania.Ast = {}));
 })(Xania || (Xania = {}));
