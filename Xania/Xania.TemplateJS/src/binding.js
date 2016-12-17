@@ -138,6 +138,8 @@ var Xania;
                 return new Immutable(result);
             };
             Binding.prototype.forEach = function (context, fn) {
+                if (!!context.get)
+                    context.get("length").subscribe(this);
                 return context.forEach(fn);
             };
             Binding.prototype.notify = function () {
@@ -148,9 +150,8 @@ var Xania;
         var ContentBinding = (function (_super) {
             __extends(ContentBinding, _super);
             function ContentBinding() {
-                var _this = _super.call(this) || this;
-                _this.dom = document.createDocumentFragment();
-                return _this;
+                _super.call(this);
+                this.dom = document.createDocumentFragment();
             }
             ContentBinding.prototype.render = function () {
                 return this.dom;
@@ -161,11 +162,10 @@ var Xania;
         var TextBinding = (function (_super) {
             __extends(TextBinding, _super);
             function TextBinding(modelAccessor, context) {
-                var _this = _super.call(this) || this;
-                _this.modelAccessor = modelAccessor;
-                _this.dom = document.createTextNode("");
-                _this.context = context;
-                return _this;
+                _super.call(this);
+                this.modelAccessor = modelAccessor;
+                this.dom = document.createTextNode("");
+                this.context = context;
             }
             TextBinding.prototype.render = function (context) {
                 var newValue = this.modelAccessor.execute(context, this).valueOf();
@@ -180,13 +180,12 @@ var Xania;
         var TagBinding = (function (_super) {
             __extends(TagBinding, _super);
             function TagBinding(name, attributes, events) {
-                var _this = _super.call(this) || this;
-                _this.attributes = attributes;
-                _this.events = events;
-                _this.attrs = {};
-                _this.dom = document.createElement(name);
-                _this.dom.attributes["__binding"] = _this;
-                return _this;
+                _super.call(this);
+                this.attributes = attributes;
+                this.events = events;
+                this.attrs = {};
+                this.dom = document.createElement(name);
+                this.dom.attributes["__binding"] = this;
             }
             TagBinding.prototype.render = function (context) {
                 var binding = this;
@@ -414,12 +413,11 @@ var Xania;
         var ReactiveBinding = (function (_super) {
             __extends(ReactiveBinding, _super);
             function ReactiveBinding(tpl, target, offset) {
-                var _this = _super.call(this) || this;
-                _this.tpl = tpl;
-                _this.target = target;
-                _this.offset = offset;
-                _this.bindings = [];
-                return _this;
+                _super.call(this);
+                this.tpl = tpl;
+                this.target = target;
+                this.offset = offset;
+                this.bindings = [];
             }
             ReactiveBinding.prototype.render = function (context) {
                 var _this = this;

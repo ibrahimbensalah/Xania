@@ -14,10 +14,9 @@ var A = (function () {
 var Role = (function (_super) {
     __extends(Role, _super);
     function Role(prefix, emp) {
-        var _this = _super.call(this) || this;
-        _this.prefix = prefix;
-        _this.emp = emp;
-        return _this;
+        _super.call(this);
+        this.prefix = prefix;
+        this.emp = emp;
     }
     Object.defineProperty(Role.prototype, "name", {
         get: function () {
@@ -59,10 +58,9 @@ var Employee = (function () {
 var Company = (function (_super) {
     __extends(Company, _super);
     function Company(name, employees) {
-        var _this = _super.call(this) || this;
-        _this.name = name;
-        _this.employees = employees;
-        return _this;
+        _super.call(this);
+        this.name = name;
+        this.employees = employees;
     }
     Company.xania = function () {
         return new Company("Xania", [

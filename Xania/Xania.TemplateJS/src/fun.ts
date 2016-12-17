@@ -277,7 +277,7 @@
             // , keyword: /\b(?:var|let|for|if|else|in|class|function|return|with|case|break|switch|export|new|while|do|throw|catch)\b/
             // , regexp: /^\/(?:(?:\\\/|[^\n\/]))*?\//g
             , ident: /^[a-zA-Z_\$][a-zA-Z_\$0-9]*\b/g
-            , number: /^\d+(?:\.\d+)?(?:e[+-]?\d+)?/g
+            , number: /^[\+\-]?\d+(?:\.\d+)?(?:e[+-]?\d+)?/g
             , booleanOrNull: /^(?:true|false|null)/g // /^(?:true|false|null)/g
             // , parens: /^[\(\)]/g
             , lparen: /^\s*\(\s*/g
@@ -288,7 +288,7 @@
             //, square: /^[\[\]]/g
             , navigate: /^\s*\.\s*/g
             // , punct: /^[;.:\?\^%<>=!&|+\-,~]/g
-            , operator: /^[\|>=\+\-\.]+/g
+            , operator: /^(?:\|>|\=|\.|[\+\-]\B)+/g
             , range: /^(\d+)\s*\.\.\s*(\d+)/g
             // , select: /^->/g
             , compose: /^compose\b/g

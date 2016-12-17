@@ -161,6 +161,8 @@
             }
 
             forEach(context, fn) {
+                if (!!context.get)
+                    context.get("length").subscribe(this);
                 return context.forEach(fn);
             }
 

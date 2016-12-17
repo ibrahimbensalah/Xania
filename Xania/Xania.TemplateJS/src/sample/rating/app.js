@@ -34,7 +34,7 @@ var TimeApp = (function () {
         this.store.times.push({ day: day, month: month, year: year });
         console.debug("times", this.store.times);
     };
+    TimeApp.MONTHS = ["JAN", "FEB", "MRT", "APR", "MAY", "JUN", "JUL", "AUG", "SEPT", "OCT", "NOV", "DEC"];
     return TimeApp;
 }());
-TimeApp.MONTHS = ["JAN", "FEB", "MRT", "APR", "MAY", "JUN", "JUL", "AUG", "SEPT", "OCT", "NOV", "DEC"];
 //# sourceMappingURL=app.js.map
