@@ -1,8 +1,8 @@
 ﻿/// <reference path="binding.ts" />
 
 module Xania {
-    import Value = Bind.IValue;
-    import RootContainer = Bind.RootContainer;
+    import Value = Data.IValue;
+    import Store = Data.Store;
 
     class Binder {
         private compile: Function;
@@ -98,8 +98,8 @@ module Xania {
         }
 
         // ReSharper disable once InconsistentNaming
-        bind(view, viewModel, target: Node) {
-            var observable = new RootContainer(viewModel, this.libs.reduce((x, y) => Object.assign(x, y), {}));
+        bind(view, model, target: Node) {
+            var observable = new Store(model, this.libs.reduce((x, y) => Object.assign(x, y), {}));
 
             this.contexts.push(observable);
 
@@ -266,7 +266,7 @@ module Xania {
     }
 
     domReady(() => {
-        var app = new Binder([Core.List, Core.Math]);
+        var app = new Binder([Core.List, Core.Math, Core.Dates]);
         var components = new ComponentContainer();
 
         // Find top level components and bind

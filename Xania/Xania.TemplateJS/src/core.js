@@ -14,11 +14,50 @@ var Xania;
         }
         Core.State = State;
         ;
+        var Dates = (function () {
+            function Dates() {
+            }
+            Dates.addDays = function (days, date) {
+                var retval = new Date(date.getTime());
+                retval.setDate(date.getDate() + days);
+                console.debug("addDays result", retval);
+                return retval;
+            };
+            Dates.addYears = function (years, date) {
+                var retval = new Date(date.getTime());
+                retval.setFullYear(date.getFullYear() + years);
+                console.debug("addYears result", retval);
+                return retval;
+            };
+            Dates.addMonths = function (months, date) {
+                var retval = new Date(date.getTime());
+                retval.setMonth(date.getMonth() + months);
+                console.debug("addMonths result", retval);
+                return retval;
+            };
+            Dates.dayOf = function (date) {
+                return date.getDate();
+            };
+            Dates.yearOf = function (date) {
+                return date.getFullYear();
+            };
+            Dates.monthOf = function (date) {
+                return date.getMonth();
+            };
+            Dates.formatDate = function (format, date) {
+                return date.toString();
+            };
+            return Dates;
+        }());
+        Core.Dates = Dates;
         var Math = (function () {
             function Math() {
             }
             Math.le = function (rating, max) {
                 return rating <= max;
+            };
+            Math.assign = function (property, value) {
+                console.debug(property, value);
             };
             return Math;
         }());

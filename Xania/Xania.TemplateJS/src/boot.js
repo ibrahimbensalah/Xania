@@ -1,6 +1,6 @@
 var Xania;
 (function (Xania) {
-    var RootContainer = Xania.Bind.RootContainer;
+    var Store = Xania.Data.Store;
     var Binder = (function () {
         function Binder(libs) {
             this.libs = libs;
@@ -87,9 +87,9 @@ var Xania;
                 throw new Error("view type is not supported");
             }
         };
-        Binder.prototype.bind = function (view, viewModel, target) {
+        Binder.prototype.bind = function (view, model, target) {
             var _this = this;
-            var observable = new RootContainer(viewModel, this.libs.reduce(function (x, y) { return Object.assign(x, y); }, {}));
+            var observable = new Store(model, this.libs.reduce(function (x, y) { return Object.assign(x, y); }, {}));
             this.contexts.push(observable);
             Xania.ready(this.import(view), function (dom) {
                 var tpl = _this.parseDom(dom);
@@ -237,7 +237,7 @@ var Xania;
         }
     }
     domReady(function () {
-        var app = new Binder([Xania.Core.List, Xania.Core.Math]);
+        var app = new Binder([Xania.Core.List, Xania.Core.Math, Xania.Core.Dates]);
         var components = new ComponentContainer();
         var stack = [document.body];
         while (stack.length > 0) {

@@ -1,6 +1,19 @@
 ﻿module Xania {
-    export module Bind {
-        export class RootContainer implements IValue {
+    export module Data {
+
+        export interface ISubscriber {
+            notify();
+        }
+
+        export interface IValue {
+            get(idx): IValue;
+            valueOf(): any;
+            subscribe(subscr: ISubscriber);
+            invoke(args: any[]);
+            update(context: any);
+        }
+
+        export class Store implements IValue {
             private properties: { name: string; value: IValue }[] = [];
 
             constructor(private value: any, private libs) {
@@ -83,7 +96,192 @@
             }
         }
 
-        class Binding implements ISubscriber {
+        export class Property implements IValue {
+            private subscribers: ISubscriber[] = [];
+            private properties = [];
+            private value;
+            private id;
+
+            constructor(private parent: any, public name: string | number) {
+                var value = parent.value[name];
+
+                this.value = value;
+                this.id = value;
+
+                if (!!this.value && this.value.id !== undefined)
+                    this.id = this.value.id;
+            }
+
+            subscribe(subscr: ISubscriber) {
+                if (this.subscribers.indexOf(subscr) < 0)
+                    this.subscribers.push(subscr);
+            }
+
+            update() {
+                // this.context = context === undefined ? this.context : context;
+
+                const currentValue = this.parent.value[this.name];
+                if (currentValue === undefined)
+                    return true;
+
+                var currentId = currentValue;
+                if (!!currentValue && currentValue.id !== undefined)
+                    currentId = currentValue.id;
+
+                if (this.id !== currentId) {
+                    this.value = currentValue;
+                    this.id = currentId;
+                    return true;
+                }
+
+                return false;
+            }
+
+            get(name) {
+                for (var i = 0; i < this.properties.length; i++) {
+                    var property = this.properties[i];
+                    if (property.name === name)
+                        return property;
+                }
+
+                var result = new Property(this, name);
+                this.properties.push(result);
+                return result;
+            }
+
+            set(value) {
+                this.parent.value[this.name] = value;
+            }
+
+            valueOf() {
+                return this.value;
+            }
+
+            hasChanges(): boolean {
+                return this.value !== this.valueOf();
+            }
+
+            invoke(args: any[]) {
+                var value = this.value;
+                if (value === void 0 || value === null)
+                    throw new TypeError(this.name + " is not invocable");
+                if (!!value.execute)
+                    return value.execute.apply(value, args);
+                return value.apply(this.parent.value, args);
+            }
+
+            forEach(fn) {
+                for (let i = 0; i < this.value.length; i++) {
+                    var value = this.get(i);
+                    fn(value, i);
+                }
+            }
+        }
+
+        class Global implements IValue {
+            private properties = [];
+
+            constructor(private value) {
+            }
+
+            get(name): IValue {
+                return this[name];
+            }
+
+            subscribe(subscr: ISubscriber) { }
+
+            invoke(args: any[]) {
+                return this.value.apply(null, args);
+            }
+
+            update(context) {
+                return false;
+            }
+
+            forEach(fn) {
+                return this.value.forEach(fn);
+            }
+        }
+
+        interface IValueProvider {
+            get(name: string | number): IValue;
+        }
+
+        export class Extension implements IValueProvider {
+            constructor(private parent: IValueProvider, private name, private value) {
+            }
+
+            get(name): IValue {
+                if (name === this.name)
+                    return this.value;
+
+                if (this.parent !== null)
+                    return this.parent.get(name);
+
+                return undefined;
+            }
+
+            forEach(fn) {
+                fn(this, 0);
+            }
+        }
+
+        export class Immutable implements IValue {
+            private properties = [];
+
+            constructor(private value) {
+                if (!!value.$target)
+                    throw new Error("proxy is not allowed");
+            }
+
+            update() {
+                return false;
+            }
+
+            get(name): IValue {
+                for (var i = 0; i < this.properties.length; i++) {
+                    var property = this.properties[i];
+                    if (property.name === name)
+                        return property;
+                }
+
+                var value = this.value[name];
+                var result = (value instanceof Property) ? value : new Property(this, name);
+                this.properties.push(result);
+                return result;
+            }
+
+            valueOf() {
+                return this.value;
+            }
+
+            subscribe(subscr: ISubscriber) { return false; }
+
+            invoke(args: any[]) {
+                return null;
+            }
+
+            map(fn) {
+                var result = [];
+                for (let i = 0; i < this.value.length; i++) {
+                    var value = this.get(i);
+                    result.push(fn(value, i));
+                }
+                return result;
+            }
+
+            forEach(fn) {
+                for (let i = 0; i < this.value.length; i++) {
+                    var value = this.get(i);
+                    fn(value, i);
+                }
+            }
+        }
+
+    }
+    export module Bind {
+
+        class Binding implements Data.ISubscriber {
             public state;
             protected context;
             private subscriptions = [];
@@ -99,7 +297,7 @@
                     });
             }
 
-            get(obj: IValue, name: string): any {
+            get(obj: Data.IValue, name: string): any {
                 var result = obj.get(name);
                 if (!!result && !!result.subscribe) {
                     var subscription = result.subscribe(this);
@@ -110,7 +308,7 @@
             }
 
             extend(context, varName: string, x: any) {
-                return new Extension(context, varName, x);
+                return new Data.Extension(context, varName, x);
             }
 
             invoke(root, invocable, args: any[]) {
@@ -135,7 +333,10 @@
                         return result;
                     },
                     set(target, name, value) {
-                        target.set(name, value);
+                        target.set(name, value.valueOf());
+                    },
+                    invoke(target, fn) {
+                        return fn.apply(target.value);
                     }
                 };
                 var zone = new Zone(runtime);
@@ -157,7 +358,7 @@
                     return result;
                 }
 
-                return new Immutable(result);
+                return new Data.Immutable(result);
             }
 
             forEach(context, fn) {
@@ -169,10 +370,6 @@
             notify() {
                 this.update(this.context);
             }
-        }
-
-        interface ISubscriber {
-            notify();
         }
 
         export class ContentBinding extends Binding {
@@ -276,209 +473,21 @@
             trigger(name) {
                 var handler = this.events.get(name);
                 if (!!handler) {
-                    var result = handler.execute(this.context,
-                        {
-                            get(value, name) {
-                                return value.get(name);
-                            },
-                            invoke(_, fn, args) {
-                                var xs = args.map(x => x.valueOf());
-                                fn.invoke(xs);
-                            }
-                        });
+                    var result = handler.execute(this.context, {
+                        get(obj, name) {
+                            return obj.get(name);
+                        },
+                        set(obj: any, name: string, value: any) {
+                            obj.set(name, value);
+                        },
+                        invoke(_, fn, args) {
+                            var xs = args.map(x => x.valueOf());
+                            return fn.invoke(xs);
+                        }
+                    });
 
                     if (!!result && typeof result.value === "function")
                         result.invoke();
-                }
-            }
-        }
-
-        class Global implements IValue {
-            private properties = [];
-
-            constructor(private value) {
-            }
-
-            get(name): IValue {
-                return this[name];
-            }
-
-            subscribe(subscr: ISubscriber) { }
-
-            invoke(args: any[]) {
-                return this.value.apply(null, args);
-            }
-
-            update(context) {
-                return false;
-            }
-
-            forEach(fn) {
-                return this.value.forEach(fn);
-            }
-        }
-
-        class Immutable implements IValue {
-            private properties = [];
-
-            constructor(private value) {
-                if (!!value.$target)
-                    throw new Error("proxy is not allowed");
-            }
-
-            update() {
-                return false;
-            }
-
-            get(name): IValue {
-                for (var i = 0; i < this.properties.length; i++) {
-                    var property = this.properties[i];
-                    if (property.name === name)
-                        return property;
-                }
-
-                var value = this.value[name];
-                var result = (value instanceof Property) ? value : new Property(this, name);
-                this.properties.push(result);
-                return result;
-            }
-
-            valueOf() {
-                return this.value;
-            }
-
-            subscribe(subscr: ISubscriber) { return false; }
-
-            invoke(args: any[]) {
-                return null;
-            }
-
-            map(fn) {
-                var result = [];
-                for (let i = 0; i < this.value.length; i++) {
-                    var value = this.get(i);
-                    result.push(fn(value, i));
-                }
-                return result;
-            }
-
-            forEach(fn) {
-                for (let i = 0; i < this.value.length; i++) {
-                    var value = this.get(i);
-                    fn(value, i);
-                }
-            }
-        }
-
-        export interface IValue {
-            get(idx): IValue;
-            valueOf(): any;
-            subscribe(subscr: ISubscriber);
-            invoke(args: any[]);
-            update(context: any);
-        }
-
-        interface IValueProvider {
-            get(name: string | number): IValue;
-        }
-
-        class Extension implements IValueProvider {
-            constructor(private parent: IValueProvider, private name, private value) {
-            }
-
-            get(name): IValue {
-                if (name === this.name)
-                    return this.value;
-
-                if (this.parent !== null)
-                    return this.parent.get(name);
-
-                return undefined;
-            }
-
-            forEach(fn) {
-                fn(this, 0);
-            }
-        }
-
-        export class Property implements IValue {
-            private subscribers: ISubscriber[] = [];
-            private properties = [];
-            private value;
-            private id;
-
-            constructor(private parent: any, public name: string | number) {
-                var value = parent.value[name];
-
-                this.value = value;
-                this.id = value;
-
-                if (!!this.value && this.value.id !== undefined)
-                    this.id = this.value.id;
-            }
-
-            subscribe(subscr: ISubscriber) {
-                if (this.subscribers.indexOf(subscr) < 0)
-                    this.subscribers.push(subscr);
-            }
-
-            update() {
-                // this.context = context === undefined ? this.context : context;
-
-                const currentValue = this.parent.value[this.name];
-                if (currentValue === undefined)
-                    return true;
-
-                var currentId = currentValue;
-                if (!!currentValue && currentValue.id !== undefined)
-                    currentId = currentValue.id;
-
-                if (this.id !== currentId) {
-                    this.value = currentValue;
-                    this.id = currentId;
-                    return true;
-                }
-
-                return false;
-            }
-
-            get(name) {
-                for (var i = 0; i < this.properties.length; i++) {
-                    var property = this.properties[i];
-                    if (property.name === name)
-                        return property;
-                }
-
-                var result = new Property(this, name);
-                this.properties.push(result);
-                return result;
-            }
-
-            set(value) {
-                this.parent.value[this.name] = value;
-            }
-
-            valueOf() {
-                return this.value;
-            }
-
-            hasChanges(): boolean {
-                return this.value !== this.valueOf();
-            }
-
-            invoke(args: any[]) {
-                var value = this.value;
-                if (value === void 0 || value === null)
-                    throw new TypeError(this.name + " is not invocable");
-                if (!!value.execute)
-                    return value.execute.apply(value, args);
-                return value.apply(this.parent.value, args);
-            }
-
-            forEach(fn) {
-                for (let i = 0; i < this.value.length; i++) {
-                    var value = this.get(i);
-                    fn(value, i);
                 }
             }
         }

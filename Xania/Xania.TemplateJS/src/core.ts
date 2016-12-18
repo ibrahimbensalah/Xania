@@ -12,9 +12,54 @@
         return fn;
     };
 
+    export class Dates {
+        static addDays(days: number, date: Date) {
+            var retval = new Date(date.getTime());
+            retval.setDate(date.getDate() + days);
+
+            console.debug("addDays result", retval);
+            return retval;
+        }
+
+        static addYears(years: number, date: Date) {
+            var retval = new Date(date.getTime());
+            retval.setFullYear(date.getFullYear() + years);
+
+            console.debug("addYears result", retval);
+            return retval;
+        }
+
+        static addMonths(months: number, date: Date) {
+            var retval = new Date(date.getTime());
+            retval.setMonth(date.getMonth() + months);
+
+            console.debug("addMonths result", retval);
+            return retval;
+        }
+
+        static dayOf(date: Date) {
+            return date.getDate();
+        }
+
+        static yearOf(date: Date) {
+            return date.getFullYear();
+        }
+
+        static monthOf(date: Date) {
+            return date.getMonth();
+        }
+
+        static formatDate(format, date: Date) {
+            return date.toString();
+        }
+    }
+
     export class Math {
         static le(rating, max) {
             return rating <= max;
+        }
+        static assign(property, value) {
+            console.debug(property, value);
         }
     }
 

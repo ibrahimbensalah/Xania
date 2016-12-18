@@ -5,15 +5,15 @@ var __extends = (this && this.__extends) || function (d, b) {
 };
 var Xania;
 (function (Xania) {
-    var Bind;
-    (function (Bind) {
-        var RootContainer = (function () {
-            function RootContainer(value, libs) {
+    var Data;
+    (function (Data) {
+        var Store = (function () {
+            function Store(value, libs) {
                 this.value = value;
                 this.libs = libs;
                 this.properties = [];
             }
-            RootContainer.prototype.get = function (name) {
+            Store.prototype.get = function (name) {
                 for (var i = 0; i < this.properties.length; i++) {
                     var existing = this.properties[i];
                     if (existing.name === name)
@@ -32,12 +32,12 @@ var Xania;
                 this.properties.push({ name: name, value: gv });
                 return gv;
             };
-            RootContainer.prototype.set = function (name, value) {
+            Store.prototype.set = function (name, value) {
                 this.value[name] = value;
             };
-            RootContainer.prototype.subscribe = function (subscr) { throw new Error("Not implemented"); };
-            RootContainer.prototype.invoke = function (args) { throw new Error("Not implemented"); };
-            RootContainer.prototype.update = function () {
+            Store.prototype.subscribe = function (subscr) { throw new Error("Not implemented"); };
+            Store.prototype.invoke = function (args) { throw new Error("Not implemented"); };
+            Store.prototype.update = function () {
                 var length, stack = [];
                 for (var i = 0; i < this.properties.length; i++) {
                     var property = this.properties[i];
@@ -70,12 +70,165 @@ var Xania;
                     d.notify();
                 });
             };
-            RootContainer.prototype.forEach = function (fn) {
+            Store.prototype.forEach = function (fn) {
                 fn(this, 0);
             };
-            return RootContainer;
+            return Store;
         }());
-        Bind.RootContainer = RootContainer;
+        Data.Store = Store;
+        var Property = (function () {
+            function Property(parent, name) {
+                this.parent = parent;
+                this.name = name;
+                this.subscribers = [];
+                this.properties = [];
+                var value = parent.value[name];
+                this.value = value;
+                this.id = value;
+                if (!!this.value && this.value.id !== undefined)
+                    this.id = this.value.id;
+            }
+            Property.prototype.subscribe = function (subscr) {
+                if (this.subscribers.indexOf(subscr) < 0)
+                    this.subscribers.push(subscr);
+            };
+            Property.prototype.update = function () {
+                var currentValue = this.parent.value[this.name];
+                if (currentValue === undefined)
+                    return true;
+                var currentId = currentValue;
+                if (!!currentValue && currentValue.id !== undefined)
+                    currentId = currentValue.id;
+                if (this.id !== currentId) {
+                    this.value = currentValue;
+                    this.id = currentId;
+                    return true;
+                }
+                return false;
+            };
+            Property.prototype.get = function (name) {
+                for (var i = 0; i < this.properties.length; i++) {
+                    var property = this.properties[i];
+                    if (property.name === name)
+                        return property;
+                }
+                var result = new Property(this, name);
+                this.properties.push(result);
+                return result;
+            };
+            Property.prototype.set = function (value) {
+                this.parent.value[this.name] = value;
+            };
+            Property.prototype.valueOf = function () {
+                return this.value;
+            };
+            Property.prototype.hasChanges = function () {
+                return this.value !== this.valueOf();
+            };
+            Property.prototype.invoke = function (args) {
+                var value = this.value;
+                if (value === void 0 || value === null)
+                    throw new TypeError(this.name + " is not invocable");
+                if (!!value.execute)
+                    return value.execute.apply(value, args);
+                return value.apply(this.parent.value, args);
+            };
+            Property.prototype.forEach = function (fn) {
+                for (var i = 0; i < this.value.length; i++) {
+                    var value = this.get(i);
+                    fn(value, i);
+                }
+            };
+            return Property;
+        }());
+        Data.Property = Property;
+        var Global = (function () {
+            function Global(value) {
+                this.value = value;
+                this.properties = [];
+            }
+            Global.prototype.get = function (name) {
+                return this[name];
+            };
+            Global.prototype.subscribe = function (subscr) { };
+            Global.prototype.invoke = function (args) {
+                return this.value.apply(null, args);
+            };
+            Global.prototype.update = function (context) {
+                return false;
+            };
+            Global.prototype.forEach = function (fn) {
+                return this.value.forEach(fn);
+            };
+            return Global;
+        }());
+        var Extension = (function () {
+            function Extension(parent, name, value) {
+                this.parent = parent;
+                this.name = name;
+                this.value = value;
+            }
+            Extension.prototype.get = function (name) {
+                if (name === this.name)
+                    return this.value;
+                if (this.parent !== null)
+                    return this.parent.get(name);
+                return undefined;
+            };
+            Extension.prototype.forEach = function (fn) {
+                fn(this, 0);
+            };
+            return Extension;
+        }());
+        Data.Extension = Extension;
+        var Immutable = (function () {
+            function Immutable(value) {
+                this.value = value;
+                this.properties = [];
+                if (!!value.$target)
+                    throw new Error("proxy is not allowed");
+            }
+            Immutable.prototype.update = function () {
+                return false;
+            };
+            Immutable.prototype.get = function (name) {
+                for (var i = 0; i < this.properties.length; i++) {
+                    var property = this.properties[i];
+                    if (property.name === name)
+                        return property;
+                }
+                var value = this.value[name];
+                var result = (value instanceof Property) ? value : new Property(this, name);
+                this.properties.push(result);
+                return result;
+            };
+            Immutable.prototype.valueOf = function () {
+                return this.value;
+            };
+            Immutable.prototype.subscribe = function (subscr) { return false; };
+            Immutable.prototype.invoke = function (args) {
+                return null;
+            };
+            Immutable.prototype.map = function (fn) {
+                var result = [];
+                for (var i = 0; i < this.value.length; i++) {
+                    var value = this.get(i);
+                    result.push(fn(value, i));
+                }
+                return result;
+            };
+            Immutable.prototype.forEach = function (fn) {
+                for (var i = 0; i < this.value.length; i++) {
+                    var value = this.get(i);
+                    fn(value, i);
+                }
+            };
+            return Immutable;
+        }());
+        Data.Immutable = Immutable;
+    })(Data = Xania.Data || (Xania.Data = {}));
+    var Bind;
+    (function (Bind) {
         var Binding = (function () {
             function Binding() {
                 this.subscriptions = [];
@@ -96,7 +249,7 @@ var Xania;
                 return result;
             };
             Binding.prototype.extend = function (context, varName, x) {
-                return new Extension(context, varName, x);
+                return new Data.Extension(context, varName, x);
             };
             Binding.prototype.invoke = function (root, invocable, args) {
                 var runtime = {
@@ -117,7 +270,10 @@ var Xania;
                         return result;
                     },
                     set: function (target, name, value) {
-                        target.set(name, value);
+                        target.set(name, value.valueOf());
+                    },
+                    invoke: function (target, fn) {
+                        return fn.apply(target.value);
                     }
                 };
                 var zone = new Xania.Zone(runtime);
@@ -135,7 +291,7 @@ var Xania;
                 if (!!result && result.subscribe) {
                     return result;
                 }
-                return new Immutable(result);
+                return new Data.Immutable(result);
             };
             Binding.prototype.forEach = function (context, fn) {
                 if (!!context.get)
@@ -247,12 +403,15 @@ var Xania;
                 var handler = this.events.get(name);
                 if (!!handler) {
                     var result = handler.execute(this.context, {
-                        get: function (value, name) {
-                            return value.get(name);
+                        get: function (obj, name) {
+                            return obj.get(name);
+                        },
+                        set: function (obj, name, value) {
+                            obj.set(name, value);
                         },
                         invoke: function (_, fn, args) {
                             var xs = args.map(function (x) { return x.valueOf(); });
-                            fn.invoke(xs);
+                            return fn.invoke(xs);
                         }
                     });
                     if (!!result && typeof result.value === "function")
@@ -262,154 +421,6 @@ var Xania;
             return TagBinding;
         }(Binding));
         Bind.TagBinding = TagBinding;
-        var Global = (function () {
-            function Global(value) {
-                this.value = value;
-                this.properties = [];
-            }
-            Global.prototype.get = function (name) {
-                return this[name];
-            };
-            Global.prototype.subscribe = function (subscr) { };
-            Global.prototype.invoke = function (args) {
-                return this.value.apply(null, args);
-            };
-            Global.prototype.update = function (context) {
-                return false;
-            };
-            Global.prototype.forEach = function (fn) {
-                return this.value.forEach(fn);
-            };
-            return Global;
-        }());
-        var Immutable = (function () {
-            function Immutable(value) {
-                this.value = value;
-                this.properties = [];
-                if (!!value.$target)
-                    throw new Error("proxy is not allowed");
-            }
-            Immutable.prototype.update = function () {
-                return false;
-            };
-            Immutable.prototype.get = function (name) {
-                for (var i = 0; i < this.properties.length; i++) {
-                    var property = this.properties[i];
-                    if (property.name === name)
-                        return property;
-                }
-                var value = this.value[name];
-                var result = (value instanceof Property) ? value : new Property(this, name);
-                this.properties.push(result);
-                return result;
-            };
-            Immutable.prototype.valueOf = function () {
-                return this.value;
-            };
-            Immutable.prototype.subscribe = function (subscr) { return false; };
-            Immutable.prototype.invoke = function (args) {
-                return null;
-            };
-            Immutable.prototype.map = function (fn) {
-                var result = [];
-                for (var i = 0; i < this.value.length; i++) {
-                    var value = this.get(i);
-                    result.push(fn(value, i));
-                }
-                return result;
-            };
-            Immutable.prototype.forEach = function (fn) {
-                for (var i = 0; i < this.value.length; i++) {
-                    var value = this.get(i);
-                    fn(value, i);
-                }
-            };
-            return Immutable;
-        }());
-        var Extension = (function () {
-            function Extension(parent, name, value) {
-                this.parent = parent;
-                this.name = name;
-                this.value = value;
-            }
-            Extension.prototype.get = function (name) {
-                if (name === this.name)
-                    return this.value;
-                if (this.parent !== null)
-                    return this.parent.get(name);
-                return undefined;
-            };
-            Extension.prototype.forEach = function (fn) {
-                fn(this, 0);
-            };
-            return Extension;
-        }());
-        var Property = (function () {
-            function Property(parent, name) {
-                this.parent = parent;
-                this.name = name;
-                this.subscribers = [];
-                this.properties = [];
-                var value = parent.value[name];
-                this.value = value;
-                this.id = value;
-                if (!!this.value && this.value.id !== undefined)
-                    this.id = this.value.id;
-            }
-            Property.prototype.subscribe = function (subscr) {
-                if (this.subscribers.indexOf(subscr) < 0)
-                    this.subscribers.push(subscr);
-            };
-            Property.prototype.update = function () {
-                var currentValue = this.parent.value[this.name];
-                if (currentValue === undefined)
-                    return true;
-                var currentId = currentValue;
-                if (!!currentValue && currentValue.id !== undefined)
-                    currentId = currentValue.id;
-                if (this.id !== currentId) {
-                    this.value = currentValue;
-                    this.id = currentId;
-                    return true;
-                }
-                return false;
-            };
-            Property.prototype.get = function (name) {
-                for (var i = 0; i < this.properties.length; i++) {
-                    var property = this.properties[i];
-                    if (property.name === name)
-                        return property;
-                }
-                var result = new Property(this, name);
-                this.properties.push(result);
-                return result;
-            };
-            Property.prototype.set = function (value) {
-                this.parent.value[this.name] = value;
-            };
-            Property.prototype.valueOf = function () {
-                return this.value;
-            };
-            Property.prototype.hasChanges = function () {
-                return this.value !== this.valueOf();
-            };
-            Property.prototype.invoke = function (args) {
-                var value = this.value;
-                if (value === void 0 || value === null)
-                    throw new TypeError(this.name + " is not invocable");
-                if (!!value.execute)
-                    return value.execute.apply(value, args);
-                return value.apply(this.parent.value, args);
-            };
-            Property.prototype.forEach = function (fn) {
-                for (var i = 0; i < this.value.length; i++) {
-                    var value = this.get(i);
-                    fn(value, i);
-                }
-            };
-            return Property;
-        }());
-        Bind.Property = Property;
         var ReactiveBinding = (function (_super) {
             __extends(ReactiveBinding, _super);
             function ReactiveBinding(tpl, target, offset) {

@@ -36,6 +36,7 @@ var Xania;
             return true;
         };
         Zone.prototype.get = function (target, name) {
+            var _this = this;
             if (name === "$handler")
                 return this;
             if (name === "$target")
@@ -45,6 +46,11 @@ var Xania;
             if (name === (window["Symbol"]).toPrimitive)
                 return function () { return target.valueOf(); };
             var value = this.runtime.get(target, name);
+            if (typeof value === "function") {
+                return function () {
+                    return _this.runtime.invoke(target, value);
+                };
+            }
             return this.$wrap(value);
         };
         Zone.prototype.set = function (target, name, value) {
@@ -68,7 +74,6 @@ var Xania;
                 result = func.apply(ctx, xs);
             }
             else {
-                var ctx = this.$wrap(func);
                 result = func.invoke(xs);
             }
             return this.$unwrap(result);

@@ -121,6 +121,21 @@ var Xania;
             };
             return BinaryOperator;
         }());
+        var Assign = (function () {
+            function Assign(valueExpr, targetExpr) {
+                if (targetExpr === void 0) { targetExpr = null; }
+                this.valueExpr = valueExpr;
+                this.targetExpr = targetExpr;
+            }
+            Assign.prototype.execute = function (context, provider) {
+                var newValue = this.valueExpr.app([this.targetExpr]).execute(context, provider);
+                provider.set(context, this.targetExpr.id, newValue);
+            };
+            Assign.prototype.app = function (args) {
+                return new Assign(this.valueExpr, args[0]);
+            };
+            return Assign;
+        }());
         var Selector = (function () {
             function Selector(expr) {
                 this.expr = expr;
@@ -240,6 +255,9 @@ var Xania;
             DefaultRuntimeProvider.get = function (obj, name) {
                 return obj[name];
             };
+            DefaultRuntimeProvider.set = function (obj, name, value) {
+                throw new Error("Not implemented");
+            };
             DefaultRuntimeProvider.extend = function (context, varName, x) {
                 var item = {};
                 item[varName] = x;
@@ -350,6 +368,8 @@ var Xania;
                             return this.parseExpr(stream);
                         case "->":
                             return new Selector(this.parseExpr(stream));
+                        case "<-":
+                            return new Assign(this.parseExpr(stream));
                         default:
                             throw new SyntaxError("unresolved operator '" + op + "'");
                     }
@@ -486,7 +506,7 @@ var Xania;
                 lbrack: /^\s*\[\s*/g,
                 rbrack: /^\s*\]\s*/g,
                 navigate: /^\s*\.\s*/g,
-                operator: /^(?:\|>|\=|\.|[\+\-]\B)+/g,
+                operator: /^(?:<-|\|>|\=|\.|[\+\-]\B)+/g,
                 range: /^(\d+)\s*\.\.\s*(\d+)/g,
                 compose: /^compose\b/g,
                 eq: /^\s*=\s*/g

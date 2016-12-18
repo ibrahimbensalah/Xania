@@ -114,6 +114,21 @@
         };
     }
 
+    class Assign implements IExpr {
+
+        constructor(private valueExpr: IExpr, private targetExpr: Ident = null) {
+        }
+
+        execute(context, provider: IRuntimeProvider) {
+            var newValue = this.valueExpr.app([this.targetExpr]).execute(context, provider);
+            provider.set(context, this.targetExpr.id, newValue);
+        }
+
+        app(args: IExpr[]): IExpr {
+            return new Assign(this.valueExpr, args[0] as Ident);
+        }
+    }
+
     class Selector implements IExpr {
         private query;
 
@@ -183,6 +198,7 @@
     interface IRuntimeProvider {
         itemAt(arr: any, idx: number): any;
         get(obj: any, name: string): any;
+        set(obj: any, name: string, value: any);
         extend(context, varName: string, x: any);
         invoke(context, invocable, args: any[]);
         forEach(data, fn);
@@ -244,6 +260,9 @@
         static get(obj, name: string) {
             return obj[name];
         }
+        static set(obj, name: string, value: any) {
+            throw new Error("Not implemented");
+        }
         static extend(context, varName: string, x: any) {
             var item = {};
             item[varName] = x;
@@ -288,7 +307,7 @@
             //, square: /^[\[\]]/g
             , navigate: /^\s*\.\s*/g
             // , punct: /^[;.:\?\^%<>=!&|+\-,~]/g
-            , operator: /^(?:\|>|\=|\.|[\+\-]\B)+/g
+            , operator: /^(?:<-|\|>|\=|\.|[\+\-]\B)+/g
             , range: /^(\d+)\s*\.\.\s*(\d+)/g
             // , select: /^->/g
             , compose: /^compose\b/g
@@ -407,6 +426,8 @@
                         return this.parseExpr(stream);
                     case "->":
                         return new Selector(this.parseExpr(stream));
+                    case "<-":
+                        return new Assign(this.parseExpr(stream));
                     default:
                         throw new SyntaxError(`unresolved operator '${op}'`);
                 }

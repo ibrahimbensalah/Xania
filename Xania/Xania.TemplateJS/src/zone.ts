@@ -3,7 +3,7 @@
         private $target = (window["Symbol"])("target");
         private $cache = new Map();
 
-        constructor(private runtime: { get: Function, set: Function }) {
+        constructor(private runtime: { get: Function, set: Function, invoke: Function }) {
         }
 
         $wrap(object) {
@@ -51,6 +51,13 @@
                 return () => target.valueOf();
 
             var value = this.runtime.get(target, name);
+
+            if (typeof value === "function") {
+                return () => {
+                    return this.runtime.invoke(target, value);
+                };
+            }
+
             return this.$wrap(value);
         }
         set(target, name, value) {
@@ -73,7 +80,6 @@
                 let ctx = this.$wrap(context);
                 result = func.apply(ctx, xs);
             } else {
-                let ctx = this.$wrap(func);
                 result = func.invoke(xs);
             }
 
