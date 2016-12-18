@@ -55,6 +55,7 @@ var Xania;
             App.prototype.execute = function (context, runtimeProvider) {
                 if (runtimeProvider === void 0) { runtimeProvider = DefaultRuntimeProvider; }
                 var fun = !!this.fun.execute ? this.fun.execute(context, runtimeProvider) : this.fun;
+                // var fun: Function = this.fun.execute(context, runtimeProvider);
                 var args = this.args.map(function (x) { return x.execute(context, runtimeProvider); });
                 return runtimeProvider.invoke(fun, args);
             };
@@ -79,4 +80,3 @@ var Xania;
         Compile.Not = Not;
     })(Compile = Xania.Compile || (Xania.Compile = {}));
 })(Xania || (Xania = {}));
-//# sourceMappingURL=ast.js.map

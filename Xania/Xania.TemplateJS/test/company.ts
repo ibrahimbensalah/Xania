@@ -1,4 +1,4 @@
-﻿/// <reference path="../src/binding.ts" />
+﻿/// <reference path="../wwwroot/src/binding.ts" />
 
 class A {
     getZero() {

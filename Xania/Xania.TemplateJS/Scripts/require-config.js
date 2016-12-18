@@ -1,4 +1,0 @@
-﻿var require = {
-    shim: {
-    }
-};

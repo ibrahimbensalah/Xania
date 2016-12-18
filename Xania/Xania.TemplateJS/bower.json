@@ -1,0 +1,10 @@
+{
+  "name": "asp.net",
+  "private": true,
+  "dependencies": {
+    "polymer": "1.4.0",
+    "moment": "2.13.0",
+    "jasmine-core": "2.4.1",
+    "webcomponentsjs": "0.7.22"
+  }
+}

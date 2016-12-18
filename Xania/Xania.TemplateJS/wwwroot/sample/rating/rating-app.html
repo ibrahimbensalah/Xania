@@ -1,0 +1,27 @@
+﻿<!-- ReSharper disable Html.TagNotResolved -->
+<template>
+    <div class="example-container">
+        <p class="current-rating">
+            current rating: <strong>{{ rating }}</strong>
+        </p>
+        <div class="ratings">
+            <h3>Clickable Rating</h3>
+            <div class="rating">
+                <span data-select="{{ for r in [ 1..10 ] }}"
+                      class="star" 
+                      class.selected="{{ le r rating }}"
+                      class.highlighted="{{ le r highlighted }}"
+                      mouseover="{{ highlighted <- r }}"
+                      mouseout="{{ highlighted <- 0 }}"
+                      click="{{ rating <- r }}">★</span>
+            </div>
+            <h3>Readonly rating</h3>
+            <div class="rating readonly">
+                <span class="star" data-select="{{ for r in [ 1..10 ] }}"
+                      class.highlighted="{{ le r highlighted }}"
+                      class.selected="{{ le r rating }}">★</span>
+            </div>
+        </div>
+    </div>  
+</template>    
+<!-- ReSharper restore Html.TagNotResolved -->
