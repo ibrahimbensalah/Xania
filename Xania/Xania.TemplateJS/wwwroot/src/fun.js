@@ -58,7 +58,7 @@ var Xania;
             }
             App.prototype.execute = function (context, provider) {
                 if (provider === void 0) { provider = DefaultRuntimeProvider; }
-                var args = this.args.map(function (x) { return x.execute(context, provider); });
+                var args = this.args.map(function (x) { return x.execute(context, provider); }).filter(function (x) { return x !== undefined; });
                 var target = this.targetExpr.execute(context, provider);
                 if (target === undefined)
                     throw new Error(this.targetExpr.toString() + " is undefined or null.");

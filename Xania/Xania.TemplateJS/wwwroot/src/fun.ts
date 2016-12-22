@@ -52,7 +52,7 @@
         }
 
         execute(context, provider: IRuntimeProvider = DefaultRuntimeProvider) {
-            let args = this.args.map(x => x.execute(context, provider));
+            let args = this.args.map(x => x.execute(context, provider)).filter(x => x !== undefined);
 
             const target = this.targetExpr.execute(context, provider);
 

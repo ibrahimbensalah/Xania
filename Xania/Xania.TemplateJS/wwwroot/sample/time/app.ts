@@ -1,9 +1,6 @@
 ﻿class TimeApp {
 
     date;
-    day = 1;
-    month = 1;
-    year = 1;
 
     store = { times: [] };
 
@@ -15,20 +12,12 @@
         this.date = new Date();
     }
 
-    addMonth(increment) {
-        this.month = (this.month + increment) % 12;
-    }
-
-    static monthDisplay(month) {
-        return TimeApp.MONTHS[month];
-    }
-
-    addYear(increment) {
-        this.year += increment;
+    static monthDisplay(date) {
+        return TimeApp.MONTHS[date.getMonth()];
     }
 
     submitTime() {
-        this.store.times.push({ date: this.date });
+        this.store.times.push({ date: this.date, hours: 8, notes: "" });
     }
 
     // ReSharper disable once InconsistentNaming

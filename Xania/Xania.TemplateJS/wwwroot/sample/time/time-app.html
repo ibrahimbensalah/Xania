@@ -3,26 +3,28 @@
     <div>
         <table>
             <tr>
-                <td><button click="{{ date <- addDays 1 }}">up</button></td>
-                <td></td>
-                <td><button click="{{ date <- addYears 1 }}">up</button></td>
+                <td><button click="{{ date <- addDays 1 date }}">up</button></td>
+                <td><button click="{{ date <- addMonths 1 date }}">up</button></td>
+                <td><button click="{{ date <- addYears 1 date }}">up</button></td>
             </tr>
             <tr>
                 <td>{{ dayOf date }}</td>
-                <td><button click="{{ date <- addMonths -1 }}">{{ (monthOf date) |> formatDate '' }}</button></td>
-                <td><input type="text" name="year" /> {{ yearOf date }}</td>
+                <td>{{ monthDisplay date }}</td>
+                <td>{{ date.getFullYear () }}</td>
                 <td><button click="{{ submitTime }}">Add >> </button></td>
             </tr>
             <tr>
-                <td><button click="{{ date <- addDays -1 }}">down</button></td>
-                <td></td>
-                <td><button click="{{ date <- addYears -1 }}">up</button></td>
+                <td><button click="{{ date <- addDays -1 date }}">down</button></td>
+                <td><button click="{{ date <- addMonths -1 date }}">up</button></td>
+                <td><button click="{{ date <- addYears -1 date }}">up</button></td>
             </tr>
         </table>
 
         <ul>
             <li data-select="{{ for t in store.times }}">
-                {{ formatDate '' t.date }}
+                {{ monthDisplay t.date }}
+                <input type="text" name="t.hours" />
+                <input type="text" name="t.notes" />
             </li>
         </ul>
     </div>

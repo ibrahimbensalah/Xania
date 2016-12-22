@@ -4,5 +4,5 @@ describe("asd fasdf asd", function () {
         console.log("testa sdf as");
     });
 });
-
-window.ReSharperReporter.prototype.jasmineDone = function () { };
+var ReSharperReporter;
+ReSharperReporter.prototype.jasmineDone = function () { };
