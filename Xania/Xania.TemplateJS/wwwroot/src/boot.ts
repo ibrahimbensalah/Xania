@@ -1,4 +1,5 @@
-﻿/// <reference path="binding.ts" />
+﻿/// <reference path="../../node_modules/@types/core-js/index.d.ts" />
+/// <reference path="binding.ts" />
 
 module Xania {
     import Value = Data.IValue;
@@ -19,7 +20,6 @@ module Xania {
                 var binding = target.attributes["__binding"];
                 if (!!binding) {
                     binding.trigger(name);
-                    // binding.context.update();
                     this.update();
                 }
             };
@@ -259,13 +259,13 @@ module Xania {
 
     function domReady(fn) {
         if (document.readyState !== "loading") {
-            fn();
+            fn(document);
         } else {
-            document.addEventListener("DOMContentLoaded", fn);
+            document.addEventListener("DOMContentLoaded", () => fn(document));
         }
     }
 
-    domReady(() => {
+    export function init() {
         var app = new Binder([Core.List, Core.Math, Core.Dates]);
         var components = new ComponentContainer();
 
@@ -284,14 +284,14 @@ module Xania {
                 }
             } else {
                 var target = document.createElement("div");
-                dom.parentNode.insertBefore(target, dom);
                 app.bind(dom.nodeName + ".html", component, target);
+                dom.parentNode.insertBefore(target, dom);
 
                 app.listen(target);
 
                 for (let i = 0; i < dom.attributes.length; i++) {
                     var attr = dom.attributes.item(i);
-                    dom[attr.name] = eval(attr.value);
+                    component[attr.name] = eval(attr.value);
                 }
 
                 if (!!component.init) {
@@ -299,5 +299,7 @@ module Xania {
                 }
             }
         }
-    });
+    }
+
+    domReady(init);
 }

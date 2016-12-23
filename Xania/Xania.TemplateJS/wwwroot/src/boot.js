@@ -1,3 +1,4 @@
+/// <reference path="../../node_modules/@types/core-js/index.d.ts" />
 /// <reference path="binding.ts" />
 var Xania;
 (function (Xania) {
@@ -15,7 +16,6 @@ var Xania;
                 var binding = target.attributes["__binding"];
                 if (!!binding) {
                     binding.trigger(name);
-                    // binding.context.update();
                     _this.update();
                 }
             };
@@ -236,13 +236,13 @@ var Xania;
     }());
     function domReady(fn) {
         if (document.readyState !== "loading") {
-            fn();
+            fn(document);
         }
         else {
-            document.addEventListener("DOMContentLoaded", fn);
+            document.addEventListener("DOMContentLoaded", function () { return fn(document); });
         }
     }
-    domReady(function () {
+    function init() {
         var app = new Binder([Xania.Core.List, Xania.Core.Math, Xania.Core.Dates]);
         var components = new ComponentContainer();
         // Find top level components and bind
@@ -259,17 +259,19 @@ var Xania;
             }
             else {
                 var target = document.createElement("div");
-                dom.parentNode.insertBefore(target, dom);
                 app.bind(dom.nodeName + ".html", component, target);
+                dom.parentNode.insertBefore(target, dom);
                 app.listen(target);
                 for (var i = 0; i < dom.attributes.length; i++) {
                     var attr = dom.attributes.item(i);
-                    dom[attr.name] = eval(attr.value);
+                    component[attr.name] = eval(attr.value);
                 }
                 if (!!component.init) {
                     component.init(app);
                 }
             }
         }
-    });
+    }
+    Xania.init = init;
+    domReady(init);
 })(Xania || (Xania = {}));
