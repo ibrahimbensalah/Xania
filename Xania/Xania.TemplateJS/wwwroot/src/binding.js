@@ -5,229 +5,6 @@ var __extends = (this && this.__extends) || function (d, b) {
 };
 var Xania;
 (function (Xania) {
-    var Data;
-    (function (Data) {
-        var Store = (function () {
-            function Store(value, libs) {
-                this.value = value;
-                this.libs = libs;
-                this.properties = [];
-            }
-            Store.prototype.get = function (name) {
-                for (var i = 0; i < this.properties.length; i++) {
-                    var existing = this.properties[i];
-                    if (existing.name === name)
-                        return existing.value;
-                }
-                var raw = this.value[name];
-                if (raw !== undefined) {
-                    var instval = new Property(this, name);
-                    this.properties.push({ name: name, value: instval });
-                    return instval;
-                }
-                raw = this.value.constructor[name] || this.libs[name];
-                if (raw === undefined)
-                    throw new Error("Could not resolve " + name);
-                var gv = new Global(raw);
-                this.properties.push({ name: name, value: gv });
-                return gv;
-            };
-            Store.prototype.set = function (name, value) {
-                this.value[name] = value;
-            };
-            Store.prototype.subscribe = function (subscr) { throw new Error("Not implemented"); };
-            Store.prototype.invoke = function (args) { throw new Error("Not implemented"); };
-            Store.prototype.update = function () {
-                var length, stack = [];
-                for (var i = 0; i < this.properties.length; i++) {
-                    var property = this.properties[i];
-                    stack[i] = property.value;
-                }
-                var dirty = new Set();
-                while (stack.length > 0) {
-                    var value = stack.pop();
-                    if (value.update()) {
-                        if (value.value === undefined) {
-                            var parentProps = value.parent.properties;
-                            parentProps.splice(parentProps.indexOf(value), 1);
-                            continue;
-                        }
-                        var subscribers = value.subscribers;
-                        for (var n = 0; n < subscribers.length; n++) {
-                            var s = subscribers[n];
-                            dirty.add(s);
-                        }
-                        subscribers.length = 0;
-                    }
-                    var properties = value.properties;
-                    length = properties.length;
-                    for (var i = 0; i < length; i++) {
-                        var child = properties[i];
-                        stack.push(child);
-                    }
-                }
-                dirty.forEach(function (d) {
-                    d.notify();
-                });
-            };
-            Store.prototype.forEach = function (fn) {
-                fn(this, 0);
-            };
-            return Store;
-        }());
-        Data.Store = Store;
-        var Property = (function () {
-            function Property(parent, name) {
-                this.parent = parent;
-                this.name = name;
-                this.subscribers = [];
-                this.properties = [];
-                var value = parent.value[name];
-                this.value = value;
-                this.id = value;
-                if (!!this.value && this.value.id !== undefined)
-                    this.id = this.value.id;
-            }
-            Property.prototype.subscribe = function (subscr) {
-                if (this.subscribers.indexOf(subscr) < 0)
-                    this.subscribers.push(subscr);
-            };
-            Property.prototype.update = function () {
-                // this.context = context === undefined ? this.context : context;
-                var currentValue = this.parent.value[this.name];
-                if (currentValue === undefined)
-                    return true;
-                var currentId = currentValue;
-                if (!!currentValue && currentValue.id !== undefined)
-                    currentId = currentValue.id;
-                if (this.id !== currentId) {
-                    this.value = currentValue;
-                    this.id = currentId;
-                    return true;
-                }
-                return false;
-            };
-            Property.prototype.get = function (name) {
-                for (var i = 0; i < this.properties.length; i++) {
-                    var property = this.properties[i];
-                    if (property.name === name)
-                        return property;
-                }
-                var result = new Property(this, name);
-                this.properties.push(result);
-                return result;
-            };
-            Property.prototype.set = function (value) {
-                this.parent.value[this.name] = value;
-            };
-            Property.prototype.valueOf = function () {
-                return this.value;
-            };
-            Property.prototype.hasChanges = function () {
-                return this.value !== this.valueOf();
-            };
-            Property.prototype.invoke = function (args) {
-                var value = this.value;
-                if (value === void 0 || value === null)
-                    throw new TypeError(this.name + " is not invocable");
-                if (!!value.execute)
-                    return value.execute.apply(value, args);
-                return value.apply(this.parent.value, args);
-            };
-            Property.prototype.forEach = function (fn) {
-                for (var i = 0; i < this.value.length; i++) {
-                    var value = this.get(i);
-                    fn(value, i);
-                }
-            };
-            return Property;
-        }());
-        Data.Property = Property;
-        var Global = (function () {
-            function Global(value) {
-                this.value = value;
-                this.properties = [];
-            }
-            Global.prototype.get = function (name) {
-                return this[name];
-            };
-            Global.prototype.subscribe = function (subscr) { };
-            Global.prototype.invoke = function (args) {
-                return this.value.apply(null, args);
-            };
-            Global.prototype.update = function (context) {
-                return false;
-            };
-            Global.prototype.forEach = function (fn) {
-                return this.value.forEach(fn);
-            };
-            return Global;
-        }());
-        var Extension = (function () {
-            function Extension(parent, name, value) {
-                this.parent = parent;
-                this.name = name;
-                this.value = value;
-            }
-            Extension.prototype.get = function (name) {
-                if (name === this.name)
-                    return this.value;
-                if (this.parent !== null)
-                    return this.parent.get(name);
-                return undefined;
-            };
-            Extension.prototype.forEach = function (fn) {
-                fn(this, 0);
-            };
-            return Extension;
-        }());
-        Data.Extension = Extension;
-        var Immutable = (function () {
-            function Immutable(value) {
-                this.value = value;
-                this.properties = [];
-                if (!!value.$target)
-                    throw new Error("proxy is not allowed");
-            }
-            Immutable.prototype.update = function () {
-                return false;
-            };
-            Immutable.prototype.get = function (name) {
-                for (var i = 0; i < this.properties.length; i++) {
-                    var property = this.properties[i];
-                    if (property.name === name)
-                        return property;
-                }
-                var value = this.value[name];
-                var result = (value instanceof Property) ? value : new Property(this, name);
-                this.properties.push(result);
-                return result;
-            };
-            Immutable.prototype.valueOf = function () {
-                return this.value;
-            };
-            Immutable.prototype.subscribe = function (subscr) { return false; };
-            Immutable.prototype.invoke = function (args) {
-                return null;
-            };
-            Immutable.prototype.map = function (fn) {
-                var result = [];
-                for (var i = 0; i < this.value.length; i++) {
-                    var value = this.get(i);
-                    result.push(fn(value, i));
-                }
-                return result;
-            };
-            Immutable.prototype.forEach = function (fn) {
-                for (var i = 0; i < this.value.length; i++) {
-                    var value = this.get(i);
-                    fn(value, i);
-                }
-            };
-            return Immutable;
-        }());
-        Data.Immutable = Immutable;
-    })(Data = Xania.Data || (Xania.Data = {}));
     var Bind;
     (function (Bind) {
         var Binding = (function () {
@@ -250,7 +27,7 @@ var Xania;
                 return result;
             };
             Binding.prototype.extend = function (context, varName, x) {
-                return new Data.Extension(context, varName, x);
+                return new Xania.Data.Extension(context, varName, x);
             };
             Binding.prototype.invoke = function (root, invocable, args) {
                 var runtime = {
@@ -292,7 +69,7 @@ var Xania;
                 if (!!result && result.subscribe) {
                     return result;
                 }
-                return new Data.Immutable(result);
+                return new Xania.Data.Immutable(result);
             };
             Binding.prototype.forEach = function (context, fn) {
                 if (!!context.get)
@@ -486,6 +263,199 @@ var Xania;
             return new ReactiveBinding(tpl, target, offset).update(observable);
         }
         Bind.executeTemplate = executeTemplate;
+        var Binder = (function () {
+            function Binder(libs) {
+                this.libs = libs;
+                this.contexts = [];
+                this.compiler = new Xania.Ast.Compiler();
+                this.compile = this.compiler.template.bind(this.compiler);
+            }
+            Binder.listen = function (target, store) {
+                var eventHandler = function (target, name) {
+                    var binding = target.attributes["__binding"];
+                    if (!!binding) {
+                        binding.trigger(name);
+                        store.update();
+                    }
+                };
+                target.addEventListener("click", function (evt) { return eventHandler(evt.target, evt.type); });
+                var onchange = function (evt) {
+                    var binding = evt.target.attributes["__binding"];
+                    if (binding != null) {
+                        var nameAttr = evt.target.attributes["name"];
+                        if (!!nameAttr) {
+                            var arr = nameAttr.value.split('.');
+                            var context = binding.context;
+                            for (var i = 0; i < arr.length; i++) {
+                                var p = arr[i];
+                                context = context.get(p);
+                            }
+                            context.set(evt.target.value);
+                            store.update();
+                        }
+                    }
+                };
+                target.addEventListener("keyup", function (evt) {
+                    if (evt.keyCode === 13) {
+                        eventHandler(evt.target, "keyup.enter");
+                    }
+                    else {
+                        onchange(evt);
+                    }
+                });
+                target.addEventListener("mouseover", function (evt) {
+                    eventHandler(evt.target, "mouseover");
+                });
+                target.addEventListener("mouseout", function (evt) {
+                    eventHandler(evt.target, "mouseout");
+                });
+            };
+            Binder.prototype.update2 = function () {
+                for (var i = 0; i < this.contexts.length; i++) {
+                    var ctx = this.contexts[i];
+                    ctx.update(null);
+                }
+            };
+            Binder.prototype.parseDom = function (rootDom) {
+                var stack = [];
+                var i;
+                var rootTpl;
+                stack.push({
+                    node: rootDom,
+                    push: function (e) {
+                        rootTpl = e;
+                    }
+                });
+                while (stack.length > 0) {
+                    var cur = stack.pop();
+                    var node = cur.node;
+                    var push = cur.push;
+                    if (!!node["content"]) {
+                        var elt = node["content"];
+                        var template = new Xania.Dom.ContentTemplate();
+                        for (i = elt.childNodes.length - 1; i >= 0; i--) {
+                            stack.push({ node: elt.childNodes[i], push: template.addChild.bind(template) });
+                        }
+                        push(template);
+                    }
+                    else if (node.nodeType === 1) {
+                        var elt = node;
+                        var template_1 = new Xania.Dom.TagTemplate(elt.tagName);
+                        for (i = 0; !!elt.attributes && i < elt.attributes.length; i++) {
+                            var attribute = elt.attributes[i];
+                            this.parseAttr(template_1, attribute);
+                        }
+                        for (i = elt.childNodes.length - 1; i >= 0; i--) {
+                            stack.push({ node: elt.childNodes[i], push: template_1.addChild.bind(template_1) });
+                        }
+                        push(template_1);
+                    }
+                    else if (node.nodeType === 3) {
+                        var textContent = node.textContent;
+                        if (textContent.trim().length > 0) {
+                            var tpl = this.compile(textContent);
+                            push(new Xania.Dom.TextTemplate(tpl || node.textContent));
+                        }
+                    }
+                }
+                return rootTpl;
+            };
+            Binder.prototype.parseAttr = function (tagElement, attr) {
+                var name = attr.name;
+                if (name === "click" || name.match(/keyup\./) || name === "mouseover" || name === "mouseout") {
+                    var fn = this.compile(attr.value);
+                    tagElement.addEvent(name, fn);
+                }
+                else if (name === "data-select" || name === "data-from") {
+                    var fn = this.compile(attr.value);
+                    tagElement.select(fn);
+                }
+                else {
+                    var tpl = this.compile(attr.value);
+                    tagElement.attr(name, tpl || attr.value);
+                    // conventions
+                    if (!!tagElement.name.match(/^input$/i) &&
+                        !!attr.name.match(/^name$/i) &&
+                        !tagElement.getAttribute("value")) {
+                        var valueAccessor = this.compile("{{ " + attr.value + " }}");
+                        tagElement.attr("value", valueAccessor);
+                    }
+                }
+            };
+            return Binder;
+        }());
+        function importView(view) {
+            var args = [];
+            for (var _i = 1; _i < arguments.length; _i++) {
+                args[_i - 1] = arguments[_i];
+            }
+            if (!("import" in document.createElement("link"))) {
+                throw new Error("HTML import is not supported in this browser");
+            }
+            var deferred = {
+                value: undefined,
+                resolvers: [],
+                notify: function (value) {
+                    this.value = value;
+                    for (var i = 0; i < this.resolvers.length; i++) {
+                        var resolver = this.resolvers[i];
+                        resolver.apply(this, [this.value].concat(args));
+                    }
+                },
+                then: function (resolve) {
+                    if (this.value !== undefined) {
+                        resolve.apply(this, [this.value].concat(args));
+                    }
+                    else {
+                        this.resolvers.push(resolve);
+                    }
+                }
+            };
+            var link = document.createElement('link');
+            link.rel = 'import';
+            link.href = view;
+            link.setAttribute('async', ""); // make it async!
+            link.onload = function (e) {
+                var link = e.target;
+                deferred.notify(link.import.querySelector("template"));
+            };
+            document.head.appendChild(link);
+            return deferred;
+        }
+        Bind.importView = importView;
+        function defer() {
+            return {
+                value: undefined,
+                resolvers: [],
+                notify: function (value) {
+                    if (value === undefined)
+                        throw new Error("undefined result");
+                    this.value = value;
+                    for (var i = 0; i < this.resolvers.length; i++) {
+                        this.resolvers[i].call(null, value);
+                    }
+                },
+                then: function (resolve) {
+                    if (this.value === undefined) {
+                        this.resolvers.push(resolve);
+                    }
+                    else {
+                        resolve.call(null, this.value);
+                    }
+                }
+            };
+        }
+        function bind(dom, store) {
+            var binder = new Binder([Xania.Core.List, Xania.Core.Math, Xania.Core.Dates]);
+            var fragment = document.createDocumentFragment();
+            Bind.executeTemplate(store, binder.parseDom(dom), fragment, 0);
+            for (var i = 0; i < fragment.childNodes.length; i++) {
+                var child = fragment.childNodes[i];
+                Binder.listen(child, store);
+            }
+            return fragment;
+        }
+        Bind.bind = bind;
     })(Bind = Xania.Bind || (Xania.Bind = {}));
     function ready(data, resolve) {
         if (data !== null && data !== undefined && !!data.then)

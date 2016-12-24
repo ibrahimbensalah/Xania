@@ -1,286 +1,5 @@
 ﻿module Xania {
-    export module Data {
-
-        export interface ISubscriber {
-            notify();
-        }
-
-        export interface IValue {
-            get(idx): IValue;
-            valueOf(): any;
-            subscribe(subscr: ISubscriber);
-            invoke(args: any[]);
-            update(context: any);
-        }
-
-        export class Store implements IValue {
-            private properties: { name: string; value: IValue }[] = [];
-
-            constructor(private value: any, private libs) {
-            }
-
-            get(name): IValue {
-                for (let i = 0; i < this.properties.length; i++) {
-                    const existing = this.properties[i];
-                    if (existing.name === name)
-                        return existing.value;
-                }
-
-                var raw = this.value[name];
-                if (raw !== undefined) {
-                    var instval = new Property(this, name);
-                    this.properties.push({ name, value: instval });
-                    return instval;
-                }
-
-                raw = this.value.constructor[name] || this.libs[name];
-                if (raw === undefined)
-                    throw new Error("Could not resolve " + name);
-
-
-                var gv = new Global(raw);
-                this.properties.push({ name, value: gv });
-                return gv;
-            }
-
-            set(name, value) {
-                this.value[name] = value;
-            }
-
-            subscribe(subscr: ISubscriber) { throw new Error("Not implemented"); }
-
-            invoke(args: any[]) { throw new Error("Not implemented"); }
-
-            update() {
-                let length, stack: any[] = [];
-
-                for (let i = 0; i < this.properties.length; i++) {
-                    const property = this.properties[i];
-                    stack[i] = property.value;
-                }
-
-                var dirty = new Set<ISubscriber>();
-
-                while (stack.length > 0) {
-                    var value = stack.pop();
-
-                    if (value.update()) {
-                        if (value.value === undefined) {
-                            var parentProps = value.parent.properties;
-                            parentProps.splice(parentProps.indexOf(value), 1);
-                            continue;
-                        }
-                        var subscribers = value.subscribers;
-                        for (var n = 0; n < subscribers.length; n++) {
-                            var s = subscribers[n];
-                            dirty.add(s);
-                        }
-                        subscribers.length = 0;
-                    }
-
-                    let properties = value.properties;
-                    length = properties.length;
-                    for (let i = 0; i < length; i++) {
-                        const child = properties[i];
-                        stack.push(child);
-                    }
-                }
-
-                dirty.forEach(d => {
-                    d.notify();
-                });
-            }
-
-            forEach(fn) {
-                fn(this, 0);
-            }
-        }
-
-        export class Property implements IValue {
-            private subscribers: ISubscriber[] = [];
-            private properties = [];
-            private value;
-            private id;
-
-            constructor(private parent: any, public name: string | number) {
-                var value = parent.value[name];
-
-                this.value = value;
-                this.id = value;
-
-                if (!!this.value && this.value.id !== undefined)
-                    this.id = this.value.id;
-            }
-
-            subscribe(subscr: ISubscriber) {
-                if (this.subscribers.indexOf(subscr) < 0)
-                    this.subscribers.push(subscr);
-            }
-
-            update() {
-                // this.context = context === undefined ? this.context : context;
-
-                const currentValue = this.parent.value[this.name];
-                if (currentValue === undefined)
-                    return true;
-
-                var currentId = currentValue;
-                if (!!currentValue && currentValue.id !== undefined)
-                    currentId = currentValue.id;
-
-                if (this.id !== currentId) {
-                    this.value = currentValue;
-                    this.id = currentId;
-                    return true;
-                }
-
-                return false;
-            }
-
-            get(name) {
-                for (var i = 0; i < this.properties.length; i++) {
-                    var property = this.properties[i];
-                    if (property.name === name)
-                        return property;
-                }
-
-                var result = new Property(this, name);
-                this.properties.push(result);
-                return result;
-            }
-
-            set(value) {
-                this.parent.value[this.name] = value;
-            }
-
-            valueOf() {
-                return this.value;
-            }
-
-            hasChanges(): boolean {
-                return this.value !== this.valueOf();
-            }
-
-            invoke(args: any[]) {
-                var value = this.value;
-                if (value === void 0 || value === null)
-                    throw new TypeError(this.name + " is not invocable");
-                if (!!value.execute)
-                    return value.execute.apply(value, args);
-                return value.apply(this.parent.value, args);
-            }
-
-            forEach(fn) {
-                for (let i = 0; i < this.value.length; i++) {
-                    var value = this.get(i);
-                    fn(value, i);
-                }
-            }
-        }
-
-        class Global implements IValue {
-            private properties = [];
-
-            constructor(private value) {
-            }
-
-            get(name): IValue {
-                return this[name];
-            }
-
-            subscribe(subscr: ISubscriber) { }
-
-            invoke(args: any[]) {
-                return this.value.apply(null, args);
-            }
-
-            update(context) {
-                return false;
-            }
-
-            forEach(fn) {
-                return this.value.forEach(fn);
-            }
-        }
-
-        interface IValueProvider {
-            get(name: string | number): IValue;
-        }
-
-        export class Extension implements IValueProvider {
-            constructor(private parent: IValueProvider, private name, private value) {
-            }
-
-            get(name): IValue {
-                if (name === this.name)
-                    return this.value;
-
-                if (this.parent !== null)
-                    return this.parent.get(name);
-
-                return undefined;
-            }
-
-            forEach(fn) {
-                fn(this, 0);
-            }
-        }
-
-        export class Immutable implements IValue {
-            private properties = [];
-
-            constructor(private value) {
-                if (!!value.$target)
-                    throw new Error("proxy is not allowed");
-            }
-
-            update() {
-                return false;
-            }
-
-            get(name): IValue {
-                for (var i = 0; i < this.properties.length; i++) {
-                    var property = this.properties[i];
-                    if (property.name === name)
-                        return property;
-                }
-
-                var value = this.value[name];
-                var result = (value instanceof Property) ? value : new Property(this, name);
-                this.properties.push(result);
-                return result;
-            }
-
-            valueOf() {
-                return this.value;
-            }
-
-            subscribe(subscr: ISubscriber) { return false; }
-
-            invoke(args: any[]) {
-                return null;
-            }
-
-            map(fn) {
-                var result = [];
-                for (let i = 0; i < this.value.length; i++) {
-                    var value = this.get(i);
-                    result.push(fn(value, i));
-                }
-                return result;
-            }
-
-            forEach(fn) {
-                for (let i = 0; i < this.value.length; i++) {
-                    var value = this.get(i);
-                    fn(value, i);
-                }
-            }
-        }
-
-    }
     export module Bind {
-
         class Binding implements Data.ISubscriber {
             public state;
             protected context;
@@ -558,6 +277,217 @@
 
         export function executeTemplate(observable, tpl: Dom.IDomTemplate, target, offset) {
             return new ReactiveBinding(tpl, target, offset).update(observable);
+        }
+
+        class Binder {
+            private compile: Function;
+            private compiler: Ast.Compiler;
+            public contexts: Data.IValue[] = [];
+
+            constructor(private libs: any[]) {
+                this.compiler = new Ast.Compiler();
+                this.compile = this.compiler.template.bind(this.compiler);
+            }
+
+            static listen(target, store: Data.Store) {
+                var eventHandler = (target, name) => {
+                    var binding = target.attributes["__binding"];
+                    if (!!binding) {
+                        binding.trigger(name);
+                        store.update();
+                    }
+                };
+
+                target.addEventListener("click", evt => eventHandler(evt.target, evt.type));
+
+                const onchange = evt => {
+                    var binding = evt.target.attributes["__binding"];
+                    if (binding != null) {
+                        const nameAttr = evt.target.attributes["name"];
+                        if (!!nameAttr) {
+                            var arr = nameAttr.value.split('.');
+                            var context = binding.context;
+                            for (var i = 0; i < arr.length; i++) {
+                                var p = arr[i];
+                                context = context.get(p);
+                            }
+                            context.set(evt.target.value);
+
+                            store.update();
+                        }
+                    }
+                };
+                target.addEventListener("keyup",
+                    evt => {
+                        if (evt.keyCode === 13) {
+                            eventHandler(evt.target, "keyup.enter");
+                        } else {
+                            onchange(evt);
+                        }
+                    });
+                target.addEventListener("mouseover",
+                    evt => {
+                        eventHandler(evt.target, "mouseover");
+                    }
+                );
+                target.addEventListener("mouseout",
+                    evt => {
+                        eventHandler(evt.target, "mouseout");
+                    }
+                );
+            }
+
+            public update2() {
+                for (let i = 0; i < this.contexts.length; i++) {
+                    var ctx = this.contexts[i];
+                    ctx.update(null);
+                }
+            }
+
+            parseDom(rootDom: Node): Dom.TagTemplate {
+                const stack = [];
+                let i: number;
+                var rootTpl;
+                stack.push({
+                    node: rootDom,
+                    push(e) {
+                        rootTpl = e;
+                    }
+                });
+
+                while (stack.length > 0) {
+                    const cur = stack.pop();
+                    const node: Node = cur.node;
+                    const push = cur.push;
+
+                    if (!!node["content"]) {
+                        const elt = <HTMLElement>node["content"];
+                        var template = new Dom.ContentTemplate();
+                        for (i = elt.childNodes.length - 1; i >= 0; i--) {
+                            stack.push({ node: elt.childNodes[i], push: template.addChild.bind(template) });
+                        }
+                        push(template);
+                    } else if (node.nodeType === 1) {
+                        const elt = <HTMLElement>node;
+                        const template = new Dom.TagTemplate(elt.tagName);
+
+                        for (i = 0; !!elt.attributes && i < elt.attributes.length; i++) {
+                            var attribute = elt.attributes[i];
+                            this.parseAttr(template, attribute);
+                        }
+
+                        for (i = elt.childNodes.length - 1; i >= 0; i--) {
+                            stack.push({ node: elt.childNodes[i], push: template.addChild.bind(template) });
+                        }
+                        push(template);
+                    } else if (node.nodeType === 3) {
+                        var textContent = node.textContent;
+                        if (textContent.trim().length > 0) {
+                            const tpl = this.compile(textContent);
+                            push(new Dom.TextTemplate(tpl || node.textContent));
+                        }
+                    }
+                }
+
+                return rootTpl;
+            }
+
+            parseAttr(tagElement: Dom.TagTemplate, attr: Attr) {
+                const name = attr.name;
+                if (name === "click" || name.match(/keyup\./) || name === "mouseover" || name === "mouseout") {
+                    const fn = this.compile(attr.value);
+                    tagElement.addEvent(name, fn);
+                } else if (name === "data-select" || name === "data-from") {
+                    const fn = this.compile(attr.value);
+                    tagElement.select(fn);
+                } else {
+                    const tpl = this.compile(attr.value);
+                    tagElement.attr(name, tpl || attr.value);
+
+                    // conventions
+                    if (!!tagElement.name.match(/^input$/i) &&
+                        !!attr.name.match(/^name$/i) &&
+                        !tagElement.getAttribute("value")) {
+                        const valueAccessor = this.compile(`{{ ${attr.value} }}`);
+                        tagElement.attr("value", valueAccessor);
+                    }
+                }
+            }
+
+        }
+
+        export function importView(view: string, ...args): any {
+            if (!("import" in document.createElement("link"))) {
+                throw new Error("HTML import is not supported in this browser");
+            }
+
+            var deferred = {
+                value: undefined,
+                resolvers: [],
+                notify(value) {
+                    this.value = value;
+                    for (var i = 0; i < this.resolvers.length; i++) {
+                        var resolver = this.resolvers[i];
+                        resolver.apply(this, [this.value].concat(args));
+                    }
+                },
+                then(resolve) {
+                    if (this.value !== undefined) {
+                        resolve.apply(this, [this.value].concat(args));
+                    } else {
+                        this.resolvers.push(resolve);
+                    }
+                }
+            };
+            var link = document.createElement('link');
+            link.rel = 'import';
+            link.href = view;
+            link.setAttribute('async', ""); // make it async!
+            link.onload = e => {
+                var link = (<any>e.target);
+                deferred.notify(link.import.querySelector("template"));
+            }
+            document.head.appendChild(link);
+
+            return deferred;
+        }
+
+        function defer() {
+            return {
+                value: undefined,
+                resolvers: [],
+                notify(value) {
+                    if (value === undefined)
+                        throw new Error("undefined result");
+
+                    this.value = value;
+
+                    for (var i = 0; i < this.resolvers.length; i++) {
+                        this.resolvers[i].call(null, value);
+                    }
+                },
+                then(resolve) {
+                    if (this.value === undefined) {
+                        this.resolvers.push(resolve);
+                    } else {
+                        resolve.call(null, this.value);
+                    }
+                }
+            };
+        }
+
+        export function bind(dom: Node, store) {
+
+            var binder = new Binder([Core.List, Core.Math, Core.Dates]);
+
+            let fragment = document.createDocumentFragment();
+            Bind.executeTemplate(store, binder.parseDom(dom), fragment, 0);
+            for (var i = 0; i < fragment.childNodes.length; i++) {
+                var child = fragment.childNodes[i];
+                Binder.listen(child, store);
+            }
+
+            return fragment;
         }
     }
 

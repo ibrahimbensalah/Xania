@@ -4,12 +4,13 @@
     <title></title>
     <meta charset="utf-8" />
     <link href="app.css" rel="stylesheet" />
+    <script src="../../src/store.js"></script>
     <script src="../../src/fun.js"></script>
     <script src="../../src/binding.js"></script>
     <script src="../../src/dom.js"></script>
     <script src="../../src/zone.js"></script>
-    <script src="../../src/boot.js"></script>
     <script src="../../src/core.js"></script>
+    <script src="../../src/boot.js"></script>
     <script src="app.js"></script>
     <script src="../../lib/webcomponentsjs/webcomponents-lite.js"></script>
 </head>
@@ -22,8 +23,17 @@
         <rating-app rating="1"></rating-app>
 
         <hr style="clear: both;" />
+        
+        <template model="{ rating: 123 }">
+            <div>
+                What is your rating?
+            </div>
+            <input type="text" name="rating"/>
+            <div>
+                Current rating is: {{ rating }}
+            </div>
+        </template>
 
-        <rating-app></rating-app>
     </div>
 </body>
 </html>
