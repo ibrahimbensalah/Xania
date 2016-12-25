@@ -127,7 +127,24 @@
             private mutationId;
             constructor(name: string, private attributes: { name: string; tpl }[], private events: Map<string, any>) {
                 super();
-                this.dom = document.createElement(name);
+
+                switch (name.toLowerCase()) {
+                    case "svg":
+                        this.dom = document.createElementNS('http://www.w3.org/2000/svg', name);
+                        break;
+                    case "g":
+                        this.dom = document.createElementNS('http://www.w3.org/2000/svg', name);
+                        break;
+                    case "circle":
+                        this.dom = document.createElementNS('http://www.w3.org/2000/svg', name);
+                        break;
+                    case "polygon":
+                        this.dom = document.createElementNS('http://www.w3.org/2000/svg', name);
+                        break;
+                    default:
+                        this.dom = document.createElement(name);
+                        break;
+                }
                 this.dom.attributes["__binding"] = this;
             }
 
@@ -152,7 +169,7 @@
                             } else if (attrName === "class") {
                                 dom.className = newValue;
                             } else {
-                                dom[attrName] = newValue;
+                                dom.setAttribute(attrName, newValue);
                             }
                         }
                         binding.attrs[attrName] = newValue;
