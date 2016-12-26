@@ -57,8 +57,8 @@ class BusSubscription<T> implements Xania.Data.ISubscription {
 }
 
 // ReSharper disable once InconsistentNaming
-var ReSharperReporter = window['ReSharperReporter'];
+var ReSharperReporter = window["ReSharperReporter"];
 (done => {
-    window.onbeforeunload = () => done();
+    ///....
 })(ReSharperReporter.prototype.jasmineDone);
 ReSharperReporter.prototype.jasmineDone = () => void 0;

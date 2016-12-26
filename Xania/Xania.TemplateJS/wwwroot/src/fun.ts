@@ -216,11 +216,58 @@
             if (this.parts.length === 1)
                 return this.executePart(this.parts[0], context, provider);
 
-            var result = "";
-            for (var i = 0; i < this.parts.length; i++) {
-                result += this.executePart(this.parts[i], context, provider);
+            return this.join(this.parts.map(p => this.executePart(p, context, provider)));
+        }
+
+        join(streams) {
+            var observer = {
+                values: new Array(streams.length),
+                observers: [],
+                subscribe(observer) {
+                    this.observers.push(observer);
+                    var result = this.valueOf();
+                    if (result !== undefined) {
+                        observer.onNext(result);
+                    }
+                },
+                set(idx, value) {
+                    if (this.values[idx] !== value) {
+                        this.values[idx] = value;
+                        this.notify();
+                    }
+                },
+                notify() {
+                    var result = this.valueOf();
+                    if (result !== undefined)
+                        for (var e = 0; e < this.observers.length; e++) {
+                            this.observers[e].onNext(result);
+                        }
+                },
+                valueOf() {
+                    for (var i = 0; i < this.values.length; i++) {
+                        if (this.values[i] === undefined)
+                            return undefined;
+                    }
+
+                    return this.values.join('');
+                }
             }
-            return result;
+
+            for (var i = 0; i < streams.length; i++) {
+                var st = streams[i].valueOf();
+                if (!!st.subscribe) {
+                    st.subscribe({
+                        idx: i,
+                        onNext(v) {
+                            observer.set(this.idx, v);
+                        }
+                    });
+                } else {
+                    observer.set(i, st);
+                }
+            }
+
+            return observer;
         }
 
         executePart(part: IExpr | string, context, provider: IRuntimeProvider) {
@@ -589,4 +636,6 @@
         regex: RegExp;
     }
 }
+
+
 

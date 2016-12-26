@@ -102,8 +102,18 @@ var Xania;
                 this.context = context;
             }
             TextBinding.prototype.render = function (context) {
-                var newValue = this.modelAccessor.execute(context, this).valueOf();
-                this.setText(newValue);
+                var binding = this;
+                var newValue = this.modelAccessor.execute(context, this);
+                if (!!newValue && !!newValue.subscribe) {
+                    newValue.subscribe({
+                        onNext: function (v) {
+                            binding.setText(v);
+                        }
+                    });
+                }
+                else {
+                    this.setText(newValue.valueOf());
+                }
             };
             TextBinding.prototype.setText = function (newValue) {
                 this.dom.textContent = newValue;

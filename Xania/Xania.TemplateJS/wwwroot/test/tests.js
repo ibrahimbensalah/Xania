@@ -50,8 +50,8 @@ var BusSubscription = (function () {
     return BusSubscription;
 }());
 // ReSharper disable once InconsistentNaming
-var ReSharperReporter = window['ReSharperReporter'];
+var ReSharperReporter = window["ReSharperReporter"];
 (function (done) {
-    window.onbeforeunload = function () { return done(); };
+    ///....
 })(ReSharperReporter.prototype.jasmineDone);
 ReSharperReporter.prototype.jasmineDone = function () { return void 0; };

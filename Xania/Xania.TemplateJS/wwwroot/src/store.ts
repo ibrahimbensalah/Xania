@@ -5,6 +5,10 @@
             dispose();
         }
 
+        export interface IObservable<T> {
+            subscriber(observer: IObserver<T>);
+        }
+
         export interface IObserver<T> {
             onNext?(v: T);
             onDone?();

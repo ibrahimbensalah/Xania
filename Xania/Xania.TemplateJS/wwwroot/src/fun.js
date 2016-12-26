@@ -209,16 +209,61 @@ var Xania;
                 this.parts = parts;
             }
             Template.prototype.execute = function (context, provider) {
+                var _this = this;
                 if (provider === void 0) { provider = DefaultRuntimeProvider; }
                 if (this.parts.length === 0)
                     return "";
                 if (this.parts.length === 1)
                     return this.executePart(this.parts[0], context, provider);
-                var result = "";
-                for (var i = 0; i < this.parts.length; i++) {
-                    result += this.executePart(this.parts[i], context, provider);
+                return this.join(this.parts.map(function (p) { return _this.executePart(p, context, provider); }));
+            };
+            Template.prototype.join = function (streams) {
+                var observer = {
+                    values: new Array(streams.length),
+                    observers: [],
+                    subscribe: function (observer) {
+                        this.observers.push(observer);
+                        var result = this.valueOf();
+                        if (result !== undefined) {
+                            observer.onNext(result);
+                        }
+                    },
+                    set: function (idx, value) {
+                        if (this.values[idx] !== value) {
+                            this.values[idx] = value;
+                            this.notify();
+                        }
+                    },
+                    notify: function () {
+                        var result = this.valueOf();
+                        if (result !== undefined)
+                            for (var e = 0; e < this.observers.length; e++) {
+                                this.observers[e].onNext(result);
+                            }
+                    },
+                    valueOf: function () {
+                        for (var i = 0; i < this.values.length; i++) {
+                            if (this.values[i] === undefined)
+                                return undefined;
+                        }
+                        return this.values.join('');
+                    }
+                };
+                for (var i = 0; i < streams.length; i++) {
+                    var st = streams[i].valueOf();
+                    if (!!st.subscribe) {
+                        st.subscribe({
+                            idx: i,
+                            onNext: function (v) {
+                                observer.set(this.idx, v);
+                            }
+                        });
+                    }
+                    else {
+                        observer.set(i, st);
+                    }
                 }
-                return result;
+                return observer;
             };
             Template.prototype.executePart = function (part, context, provider) {
                 if (typeof part === "string")

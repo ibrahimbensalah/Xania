@@ -31,7 +31,6 @@
             }
 
             invoke(root, invocable, args: any[]) {
-
                 var runtime = {
                     binding: this,
                     get(target, name) {
@@ -112,8 +111,18 @@
             }
 
             render(context) {
-                const newValue = this.modelAccessor.execute(context, this).valueOf();
-                this.setText(newValue);
+                var binding = this;
+                const newValue = this.modelAccessor.execute(context, this);
+
+                if (!!newValue && !!newValue.subscribe) {
+                    newValue.subscribe({
+                        onNext(v) {
+                            binding.setText(v);
+                        }
+                    });
+                } else {
+                    this.setText(newValue.valueOf());
+                }
             }
 
             setText(newValue) {
