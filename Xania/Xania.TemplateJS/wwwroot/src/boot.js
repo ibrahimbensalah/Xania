@@ -1,5 +1,5 @@
 /// <reference path="../../node_modules/@types/core-js/index.d.ts" />
-/// <reference path="binding.ts" />
+/// <reference path="dom.ts" />
 var Xania;
 (function (Xania) {
     function domReady(fn) {
@@ -20,7 +20,7 @@ var Xania;
                 nameAttr = dom.attributes["model"];
                 var model = eval('(' + nameAttr.value + ')');
                 store = new Xania.Data.Store(model, [Xania.Core.List, Xania.Core.Math, Xania.Core.Dates].reduce(function (x, y) { return Object.assign(x, y); }, {}));
-                fragment = Xania.Bind.bind(dom, store);
+                fragment = Xania.Dom.bind(dom, store);
                 dom.parentNode.insertBefore(fragment, dom);
                 if (!!model.init) {
                     model.init(store);
@@ -35,10 +35,10 @@ var Xania;
                         model_1[attr.name] = eval(attr.value);
                     }
                     var template_1 = dom;
-                    Xania.Bind.importView(dom.nodeName + ".html")
+                    Xania.Dom.importView(dom.nodeName + ".html")
                         .then(function (dom) {
                         var store = new Xania.Data.Store(model_1, [Xania.Core.List, Xania.Core.Math, Xania.Core.Dates].reduce(function (x, y) { return Object.assign(x, y); }, {}));
-                        var fragment = Xania.Bind.bind(dom, store);
+                        var fragment = Xania.Dom.bind(dom, store);
                         template_1.parentNode.insertBefore(fragment, template_1);
                     });
                 }

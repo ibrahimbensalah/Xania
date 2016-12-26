@@ -1,6 +1,16 @@
 ﻿module Xania {
     export module Data {
 
+        export interface ISubscription {
+            dispose();
+        }
+
+        export interface IObserver<T> {
+            onNext?(v: T);
+            onDone?();
+            onError?();
+        }
+
         export interface ISubscriber {
             notify();
         }

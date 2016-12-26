@@ -1,5 +1,5 @@
 ﻿/// <reference path="../../node_modules/@types/core-js/index.d.ts" />
-/// <reference path="binding.ts" />
+/// <reference path="dom.ts" />
 
 module Xania {
     function domReady(fn) {
@@ -25,7 +25,7 @@ module Xania {
                 var store = new Data.Store(model,
                     [Core.List, Core.Math, Core.Dates].reduce((x, y) => Object.assign(x, y), {}));
 
-                var fragment = Bind.bind(dom, store);
+                var fragment = Dom.bind(dom, store);
                 dom.parentNode.insertBefore(fragment, dom);
 
                 if (!!model.init) {
@@ -40,12 +40,12 @@ module Xania {
                         model[attr.name] = eval(attr.value);
                     }
                     let template = dom;
-                    Bind.importView(dom.nodeName + ".html")
+                    Dom.importView(dom.nodeName + ".html")
                         .then(dom => {
                             var store = new Data.Store(model,
                                 [Core.List, Core.Math, Core.Dates].reduce((x, y) => Object.assign(x, y), {}));
 
-                            var fragment = Bind.bind(dom, store);
+                            var fragment = Dom.bind(dom, store);
                             template.parentNode.insertBefore(fragment, template);
                         });
                 } else {
