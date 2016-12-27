@@ -50,23 +50,27 @@
 
         execute(context, runtimeProvider: IRuntimeProvider = DefaultRuntimeProvider) {
 
-            var fun: Function = !!this.fun.execute ? this.fun.execute(context, runtimeProvider) : this.fun;
-            // var fun: Function = this.fun.execute(context, runtimeProvider);
             var args = this.args.map(x => x.execute(context, runtimeProvider));
+
+            var fun: Function = !!this.fun.execute ? this.fun.execute(context, runtimeProvider) : this.fun;
+
+            // var fun: Function = this.fun.execute(context, runtimeProvider);
 
             return runtimeProvider.invoke(fun, args);
         }
     }
 
-    export class Not {
+    export class Not implements IExpr{
         static inverse(x) {
             return !x;
         }
-        static execute(context, runtimeProvider: IRuntimeProvider = DefaultRuntimeProvider) {
-            return Not.inverse;
+
+        constructor(private expr: IExpr) {
+            
         }
-        static app(boolExpr: IExpr) {
-            return new App(Not, [ boolExpr ] );
+
+        execute(context, runtimeProvider: IRuntimeProvider) {
+            
         }
     }
 

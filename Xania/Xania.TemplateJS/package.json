@@ -3,7 +3,8 @@
   "name": "asp.net",
   "private": true,
   "devDependencies": {
+    "@types/core-js": "^0.9.35",
     "@types/jasmine": "^2.5.38",
-    "phantomjs": "2.1.7" 
+    "phantomjs": "2.1.7"
   }
 }
