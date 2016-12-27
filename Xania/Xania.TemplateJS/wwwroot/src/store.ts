@@ -27,6 +27,105 @@
             update(context: any);
         }
 
+        class Subscription implements Xania.Data.ISubscription {
+            constructor(private observers, private observer) {
+            }
+
+            dispose() {
+                var idx = this.observers.indexOf(this.observer);
+                if (idx >= 0)
+                    this.observers.splice(idx, 1);
+                else
+                    console.warn("subscription is not found");
+            }
+        }
+
+        export class Observable<T> implements Xania.Data.IObserver<T> {
+
+            private observers: Xania.Data.IObserver<T>[] = [];
+            private current: T;
+
+            subscribe(observer: Xania.Data.IObserver<T>): Xania.Data.ISubscription {
+                this.observers.push(observer);
+                if (this.current !== undefined) {
+                    observer.onNext(this.current);
+                }
+                return new Subscription(this.observers, observer);
+            }
+
+            map(mapper: Function) {
+                var observable = new MappedObservable<T>(mapper);
+                this.subscribe(observable);
+                return observable;
+            }
+
+            onNext(value: T) {
+                if (this.current !== value) {
+                    this.current = value;
+                    if (this.current !== undefined)
+                        for (var i = 0; i < this.observers.length; i++) {
+                            var obs = this.observers[i];
+                            obs.onNext(value);
+                        }
+                }
+            }
+        }
+
+        class MappedObservable<T> extends Observable<T> {
+            constructor(private mapper: Function) {
+                super();
+            }
+
+            onNext(value: T): void {
+                super.onNext(this.mapper(value));
+            }
+        }
+
+        export class Timer extends Observable<number> {
+            private handle;
+            private currentTime = 0;
+
+            constructor() {
+                super();
+                super.onNext(this.currentTime);
+                this.resume();
+            }
+
+            toggle() {
+                if (!!this.handle)
+                    this.pause();
+                else
+                    this.resume();
+            }
+
+            resume(): Timer {
+                if (!!this.handle) {
+                    console.warn("timer is already running");
+                } else {
+                    var startTime = new Date().getTime() - this.currentTime;
+                    this.handle = setInterval(() => {
+                        var currentTime = new Date().getTime();
+
+                        super.onNext(this.currentTime = (currentTime - startTime));
+                    },
+                        60);
+
+                    return this;
+                }
+            }
+
+            pause() {
+                if (!!this.handle) {
+                    clearInterval(this.handle);
+                } else {
+                    console.warn("timer is not running");
+                }
+                this.handle = null;
+
+                return this;
+            }
+        }
+
         export class Store implements IValue {
             private properties: { name: string; value: IValue }[] = [];
 
@@ -99,9 +198,10 @@
                         stack.push(child);
                     }
                 }
-
+                
                 dirty.forEach(d => {
-                    d.notify();
+                    if (!!d.notify)
+                        d.notify();
                 });
             }
 

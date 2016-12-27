@@ -106,7 +106,7 @@
 
             constructor(private modelAccessor, context) {
                 super();
-                this.dom = document.createTextNode("");
+                this.dom = (<any>document).createTextNode("");
                 this.context = context;
             }
 
@@ -128,7 +128,6 @@
             setText(newValue) {
                 this.dom.textContent = newValue;
             }
-
         }
 
         export class TagBinding extends DomBinding {
@@ -139,51 +138,52 @@
                 if (ns === null)
                     this.dom = document.createElement(name);
                 else {
-                    this.dom = document.createElementNS(ns, name.toLowerCase());
+                    this.dom = (<any>document).createElementNS(ns, name.toLowerCase());
                 }
 
                 this.dom.attributes["__binding"] = this;
             }
 
             render(context) {
+                this.executeAttributes(this.attributes, context, this, (attrName: string, newValue: any) => {
+                    if (!!newValue && !!newValue.subscribe) {
+                        console.debug("subscribe to ", newValue);
+                        return;
+                    }
+                    this.executeAttribute(attrName, newValue);
+                });
+                return this.dom;
+            }
+
+            private executeAttribute(attrName: string, newValue) {
                 const binding = this;
 
-                this.executeAttributes(this.attributes, context, this,
-                    function executeAttribute(attrName: string, newValue) {
-                        if (binding.attrs[attrName] === newValue)
-                            return;
-                        var oldValue = binding.attrs[attrName];
+                if (binding.attrs[attrName] === newValue)
+                    return;
+                var oldValue = binding.attrs[attrName];
 
-                        var dom = binding.dom;
-                        if (typeof newValue === "undefined" || newValue === null) {
-                            dom[attrName] = undefined;
-                            dom.removeAttribute(attrName);
-                        } else {
-                            if (typeof oldValue === "undefined") {
-                                var domAttr = document.createAttribute(attrName);
-                                domAttr.value = newValue;
-                                dom.setAttributeNode(domAttr);
-                            } else if (attrName === "class") {
-                                dom.className = newValue;
-                            } else {
-                                dom.setAttribute(attrName, newValue);
-                            }
-                        }
-                        binding.attrs[attrName] = newValue;
-                    });
-
-                return this.dom;
+                var dom = binding.dom;
+                if (typeof newValue === "undefined" || newValue === null) {
+                    dom[attrName] = undefined;
+                    dom.removeAttribute(attrName);
+                } else {
+                    if (typeof oldValue === "undefined") {
+                        var domAttr = document.createAttribute(attrName);
+                        domAttr.value = newValue;
+                        dom.setAttributeNode(domAttr);
+                    } else if (attrName === "class") {
+                        dom.className = newValue;
+                    } else {
+                        dom.setAttribute(attrName, newValue);
+                    }
+                }
+                binding.attrs[attrName] = newValue;
             }
 
             private executeAttributes(attributes, context, binding, resolve) {
                 var classes = [];
 
-                const attrs = this.attributes;
-                const length = attrs.length;
-                for (var i = 0; i < length; i++) {
-                    var { tpl, name } = attrs[i];
-                    var value = tpl.execute(context, binding);
-
+                function item(name, value) {
                     if (value !== null && value !== undefined && !!value.valueOf)
                         value = value.valueOf();
                     if (name === "checked") {
@@ -197,6 +197,24 @@
                         }
                     } else {
                         resolve(name, value);
+                    }
+                }
+
+                const attrs = this.attributes;
+                const length = attrs.length;
+                for (var i = 0; i < length; i++) {
+                    var { tpl, name } = attrs[i];
+                    var value = tpl.execute(context, binding);
+
+                    if (!!value && value.subscribe) {
+                        value.subscribe({
+                            name: name,
+                            onNext(v) {
+                                item(this.name, v);
+                            }
+                        });
+                    } else {
+                        item(name, value);
                     }
                 };
 
@@ -225,6 +243,99 @@
                     if (!!result && typeof result.value === "function")
                         result.invoke();
                 }
+            }
+        }
+
+        export class ClassBinding extends DomBinding {
+            private conditions = [];
+            private oldValue;
+
+            constructor(private parent: TagBinding, private name, private tpl: { execute }) {
+                super();
+            }
+
+            addClass(className, condition) {
+                this.conditions.push({ className, condition });
+            }
+
+            render(context) {
+                var classes = [];
+                if (this.tpl !== null) {
+                    var value = this.tpl.execute(context, this);
+                    classes.push(value);
+                }
+
+                for (var i = 0; i < this.conditions.length; i++) {
+                    var { className, condition } = this.conditions[i];
+                    if (!!condition.execute(context, this)) {
+                        classes.push(className);
+                    }
+                }
+
+                this.setAttribute("class", classes.length > 0 ? join(" ", classes) : null);
+            }
+
+            public setAttribute(attrName: string, newValue) {
+                var oldValue = this.oldValue;
+
+                var tag = this.parent.dom;
+                if (typeof newValue === "undefined" || newValue === null) {
+                    tag[attrName] = undefined;
+                    tag.removeAttribute(attrName);
+                } else {
+                    if (typeof oldValue === "undefined") {
+                        var attr = document.createAttribute(attrName);
+                        attr.value = newValue;
+                        tag.setAttributeNode(attr);
+                    } else {
+                        tag.className = newValue;
+                    }
+                }
+                this.oldValue = newValue;
+            }
+
+        }
+
+        export class AttributeBinding extends DomBinding {
+            private oldValue;
+
+            constructor(private parent : TagBinding, private name, private tpl) {
+                super();
+            }
+
+            render(context) {
+                var value = this.tpl.execute(context, this);
+
+                if (value !== null && value !== undefined && !!value.valueOf)
+                    value = value.valueOf();
+
+                var newValue;
+                if (name === "checked") {
+                    newValue = !!value ? "checked" : null;
+                } else {
+                    newValue = value;
+                }
+
+                this.setAttribute(this.name, newValue);
+            }
+
+            public setAttribute(attrName: string, newValue) {
+                var oldValue = this.oldValue;
+
+                var tag = this.parent.dom;
+                if (typeof newValue === "undefined" || newValue === null) {
+                    tag[attrName] = undefined;
+                    tag.removeAttribute(attrName);
+                } else {
+                    if (typeof oldValue === "undefined") {
+                        var attr = document.createAttribute(attrName);
+                        attr.value = newValue;
+                        tag.setAttributeNode(attr);
+                    } else {
+                        tag.setAttribute(attrName, newValue);
+                    }
+                }
+                this.oldValue = newValue;
             }
         }
 

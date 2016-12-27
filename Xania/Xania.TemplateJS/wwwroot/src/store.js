@@ -1,7 +1,109 @@
+var __extends = (this && this.__extends) || function (d, b) {
+    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
+    function __() { this.constructor = d; }
+    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+};
 var Xania;
 (function (Xania) {
     var Data;
     (function (Data) {
+        var Subscription = (function () {
+            function Subscription(observers, observer) {
+                this.observers = observers;
+                this.observer = observer;
+            }
+            Subscription.prototype.dispose = function () {
+                var idx = this.observers.indexOf(this.observer);
+                if (idx >= 0)
+                    this.observers.splice(idx, 1);
+                else
+                    console.warn("subscription is not found");
+            };
+            return Subscription;
+        }());
+        var Observable = (function () {
+            function Observable() {
+                this.observers = [];
+            }
+            Observable.prototype.subscribe = function (observer) {
+                this.observers.push(observer);
+                if (this.current !== undefined) {
+                    observer.onNext(this.current);
+                }
+                return new Subscription(this.observers, observer);
+            };
+            Observable.prototype.map = function (mapper) {
+                var observable = new MappedObservable(mapper);
+                this.subscribe(observable);
+                return observable;
+            };
+            Observable.prototype.onNext = function (value) {
+                if (this.current !== value) {
+                    this.current = value;
+                    if (this.current !== undefined)
+                        for (var i = 0; i < this.observers.length; i++) {
+                            var obs = this.observers[i];
+                            obs.onNext(value);
+                        }
+                }
+            };
+            return Observable;
+        }());
+        Data.Observable = Observable;
+        var MappedObservable = (function (_super) {
+            __extends(MappedObservable, _super);
+            function MappedObservable(mapper) {
+                var _this = _super.call(this) || this;
+                _this.mapper = mapper;
+                return _this;
+            }
+            MappedObservable.prototype.onNext = function (value) {
+                _super.prototype.onNext.call(this, this.mapper(value));
+            };
+            return MappedObservable;
+        }(Observable));
+        var Timer = (function (_super) {
+            __extends(Timer, _super);
+            function Timer() {
+                var _this = _super.call(this) || this;
+                _this.currentTime = 0;
+                _super.prototype.onNext.call(_this, _this.currentTime);
+                _this.resume();
+                return _this;
+            }
+            Timer.prototype.toggle = function () {
+                if (!!this.handle)
+                    this.pause();
+                else
+                    this.resume();
+            };
+            Timer.prototype.resume = function () {
+                var _this = this;
+                if (!!this.handle) {
+                    console.warn("timer is already running");
+                }
+                else {
+                    var startTime = new Date().getTime() - this.currentTime;
+                    this.handle = setInterval(function () {
+                        var currentTime = new Date().getTime();
+                        _super.prototype.onNext.call(_this, _this.currentTime = (currentTime - startTime));
+                    }, 60);
+                    return this;
+                }
+            };
+            Timer.prototype.pause = function () {
+                if (!!this.handle) {
+                    clearInterval(this.handle);
+                }
+                else {
+                    console.warn("timer is not running");
+                }
+                this.handle = null;
+                return this;
+            };
+            return Timer;
+        }(Observable));
+        Data.Timer = Timer;
         var Store = (function () {
             function Store(value, libs) {
                 this.value = value;
@@ -62,7 +164,8 @@ var Xania;
                     }
                 }
                 dirty.forEach(function (d) {
-                    d.notify();
+                    if (!!d.notify)
+                        d.notify();
                 });
             };
             Store.prototype.forEach = function (fn) {
@@ -257,7 +360,7 @@ var Xania;
                 var _this = this;
                 var args = [];
                 for (var _i = 0; _i < arguments.length; _i++) {
-                    args[_i - 0] = arguments[_i];
+                    args[_i] = arguments[_i];
                 }
                 if (args.length === 1 && typeof args[0] === "function") {
                     var component = args[0];

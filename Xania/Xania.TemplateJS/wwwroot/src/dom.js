@@ -84,8 +84,9 @@ var Xania;
         var ContentBinding = (function (_super) {
             __extends(ContentBinding, _super);
             function ContentBinding() {
-                _super.call(this);
-                this.dom = document.createDocumentFragment();
+                var _this = _super.call(this) || this;
+                _this.dom = document.createDocumentFragment();
+                return _this;
             }
             ContentBinding.prototype.render = function () {
                 return this.dom;
@@ -96,10 +97,11 @@ var Xania;
         var TextBinding = (function (_super) {
             __extends(TextBinding, _super);
             function TextBinding(modelAccessor, context) {
-                _super.call(this);
-                this.modelAccessor = modelAccessor;
-                this.dom = document.createTextNode("");
-                this.context = context;
+                var _this = _super.call(this) || this;
+                _this.modelAccessor = modelAccessor;
+                _this.dom = document.createTextNode("");
+                _this.context = context;
+                return _this;
             }
             TextBinding.prototype.render = function (context) {
                 var binding = this;
@@ -124,53 +126,58 @@ var Xania;
         var TagBinding = (function (_super) {
             __extends(TagBinding, _super);
             function TagBinding(name, ns, attributes, events) {
-                _super.call(this);
-                this.ns = ns;
-                this.attributes = attributes;
-                this.events = events;
-                this.attrs = {};
+                var _this = _super.call(this) || this;
+                _this.ns = ns;
+                _this.attributes = attributes;
+                _this.events = events;
+                _this.attrs = {};
                 if (ns === null)
-                    this.dom = document.createElement(name);
+                    _this.dom = document.createElement(name);
                 else {
-                    this.dom = document.createElementNS(ns, name.toLowerCase());
+                    _this.dom = document.createElementNS(ns, name.toLowerCase());
                 }
-                this.dom.attributes["__binding"] = this;
+                _this.dom.attributes["__binding"] = _this;
+                return _this;
             }
             TagBinding.prototype.render = function (context) {
-                var binding = this;
-                this.executeAttributes(this.attributes, context, this, function executeAttribute(attrName, newValue) {
-                    if (binding.attrs[attrName] === newValue)
+                var _this = this;
+                this.executeAttributes(this.attributes, context, this, function (attrName, newValue) {
+                    if (!!newValue && !!newValue.subscribe) {
+                        console.debug("subscribe to ", newValue);
                         return;
-                    var oldValue = binding.attrs[attrName];
-                    var dom = binding.dom;
-                    if (typeof newValue === "undefined" || newValue === null) {
-                        dom[attrName] = undefined;
-                        dom.removeAttribute(attrName);
                     }
-                    else {
-                        if (typeof oldValue === "undefined") {
-                            var domAttr = document.createAttribute(attrName);
-                            domAttr.value = newValue;
-                            dom.setAttributeNode(domAttr);
-                        }
-                        else if (attrName === "class") {
-                            dom.className = newValue;
-                        }
-                        else {
-                            dom.setAttribute(attrName, newValue);
-                        }
-                    }
-                    binding.attrs[attrName] = newValue;
+                    _this.executeAttribute(attrName, newValue);
                 });
                 return this.dom;
             };
+            TagBinding.prototype.executeAttribute = function (attrName, newValue) {
+                var binding = this;
+                if (binding.attrs[attrName] === newValue)
+                    return;
+                var oldValue = binding.attrs[attrName];
+                var dom = binding.dom;
+                if (typeof newValue === "undefined" || newValue === null) {
+                    dom[attrName] = undefined;
+                    dom.removeAttribute(attrName);
+                }
+                else {
+                    if (typeof oldValue === "undefined") {
+                        var domAttr = document.createAttribute(attrName);
+                        domAttr.value = newValue;
+                        dom.setAttributeNode(domAttr);
+                    }
+                    else if (attrName === "class") {
+                        dom.className = newValue;
+                    }
+                    else {
+                        dom.setAttribute(attrName, newValue);
+                    }
+                }
+                binding.attrs[attrName] = newValue;
+            };
             TagBinding.prototype.executeAttributes = function (attributes, context, binding, resolve) {
                 var classes = [];
-                var attrs = this.attributes;
-                var length = attrs.length;
-                for (var i = 0; i < length; i++) {
-                    var _a = attrs[i], tpl = _a.tpl, name = _a.name;
-                    var value = tpl.execute(context, binding);
+                function item(name, value) {
                     if (value !== null && value !== undefined && !!value.valueOf)
                         value = value.valueOf();
                     if (name === "checked") {
@@ -187,6 +194,23 @@ var Xania;
                     }
                     else {
                         resolve(name, value);
+                    }
+                }
+                var attrs = this.attributes;
+                var length = attrs.length;
+                for (var i = 0; i < length; i++) {
+                    var _a = attrs[i], tpl = _a.tpl, name = _a.name;
+                    var value = tpl.execute(context, binding);
+                    if (!!value && value.subscribe) {
+                        value.subscribe({
+                            name: name,
+                            onNext: function (v) {
+                                item(this.name, v);
+                            }
+                        });
+                    }
+                    else {
+                        item(name, value);
                     }
                 }
                 ;
@@ -217,14 +241,108 @@ var Xania;
             return TagBinding;
         }(DomBinding));
         Dom.TagBinding = TagBinding;
+        var ClassBinding = (function (_super) {
+            __extends(ClassBinding, _super);
+            function ClassBinding(parent, name, tpl) {
+                var _this = _super.call(this) || this;
+                _this.parent = parent;
+                _this.name = name;
+                _this.tpl = tpl;
+                _this.conditions = [];
+                return _this;
+            }
+            ClassBinding.prototype.addClass = function (className, condition) {
+                this.conditions.push({ className: className, condition: condition });
+            };
+            ClassBinding.prototype.render = function (context) {
+                var classes = [];
+                if (this.tpl !== null) {
+                    var value = this.tpl.execute(context, this);
+                    classes.push(value);
+                }
+                for (var i = 0; i < this.conditions.length; i++) {
+                    var _a = this.conditions[i], className = _a.className, condition = _a.condition;
+                    if (!!condition.execute(context, this)) {
+                        classes.push(className);
+                    }
+                }
+                this.setAttribute("class", classes.length > 0 ? join(" ", classes) : null);
+            };
+            ClassBinding.prototype.setAttribute = function (attrName, newValue) {
+                var oldValue = this.oldValue;
+                var tag = this.parent.dom;
+                if (typeof newValue === "undefined" || newValue === null) {
+                    tag[attrName] = undefined;
+                    tag.removeAttribute(attrName);
+                }
+                else {
+                    if (typeof oldValue === "undefined") {
+                        var attr = document.createAttribute(attrName);
+                        attr.value = newValue;
+                        tag.setAttributeNode(attr);
+                    }
+                    else {
+                        tag.className = newValue;
+                    }
+                }
+                this.oldValue = newValue;
+            };
+            return ClassBinding;
+        }(DomBinding));
+        Dom.ClassBinding = ClassBinding;
+        var AttributeBinding = (function (_super) {
+            __extends(AttributeBinding, _super);
+            function AttributeBinding(parent, name, tpl) {
+                var _this = _super.call(this) || this;
+                _this.parent = parent;
+                _this.name = name;
+                _this.tpl = tpl;
+                return _this;
+            }
+            AttributeBinding.prototype.render = function (context) {
+                var value = this.tpl.execute(context, this);
+                if (value !== null && value !== undefined && !!value.valueOf)
+                    value = value.valueOf();
+                var newValue;
+                if (name === "checked") {
+                    newValue = !!value ? "checked" : null;
+                }
+                else {
+                    newValue = value;
+                }
+                this.setAttribute(this.name, newValue);
+            };
+            AttributeBinding.prototype.setAttribute = function (attrName, newValue) {
+                var oldValue = this.oldValue;
+                var tag = this.parent.dom;
+                if (typeof newValue === "undefined" || newValue === null) {
+                    tag[attrName] = undefined;
+                    tag.removeAttribute(attrName);
+                }
+                else {
+                    if (typeof oldValue === "undefined") {
+                        var attr = document.createAttribute(attrName);
+                        attr.value = newValue;
+                        tag.setAttributeNode(attr);
+                    }
+                    else {
+                        tag.setAttribute(attrName, newValue);
+                    }
+                }
+                this.oldValue = newValue;
+            };
+            return AttributeBinding;
+        }(DomBinding));
+        Dom.AttributeBinding = AttributeBinding;
         var ReactiveBinding = (function (_super) {
             __extends(ReactiveBinding, _super);
             function ReactiveBinding(tpl, target, offset) {
-                _super.call(this);
-                this.tpl = tpl;
-                this.target = target;
-                this.offset = offset;
-                this.bindings = [];
+                var _this = _super.call(this) || this;
+                _this.tpl = tpl;
+                _this.target = target;
+                _this.offset = offset;
+                _this.bindings = [];
+                return _this;
             }
             ReactiveBinding.prototype.render = function (context) {
                 var _this = this;
@@ -487,4 +605,5 @@ var Xania;
         return value;
     }
     Xania.join = join;
+    // ReSharper restore InconsistentNaming
 })(Xania || (Xania = {}));
