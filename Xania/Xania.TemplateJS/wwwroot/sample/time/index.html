@@ -3,17 +3,53 @@
 <head>
     <title></title>
     <meta charset="utf-8" />
-    <script src="../../src/fun.js"></script>
-    <script src="../../src/binding.js"></script>
-    <script src="../../src/dom.js"></script>
-    <script src="../../src/zone.js"></script>
-    <script src="../../src/boot.js"></script>
-    <script src="../../src/core.js"></script>
-    <script src="app.js"></script>
+
+    <script src="../../lib/webcomponentsjs/webcomponents-lite.js"></script>
+
+    <link rel="import" href="../../lib/paper-icon-button/paper-icon-button-light.html">
+    <link rel="import" href="../../lib/paper-styles/paper-styles.html">
+    <link rel="import" href="../../lib/paper-styles/color.html">
+    <link rel="import" href="../../lib/iron-demo-helpers/demo-snippet.html">
+    <link rel="import" href="../../lib/iron-demo-helpers/demo-pages-shared-styles.html">
+    <link rel="import" href="../../lib/iron-icons/iron-icons.html">
+
+    <style is="custom-style">
+        button[is=paper-icon-button-light] {
+            width: 40px;
+            height: 40px;
+            padding: 8px;
+            margin: 10px;
+        }
+
+            button[is=paper-icon-button-light] > img {
+                width: 24px;
+                height: 24px;
+            }
+    </style>
+
 </head>
 <body>
-    <div style="margin: 40px;">
-        <time-app></time-app>
-    </div>
+<div style="margin: 40px;">
+    <time-app></time-app>
+</div>
+    
+    <button is="paper-icon-button-light" title="heart">
+        <iron-icon icon="favorite"></iron-icon>
+    </button>
+    <button is="paper-icon-button-light" title="octocat">
+        <img src="https://assets-cdn.github.com/images/modules/logos_page/Octocat.png" alt="octocat">
+    </button>
+    <button is="paper-icon-button-light" title="reply">
+        <iron-icon icon="arrow-drop-up"></iron-icon>
+    </button>
+
+    <script src="../../src/fun.js"></script>
+    <script src="../../src/template.js"></script>
+    <script src="../../src/zone.js"></script>
+    <script src="../../src/core.js"></script>
+    <script src="../../src/store.js"></script>
+    <script src="../../src/dom.js"></script>
+    <script src="app.js"></script>
+    <script src="../../src/boot.js"></script>
 </body>
 </html>

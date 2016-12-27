@@ -19,6 +19,7 @@ x64/
 x86/
 bld/
 [Bb]in/
+wwwroot/lib/
 
 # Visual Studio 2015 cache/options directory
 .vs/
@@ -239,3 +240,4 @@ _Pvt_Extensions
 /Xania/Xania.WebApi/App_Data
 /Xania/Unify-v1.9.4
 /Xania/products-WB0412697.zip
+/Xania/Xania.TemplateJS/wwwroot/lib

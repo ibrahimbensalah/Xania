@@ -1,0 +1,30 @@
+﻿  .donut-chart {
+    float: left;
+  }
+
+  .square {
+    position: relative;
+    width: 100px;
+    height: 100px;
+    padding: 0 0 0 0;
+  }
+
+  svg, g, polygon {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+  }
+
+  polygon {
+    stroke: white;
+    stroke-width: 3;
+    -webkit-transition: opacity 0.2s;
+    transition: opacity 0.2s;
+  }
+
+  text {
+    text-anchor: middle;
+    font-size: 1.2em;
+    font-weight: 900;
+    fill: #999;
+  }
