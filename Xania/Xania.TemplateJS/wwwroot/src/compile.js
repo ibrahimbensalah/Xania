@@ -8,28 +8,50 @@ var Xania;
             DefaultRuntimeProvider.prop = function (context, name) {
                 return context[name];
             };
-            DefaultRuntimeProvider.invoke = function (fun, args) {
+            DefaultRuntimeProvider.apply = function (fun, args) {
                 return fun.apply(null, args);
+            };
+            DefaultRuntimeProvider.global = function (name) {
+                return window[name];
             };
             return DefaultRuntimeProvider;
         }());
+        var Ident = (function () {
+            function Ident(name) {
+                this.name = name;
+            }
+            Ident.prototype.compile = function (runtimeProvider) {
+                return runtimeProvider.global(this.name);
+            };
+            Ident.prototype.toString = function () { return this.name; };
+            return Ident;
+        }());
+        Compile.Ident = Ident;
         var Member = (function () {
             function Member(name) {
                 this.name = name;
             }
-            Member.prototype.execute = function (context, runtimeProvider) {
+            Member.prototype.compile = function (runtimeProvider) {
+                var _this = this;
                 if (runtimeProvider === void 0) { runtimeProvider = DefaultRuntimeProvider; }
-                return runtimeProvider.prop(context, this.name);
+                return function (obj) { return runtimeProvider.prop(obj, _this.name); };
+            };
+            Member.prototype.toString = function () {
+                return "(." + this.name + ")";
             };
             return Member;
         }());
         Compile.Member = Member;
         var Const = (function () {
-            function Const(value) {
+            function Const(value, display) {
                 this.value = value;
+                this.display = display;
             }
-            Const.prototype.execute = function (context, runtimeProvider) {
+            Const.prototype.compile = function (runtimeProvider) {
                 return this.value;
+            };
+            Const.prototype.toString = function () {
+                return this.display || this.value;
             };
             return Const;
         }());
@@ -39,10 +61,17 @@ var Xania;
                 this.left = left;
                 this.right = right;
             }
-            Pipe.prototype.execute = function (context, runtimeProvider) {
+            Pipe.prototype.compile = function (runtimeProvider) {
                 if (runtimeProvider === void 0) { runtimeProvider = DefaultRuntimeProvider; }
-                var leftResult = this.left.execute(context, runtimeProvider);
-                return this.right.execute(leftResult, runtimeProvider);
+                var leftResult = this.left.compile(runtimeProvider);
+                var rightResult = this.right.compile(runtimeProvider);
+                return function () {
+                    var data = typeof leftResult === "function" ? leftResult() : leftResult;
+                    return rightResult(data);
+                };
+            };
+            Pipe.prototype.toString = function () {
+                return "(" + this.left + " |> " + this.right + " )";
             };
             return Pipe;
         }());
@@ -52,12 +81,17 @@ var Xania;
                 this.fun = fun;
                 this.args = args;
             }
-            App.prototype.execute = function (context, runtimeProvider) {
+            App.prototype.compile = function (runtimeProvider) {
                 if (runtimeProvider === void 0) { runtimeProvider = DefaultRuntimeProvider; }
-                var args = this.args.map(function (x) { return x.execute(context, runtimeProvider); });
-                var fun = !!this.fun.execute ? this.fun.execute(context, runtimeProvider) : this.fun;
-                // var fun: Function = this.fun.execute(context, runtimeProvider);
-                return runtimeProvider.invoke(fun, args);
+                var args = this.args.map(function (x) { return x.compile(runtimeProvider); });
+                var fun = !!this.fun.compile ? this.fun.compile(runtimeProvider) : this.fun;
+                return function (additionalArg) {
+                    if (additionalArg === void 0) { additionalArg = []; }
+                    return runtimeProvider.apply(fun, args.concat([additionalArg]));
+                };
+            };
+            App.prototype.toString = function () {
+                return this.fun.toString() + " " + this.args.map(function (x) { return x.toString(); }).join(" ") + "";
             };
             return App;
         }());
@@ -69,7 +103,15 @@ var Xania;
             Not.inverse = function (x) {
                 return !x;
             };
-            Not.prototype.execute = function (context, runtimeProvider) {
+            Not.prototype.compile = function (runtimeProvider) {
+                if (runtimeProvider === void 0) { runtimeProvider = DefaultRuntimeProvider; }
+                var value = this.expr.compile(runtimeProvider);
+                if (typeof value === "function")
+                    return function (obj) { return !value(obj); };
+                return !value;
+            };
+            Not.prototype.toString = function () {
+                return "(not " + this.expr.toString() + ")";
             };
             return Not;
         }());

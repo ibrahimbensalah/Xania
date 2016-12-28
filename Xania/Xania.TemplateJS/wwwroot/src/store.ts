@@ -1,4 +1,6 @@
 ﻿module Xania {
+    var undefined = void 0;
+
     export module Data {
 
         export interface ISubscription {
@@ -232,8 +234,6 @@
             }
 
             update() {
-                // this.context = context === undefined ? this.context : context;
-
                 const currentValue = this.parent.value[this.name];
                 if (currentValue === undefined)
                     return true;

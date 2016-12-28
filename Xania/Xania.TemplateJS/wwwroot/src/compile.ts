@@ -1,36 +1,60 @@
 ﻿module Xania.Compile {
 
-    interface IRuntimeProvider {
-        prop(context: any, name: string): any;
-        invoke(fun: Function, args: any[]);
+    export interface IRuntimeProvider {
+        prop(object: any, name: string): any;
+        apply(fun: Function, args: any[]);
+        global(name: string): any;
     }
 
     interface IExpr {
-        execute(context: any, runtimeProvider: IRuntimeProvider);
+        compile<T>(runtimeProvider: IRuntimeProvider);
     }
 
     class DefaultRuntimeProvider {
         static prop(context: any, name: string): any {
             return context[name];
         }
-        static invoke(fun: Function, args: any[]) {
+        static apply(fun: Function, args: any[]) {
             return fun.apply(null, args);
         }
+        static global(name: string) {
+            return window[name];
+        }
+    }
+
+    export class Ident implements IExpr {
+        constructor(private name: string) { }
+
+        compile(runtimeProvider: IRuntimeProvider) {
+            return runtimeProvider.global(this.name);
+        }
+
+        toString() { return this.name; }
     }
 
     export class Member implements IExpr {
 
-        constructor(private name: string) { }
-        execute(context, runtimeProvider: IRuntimeProvider = DefaultRuntimeProvider) {
-            return runtimeProvider.prop(context, this.name);
+        constructor(private name: string) {
+        }
+
+        compile(runtimeProvider: IRuntimeProvider = DefaultRuntimeProvider) : Function {
+            return obj => runtimeProvider.prop(obj, this.name);
+        }
+
+        toString() {
+            return `(.${this.name})`;
         }
     }
 
     export class Const implements IExpr {
-        constructor(private value: any) { }
+        constructor(private value: any, private display?) { }
 
-        execute(context, runtimeProvider: IRuntimeProvider) {
+        compile(runtimeProvider: IRuntimeProvider) {
             return this.value;
+        }
+
+        toString() {
+            return this.display || this.value;
         }
     }
 
@@ -38,29 +62,37 @@
 
         constructor(private left: IExpr, private right: IExpr) { }
 
-        execute(context, runtimeProvider: IRuntimeProvider = DefaultRuntimeProvider) {
-            var leftResult = this.left.execute(context, runtimeProvider);
+        compile<T>(runtimeProvider: IRuntimeProvider = DefaultRuntimeProvider) {
+            var leftResult = this.left.compile(runtimeProvider);
+            var rightResult = this.right.compile(runtimeProvider);
 
-            return this.right.execute(leftResult, runtimeProvider);
+            return () => {
+                var data = typeof leftResult === "function" ? leftResult() : leftResult;
+                return rightResult(data);
+            };
+        }
+
+        toString() {
+            return "("  + this.left + " |> " + this.right + " )";
         }
     }
 
     export class App implements IExpr {
         constructor(private fun: IExpr, private args: IExpr[]) {}
 
-        execute(context, runtimeProvider: IRuntimeProvider = DefaultRuntimeProvider) {
+        compile(runtimeProvider: IRuntimeProvider = DefaultRuntimeProvider) {
+            var args = this.args.map(x => x.compile(runtimeProvider));
+            var fun: Function = !!this.fun.compile ? this.fun.compile(runtimeProvider) : this.fun;
 
-            var args = this.args.map(x => x.execute(context, runtimeProvider));
+            return (additionalArg: any[] = []) => runtimeProvider.apply(fun, args.concat([additionalArg]));
+        }
 
-            var fun: Function = !!this.fun.execute ? this.fun.execute(context, runtimeProvider) : this.fun;
-
-            // var fun: Function = this.fun.execute(context, runtimeProvider);
-
-            return runtimeProvider.invoke(fun, args);
+        toString() {
+            return this.fun.toString() + " " + this.args.map(x => x.toString()).join(" ") + "";
         }
     }
 
-    export class Not implements IExpr{
+    export class Not implements IExpr {
         static inverse(x) {
             return !x;
         }
@@ -69,8 +101,15 @@
             
         }
 
-        execute(context, runtimeProvider: IRuntimeProvider) {
-            
+        compile(runtimeProvider: IRuntimeProvider = DefaultRuntimeProvider): boolean | Function {
+            var value = this.expr.compile(runtimeProvider);
+            if (typeof value === "function")
+                return obj => !value(obj);
+            return !value;
+        }
+
+        toString() {
+            return "(not " + this.expr.toString() + ")";
         }
     }
 

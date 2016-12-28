@@ -277,6 +277,7 @@ var Xania;
                         tag.setAttributeNode(attr);
                     }
                     else {
+                        tag[attrName] = newValue;
                         tag.setAttribute(attrName, newValue);
                     }
                 }
@@ -475,25 +476,7 @@ var Xania;
             if (!("import" in document.createElement("link"))) {
                 throw new Error("HTML import is not supported in this browser");
             }
-            var deferred = {
-                value: void 0,
-                resolvers: [],
-                notify: function (value) {
-                    this.value = value;
-                    for (var i = 0; i < this.resolvers.length; i++) {
-                        var resolver = this.resolvers[i];
-                        resolver.apply(this, [this.value].concat(args));
-                    }
-                },
-                then: function (resolve) {
-                    if (this.value !== void 0) {
-                        resolve.apply(this, [this.value].concat(args));
-                    }
-                    else {
-                        this.resolvers.push(resolve);
-                    }
-                }
-            };
+            var deferred = defer();
             var link = document.createElement('link');
             link.rel = 'import';
             link.href = view;
@@ -501,6 +484,7 @@ var Xania;
             link.onload = function (e) {
                 var link = e.target;
                 deferred.notify(link.import.querySelector("template"));
+                link.onload = null;
             };
             document.head.appendChild(link);
             return deferred;

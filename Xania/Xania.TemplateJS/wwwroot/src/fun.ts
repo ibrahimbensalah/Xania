@@ -1,4 +1,6 @@
 ﻿module Xania.Ast {
+    var undefined = void 0;
+
     interface IExpr {
         execute(context: any, provider: IRuntimeProvider);
         app(args: IExpr[]): IExpr;
@@ -56,7 +58,7 @@
 
             const target = this.targetExpr.execute(context, provider);
 
-            if (target === undefined)
+            if (target === void 0)
                 throw new Error(`${this.targetExpr.toString()} is undefined or null.`);
 
             return provider.invoke(context, target, args);
@@ -236,6 +238,7 @@
                         this.notify();
                     }
                 },
+                onNext: true,
                 notify() {
                     var result = this.valueOf();
                     if (result !== undefined)

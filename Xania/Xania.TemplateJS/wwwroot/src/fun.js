@@ -2,6 +2,7 @@ var Xania;
 (function (Xania) {
     var Ast;
     (function (Ast) {
+        var undefined = void 0;
         var Const = (function () {
             function Const(value) {
                 this.value = value;
@@ -60,7 +61,7 @@ var Xania;
                 if (provider === void 0) { provider = DefaultRuntimeProvider; }
                 var args = this.args.map(function (x) { return x.execute(context, provider); }).filter(function (x) { return x !== undefined; });
                 var target = this.targetExpr.execute(context, provider);
-                if (target === undefined)
+                if (target === void 0)
                     throw new Error(this.targetExpr.toString() + " is undefined or null.");
                 return provider.invoke(context, target, args);
             };
@@ -234,6 +235,7 @@ var Xania;
                             this.notify();
                         }
                     },
+                    onNext: true,
                     notify: function () {
                         var result = this.valueOf();
                         if (result !== undefined)

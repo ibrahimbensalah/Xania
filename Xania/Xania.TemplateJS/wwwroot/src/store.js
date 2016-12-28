@@ -5,6 +5,7 @@ var __extends = (this && this.__extends) || function (d, b) {
 };
 var Xania;
 (function (Xania) {
+    var undefined = void 0;
     var Data;
     (function (Data) {
         var Subscription = (function () {
@@ -189,7 +190,6 @@ var Xania;
                     this.subscribers.push(subscr);
             };
             Property.prototype.update = function () {
-                // this.context = context === undefined ? this.context : context;
                 var currentValue = this.parent.value[this.name];
                 if (currentValue === undefined)
                     return true;
