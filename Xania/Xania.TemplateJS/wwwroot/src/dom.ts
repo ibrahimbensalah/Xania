@@ -1,9 +1,15 @@
-﻿module Xania {
+﻿/// <reference path="template.ts" />
+/// <reference path="store.ts" />
+/// <reference path="zone.ts" />
+/// <reference path="core.ts" />
+/// <reference path="fun.ts" />
+module Xania {
     export module Dom {
+
         class DomBinding implements Data.ISubscriber {
             public state;
             protected context;
-            private subscriptions = [];
+            private subscriptions: any[] = [];
             public dom;
 
             update(context) {
@@ -111,29 +117,24 @@
             }
 
             render(context) {
-                var binding = this;
                 const newValue = this.modelAccessor.execute(context, this);
 
-                if (!!newValue && !!newValue.subscribe) {
-                    newValue.subscribe({
-                        onNext(v) {
-                            binding.setText(v);
-                        }
-                    });
+                if (!!newValue && !!newValue.onNext) {
+                    newValue.subscribe(this);
                 } else {
-                    this.setText(newValue.valueOf());
+                    this.onNext(newValue.valueOf());
                 }
             }
 
-            setText(newValue) {
+            onNext(newValue) {
                 this.dom.textContent = newValue;
             }
         }
 
         export class TagBinding extends DomBinding {
-            protected attrs = {};
-            private mutationId;
-            constructor(name: string, private ns: string, private attributes: { name: string; tpl }[], private events: Map<string, any>) {
+            private attributeBindings = [];
+
+            constructor(name: string, private ns: string, attributes: { name; tpl }[], private events) {
                 super();
                 if (ns === null)
                     this.dom = document.createElement(name);
@@ -142,83 +143,32 @@
                 }
 
                 this.dom.attributes["__binding"] = this;
+
+                var classBinding = new ClassBinding(this);
+                const length = attributes.length;
+                for (var i = 0; i < length; i++) {
+                    var attr = attributes[i];
+
+                    var attrTpl = attr.tpl;
+                    var attrName = attr.name;
+
+                    if (attrName === "class") {
+                        classBinding.setBaseClass(attrTpl);
+                    } else if (attrName.startsWith("class.")) {
+                        classBinding.addClass(attrName.substr(6), attrTpl);
+                    } else {
+                        var attrBinding = new AttributeBinding(this, attrName, attrTpl);
+                        this.attributeBindings.push(attrBinding);
+                    }
+                };
+                this.attributeBindings.push(classBinding);
             }
 
             render(context) {
-                this.executeAttributes(this.attributes, context, this, (attrName: string, newValue: any) => {
-                    if (!!newValue && !!newValue.subscribe) {
-                        console.debug("subscribe to ", newValue);
-                        return;
-                    }
-                    this.executeAttribute(attrName, newValue);
-                });
+                for (var i = 0; i < this.attributeBindings.length; i++) {
+                    this.attributeBindings[i].render(context);
+                }
                 return this.dom;
-            }
-
-            private executeAttribute(attrName: string, newValue) {
-                const binding = this;
-
-                if (binding.attrs[attrName] === newValue)
-                    return;
-                var oldValue = binding.attrs[attrName];
-
-                var dom = binding.dom;
-                if (typeof newValue === "undefined" || newValue === null) {
-                    dom[attrName] = undefined;
-                    dom.removeAttribute(attrName);
-                } else {
-                    if (typeof oldValue === "undefined") {
-                        var domAttr = document.createAttribute(attrName);
-                        domAttr.value = newValue;
-                        dom.setAttributeNode(domAttr);
-                    } else if (attrName === "class") {
-                        dom.className = newValue;
-                    } else {
-                        dom.setAttribute(attrName, newValue);
-                    }
-                }
-                binding.attrs[attrName] = newValue;
-            }
-
-            private executeAttributes(attributes, context, binding, resolve) {
-                var classes = [];
-
-                function item(name, value) {
-                    if (value !== null && value !== undefined && !!value.valueOf)
-                        value = value.valueOf();
-                    if (name === "checked") {
-                        resolve(name, !!value ? "checked" : null);
-                    } else if (name === "class") {
-                        classes.push(value);
-                    } else if (name.startsWith("class.")) {
-                        if (!!value) {
-                            var className = name.substr(6);
-                            classes.push(className);
-                        }
-                    } else {
-                        resolve(name, value);
-                    }
-                }
-
-                const attrs = this.attributes;
-                const length = attrs.length;
-                for (var i = 0; i < length; i++) {
-                    var { tpl, name } = attrs[i];
-                    var value = tpl.execute(context, binding);
-
-                    if (!!value && value.subscribe) {
-                        value.subscribe({
-                            name: name,
-                            onNext(v) {
-                                item(this.name, v);
-                            }
-                        });
-                    } else {
-                        item(name, value);
-                    }
-                };
-
-                resolve("class", classes.length > 0 ? join(" ", classes) : null);
             }
 
             trigger(name) {
@@ -249,9 +199,14 @@
         export class ClassBinding extends DomBinding {
             private conditions = [];
             private oldValue;
+            private baseClassTpl;
 
-            constructor(private parent: TagBinding, private name, private tpl: { execute }) {
+            constructor(private parent: TagBinding) {
                 super();
+            }
+
+            setBaseClass(tpl) {
+                this.baseClassTpl = tpl;
             }
 
             addClass(className, condition) {
@@ -259,15 +214,16 @@
             }
 
             render(context) {
-                var classes = [];
-                if (this.tpl !== null) {
-                    var value = this.tpl.execute(context, this);
+                this.context = context;
+                const classes = [];
+                if (!!this.baseClassTpl) {
+                    var value = this.baseClassTpl.execute(context, this).valueOf();
                     classes.push(value);
                 }
 
                 for (var i = 0; i < this.conditions.length; i++) {
                     var { className, condition } = this.conditions[i];
-                    if (!!condition.execute(context, this)) {
+                    if (!!condition.execute(context, this).valueOf()) {
                         classes.push(className);
                     }
                 }
@@ -280,7 +236,7 @@
 
                 var tag = this.parent.dom;
                 if (typeof newValue === "undefined" || newValue === null) {
-                    tag[attrName] = undefined;
+                    tag[attrName] = void 0;
                     tag.removeAttribute(attrName);
                 } else {
                     if (typeof oldValue === "undefined") {
@@ -304,27 +260,33 @@
             }
 
             render(context) {
+                this.context = context;
                 var value = this.tpl.execute(context, this);
 
-                if (value !== null && value !== undefined && !!value.valueOf)
+                if (!!value && !!value.onNext) {
+                    value.subscribe(this);
+                } else {
+                    this.onNext(value);
+                }
+            }
+
+            public onNext(value) {
+                if (value !== null && value !== void 0 && !!value.valueOf)
                     value = value.valueOf();
 
                 var newValue;
-                if (name === "checked") {
+                if (this.name === "checked") {
                     newValue = !!value ? "checked" : null;
                 } else {
                     newValue = value;
                 }
 
-                this.setAttribute(this.name, newValue);
-            }
-
-            public setAttribute(attrName: string, newValue) {
                 var oldValue = this.oldValue;
 
+                var attrName = this.name;
                 var tag = this.parent.dom;
                 if (typeof newValue === "undefined" || newValue === null) {
-                    tag[attrName] = undefined;
+                    tag[attrName] = void 0;
                     tag.removeAttribute(attrName);
                 } else {
                     if (typeof oldValue === "undefined") {
@@ -547,7 +509,7 @@
             }
 
             var deferred = {
-                value: undefined,
+                value: void 0,
                 resolvers: [],
                 notify(value) {
                     this.value = value;
@@ -557,7 +519,7 @@
                     }
                 },
                 then(resolve) {
-                    if (this.value !== undefined) {
+                    if (this.value !== void 0) {
                         resolve.apply(this, [this.value].concat(args));
                     } else {
                         this.resolvers.push(resolve);
@@ -579,10 +541,10 @@
 
         function defer() {
             return {
-                value: undefined,
+                value: void 0,
                 resolvers: [],
                 notify(value) {
-                    if (value === undefined)
+                    if (value === void 0)
                         throw new Error("undefined result");
 
                     this.value = value;
@@ -592,7 +554,7 @@
                     }
                 },
                 then(resolve) {
-                    if (this.value === undefined) {
+                    if (this.value === void 0) {
                         this.resolvers.push(resolve);
                     } else {
                         resolve.call(null, this.value);
@@ -603,7 +565,7 @@
 
         export function bind(dom: Node, store) {
 
-            var binder = new Binder([Core.List, Core.Math, Core.Dates]);
+            var binder = new Binder([Xania.Core.List, Xania.Core.Math, Xania.Core.Dates]);
 
             let fragment = document.createDocumentFragment();
             Dom.executeTemplate(store, binder.parseDom(dom), fragment, 0);
@@ -618,7 +580,7 @@
 
     export function ready(data, resolve) {
 
-        if (data !== null && data !== undefined && !!data.then)
+        if (data !== null && data !== void 0 && !!data.then)
             return data.then(resolve);
 
         if (!!resolve.execute)

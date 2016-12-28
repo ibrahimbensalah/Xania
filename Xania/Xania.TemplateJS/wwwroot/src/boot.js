@@ -1,4 +1,3 @@
-/// <reference path="../../node_modules/@types/core-js/index.d.ts" />
 /// <reference path="dom.ts" />
 var Xania;
 (function (Xania) {
@@ -14,7 +13,7 @@ var Xania;
         var container = new Xania.Data.ObjectContainer();
         // Find top level components and bind
         var stack = [document.body];
-        var _loop_1 = function () {
+        var _loop_1 = function() {
             dom = stack.pop();
             if (!!dom["content"] && !!dom.attributes["model"]) {
                 nameAttr = dom.attributes["model"];
@@ -59,3 +58,4 @@ var Xania;
     Xania.init = init;
     domReady(init);
 })(Xania || (Xania = {}));
+//# sourceMappingURL=boot.js.map

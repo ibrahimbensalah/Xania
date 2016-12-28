@@ -55,3 +55,4 @@ var ReSharperReporter = window["ReSharperReporter"];
     ///....
 })(ReSharperReporter.prototype.jasmineDone);
 ReSharperReporter.prototype.jasmineDone = function () { return void 0; };
+//# sourceMappingURL=tests.js.map

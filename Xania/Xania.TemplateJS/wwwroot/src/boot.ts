@@ -1,5 +1,4 @@
-﻿/// <reference path="../../node_modules/@types/core-js/index.d.ts" />
-/// <reference path="dom.ts" />
+﻿/// <reference path="dom.ts" />
 
 module Xania {
     function domReady(fn) {

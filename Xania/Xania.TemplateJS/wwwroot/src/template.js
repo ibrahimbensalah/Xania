@@ -100,3 +100,4 @@ var Xania;
         Template.TagTemplate = TagTemplate;
     })(Template = Xania.Template || (Xania.Template = {}));
 })(Xania || (Xania = {}));
+//# sourceMappingURL=template.js.map

@@ -20,3 +20,4 @@ window.onload = function () {
     //var greeter = new Greeter(el);
     //greeter.start();
 };
+//# sourceMappingURL=app.js.map

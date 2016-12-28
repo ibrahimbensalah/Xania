@@ -5,3 +5,4 @@ var RatingApp = (function () {
     }
     return RatingApp;
 }());
+//# sourceMappingURL=app.js.map

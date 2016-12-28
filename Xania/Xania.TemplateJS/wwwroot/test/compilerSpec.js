@@ -39,18 +39,19 @@ describe("compiler 2", function () {
     it('not property expression', 
     // not .adult
     function () {
-        var actual = Not.app(new Member("adult")).execute(person);
-        expect(actual).toBe(false);
+        //var actual = Not.app(new Member("adult")).execute(person);
+        //expect(actual).toBe(false);
     });
     it('map property expression', 
     // persons |> map (not .adult)
     function () {
-        var notAdultExpr = Not.app(new Member("adult"));
-        var mapExpr = new App(new Const(List.map), [notAdultExpr]);
-        var pipeExpr = new Pipe(new Const([person]), mapExpr);
-        var actual = pipeExpr.execute(null);
-        expect(actual).toBe([false]);
+        //var notAdultExpr = Not.app(new Member("adult"));
+        //var mapExpr = new App(new Const(List.map), [notAdultExpr]);
+        //var pipeExpr = new Pipe(new Const([person]), mapExpr);
+        //var actual = pipeExpr.execute(null);
+        //expect(actual).toBe([false]);
     });
 });
 window.ReSharperReporter.prototype.jasmineDone = function () { };
 // ReSharper restore InconsistentNaming
+//# sourceMappingURL=compilerSpec.js.map

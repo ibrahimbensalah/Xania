@@ -3,6 +3,11 @@ var __extends = (this && this.__extends) || function (d, b) {
     function __() { this.constructor = d; }
     d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
 };
+/// <reference path="template.ts" />
+/// <reference path="store.ts" />
+/// <reference path="zone.ts" />
+/// <reference path="core.ts" />
+/// <reference path="fun.ts" />
 var Xania;
 (function (Xania) {
     var Dom;
@@ -84,9 +89,8 @@ var Xania;
         var ContentBinding = (function (_super) {
             __extends(ContentBinding, _super);
             function ContentBinding() {
-                var _this = _super.call(this) || this;
-                _this.dom = document.createDocumentFragment();
-                return _this;
+                _super.call(this);
+                this.dom = document.createDocumentFragment();
             }
             ContentBinding.prototype.render = function () {
                 return this.dom;
@@ -97,27 +101,21 @@ var Xania;
         var TextBinding = (function (_super) {
             __extends(TextBinding, _super);
             function TextBinding(modelAccessor, context) {
-                var _this = _super.call(this) || this;
-                _this.modelAccessor = modelAccessor;
-                _this.dom = document.createTextNode("");
-                _this.context = context;
-                return _this;
+                _super.call(this);
+                this.modelAccessor = modelAccessor;
+                this.dom = document.createTextNode("");
+                this.context = context;
             }
             TextBinding.prototype.render = function (context) {
-                var binding = this;
                 var newValue = this.modelAccessor.execute(context, this);
-                if (!!newValue && !!newValue.subscribe) {
-                    newValue.subscribe({
-                        onNext: function (v) {
-                            binding.setText(v);
-                        }
-                    });
+                if (!!newValue && !!newValue.onNext) {
+                    newValue.subscribe(this);
                 }
                 else {
-                    this.setText(newValue.valueOf());
+                    this.onNext(newValue.valueOf());
                 }
             };
-            TextBinding.prototype.setText = function (newValue) {
+            TextBinding.prototype.onNext = function (newValue) {
                 this.dom.textContent = newValue;
             };
             return TextBinding;
@@ -126,95 +124,41 @@ var Xania;
         var TagBinding = (function (_super) {
             __extends(TagBinding, _super);
             function TagBinding(name, ns, attributes, events) {
-                var _this = _super.call(this) || this;
-                _this.ns = ns;
-                _this.attributes = attributes;
-                _this.events = events;
-                _this.attrs = {};
+                _super.call(this);
+                this.ns = ns;
+                this.events = events;
+                this.attributeBindings = [];
                 if (ns === null)
-                    _this.dom = document.createElement(name);
+                    this.dom = document.createElement(name);
                 else {
-                    _this.dom = document.createElementNS(ns, name.toLowerCase());
+                    this.dom = document.createElementNS(ns, name.toLowerCase());
                 }
-                _this.dom.attributes["__binding"] = _this;
-                return _this;
-            }
-            TagBinding.prototype.render = function (context) {
-                var _this = this;
-                this.executeAttributes(this.attributes, context, this, function (attrName, newValue) {
-                    if (!!newValue && !!newValue.subscribe) {
-                        console.debug("subscribe to ", newValue);
-                        return;
-                    }
-                    _this.executeAttribute(attrName, newValue);
-                });
-                return this.dom;
-            };
-            TagBinding.prototype.executeAttribute = function (attrName, newValue) {
-                var binding = this;
-                if (binding.attrs[attrName] === newValue)
-                    return;
-                var oldValue = binding.attrs[attrName];
-                var dom = binding.dom;
-                if (typeof newValue === "undefined" || newValue === null) {
-                    dom[attrName] = undefined;
-                    dom.removeAttribute(attrName);
-                }
-                else {
-                    if (typeof oldValue === "undefined") {
-                        var domAttr = document.createAttribute(attrName);
-                        domAttr.value = newValue;
-                        dom.setAttributeNode(domAttr);
-                    }
-                    else if (attrName === "class") {
-                        dom.className = newValue;
-                    }
-                    else {
-                        dom.setAttribute(attrName, newValue);
-                    }
-                }
-                binding.attrs[attrName] = newValue;
-            };
-            TagBinding.prototype.executeAttributes = function (attributes, context, binding, resolve) {
-                var classes = [];
-                function item(name, value) {
-                    if (value !== null && value !== undefined && !!value.valueOf)
-                        value = value.valueOf();
-                    if (name === "checked") {
-                        resolve(name, !!value ? "checked" : null);
-                    }
-                    else if (name === "class") {
-                        classes.push(value);
-                    }
-                    else if (name.startsWith("class.")) {
-                        if (!!value) {
-                            var className = name.substr(6);
-                            classes.push(className);
-                        }
-                    }
-                    else {
-                        resolve(name, value);
-                    }
-                }
-                var attrs = this.attributes;
-                var length = attrs.length;
+                this.dom.attributes["__binding"] = this;
+                var classBinding = new ClassBinding(this);
+                var length = attributes.length;
                 for (var i = 0; i < length; i++) {
-                    var _a = attrs[i], tpl = _a.tpl, name = _a.name;
-                    var value = tpl.execute(context, binding);
-                    if (!!value && value.subscribe) {
-                        value.subscribe({
-                            name: name,
-                            onNext: function (v) {
-                                item(this.name, v);
-                            }
-                        });
+                    var attr = attributes[i];
+                    var attrTpl = attr.tpl;
+                    var attrName = attr.name;
+                    if (attrName === "class") {
+                        classBinding.setBaseClass(attrTpl);
+                    }
+                    else if (attrName.startsWith("class.")) {
+                        classBinding.addClass(attrName.substr(6), attrTpl);
                     }
                     else {
-                        item(name, value);
+                        var attrBinding = new AttributeBinding(this, attrName, attrTpl);
+                        this.attributeBindings.push(attrBinding);
                     }
                 }
                 ;
-                resolve("class", classes.length > 0 ? join(" ", classes) : null);
+                this.attributeBindings.push(classBinding);
+            }
+            TagBinding.prototype.render = function (context) {
+                for (var i = 0; i < this.attributeBindings.length; i++) {
+                    this.attributeBindings[i].render(context);
+                }
+                return this.dom;
             };
             TagBinding.prototype.trigger = function (name) {
                 var handler = this.events.get(name);
@@ -243,26 +187,27 @@ var Xania;
         Dom.TagBinding = TagBinding;
         var ClassBinding = (function (_super) {
             __extends(ClassBinding, _super);
-            function ClassBinding(parent, name, tpl) {
-                var _this = _super.call(this) || this;
-                _this.parent = parent;
-                _this.name = name;
-                _this.tpl = tpl;
-                _this.conditions = [];
-                return _this;
+            function ClassBinding(parent) {
+                _super.call(this);
+                this.parent = parent;
+                this.conditions = [];
             }
+            ClassBinding.prototype.setBaseClass = function (tpl) {
+                this.baseClassTpl = tpl;
+            };
             ClassBinding.prototype.addClass = function (className, condition) {
                 this.conditions.push({ className: className, condition: condition });
             };
             ClassBinding.prototype.render = function (context) {
+                this.context = context;
                 var classes = [];
-                if (this.tpl !== null) {
-                    var value = this.tpl.execute(context, this);
+                if (!!this.baseClassTpl) {
+                    var value = this.baseClassTpl.execute(context, this).valueOf();
                     classes.push(value);
                 }
                 for (var i = 0; i < this.conditions.length; i++) {
                     var _a = this.conditions[i], className = _a.className, condition = _a.condition;
-                    if (!!condition.execute(context, this)) {
+                    if (!!condition.execute(context, this).valueOf()) {
                         classes.push(className);
                     }
                 }
@@ -272,7 +217,7 @@ var Xania;
                 var oldValue = this.oldValue;
                 var tag = this.parent.dom;
                 if (typeof newValue === "undefined" || newValue === null) {
-                    tag[attrName] = undefined;
+                    tag[attrName] = void 0;
                     tag.removeAttribute(attrName);
                 }
                 else {
@@ -293,30 +238,36 @@ var Xania;
         var AttributeBinding = (function (_super) {
             __extends(AttributeBinding, _super);
             function AttributeBinding(parent, name, tpl) {
-                var _this = _super.call(this) || this;
-                _this.parent = parent;
-                _this.name = name;
-                _this.tpl = tpl;
-                return _this;
+                _super.call(this);
+                this.parent = parent;
+                this.name = name;
+                this.tpl = tpl;
             }
             AttributeBinding.prototype.render = function (context) {
+                this.context = context;
                 var value = this.tpl.execute(context, this);
-                if (value !== null && value !== undefined && !!value.valueOf)
+                if (!!value && !!value.onNext) {
+                    value.subscribe(this);
+                }
+                else {
+                    this.onNext(value);
+                }
+            };
+            AttributeBinding.prototype.onNext = function (value) {
+                if (value !== null && value !== void 0 && !!value.valueOf)
                     value = value.valueOf();
                 var newValue;
-                if (name === "checked") {
+                if (this.name === "checked") {
                     newValue = !!value ? "checked" : null;
                 }
                 else {
                     newValue = value;
                 }
-                this.setAttribute(this.name, newValue);
-            };
-            AttributeBinding.prototype.setAttribute = function (attrName, newValue) {
                 var oldValue = this.oldValue;
+                var attrName = this.name;
                 var tag = this.parent.dom;
                 if (typeof newValue === "undefined" || newValue === null) {
-                    tag[attrName] = undefined;
+                    tag[attrName] = void 0;
                     tag.removeAttribute(attrName);
                 }
                 else {
@@ -337,12 +288,11 @@ var Xania;
         var ReactiveBinding = (function (_super) {
             __extends(ReactiveBinding, _super);
             function ReactiveBinding(tpl, target, offset) {
-                var _this = _super.call(this) || this;
-                _this.tpl = tpl;
-                _this.target = target;
-                _this.offset = offset;
-                _this.bindings = [];
-                return _this;
+                _super.call(this);
+                this.tpl = tpl;
+                this.target = target;
+                this.offset = offset;
+                this.bindings = [];
             }
             ReactiveBinding.prototype.render = function (context) {
                 var _this = this;
@@ -526,7 +476,7 @@ var Xania;
                 throw new Error("HTML import is not supported in this browser");
             }
             var deferred = {
-                value: undefined,
+                value: void 0,
                 resolvers: [],
                 notify: function (value) {
                     this.value = value;
@@ -536,7 +486,7 @@ var Xania;
                     }
                 },
                 then: function (resolve) {
-                    if (this.value !== undefined) {
+                    if (this.value !== void 0) {
                         resolve.apply(this, [this.value].concat(args));
                     }
                     else {
@@ -558,10 +508,10 @@ var Xania;
         Dom.importView = importView;
         function defer() {
             return {
-                value: undefined,
+                value: void 0,
                 resolvers: [],
                 notify: function (value) {
-                    if (value === undefined)
+                    if (value === void 0)
                         throw new Error("undefined result");
                     this.value = value;
                     for (var i = 0; i < this.resolvers.length; i++) {
@@ -569,7 +519,7 @@ var Xania;
                     }
                 },
                 then: function (resolve) {
-                    if (this.value === undefined) {
+                    if (this.value === void 0) {
                         this.resolvers.push(resolve);
                     }
                     else {
@@ -591,7 +541,7 @@ var Xania;
         Dom.bind = bind;
     })(Dom = Xania.Dom || (Xania.Dom = {}));
     function ready(data, resolve) {
-        if (data !== null && data !== undefined && !!data.then)
+        if (data !== null && data !== void 0 && !!data.then)
             return data.then(resolve);
         if (!!resolve.execute)
             return resolve.execute.call(resolve, data);
@@ -605,5 +555,5 @@ var Xania;
         return value;
     }
     Xania.join = join;
-    // ReSharper restore InconsistentNaming
 })(Xania || (Xania = {}));
+//# sourceMappingURL=dom.js.map

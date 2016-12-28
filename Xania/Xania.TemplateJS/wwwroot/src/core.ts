@@ -58,6 +58,7 @@
         static le(rating, max) {
             return rating <= max;
         }
+
         static assign(property, value) {
             console.debug(property, value);
         }
