@@ -108,7 +108,7 @@ describe("compiler 2", () => {
             expect(actual).toEqual(["Ibrahim", "Ramy"]);
         });
 
-    it(':: for p in people do groupBy p.adult into g select count ()',
+    it(':: for p in people do groupBy p.adult into g select g.count ()',
         () => {
             var p = new XC.Ident("p");
             var query = new XC.Query("p", new XC.Const([ramy, ibrahim, rania], "[ramy, ibrahim, rania]"));
@@ -121,10 +121,10 @@ describe("compiler 2", () => {
         });
 
     var defaultRuntime: Xania.Compile.IRuntime = {
-        prop(object: any, name: string): any {
+        get(object: any, name: string): any {
             return object[name];
         },
-        global(name: string) {
+        variable(name: string) {
             return List[name];
         },
         apply(fn, args): any {

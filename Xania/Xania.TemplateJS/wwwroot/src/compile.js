@@ -9,31 +9,40 @@ var Xania;
     (function (Compile) {
         var undefined = void 0;
         var ScopeRuntime = (function () {
-            function ScopeRuntime(parent, values) {
+            function ScopeRuntime(parent, globals) {
                 if (parent === void 0) { parent = DefaultRuntime; }
-                if (values === void 0) { values = {}; }
+                if (globals === void 0) { globals = {}; }
                 this.parent = parent;
-                this.values = values;
+                this.globals = globals;
+                this.scope = {};
             }
             ScopeRuntime.prototype.set = function (name, value) {
                 if (value === undefined) {
                     throw new Error("value is undefined");
                 }
-                this.values[name] = value;
+                if (this.variable(name) !== undefined) {
+                    throw new Error("modifying value is not permitted.");
+                }
+                this.scope[name] = value;
                 return this;
             };
-            ScopeRuntime.prototype.prop = function (object, name) {
-                return this.parent.prop(object, name);
+            ScopeRuntime.prototype.get = function (object, name) {
+                return this.parent.get(object, name);
             };
             ScopeRuntime.prototype.apply = function (fun, args, context) {
                 return this.parent.apply(fun, args, context);
             };
-            ScopeRuntime.prototype.global = function (name) {
-                var value = this.values[name];
+            ScopeRuntime.prototype.variable = function (name) {
+                var value;
+                value = this.scope[name];
                 if (value !== undefined) {
                     return value;
                 }
-                return this.parent.global(name);
+                value = this.globals[name];
+                if (value !== undefined) {
+                    return value;
+                }
+                return this.parent.variable(name);
             };
             return ScopeRuntime;
         }());
@@ -41,13 +50,16 @@ var Xania;
         var DefaultRuntime = (function () {
             function DefaultRuntime() {
             }
-            DefaultRuntime.prop = function (context, name) {
-                return context[name];
+            DefaultRuntime.get = function (context, name) {
+                var value = context[name];
+                if (typeof value === "function")
+                    value = value.bind(context);
+                return value;
             };
             DefaultRuntime.apply = function (fun, args, context) {
                 return fun.apply(context, args);
             };
-            DefaultRuntime.global = function (name) {
+            DefaultRuntime.variable = function (name) {
                 return window[name];
             };
             return DefaultRuntime;
@@ -57,30 +69,33 @@ var Xania;
                 this.name = name;
             }
             Ident.prototype.execute = function (runtime) {
-                return runtime.global(this.name);
+                return runtime.variable(this.name);
             };
             Ident.prototype.toString = function () { return this.name; };
             Ident.prototype.app = function (args) {
-                return new App(this, args, null);
+                return new App(this, args);
             };
             return Ident;
         }());
         Compile.Ident = Ident;
         var Member = (function () {
-            function Member(target, name) {
+            function Member(target, member) {
                 this.target = target;
-                this.name = name;
+                this.member = member;
             }
             Member.prototype.execute = function (runtime) {
                 if (runtime === void 0) { runtime = DefaultRuntime; }
                 var obj = this.target.execute(runtime);
-                return runtime.prop(obj, this.name);
+                if (typeof this.member === "string")
+                    return runtime.get(obj, this.member);
+                var scope = new ScopeRuntime(runtime, obj);
+                return this.member.execute(scope);
             };
             Member.prototype.toString = function () {
-                return this.target + "." + this.name;
+                return this.target + "." + this.member;
             };
             Member.prototype.app = function (args) {
-                return new App(new Ident(this.name), args, this.target);
+                return new App(this, args);
             };
             return Member;
         }());
@@ -106,7 +121,7 @@ var Xania;
                 return function () {
                     var models = [];
                     for (var _i = 0; _i < arguments.length; _i++) {
-                        models[_i] = arguments[_i];
+                        models[_i - 0] = arguments[_i];
                     }
                     var scope = new ScopeRuntime(runtime);
                     for (var i = 0; i < _this.modelNames.length; i++) {
@@ -122,13 +137,13 @@ var Xania;
             Lambda.prototype.app = function (args) {
                 if (args.length !== this.modelNames.length)
                     throw new Error("arguments mismatch");
-                return new App(this, args, null);
+                return new App(this, args);
             };
             Lambda.prototype.toString = function () {
                 return "(fun " + this.modelNames.join(" ") + " -> " + this.body + ")";
             };
             Lambda.member = function (name) {
-                return new Lambda(["m"], new Member(new Ident("m"), name));
+                return new Lambda(["m"], new Member(new Ident("m"), new Ident(name)));
             };
             return Lambda;
         }());
@@ -145,7 +160,7 @@ var Xania;
                 return this.display || this.value;
             };
             Const.prototype.app = function (args) {
-                return new App(this, args, null);
+                return new App(this, args);
             };
             return Const;
         }());
@@ -222,12 +237,11 @@ var Xania;
         var Group = (function (_super) {
             __extends(Group, _super);
             function Group(parent, key, into) {
-                var _this = _super.call(this, parent) || this;
-                _this.key = key;
-                _this.into = into;
-                _this.scopes = [];
-                _super.prototype.set.call(_this, into, _this);
-                return _this;
+                _super.call(this, parent);
+                this.key = key;
+                this.into = into;
+                this.scopes = [];
+                _super.prototype.set.call(this, into, this);
             }
             Group.prototype.count = function () {
                 return this.scopes.length;
@@ -282,25 +296,16 @@ var Xania;
         }());
         Compile.Query = Query;
         var App = (function () {
-            function App(fun, args, context) {
+            function App(fun, args) {
                 if (args === void 0) { args = []; }
                 this.fun = fun;
                 this.args = args;
-                this.context = context;
             }
             App.prototype.execute = function (runtime) {
                 if (runtime === void 0) { runtime = DefaultRuntime; }
                 var args = this.args.map(function (x) { return x.execute(runtime); });
-                if (!!this.context) {
-                    var context = this.context.execute(runtime);
-                    var scope = new ScopeRuntime(runtime, context);
-                    var fun = this.fun.execute(scope);
-                    return scope.apply(fun, args, context);
-                }
-                else {
-                    var fun = this.fun.execute(runtime);
-                    return runtime.apply(fun, args);
-                }
+                var fun = this.fun.execute(runtime);
+                return runtime.apply(fun, args);
             };
             App.prototype.toString = function () {
                 if (this.args.length === 0)
@@ -308,7 +313,7 @@ var Xania;
                 return this.fun.toString() + " " + this.args.map(function (x) { return x.toString(); }).join(" ") + "";
             };
             App.prototype.app = function (args) {
-                return new App(this.fun, this.args.concat(args), this.context);
+                return new App(this.fun, this.args.concat(args));
             };
             return App;
         }());

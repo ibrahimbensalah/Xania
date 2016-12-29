@@ -89,9 +89,8 @@ var Xania;
         var ContentBinding = (function (_super) {
             __extends(ContentBinding, _super);
             function ContentBinding() {
-                var _this = _super.call(this) || this;
-                _this.dom = document.createDocumentFragment();
-                return _this;
+                _super.call(this);
+                this.dom = document.createDocumentFragment();
             }
             ContentBinding.prototype.render = function () {
                 return this.dom;
@@ -102,11 +101,10 @@ var Xania;
         var TextBinding = (function (_super) {
             __extends(TextBinding, _super);
             function TextBinding(modelAccessor, context) {
-                var _this = _super.call(this) || this;
-                _this.modelAccessor = modelAccessor;
-                _this.dom = document.createTextNode("");
-                _this.context = context;
-                return _this;
+                _super.call(this);
+                this.modelAccessor = modelAccessor;
+                this.dom = document.createTextNode("");
+                this.context = context;
             }
             TextBinding.prototype.render = function (context) {
                 var newValue = this.modelAccessor.execute(context, this);
@@ -126,17 +124,17 @@ var Xania;
         var TagBinding = (function (_super) {
             __extends(TagBinding, _super);
             function TagBinding(name, ns, attributes, events) {
-                var _this = _super.call(this) || this;
-                _this.ns = ns;
-                _this.events = events;
-                _this.attributeBindings = [];
+                _super.call(this);
+                this.ns = ns;
+                this.events = events;
+                this.attributeBindings = [];
                 if (ns === null)
-                    _this.dom = document.createElement(name);
+                    this.dom = document.createElement(name);
                 else {
-                    _this.dom = document.createElementNS(ns, name.toLowerCase());
+                    this.dom = document.createElementNS(ns, name.toLowerCase());
                 }
-                _this.dom.attributes["__binding"] = _this;
-                var classBinding = new ClassBinding(_this);
+                this.dom.attributes["__binding"] = this;
+                var classBinding = new ClassBinding(this);
                 var length = attributes.length;
                 for (var i = 0; i < length; i++) {
                     var attr = attributes[i];
@@ -149,13 +147,12 @@ var Xania;
                         classBinding.addClass(attrName.substr(6), attrTpl);
                     }
                     else {
-                        var attrBinding = new AttributeBinding(_this, attrName, attrTpl);
-                        _this.attributeBindings.push(attrBinding);
+                        var attrBinding = new AttributeBinding(this, attrName, attrTpl);
+                        this.attributeBindings.push(attrBinding);
                     }
                 }
                 ;
-                _this.attributeBindings.push(classBinding);
-                return _this;
+                this.attributeBindings.push(classBinding);
             }
             TagBinding.prototype.render = function (context) {
                 for (var i = 0; i < this.attributeBindings.length; i++) {
@@ -191,10 +188,9 @@ var Xania;
         var ClassBinding = (function (_super) {
             __extends(ClassBinding, _super);
             function ClassBinding(parent) {
-                var _this = _super.call(this) || this;
-                _this.parent = parent;
-                _this.conditions = [];
-                return _this;
+                _super.call(this);
+                this.parent = parent;
+                this.conditions = [];
             }
             ClassBinding.prototype.setBaseClass = function (tpl) {
                 this.baseClassTpl = tpl;
@@ -242,11 +238,10 @@ var Xania;
         var AttributeBinding = (function (_super) {
             __extends(AttributeBinding, _super);
             function AttributeBinding(parent, name, tpl) {
-                var _this = _super.call(this) || this;
-                _this.parent = parent;
-                _this.name = name;
-                _this.tpl = tpl;
-                return _this;
+                _super.call(this);
+                this.parent = parent;
+                this.name = name;
+                this.tpl = tpl;
             }
             AttributeBinding.prototype.render = function (context) {
                 this.context = context;
@@ -294,12 +289,11 @@ var Xania;
         var ReactiveBinding = (function (_super) {
             __extends(ReactiveBinding, _super);
             function ReactiveBinding(tpl, target, offset) {
-                var _this = _super.call(this) || this;
-                _this.tpl = tpl;
-                _this.target = target;
-                _this.offset = offset;
-                _this.bindings = [];
-                return _this;
+                _super.call(this);
+                this.tpl = tpl;
+                this.target = target;
+                this.offset = offset;
+                this.bindings = [];
             }
             ReactiveBinding.prototype.render = function (context) {
                 var _this = this;
@@ -545,6 +539,5 @@ var Xania;
         return value;
     }
     Xania.join = join;
-    // ReSharper restore InconsistentNaming
 })(Xania || (Xania = {}));
 //# sourceMappingURL=dom.js.map

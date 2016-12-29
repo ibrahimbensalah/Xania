@@ -85,7 +85,7 @@ describe("compiler 2", function () {
         var actual = select.execute();
         expect(actual).toEqual(["Ibrahim", "Ramy"]);
     });
-    it(':: for p in people do groupBy p.adult into g select count ()', function () {
+    it(':: for p in people do groupBy p.adult into g select g.count ()', function () {
         var p = new XC.Ident("p");
         var query = new XC.Query("p", new XC.Const([ramy, ibrahim, rania], "[ramy, ibrahim, rania]"));
         var groupBy = new XC.GroupBy(query, new XC.Member(p, "adult"), "g");
@@ -95,10 +95,10 @@ describe("compiler 2", function () {
         expect(actual).toEqual([2, 1]);
     });
     var defaultRuntime = {
-        prop: function (object, name) {
+        get: function (object, name) {
             return object[name];
         },
-        global: function (name) {
+        variable: function (name) {
             return List[name];
         },
         apply: function (fn, args) {

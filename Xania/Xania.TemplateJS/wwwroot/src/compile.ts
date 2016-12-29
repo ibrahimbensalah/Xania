@@ -1,38 +1,49 @@
 ﻿module Xania.Compile {
     var undefined = void 0;
     export interface IRuntime {
-        prop(object: any, name: string): any;
+        get(object: any, name: string): any;
         apply(fun: Function, args: any[], context?: any);
-        global(name: string): any;
+        variable(name: string): any;
     }
 
     export class ScopeRuntime implements IRuntime {
-        constructor(private parent: IRuntime = DefaultRuntime, private values = {}) {
+        private scope = {};
+
+        constructor(private parent: IRuntime = DefaultRuntime, private globals = {}) {
         }
 
         set(name: string, value: any) {
             if (value === undefined) {
                 throw new Error("value is undefined");
             }
-            this.values[name] = value;
+
+            if (this.variable(name) !== undefined) {
+                throw new Error("modifying value is not permitted.");
+            }
+
+            this.scope[name] = value;
             return this;
         }
 
-        prop(object, name: string) {
-            return this.parent.prop(object, name);
+        get(object, name: string) {
+            return this.parent.get(object, name);
         }
 
         apply(fun: Function, args: any[], context: any) {
             return this.parent.apply(fun, args, context);
         }
 
-        global(name: string) {
-            var value = this.values[name];
+        variable(name: string) {
+            var value;
+            value = this.scope[name];
             if (value !== undefined) {
                 return value;
             }
-
-            return this.parent.global(name);
+            value = this.globals[name];
+            if (value !== undefined) {
+                return value;
+            }
+            return this.parent.variable(name);
         }
     }
 
@@ -43,13 +54,18 @@
     }
 
     class DefaultRuntime {
-        static prop(context: any, name: string): any {
-            return context[name];
+        static get(context: any, name: string): any {
+            var value = context[name];
+
+            if (typeof value === "function")
+                value = value.bind(context);
+
+            return value;
         }
         static apply(fun: Function, args: any[], context: any) {
             return fun.apply(context, args);
         }
-        static global(name: string) {
+        static variable(name: string) {
             return window[name];
         }
     }
@@ -58,31 +74,36 @@
         constructor(public name: string) { }
 
         execute(runtime: IRuntime) {
-            return runtime.global(this.name);
+            return runtime.variable(this.name);
         }
 
         toString() { return this.name; }
 
         app(args: IExpr[]): App {
-            return new App(this, args, null);
+            return new App(this, args);
         }
     }
 
     export class Member implements IExpr {
-        constructor(private target: IExpr, private name: string) {
+        constructor(private target: IExpr, private member: string | IExpr) {
         }
 
         execute(runtime: IRuntime = DefaultRuntime): Function {
             var obj = this.target.execute(runtime);
-            return runtime.prop(obj, this.name);
+
+            if (typeof this.member === "string")
+                return runtime.get(obj, this.member);
+
+            var scope = new ScopeRuntime(runtime, obj);
+            return this.member.execute(scope);
         }
 
         toString() {
-            return `${this.target}.${this.name}`;
+            return `${this.target}.${this.member}`;
         }
 
         app(args: IExpr[]): App {
-            return new App(new Ident(this.name), args, this.target);
+            return new App(this, args);
         }
     }
 
@@ -122,15 +143,15 @@
             if (args.length !== this.modelNames.length)
                 throw new Error("arguments mismatch");
 
-            return new App(this, args, null);
-       }
+            return new App(this, args);
+        }
 
         toString() {
             return `(fun ${this.modelNames.join(" ")} -> ${this.body})`;
         }
 
         static member(name: string): Lambda {
-            return new Lambda(["m"], new Member(new Ident("m"), name));
+            return new Lambda(["m"], new Member(new Ident("m"), new Ident(name)));
         }
     }
 
@@ -146,20 +167,20 @@
         }
 
         app(args: IExpr[]): App {
-            return new App(this, args, null);
+            return new App(this, args);
         }
     }
 
     export class Pipe implements IExpr {
 
-        constructor(private left: IExpr, private right: IExpr) {}
+        constructor(private left: IExpr, private right: IExpr) { }
 
         execute(runtime: IRuntime = DefaultRuntime) {
             return this.right.app([this.left]).execute(runtime);
         }
 
         toString() {
-            return ""  + this.left + " |> " + this.right + "";
+            return "" + this.left + " |> " + this.right + "";
         }
 
         app(args: IExpr[]): App {
@@ -267,19 +288,13 @@
     }
 
     export class App implements IExpr {
-        constructor(public fun: IExpr, public args: IExpr[] = [], private context?: IExpr) {}
+        constructor(public fun: IExpr, public args: IExpr[] = []) { }
 
         execute(runtime: IRuntime = DefaultRuntime) {
             var args = this.args.map(x => x.execute(runtime));
-            if (!!this.context) {
-                var context = this.context.execute(runtime);
-                var scope = new ScopeRuntime(runtime, context);
-                let fun = this.fun.execute(scope);
-                return scope.apply(fun, args, context);
-            } else {
-                let fun: Function = this.fun.execute(runtime);
-                return runtime.apply(fun, args);
-            }
+
+            let fun: Function = this.fun.execute(runtime);
+            return runtime.apply(fun, args);
         }
 
         toString() {
@@ -289,7 +304,7 @@
         }
 
         app(args: IExpr[]) {
-            return new App(this.fun, this.args.concat(args), this.context);
+            return new App(this.fun, this.args.concat(args));
         }
     }
 
@@ -299,7 +314,7 @@
         }
 
         constructor(private expr: IExpr) {
-            
+
         }
 
         execute(runtime: IRuntime = DefaultRuntime): boolean | Function {

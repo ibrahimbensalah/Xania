@@ -2,7 +2,6 @@ var ClockApp = (function () {
     function ClockApp() {
         this.timer = new Xania.Data.Timer();
         this.seconds = this.timer.map(ClockApp.getSeconds);
-        // static map(format: (time: any) => string) { throw new Error("Not implemented"); }
     }
     ClockApp.getSeconds = function (time) {
         var totalSec = Math.floor(time / 1000);
