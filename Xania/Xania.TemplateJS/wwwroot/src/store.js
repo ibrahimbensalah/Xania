@@ -54,8 +54,9 @@ var Xania;
         var MappedObservable = (function (_super) {
             __extends(MappedObservable, _super);
             function MappedObservable(mapper) {
-                _super.call(this);
-                this.mapper = mapper;
+                var _this = _super.call(this) || this;
+                _this.mapper = mapper;
+                return _this;
             }
             MappedObservable.prototype.onNext = function (value) {
                 _super.prototype.onNext.call(this, this.mapper(value));
@@ -65,10 +66,11 @@ var Xania;
         var Timer = (function (_super) {
             __extends(Timer, _super);
             function Timer() {
-                _super.call(this);
-                this.currentTime = 0;
-                _super.prototype.onNext.call(this, this.currentTime);
-                this.resume();
+                var _this = _super.call(this) || this;
+                _this.currentTime = 0;
+                _super.prototype.onNext.call(_this, _this.currentTime);
+                _this.resume();
+                return _this;
             }
             Timer.prototype.toggle = function () {
                 if (!!this.handle)
@@ -358,7 +360,7 @@ var Xania;
                 var _this = this;
                 var args = [];
                 for (var _i = 0; _i < arguments.length; _i++) {
-                    args[_i - 0] = arguments[_i];
+                    args[_i] = arguments[_i];
                 }
                 if (args.length === 1 && typeof args[0] === "function") {
                     var component = args[0];
