@@ -174,7 +174,6 @@ describe("reactive expressions", function () {
         expect(store.dirty.length).toBe(0);
         expect(binding.value).toBe("Ramy");
         expect(binding.subscriptions.length).toBe(1);
-        loadtest();
     });
     function loadtest() {
         var object = { firstName: "Ibrahim" };
