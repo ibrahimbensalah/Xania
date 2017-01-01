@@ -8,7 +8,8 @@
     "polymer": "1.4.0",
     "paper-button": "1.0.14",
     "iron-icons": "1.2.0",
-    "iron-demo-helpers": "1.2.0"
+    "iron-demo-helpers": "1.2.0",
+    "commonjs": "0.2.0"
   },
   "resolutions": {
     "polymer": "^1.2.1"

@@ -1,15 +1,15 @@
 ﻿module Xania.Compile {
     var undefined = void 0;
-    export interface IRuntime {
+    export interface IScope {
         get(object: any, name: string): any;
-        apply(fun: Function, args: any[], context?: any);
+        // apply(fun: Function, args: any[], context?: any);
         variable(name: string): any;
     }
 
-    export class ScopeRuntime implements IRuntime {
+    export class Scope implements IScope {
         private scope = {};
 
-        constructor(private parent: IRuntime = DefaultRuntime, private globals = {}) {
+        constructor(private parent: IScope = DefaultScope, private globals = {}) {
         }
 
         set(name: string, value: any) {
@@ -29,10 +29,6 @@
             return this.parent.get(object, name);
         }
 
-        apply(fun: Function, args: any[], context: any) {
-            return this.parent.apply(fun, args, context);
-        }
-
         variable(name: string) {
             var value;
             value = this.scope[name];
@@ -48,12 +44,12 @@
     }
 
     interface IExpr {
-        execute(runtime: IRuntime);
+        execute(scope: IScope);
 
-        app(args: IExpr[]): App;
+        app(args: IExpr[]): IExpr;
     }
 
-    class DefaultRuntime {
+    class DefaultScope {
         static get(context: any, name: string): any {
             var value = context[name];
 
@@ -73,8 +69,8 @@
     export class Ident implements IExpr {
         constructor(public name: string) { }
 
-        execute(runtime: IRuntime) {
-            return runtime.variable(this.name);
+        execute(scope: IScope) {
+            return scope.variable(this.name);
         }
 
         toString() { return this.name; }
@@ -88,14 +84,13 @@
         constructor(private target: IExpr, private member: string | IExpr) {
         }
 
-        execute(runtime: IRuntime = DefaultRuntime): Function {
-            var obj = this.target.execute(runtime);
+        execute(scope: IScope = DefaultScope): Function {
+            var obj = this.target.execute(scope);
 
             if (typeof this.member === "string")
-                return runtime.get(obj, this.member);
+                return scope.get(obj, this.member);
 
-            var scope = new ScopeRuntime(runtime, obj);
-            return this.member.execute(scope);
+            return this.member.execute(new Scope(scope, obj));
         }
 
         toString() {
@@ -121,9 +116,9 @@
         constructor(private modelNames: string[], private body: IExpr) {
         }
 
-        execute(runtime: IRuntime = DefaultRuntime): Function {
+        execute(scope: IScope = DefaultScope): Function {
             return (...models) => {
-                var scope = new ScopeRuntime(runtime);
+                var childScope = new Scope(scope);
 
                 for (var i = 0; i < this.modelNames.length; i++) {
                     var n = this.modelNames[i];
@@ -132,10 +127,10 @@
                     if (v === undefined)
                         throw new Error(`value of ${n} is undefined :: ${this.toString()}`);
 
-                    scope.set(n, v);
+                    childScope.set(n, v);
                 }
 
-                return this.body.execute(scope);
+                return this.body.execute(childScope);
             };
         }
 
@@ -158,7 +153,7 @@
     export class Const implements IExpr {
         constructor(private value: any, private display?) { }
 
-        execute(runtime: IRuntime) {
+        execute(scope: IScope) {
             return this.value;
         }
 
@@ -175,8 +170,8 @@
 
         constructor(private left: IExpr, private right: IExpr) { }
 
-        execute(runtime: IRuntime = DefaultRuntime) {
-            return this.right.app([this.left]).execute(runtime);
+        execute(scope: IScope = DefaultScope) {
+            return this.right.app([this.left]).execute(scope);
         }
 
         toString() {
@@ -189,15 +184,15 @@
     }
 
     interface IQuery {
-        execute(runtime: IRuntime): Array<IRuntime>;
+        execute(scope: IScope): Array<IScope>;
     }
 
     export class Select implements IExpr {
         constructor(private query: IQuery, private selector: IExpr) {
         }
 
-        execute(runtime: IRuntime = DefaultRuntime) {
-            return this.query.execute(runtime).map(scope => this.selector.execute(scope));
+        execute(scope: IScope = DefaultScope) {
+            return this.query.execute(scope).map(scope => this.selector.execute(scope));
         }
 
         toString() {
@@ -212,8 +207,8 @@
     export class Where implements IQuery {
         constructor(private query: IQuery, private predicate: IExpr) { }
 
-        execute(runtime: IRuntime = DefaultRuntime): IRuntime[] {
-            return this.query.execute(runtime).filter(scope => this.predicate.execute(scope));
+        execute(scope: IScope = DefaultScope): IScope[] {
+            return this.query.execute(scope).filter(scope => this.predicate.execute(scope));
         }
 
         toString() {
@@ -224,8 +219,8 @@
     export class OrderBy implements IQuery {
         constructor(private query: IQuery, private selector: IExpr) { }
 
-        execute(runtime: IRuntime = DefaultRuntime): IRuntime[] {
-            return this.query.execute(runtime).sort((x, y) => this.selector.execute(x) > this.selector.execute(y) ? 1 : -1);
+        execute(scope: IScope = DefaultScope): IScope[] {
+            return this.query.execute(scope).sort((x, y) => this.selector.execute(x) > this.selector.execute(y) ? 1 : -1);
         }
 
         toString() {
@@ -233,10 +228,10 @@
         }
     }
 
-    class Group extends ScopeRuntime {
-        public scopes: IRuntime[] = [];
+    class Group extends Scope {
+        public scopes: IScope[] = [];
 
-        constructor(parent: IRuntime, public key: any, private into: string) {
+        constructor(parent: IScope, public key: any, private into: string) {
             super(parent);
 
             super.set(into, this);
@@ -250,9 +245,9 @@
     export class GroupBy implements IQuery {
         constructor(private query: IQuery, private selector: IExpr, private into: string) { }
 
-        execute(runtime: IRuntime = DefaultRuntime): IRuntime[] {
+        execute(scope: IScope = DefaultScope): IScope[] {
             var groups: Group[] = [];
-            this.query.execute(runtime).forEach(scope => {
+            this.query.execute(scope).forEach(scope => {
                 var key = this.selector.execute(scope);
 
                 var g: Group = null;
@@ -262,7 +257,7 @@
                     }
                 }
                 if (!g)
-                    groups.push(g = new Group(runtime, key, this.into));
+                    groups.push(g = new Group(scope, key, this.into));
                 g.scopes.push(scope);
             });
 
@@ -277,9 +272,9 @@
     export class Query implements IQuery {
         constructor(private itemName: string, private sourceExpr: IExpr) { }
 
-        execute(runtime: IRuntime = DefaultRuntime): Array<IRuntime> {
-            var source = this.sourceExpr.execute(runtime);
-            return source.map(item => new ScopeRuntime(runtime).set(this.itemName, item));
+        execute(scope: IScope = DefaultScope): Array<IScope> {
+            var source = this.sourceExpr.execute(scope);
+            return source.map(item => new Scope(scope).set(this.itemName, item));
         }
 
         toString() {
@@ -290,11 +285,12 @@
     export class App implements IExpr {
         constructor(public fun: IExpr, public args: IExpr[] = []) { }
 
-        execute(runtime: IRuntime = DefaultRuntime) {
-            var args = this.args.map(x => x.execute(runtime));
+        execute(scope: IScope = DefaultScope) {
+            var args = this.args.map(x => x.execute(scope));
 
-            let fun: Function = this.fun.execute(runtime);
-            return runtime.apply(fun, args);
+            var fun = this.fun.execute(scope);
+
+            return fun.apply(null, args);
         }
 
         toString() {
@@ -308,6 +304,61 @@
         }
     }
 
+    export class Unary implements IExpr {
+        constructor(private fun: IExpr, private args: IExpr[]) {
+        }
+
+        execute(scope: IScope = DefaultScope) {
+            return (arg) => {
+                var args = this.args.map(x => x.execute(scope));
+                args.push(arg);
+
+                var fun = this.fun.execute(scope);
+
+                return fun.apply(null, args);
+            }
+        }
+
+        app(args: IExpr[]): IExpr {
+            if (!!args || args.length === 0)
+                return this;
+
+            if (args.length === 1)
+                return new App(this.fun, this.args.concat(args));
+
+            throw new Error("Too many arguments");
+        }
+    }
+
+    export class Binary implements IExpr {
+        constructor(private fun: IExpr, private args: IExpr[]) {
+        }
+
+        execute(scope: IScope = DefaultScope) {
+            return (x, y) => {
+                var args = this.args.map(x => x.execute(scope));
+                args.push(x, y);
+
+                var fun = this.fun.execute(scope);
+                return fun.apply(null, args);
+            }
+        }
+
+
+        app(args: IExpr[]): IExpr {
+            if (!!args || args.length === 0)
+                return this;
+
+            if (args.length === 1)
+                return new Unary(this.fun, this.args.concat(args));
+
+            if (args.length === 2)
+                return new App(this.fun, this.args.concat(args));
+
+            throw new Error("Too many arguments");
+        }
+    }
+
     export class Not implements IExpr {
         static inverse(x) {
             return !x;
@@ -317,8 +368,8 @@
 
         }
 
-        execute(runtime: IRuntime = DefaultRuntime): boolean | Function {
-            var value = this.expr.execute(runtime);
+        execute(scope: IScope = DefaultScope): boolean | Function {
+            var value = this.expr.execute(scope);
             if (typeof value === "function")
                 return obj => !value(obj);
             return !value;

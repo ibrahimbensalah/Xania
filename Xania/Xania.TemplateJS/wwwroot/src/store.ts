@@ -47,10 +47,13 @@
             private observers: Xania.Data.IObserver<T>[] = [];
             private current: T;
 
-            subscribe(observer: Xania.Data.IObserver<T>): Xania.Data.ISubscription {
+            subscribe(observer: Xania.Data.IObserver<T> | Function): Xania.Data.ISubscription {
                 this.observers.push(observer);
                 if (this.current !== undefined) {
-                    observer.onNext(this.current);
+                    if (typeof observer === "function")
+                        (<Function>observer)(this.current);
+                    else
+                        (<IObserver<T>>observer).onNext(this.current);
                 }
                 return new Subscription(this.observers, observer);
             }
@@ -66,8 +69,11 @@
                     this.current = value;
                     if (this.current !== undefined)
                         for (var i = 0; i < this.observers.length; i++) {
-                            var obs = this.observers[i];
-                            obs.onNext(value);
+                            var observer = this.observers[i];
+                            if (typeof observer === "function")
+                                (<Function>observer)(this.current);
+                            else
+                                observer.onNext(this.current);
                         }
                 }
             }
@@ -200,7 +206,7 @@
                         stack.push(child);
                     }
                 }
-                
+
                 dirty.forEach(d => {
                     if (!!d.notify)
                         d.notify();

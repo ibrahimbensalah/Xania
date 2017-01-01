@@ -29,7 +29,10 @@ var Xania;
             Observable.prototype.subscribe = function (observer) {
                 this.observers.push(observer);
                 if (this.current !== undefined) {
-                    observer.onNext(this.current);
+                    if (typeof observer === "function")
+                        observer(this.current);
+                    else
+                        observer.onNext(this.current);
                 }
                 return new Subscription(this.observers, observer);
             };
@@ -43,8 +46,11 @@ var Xania;
                     this.current = value;
                     if (this.current !== undefined)
                         for (var i = 0; i < this.observers.length; i++) {
-                            var obs = this.observers[i];
-                            obs.onNext(value);
+                            var observer = this.observers[i];
+                            if (typeof observer === "function")
+                                observer(this.current);
+                            else
+                                observer.onNext(this.current);
                         }
                 }
             };

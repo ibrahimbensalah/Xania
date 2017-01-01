@@ -2,43 +2,41 @@
 /// <reference path="../src/core.ts" />
 /// <reference path="../src/store.ts" />
 /// <reference path="../src/compile.ts" />
+var ibrahim, ramy, rania;
+ibrahim = {
+    firstName: "Ibrahim",
+    lastName: "ben Salah",
+    adult: true
+};
+ramy = {
+    firstName: "Ramy",
+    lastName: "ben Salah",
+    adult: false
+};
+rania = {
+    firstName: "Rania",
+    lastName: "ben Salah",
+    adult: false
+};
 // ReSharper disable InconsistentNaming
-describe("compiler 2", function () {
+describe("functional expressions", function () {
     var XC = Xania.Compile;
     var List = Xania.Core.List;
-    var ibrahim, ramy, rania;
-    beforeEach(function () {
-        ibrahim = {
-            firstName: "Ibrahim",
-            lastName: "ben Salah",
-            adult: true
-        };
-        ramy = {
-            firstName: "Ramy",
-            lastName: "ben Salah",
-            adult: false
-        };
-        rania = {
-            firstName: "Rania",
-            lastName: "ben Salah",
-            adult: false
-        };
-    });
-    it(':: (.firstName)', 
+    it(":: (.firstName)", 
     // .firstName
     function () {
         var expr = XC.Lambda.member("firstName");
         console.log(":: " + expr.toString());
         var actual = expr.execute()(ibrahim);
-        expect(actual).toBe('Ibrahim');
+        expect(actual).toBe("Ibrahim");
     });
-    it(':: person |> (.firstName)', function () {
+    it(":: person |> (.firstName)", function () {
         var expr = new XC.Pipe(new XC.Const(ibrahim, "person"), XC.Lambda.member("firstName"));
         console.log(":: " + expr);
         var actual = expr.execute();
-        expect(actual).toBe('Ibrahim');
+        expect(actual).toBe("Ibrahim");
     });
-    it(':: inrement 1', 
+    it(":: inrement 1", 
     // inrement 1
     function () {
         var increment = function (x) { return (x + 1); };
@@ -47,7 +45,7 @@ describe("compiler 2", function () {
         var actual = expr.execute();
         expect(actual).toBe(2);
     });
-    it(':: not (.adult)', 
+    it(":: not (.adult)", 
     // not (.adult)
     function () {
         var notAdult = new XC.Not(XC.Lambda.member("adult"));
@@ -58,7 +56,7 @@ describe("compiler 2", function () {
         else
             fail("expected a function");
     });
-    it(':: map (not (.adult)) persons', 
+    it(":: map (not (.adult)) persons", 
     // 
     function () {
         var notAdult = new XC.Not(XC.Lambda.member("adult"));
@@ -67,7 +65,7 @@ describe("compiler 2", function () {
         var actual = mapExpr.execute();
         expect(actual).toEqual([false]);
     });
-    it(':: for p in people do where p.adult select p.firstName', function () {
+    it(":: for p in people do where p.adult select p.firstName", function () {
         var p = new XC.Ident("p");
         var query = new XC.Query("p", new XC.Const([ibrahim, ramy], "[ibrahim, ramy]"));
         var where = new XC.Where(query, new XC.Member(p, "adult"));
@@ -76,7 +74,7 @@ describe("compiler 2", function () {
         var actual = select.execute();
         expect(actual).toEqual(["Ibrahim"]);
     });
-    it(':: for p in people do orderBy p.firstName select p.firstName', function () {
+    it(":: for p in people do orderBy p.firstName select p.firstName", function () {
         var p = new XC.Ident("p");
         var query = new XC.Query("p", new XC.Const([ramy, ibrahim], "[ramy, ibrahim]"));
         var orderBy = new XC.OrderBy(query, new XC.Member(p, "firstName"));
@@ -85,7 +83,7 @@ describe("compiler 2", function () {
         var actual = select.execute();
         expect(actual).toEqual(["Ibrahim", "Ramy"]);
     });
-    it(':: for p in people do groupBy p.adult into g select g.count ()', function () {
+    it(":: for p in people do groupBy p.adult into g select g.count ()", function () {
         var p = new XC.Ident("p");
         var query = new XC.Query("p", new XC.Const([ramy, ibrahim, rania], "[ramy, ibrahim, rania]"));
         var groupBy = new XC.GroupBy(query, new XC.Member(p, "adult"), "g");
@@ -100,19 +98,16 @@ describe("compiler 2", function () {
         },
         variable: function (name) {
             return List[name];
-        },
-        apply: function (fn, args) {
-            return fn.apply(null, args);
         }
     };
-    it(':: persons |> map (not .adult)', function () {
+    it(":: persons |> map (not .adult)", function () {
         var notAdult = new XC.Not(XC.Lambda.member("adult"));
         var mapExpr = new XC.Pipe(new XC.Const([ibrahim], "everybody"), new XC.App(new XC.Ident("map"), [notAdult]));
         console.log(":: " + mapExpr);
         var actual = mapExpr.execute(defaultRuntime);
         expect(actual).toEqual([false]);
     });
-    it(':: persons |> filter (not .adult) |> map (.firstName)', function () {
+    it(":: persons |> filter (not .adult) |> map (.firstName)", function () {
         var notAdult = new XC.Not(XC.Lambda.member("adult"));
         var filterExpr = new XC.Pipe(new XC.Const([ibrahim, ramy], "everybody"), new XC.App(new XC.Ident("filter"), [notAdult]));
         var mapExpr = new XC.Pipe(filterExpr, new XC.App(new XC.Ident("map"), [XC.Lambda.member("firstName")]));
@@ -120,21 +115,19 @@ describe("compiler 2", function () {
         var actual = mapExpr.execute(defaultRuntime);
         expect(actual).toEqual(["Ramy"]);
     });
-});
-describe("Observable", function () {
-    it("scalar", function () {
-        var arr = [];
-        var stream = new Xania.Data.Observable();
-        var subscription = stream.subscribe({
-            onNext: function (v) {
-                console.log(v);
-                arr.push(v);
-            }
-        });
-        stream.onNext("a");
-        subscription.dispose();
-        stream.onNext("b");
-        expect(arr).toEqual(["a"]);
+    it(":: unary expression", function () {
+        var add = function (x, y) { return x + y; };
+        var lambda = new XC.Unary(new XC.Const(add, "add"), [new XC.Const(2)]);
+        console.log(":: " + lambda);
+        var actual = lambda.execute();
+        expect(actual(1)).toBe(3);
+    });
+    it(":: binary expression", function () {
+        var add = function (x, y) { return x + y; };
+        var lambda = new XC.Binary(new XC.Const(add, "add"), [new XC.Const(2)]);
+        console.log(":: " + lambda);
+        var actual = lambda.execute();
+        expect(actual(1, 2)).toBe(3);
     });
 });
 var ReSharperReporter = window["ReSharperReporter"];
@@ -159,6 +152,11 @@ var ReSharperReporter = window["ReSharperReporter"];
         div.style.width = "100%";
         div.appendChild(closeButton);
         document.body.appendChild(div);
+        document.addEventListener("keypress", function (evt) {
+            if (evt.keyCode === 13) {
+                closeButton.click();
+            }
+        });
     };
 })(ReSharperReporter.prototype.jasmineDone);
 // ReSharper restore InconsistentNaming
