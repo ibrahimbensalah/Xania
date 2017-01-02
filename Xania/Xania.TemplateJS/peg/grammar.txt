@@ -40,7 +40,7 @@ Program
   }
 
 Expression
-  = head:(Const / Application) tail:(_ BinaryExpression)*{
+  = head:(Const / Application) tail:(_ BindExpression)*{
     if (tail.length > 0) {
 	    var next = tail[0][1];
         return { type: "app", fun: next.fun, args: next.args.concat([ head ]) };
@@ -49,17 +49,15 @@ Expression
     }
   }
 
-BinaryExpression
-  = fun:[+] _ expr:Scalar? {
+BindExpression
+  = op:Operator _ expr:Scalar? {
   	if (expr === null) {
     	return { type: "app", fun, args: [] }
     } else {
     	return { type: "app", fun, args: [ expr ] }
     }
   }
-Binary
-  = [+]
-  
+
 Scalar
   = Const
   / "(" _ expr:Expression? _ ")" {
@@ -72,14 +70,21 @@ Const
   / Number
 
 Application
-  = fun:Identifier args:(WhiteSpace Scalar)* {
+  = fun:Function args:(WhiteSpace Scalar)* {
   	if (args.length == 0)
     	return fun;
   	return { type: "app", fun, args: args.filter(x => x[1].type != 'unit').map(x => x[1])}
   }
+
+Function
+  = Identifier
+  / "(" _ op:Operator _ ")" { return op }
   
 Identifier
   = name:IdentifierName { return { type: "ident", value: name }; }
+  
+Operator
+  = op:([=+\-|>])+ { return op.join("") }
 
 IdentifierName "identifier"
   = head:IdentifierStart tail:IdentifierPart* {
