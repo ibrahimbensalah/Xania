@@ -6,5 +6,6 @@
     "@types/jasmine": "^2.5.38",
     "phantomjs": "2.1.7"
   },
-  "dependencies": {}
+  "dependencies": {
+  }
 }

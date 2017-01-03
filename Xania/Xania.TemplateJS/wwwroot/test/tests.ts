@@ -1,5 +1,8 @@
 ﻿/// <reference path="../src/store.ts" />
 /// <reference path="../../node_modules/@types/jasmine/index.d.ts" />
+/// <reference path="interceptreporter.ts" />
+
+"use strict";
 
 describe("stream", () => {
     it("scalar",
@@ -13,6 +16,8 @@ describe("stream", () => {
                 }
             });
 
+            
+
             stream.onNext("a");
             subscription.dispose();
             stream.onNext("b");
@@ -22,8 +27,3 @@ describe("stream", () => {
 });
 
 // ReSharper disable once InconsistentNaming
-var ReSharperReporter = window["ReSharperReporter"];
-(done => {
-    ///....
-})(ReSharperReporter.prototype.jasmineDone);
-ReSharperReporter.prototype.jasmineDone = () => void 0;

@@ -41,20 +41,25 @@ Program
 
 Expression
   = head:(Const / Application) tail:(_ BindExpression)*{
-    if (tail.length > 0) {
-	    var next = tail[0][1];
-        return { type: "app", fun: next.fun, args: next.args.concat([ head ]) };
-    } else {
-    	return head;
-    }
+	return tail.reduce((h, t) => ({ type: "app", fun: t[1].fun, args: t[1].args.concat([ h ]) }), head);
+  }
+
+PipeExpression
+  = op:"|>" _ expr:Expression {
+     return { type: "app", fun:op, args: [ expr ] }
+  }
+
+AdditiveBindExpression
+  = op:[+-] _ expr:Scalar {
+     return { type: "app", fun:op, args: [ expr ] }
   }
 
 BindExpression
   = op:Operator _ expr:Scalar? {
   	if (expr === null) {
-    	return { type: "app", fun, args: [] }
+    	return { type: "app", fun:op, args: [] }
     } else {
-    	return { type: "app", fun, args: [ expr ] }
+    	return { type: "app", fun:op, args: [ expr ] }
     }
   }
 
@@ -81,7 +86,7 @@ Function
   / "(" _ op:Operator _ ")" { return op }
   
 Identifier
-  = name:IdentifierName { return { type: "ident", value: name }; }
+  = name:IdentifierName { return { type: "ident", name }; }
   
 Operator
   = op:([=+\-|>])+ { return op.join("") }

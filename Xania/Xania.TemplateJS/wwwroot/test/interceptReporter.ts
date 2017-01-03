@@ -1,7 +1,15 @@
-﻿function interceptReporter() {
+﻿var module = { exports: <any>{} };
+
+function interceptReporter() {
     var ReSharperReporter = window["ReSharperReporter"];
     (jasmineDone => {
-        ReSharperReporter.prototype.jasmineDone = () => {
+        ReSharperReporter.prototype.jasmineDone = doneArgs => {
+            if (ReSharperReporter.autoClose) {
+                jasmineDone.apply(this, doneArgs);
+                window.close();
+                return;
+            }
+            var jasmineThis = this;
             var closeButton = document.createElement("button");
             closeButton.innerHTML = "X CLOSE";
             closeButton.style.padding = "10px";
@@ -10,7 +18,7 @@
             closeButton.addEventListener("click",
                 () => {
                     try {
-                        jasmineDone();
+                        jasmineDone.apply(jasmineThis, doneArgs);
                     } catch (ex) {
                     }
                     window.close();

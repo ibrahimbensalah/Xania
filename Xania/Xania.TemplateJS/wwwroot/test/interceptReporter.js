@@ -1,7 +1,15 @@
+var module = { exports: {} };
 function interceptReporter() {
+    var _this = this;
     var ReSharperReporter = window["ReSharperReporter"];
     (function (jasmineDone) {
-        ReSharperReporter.prototype.jasmineDone = function () {
+        ReSharperReporter.prototype.jasmineDone = function (doneArgs) {
+            if (ReSharperReporter.autoClose) {
+                jasmineDone.apply(_this, doneArgs);
+                window.close();
+                return;
+            }
+            var jasmineThis = _this;
             var closeButton = document.createElement("button");
             closeButton.innerHTML = "X CLOSE";
             closeButton.style.padding = "10px";
@@ -9,7 +17,7 @@ function interceptReporter() {
             closeButton.style.margin = "0px auto";
             closeButton.addEventListener("click", function () {
                 try {
-                    jasmineDone();
+                    jasmineDone.apply(jasmineThis, doneArgs);
                 }
                 catch (ex) {
                 }

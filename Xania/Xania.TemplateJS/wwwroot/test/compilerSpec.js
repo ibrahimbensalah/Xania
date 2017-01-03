@@ -1,7 +1,9 @@
 /// <reference path="../../node_modules/@types/jasmine/index.d.ts" />
 /// <reference path="../src/core.ts" />
+/// <reference path="interceptreporter.ts" />
 /// <reference path="../src/store.ts" />
 /// <reference path="../src/compile.ts" />
+/// <reference path="../../grammar/fsharp.ts" />
 var ibrahim, ramy, rania;
 ibrahim = {
     firstName: "Ibrahim",
@@ -130,34 +132,66 @@ describe("functional expressions", function () {
         expect(actual(1, 2)).toBe(3);
     });
 });
-var ReSharperReporter = window["ReSharperReporter"];
-(function (done) {
-    ReSharperReporter.prototype.jasmineDone = function () {
-        var closeButton = document.createElement("button");
-        closeButton.innerHTML = "X CLOSE";
-        closeButton.style.padding = "10px";
-        closeButton.style.position = "absolute";
-        closeButton.style.margin = "0px auto";
-        closeButton.addEventListener("click", function () {
-            try {
-                done();
-            }
-            catch (ex) { }
-            window.close();
-        });
-        var div = document.createElement("div");
-        div.style.textAlign = "center";
-        div.style.position = "absolute";
-        div.style.top = "0";
-        div.style.width = "100%";
-        div.appendChild(closeButton);
-        document.body.appendChild(div);
-        document.addEventListener("keypress", function (evt) {
-            if (evt.keyCode === 13) {
-                closeButton.click();
-            }
-        });
-    };
-})(ReSharperReporter.prototype.jasmineDone);
-// ReSharper restore InconsistentNaming
+describe("fsharp parser", function () {
+    it(':: 1 + 2', function () {
+        var ast = module.exports.parse("1 + 2;");
+        expect(ast).toBeDefined();
+        console.log("\r\n =========== \r\n" + JSON.stringify(ast) + "\r\n ======== \r\n");
+        var expr = ast[0];
+        expect(expr.type).toBe('app');
+        console.log(JSON.stringify(ast));
+    });
+    it(':: fun a', function () {
+        var ast = module.exports.parse("fun a;");
+        expect(ast).toBeDefined();
+        console.log("\r\n =========== \r\n" + JSON.stringify(ast) + "\r\n ======== \r\n");
+        var expr = ast[0];
+        expect(expr.type).toBe('app');
+        expect(expr.fun).toEqual({ type: 'ident', name: 'fun' });
+        expect(expr.args).toEqual([{ type: "ident", name: "a" }]);
+    });
+    it(':: fun ()', function () {
+        var ast = module.exports.parse("fun ();");
+        expect(ast).toBeDefined();
+        console.log("\r\n =========== \r\n" + JSON.stringify(ast) + "\r\n ======== \r\n");
+        var expr = ast[0];
+        expect(expr.type).toBe('app');
+        expect(expr.fun).toEqual({ type: 'ident', name: 'fun' });
+        expect(expr.args.length).toBe(0);
+    });
+    it(':: (+) a b', function () {
+        var ast = module.exports.parse("(+) a b;");
+        expect(ast).toBeDefined();
+        console.log("\r\n =========== \r\n" + JSON.stringify(ast) + "\r\n ======== \r\n");
+        var expr = ast[0];
+        expect(expr).toEqual({ "type": "app", "fun": "+", "args": [{ "type": "ident", "name": "a" }, { "type": "ident", "name": "b" }] });
+    });
+    it(':: a |> b |> c', function () {
+        var ast = module.exports.parse("a |> b |> c;");
+        expect(ast).toBeDefined();
+        console.log("\r\n =========== \r\n" + JSON.stringify(ast) + "\r\n ======== \r\n");
+        var pipe1 = ast[0];
+        expect(pipe1.type).toBe("app");
+        expect(pipe1.fun).toBe("|>");
+        expect(pipe1.args[0]).toEqual({ "type": "ident", "name": "c" });
+        var pipe2 = pipe1.args[1];
+        expect(pipe2.type).toBe("app");
+        expect(pipe2.fun).toBe("|>");
+        expect(pipe2.args[0]).toEqual({ "type": "ident", "name": "b" });
+        expect(pipe2.args[1]).toEqual({ "type": "ident", "name": "a" });
+    });
+    it(':: a |> b + c', function () {
+        var ast = module.exports.parse("a |> b |> c;");
+        expect(ast).toBeDefined();
+        console.log("\r\n =========== \r\n" + JSON.stringify(ast) + "\r\n ======== \r\n");
+        var pipe = ast[0];
+        expect(pipe.type).toBe("app");
+        expect(pipe.fun).toBe("|>");
+        expect(pipe.args[0].fun).toBe("+");
+        expect(pipe.args[1].name).toBe("a");
+        var add = pipe.args[0];
+        expect(add.args[0].name).toBe("c");
+        expect(add.args[1].name).toBe("b");
+    });
+});
 //# sourceMappingURL=compilerSpec.js.map
