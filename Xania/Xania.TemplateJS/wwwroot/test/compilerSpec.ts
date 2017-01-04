@@ -3,7 +3,7 @@
 /// <reference path="interceptreporter.ts" />
 /// <reference path="../src/store.ts" />
 /// <reference path="../src/compile.ts" />
-/// <reference path="../../grammar/fsharp.ts" />
+/// <chutzpah_reference path="../../grammar/fsharp.js" />
 
 var ibrahim: { firstName: string; lastName: string; adult: boolean },
     ramy: { firstName: string; lastName: string; adult: boolean },
@@ -266,19 +266,59 @@ describe("fsharp parser", () => {
         () => {
             var ast = fsharp.parse("a >> b;");
             expect(ast).toBeDefined();
-            console.log("\r\n =========== \r\n" + JSON.stringify(ast) + "\r\n ======== \r\n");
+            console.log("\r\n =========== \r\n" + JSON.stringify(ast) + "\r\n ======== \r\n", ast);
 
-            var pipe = ast[0];
-            expect(pipe.type).toBe("pipe");
-            expect(pipe.fun).toBe("|>");
-            expect(pipe.args[0].fun).toBe("+");
-            expect(pipe.args[1].name).toBe("a");
+            var compose = ast[0];
+            expect(compose.type).toBe("compose");
+            expect(compose.fun).toBe(">>");
+            expect(compose.args[0].name).toBe("b");
+            expect(compose.args[1].name).toBe("a");
+        });
 
-            var add = pipe.args[0];
-            expect(add.args[0].name).toBe("c");
-            expect(add.args[1].name).toBe("b");
+    it(':: regression test',
+        () => {
 
-            // [{"type":"pipe","fun":"|>","args":[{"type":"ident","name":"c"},{"type":"pipe","fun":"|>","args":[{"type":"ident","name":"b"},{"type":"ident","name":"a"}]}]}]
+            var start = new Date().getTime();
+
+            var ast = fsharp.parse("a |> b >> (+) 1 |> d;");
+            for (var i = 0; i < 10000; i++) {
+                fsharp.parse("a |> b >> (+) 1 |> d;");
+            }
+            var elapsed = new Date().getTime() - start;
+
+            if (elapsed > 2000)
+                fail("too slow");
+
+            console.log("\r\n =========== \r\n" + JSON.stringify(ast) + "\r\n ======== \r\n", ast);
+
+            expect(ast).toEqual(
+                [
+                    {
+                        "type": "pipe",
+                        "fun": "|>",
+                        "args": [
+                            { "type": "ident", "name": "d" }, {
+                                "type": "pipe",
+                                "fun": "|>",
+                                "args": [
+                                    {
+                                        "type": "compose",
+                                        "fun": ">>",
+                                        "args": [
+                                            {
+                                                "type": "app", "fun": "+", "args": [
+                                                    { "type": "const", "value": 1 }
+                                                ]
+                                            },
+                                            { "type": "ident", "name": "b" }
+                                        ]
+                                    }, { "type": "ident", "name": "a" }
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            );
         });
 });
 

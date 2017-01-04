@@ -6,40 +6,52 @@
  */
 
 Program
-  = exprs:(_ Expression ";" _ "\n"?)* {
+  = exprs:(_ Expression ";" _ ?)* {
   	return exprs.map(x => x[1])
   }
 
 Expression
   = PipeExpression
-  / Application
 
 PipeExpression
-  = head:(AdditiveExpression / Application) pipes:( _ PipeBinder )* {
+  = head:CompositionExpression pipes:( _ PipeBinder )* {
 	var reducer = (prev, binder) => { 
-		var { op, operand } = binder[1];
+		var op = binder[1].op;
+		var operand = binder[1].operand;
 		return { type: "pipe", fun: op, args: [ operand, prev ] };
 	};
 	return pipes.reduce(reducer, head);
   }
 
 PipeBinder
-  = op:"|>" _ operand:(AdditiveExpression / Application) {
+  = op:"|>" _ operand:CompositionExpression {
+     return { op, operand }
+  }
+
+CompositionExpression
+  = head:AdditiveExpression comps:( _ CompositionBinder )* {
+		var reducer = (prev, binder) => { 
+			var op = binder[1].op;
+			var operand = binder[1].operand;
+			return { type: "compose", fun: op, args: [ operand, prev ] };
+		};
+	return comps.reduce(reducer, head);
+  }
+
+CompositionBinder
+  = op:">>" _ operand:AdditiveExpression {
      return { op, operand }
   }
 
 AdditiveExpression
   = head:(Term / Application) adds:( _ AdditiveBinder )* {
 		var reducer = (prev, binder) => { 
-			var { op, operand } = binder[1];
+			var op = binder[1].op;
+			var operand = binder[1].operand;
 			return { type: "app", fun: op, args: [ operand, prev ] };
 		};
 	return adds.reduce(reducer, head);
   }
-
-FunctionArgument
-  = Term
-  / Identifier
 
 AdditiveBinder
   = op:[+-] _ operand:(Term / Application) {

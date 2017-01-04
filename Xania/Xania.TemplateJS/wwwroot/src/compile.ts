@@ -59,7 +59,7 @@
             return value;
         }
         static apply(fun: Function, args: any[], context: any) {
-            return fun.apply(context, args);
+            return (<any>fun).apply(context, args);
         }
         static variable(name: string) {
             return window[name];
@@ -88,9 +88,8 @@
             var obj = this.target.execute(scope);
 
             if (typeof this.member === "string")
-                return scope.get(obj, this.member);
-
-            return this.member.execute(new Scope(scope, obj));
+                return scope.get(obj, this.member as string);
+            return (<IExpr>this.member).execute(new Scope(scope, obj));
         }
 
         toString() {

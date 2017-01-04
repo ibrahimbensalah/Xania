@@ -10,6 +10,6 @@
   "dependencies": {
   },
   "scripts": {
-    "fsharp": "pegjs -o ./grammar/fsharp.js --export-var fsharp --format globals ./grammar/fsharp.peg"
+    "fsharp": "pegjs -o ./wwwroot/src/fsharp.peg.js --optimize speed --export-var fsharp --format globals ./grammar/fsharp.peg"
   }
 }
