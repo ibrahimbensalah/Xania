@@ -32,8 +32,8 @@ function interceptReporter() {
             div.appendChild(closeButton);
             document.body.appendChild(div);
 
-            document.addEventListener("keypress",
-                evt => {
+            (<any>document).addEventListener("keypress",
+                (evt:any) => {
                     if (evt.keyCode === 13) {
                         closeButton.click();
                     }
@@ -45,5 +45,5 @@ function interceptReporter() {
 if (document.readyState !== "loading") {
     interceptReporter();
 } else {
-    document.addEventListener("DOMContentLoaded", interceptReporter);
+    (<any>document).addEventListener("DOMContentLoaded", interceptReporter);
 }

@@ -29,17 +29,20 @@ PipeBinder
   }
 
 AdditiveExpression
-  = head:Term adds:( _ AdditiveBinder )* {
-	var reducer = (prev, binder) => { 
-		var { op, operand } = binder[1];
-		return { type: "app", fun: op, args: [ operand, prev ] };
-	};
+  = head:(Term / Application) adds:( _ AdditiveBinder )* {
+		var reducer = (prev, binder) => { 
+			var { op, operand } = binder[1];
+			return { type: "app", fun: op, args: [ operand, prev ] };
+		};
 	return adds.reduce(reducer, head);
   }
-  / fun:Identifier _ args:FunctionArgument*
+
+FunctionArgument
+  = Term
+  / Identifier
 
 AdditiveBinder
-  = op:[+-] _ operand:(Term / Identifier) {
+  = op:[+-] _ operand:(Term / Application) {
      return { op, operand }
   }
 

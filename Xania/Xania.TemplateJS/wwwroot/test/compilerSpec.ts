@@ -261,5 +261,24 @@ describe("fsharp parser", () => {
 
             // [{"type":"pipe","fun":"|>","args":[{"type":"ident","name":"c"},{"type":"pipe","fun":"|>","args":[{"type":"ident","name":"b"},{"type":"ident","name":"a"}]}]}]
         });
+
+    it(':: a >> b ',
+        () => {
+            var ast = fsharp.parse("a >> b;");
+            expect(ast).toBeDefined();
+            console.log("\r\n =========== \r\n" + JSON.stringify(ast) + "\r\n ======== \r\n");
+
+            var pipe = ast[0];
+            expect(pipe.type).toBe("pipe");
+            expect(pipe.fun).toBe("|>");
+            expect(pipe.args[0].fun).toBe("+");
+            expect(pipe.args[1].name).toBe("a");
+
+            var add = pipe.args[0];
+            expect(add.args[0].name).toBe("c");
+            expect(add.args[1].name).toBe("b");
+
+            // [{"type":"pipe","fun":"|>","args":[{"type":"ident","name":"c"},{"type":"pipe","fun":"|>","args":[{"type":"ident","name":"b"},{"type":"ident","name":"a"}]}]}]
+        });
 });
 
