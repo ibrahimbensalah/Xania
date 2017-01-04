@@ -6,14 +6,13 @@
     "removeComments": false,
     "sourceMap": true,
     "target": "es5",
-    "lib": [ "es2015", "dom" ]
-    //"typeRoots": [
-    //  "node_modules/@types/"
-    //]
+    "lib": [ "dom", "es2016" ],
+    "typeRoots": [
+      "grammar/types/"
+    ]
   },
   "exclude": [
     "node_modules",
-    "wwwroot/lib",
-    "grammar"
+    "wwwroot/lib"
   ]
 }

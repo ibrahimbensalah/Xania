@@ -1,0 +1,1 @@
+pegjs -o .\grammar\fsharp.ts --export-var fsharp --format globals .\grammar\fsharp.peg

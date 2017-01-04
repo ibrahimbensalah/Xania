@@ -134,7 +134,7 @@ describe("functional expressions", function () {
 });
 describe("fsharp parser", function () {
     it(':: 1 + 2', function () {
-        var ast = module.exports.parse("1 + 2;");
+        var ast = fsharp.parse("1 + 2;");
         expect(ast).toBeDefined();
         console.log("\r\n =========== \r\n" + JSON.stringify(ast) + "\r\n ======== \r\n");
         var expr = ast[0];
@@ -142,7 +142,7 @@ describe("fsharp parser", function () {
         console.log(JSON.stringify(ast));
     });
     it(':: fun a', function () {
-        var ast = module.exports.parse("fun a;");
+        var ast = fsharp.parse("fun a;");
         expect(ast).toBeDefined();
         console.log("\r\n =========== \r\n" + JSON.stringify(ast) + "\r\n ======== \r\n");
         var expr = ast[0];
@@ -151,7 +151,7 @@ describe("fsharp parser", function () {
         expect(expr.args).toEqual([{ type: "ident", name: "a" }]);
     });
     it(':: fun ()', function () {
-        var ast = module.exports.parse("fun ();");
+        var ast = fsharp.parse("fun ();");
         expect(ast).toBeDefined();
         console.log("\r\n =========== \r\n" + JSON.stringify(ast) + "\r\n ======== \r\n");
         var expr = ast[0];
@@ -160,38 +160,39 @@ describe("fsharp parser", function () {
         expect(expr.args.length).toBe(0);
     });
     it(':: (+) a b', function () {
-        var ast = module.exports.parse("(+) a b;");
+        var ast = fsharp.parse("(+) a b;");
         expect(ast).toBeDefined();
         console.log("\r\n =========== \r\n" + JSON.stringify(ast) + "\r\n ======== \r\n");
         var expr = ast[0];
         expect(expr).toEqual({ "type": "app", "fun": "+", "args": [{ "type": "ident", "name": "a" }, { "type": "ident", "name": "b" }] });
     });
     it(':: a |> b |> c', function () {
-        var ast = module.exports.parse("a |> b |> c;");
+        var ast = fsharp.parse("a |> b |> c;");
         expect(ast).toBeDefined();
         console.log("\r\n =========== \r\n" + JSON.stringify(ast) + "\r\n ======== \r\n");
         var pipe1 = ast[0];
-        expect(pipe1.type).toBe("app");
+        expect(pipe1.type).toBe("pipe");
         expect(pipe1.fun).toBe("|>");
         expect(pipe1.args[0]).toEqual({ "type": "ident", "name": "c" });
         var pipe2 = pipe1.args[1];
-        expect(pipe2.type).toBe("app");
+        expect(pipe2.type).toBe("pipe");
         expect(pipe2.fun).toBe("|>");
         expect(pipe2.args[0]).toEqual({ "type": "ident", "name": "b" });
         expect(pipe2.args[1]).toEqual({ "type": "ident", "name": "a" });
     });
     it(':: a |> b + c', function () {
-        var ast = module.exports.parse("a |> b |> c;");
+        var ast = fsharp.parse("a |> b + c;");
         expect(ast).toBeDefined();
         console.log("\r\n =========== \r\n" + JSON.stringify(ast) + "\r\n ======== \r\n");
         var pipe = ast[0];
-        expect(pipe.type).toBe("app");
+        expect(pipe.type).toBe("pipe");
         expect(pipe.fun).toBe("|>");
         expect(pipe.args[0].fun).toBe("+");
         expect(pipe.args[1].name).toBe("a");
         var add = pipe.args[0];
         expect(add.args[0].name).toBe("c");
         expect(add.args[1].name).toBe("b");
+        // [{"type":"pipe","fun":"|>","args":[{"type":"ident","name":"c"},{"type":"pipe","fun":"|>","args":[{"type":"ident","name":"b"},{"type":"ident","name":"a"}]}]}]
     });
 });
 //# sourceMappingURL=compilerSpec.js.map

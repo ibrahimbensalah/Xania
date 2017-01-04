@@ -4,35 +4,6 @@
  *
  * Accepts expressions like "2 * (3 + 4)" and computes their value.
  */
-/* 
-Expression
-  = head:Term tail2:(_ ("+" / "-") _ Term)* _ {
-      var result = head, i;
-
-      for (i = 0; i < tail2.length; i++) {
-        if (tail2[i][1] === "+") { result += tail2[i][3]; }
-        if (tail2[i][1] === "-") { result -= tail2[i][3]; }
-      }
-
-      return result;
-    }
-
-Term
-  = head:Factor tail:(_ ("*" / "/") _ Factor)* {
-      var result = head, i;
-
-      for (i = 0; i < tail.length; i++) {
-        if (tail[i][1] === "*") { result *= tail[i][3]; }
-        if (tail[i][1] === "/") { result /= tail[i][3]; }
-      }
-
-      return result;
-    }
-
-Factor
-  = "(" _ expr:Expression _ ")" { return expr; }
-  / Integer
-*/
 
 Program
   = exprs:(_ Expression ";" _ "\n"?)* {
@@ -40,42 +11,47 @@ Program
   }
 
 Expression
-  = head:(Const / Application) tail:(_ BindExpression)*{
-	return tail.reduce((h, t) => ({ type: "app", fun: t[1].fun, args: t[1].args.concat([ h ]) }), head);
-  }
+  = PipeExpression
+  / Application
 
 PipeExpression
-  = op:"|>" _ expr:Expression {
-     return { type: "app", fun:op, args: [ expr ] }
+  = head:(AdditiveExpression / Application) pipes:( _ PipeBinder )* {
+	var reducer = (prev, binder) => { 
+		var { op, operand } = binder[1];
+		return { type: "pipe", fun: op, args: [ operand, prev ] };
+	};
+	return pipes.reduce(reducer, head);
   }
 
-AdditiveBindExpression
-  = op:[+-] _ expr:Scalar {
-     return { type: "app", fun:op, args: [ expr ] }
+PipeBinder
+  = op:"|>" _ operand:(AdditiveExpression / Application) {
+     return { op, operand }
   }
 
-BindExpression
-  = op:Operator _ expr:Scalar? {
-  	if (expr === null) {
-    	return { type: "app", fun:op, args: [] }
-    } else {
-    	return { type: "app", fun:op, args: [ expr ] }
-    }
+AdditiveExpression
+  = head:Term adds:( _ AdditiveBinder )* {
+	var reducer = (prev, binder) => { 
+		var { op, operand } = binder[1];
+		return { type: "app", fun: op, args: [ operand, prev ] };
+	};
+	return adds.reduce(reducer, head);
+  }
+  / fun:Identifier _ args:FunctionArgument*
+
+AdditiveBinder
+  = op:[+-] _ operand:(Term / Identifier) {
+     return { op, operand }
   }
 
-Scalar
-  = Const
+Term
+  = String
+  / Number
   / "(" _ expr:Expression? _ ")" {
   	return expr === null ? { type: 'unit' } : expr 
   }
-  / Identifier
-
-Const
-  = String
-  / Number
 
 Application
-  = fun:Function args:(WhiteSpace Scalar)* {
+  = fun:Function args:(_ (Term / Identifier))* {
   	if (args.length == 0)
     	return fun;
   	return { type: "app", fun, args: args.filter(x => x[1].type != 'unit').map(x => x[1])}

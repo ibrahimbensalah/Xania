@@ -1,0 +1,5 @@
+﻿{
+  "o": "./grammer/fsharp.ts",
+  "export-var": "fsharp",
+  "format": "globals"  
+}
