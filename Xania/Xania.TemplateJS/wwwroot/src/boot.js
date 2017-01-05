@@ -13,7 +13,7 @@ var Xania;
         var container = new Xania.Data.ObjectContainer();
         // Find top level components and bind
         var stack = [document.body];
-        var _loop_1 = function () {
+        var _loop_1 = function() {
             dom = stack.pop();
             if (!!dom["content"] && !!dom.attributes["model"]) {
                 nameAttr = dom.attributes["model"];

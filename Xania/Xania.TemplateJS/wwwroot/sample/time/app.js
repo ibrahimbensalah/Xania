@@ -12,8 +12,8 @@ var TimeApp = (function () {
     TimeApp.prototype.submitTime = function () {
         this.store.times.push({ date: this.date, hours: 8, notes: "" });
     };
+    // ReSharper disable once InconsistentNaming
+    TimeApp.MONTHS = ["JAN", "FEB", "MRT", "APR", "MAY", "JUN", "JUL", "AUG", "SEPT", "OCT", "NOV", "DEC"];
     return TimeApp;
 }());
-// ReSharper disable once InconsistentNaming
-TimeApp.MONTHS = ["JAN", "FEB", "MRT", "APR", "MAY", "JUN", "JUL", "AUG", "SEPT", "OCT", "NOV", "DEC"];
 //# sourceMappingURL=app.js.map

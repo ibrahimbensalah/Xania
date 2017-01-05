@@ -179,6 +179,31 @@ describe("functional expressions", () => {
 
 describe("fsharp parser", () => {
 
+    it(':: fun x -> x ',
+        () => {
+            var ast = fsharp.parse("fun x -> x;");
+            expect(ast).toBeDefined();
+            console.log("\r\n =========== \r\n" + JSON.stringify(ast) + "\r\n ======== \r\n", ast);
+
+            var compose = ast[0];
+            expect(compose.type).toBe("lambda");
+            expect(compose.param).toBe("x");
+            expect(compose.body.name).toBe("x");
+        });
+
+    it(':: .firstName ',
+        () => {
+            var ast = fsharp.parse(".firstName;");
+            expect(ast).toBeDefined();
+            console.log("\r\n =========== \r\n" + JSON.stringify(ast) + "\r\n ======== \r\n", ast);
+
+            var compose = ast[0];
+            expect(compose.type).toBe("lambda");
+            expect(compose.param).toBe("x");
+            expect(compose.body.target.name).toBe("x");
+            expect(compose.body.member.name).toBe("firstName");
+        });
+
     it(':: 1 + 2',
         () => {
             var ast = fsharp.parse("1 + 2;");
@@ -191,7 +216,7 @@ describe("fsharp parser", () => {
             console.log(JSON.stringify(ast));
         });
 
-    it(':: fun a',
+    it(':: fn a',
         () => {
             var ast = fsharp.parse("fun a;");
             expect(ast).toBeDefined();
@@ -203,7 +228,7 @@ describe("fsharp parser", () => {
             expect(expr.args).toEqual([{ type: "ident", name: "a" }]);
         });
 
-    it(':: fun ()',
+    it(':: fn ()',
         () => {
             var ast = fsharp.parse("fun ();");
             expect(ast).toBeDefined();
@@ -293,7 +318,7 @@ describe("fsharp parser", () => {
             var start = new Date().getTime();
 
             var ast = fsharp.parse("a |> b.c >> (+) 1 |> d;");
-            for (var i = 0; i < 10000; i++) {
+            for (var i = 0; i < 100; i++) {
                 fsharp.parse("a |> b >> (+) 1 |> d;");
             }
             var elapsed = new Date().getTime() - start;

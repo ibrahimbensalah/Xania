@@ -11,7 +11,16 @@ Program
   }
 
 Expression
-  = PipeExpression
+  = LambdaExpression
+  / PipeExpression
+
+LambdaExpression
+  = "fun" _ param:IdentifierName _ "->" _ body:Expression {
+	return { type: "lambda", param, body };
+  }
+  / "." ident:Identifier {
+	return { type: "lambda", param:"x", body: { type: "member", target: { type: "ident", name: "x" }, member: ident } };
+  }
 
 PipeExpression
   = head:CompositionExpression pipes:( _ PipeBinder )* {
@@ -44,7 +53,7 @@ CompositionBinder
   }
 
 AdditiveExpression
-  = head:(Term / Application) adds:( _ AdditiveBinder )* {
+  = head:(Term / ApplicativeExpression) adds:( _ AdditiveBinder )* {
 		var reducer = (prev, binder) => { 
 			var op = binder[1].op;
 			var operand = binder[1].operand;
@@ -54,7 +63,7 @@ AdditiveExpression
   }
 
 AdditiveBinder
-  = op:[+-] _ operand:(Term / Application) {
+  = op:[+-] _ operand:(Term / ApplicativeExpression) {
      return { op, operand }
   }
 
@@ -65,7 +74,7 @@ Term
   	return expr === null ? { type: 'unit' } : expr 
   }
 
-Application
+ApplicativeExpression
   = fun:Function args:(_ (Term / Identifier))* {
   	if (args.length == 0)
     	return fun;

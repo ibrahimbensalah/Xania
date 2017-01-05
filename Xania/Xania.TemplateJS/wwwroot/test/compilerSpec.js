@@ -133,6 +133,25 @@ describe("functional expressions", function () {
     });
 });
 describe("fsharp parser", function () {
+    it(':: fun x -> x ', function () {
+        var ast = fsharp.parse("fun x -> x;");
+        expect(ast).toBeDefined();
+        console.log("\r\n =========== \r\n" + JSON.stringify(ast) + "\r\n ======== \r\n", ast);
+        var compose = ast[0];
+        expect(compose.type).toBe("lambda");
+        expect(compose.param).toBe("x");
+        expect(compose.body.name).toBe("x");
+    });
+    it(':: .firstName ', function () {
+        var ast = fsharp.parse(".firstName;");
+        expect(ast).toBeDefined();
+        console.log("\r\n =========== \r\n" + JSON.stringify(ast) + "\r\n ======== \r\n", ast);
+        var compose = ast[0];
+        expect(compose.type).toBe("lambda");
+        expect(compose.param).toBe("x");
+        expect(compose.body.target.name).toBe("x");
+        expect(compose.body.member.name).toBe("firstName");
+    });
     it(':: 1 + 2', function () {
         var ast = fsharp.parse("1 + 2;");
         expect(ast).toBeDefined();
@@ -141,7 +160,7 @@ describe("fsharp parser", function () {
         expect(expr.type).toBe('app');
         console.log(JSON.stringify(ast));
     });
-    it(':: fun a', function () {
+    it(':: fn a', function () {
         var ast = fsharp.parse("fun a;");
         expect(ast).toBeDefined();
         console.log("\r\n =========== \r\n" + JSON.stringify(ast) + "\r\n ======== \r\n");
@@ -150,7 +169,7 @@ describe("fsharp parser", function () {
         expect(expr.fun).toEqual({ type: 'ident', name: 'fun' });
         expect(expr.args).toEqual([{ type: "ident", name: "a" }]);
     });
-    it(':: fun ()', function () {
+    it(':: fn ()', function () {
         var ast = fsharp.parse("fun ();");
         expect(ast).toBeDefined();
         console.log("\r\n =========== \r\n" + JSON.stringify(ast) + "\r\n ======== \r\n");
@@ -216,7 +235,7 @@ describe("fsharp parser", function () {
     it(':: regression test', function () {
         var start = new Date().getTime();
         var ast = fsharp.parse("a |> b.c >> (+) 1 |> d;");
-        for (var i = 0; i < 10000; i++) {
+        for (var i = 0; i < 100; i++) {
             fsharp.parse("a |> b >> (+) 1 |> d;");
         }
         var elapsed = new Date().getTime() - start;
