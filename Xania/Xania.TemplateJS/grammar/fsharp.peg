@@ -50,7 +50,7 @@ AdditiveExpression
 			var operand = binder[1].operand;
 			return { type: "app", fun: op, args: [ operand, prev ] };
 		};
-	return adds.reduce(reducer, head);
+		return adds.reduce(reducer, head);
   }
 
 AdditiveBinder
@@ -77,7 +77,13 @@ Function
   / "(" _ op:Operator _ ")" { return op }
   
 Identifier
-  = name:IdentifierName { return { type: "ident", name }; }
+  = name:IdentifierName members:( "." IdentifierName)* {
+		var reducer = (prev, next) => { 
+			var member = next[1];
+			return { type: "member", target: prev, member };
+		};
+		return members.reduce(reducer, { type: "ident", name });
+  }
   
 Operator
   = op:([=+\-|>])+ { return op.join("") }

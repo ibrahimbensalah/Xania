@@ -275,12 +275,24 @@ describe("fsharp parser", () => {
             expect(compose.args[1].name).toBe("a");
         });
 
+    it(':: a.b ',
+        () => {
+            var ast = fsharp.parse("a.b;");
+            expect(ast).toBeDefined();
+            console.log("\r\n =========== \r\n" + JSON.stringify(ast) + "\r\n ======== \r\n", ast);
+
+            var compose = ast[0];
+            expect(compose.type).toBe("member");
+            expect(compose.target.name).toBe("a");
+            expect(compose.member).toBe("b");
+        });
+
     it(':: regression test',
         () => {
 
             var start = new Date().getTime();
 
-            var ast = fsharp.parse("a |> b >> (+) 1 |> d;");
+            var ast = fsharp.parse("a |> b.c >> (+) 1 |> d;");
             for (var i = 0; i < 10000; i++) {
                 fsharp.parse("a |> b >> (+) 1 |> d;");
             }
@@ -296,23 +308,44 @@ describe("fsharp parser", () => {
                     {
                         "type": "pipe",
                         "fun": "|>",
-                        "args": [
-                            { "type": "ident", "name": "d" }, {
+                        "args":
+                        [
+                            {
+                                "type": "ident",
+                                "name": "d"
+                            },
+                            {
                                 "type": "pipe",
                                 "fun": "|>",
-                                "args": [
+                                "args":
+                                [
                                     {
                                         "type": "compose",
                                         "fun": ">>",
                                         "args": [
                                             {
-                                                "type": "app", "fun": "+", "args": [
-                                                    { "type": "const", "value": 1 }
+                                                "type": "app",
+                                                "fun": "+",
+                                                "args":
+                                                [
+                                                    {
+                                                        "type": "const",
+                                                        "value": 1
+                                                    }
                                                 ]
-                                            },
-                                            { "type": "ident", "name": "b" }
+                                            }, {
+                                                "type": "member",
+                                                "target": {
+                                                    "type": "ident",
+                                                    "name": "b"
+                                                },
+                                                "member": "c"
+                                            }
                                         ]
-                                    }, { "type": "ident", "name": "a" }
+                                    }, {
+                                        "type": "ident",
+                                        "name": "a"
+                                    }
                                 ]
                             }
                         ]
