@@ -1,9 +1,8 @@
 ﻿/// <reference path="../../node_modules/@types/jasmine/index.d.ts" />
 /// <reference path="../src/core.ts" />
-/// <reference path="interceptreporter.ts" />
+///// <reference path="interceptreporter.ts" />
 /// <reference path="../src/store.ts" />
 /// <reference path="../src/compile.ts" />
-/// <chutzpah_reference path="../../grammar/fsharp.js" />
 
 var ibrahim: { firstName: string; lastName: string; adult: boolean },
     ramy: { firstName: string; lastName: string; adult: boolean },
@@ -310,6 +309,18 @@ describe("fsharp parser", () => {
             expect(compose.type).toBe("member");
             expect(compose.target.name).toBe("a");
             expect(compose.member).toBe("b");
+        });
+
+    it(':: [1..n] ',
+        () => {
+            var ast = fsharp.parse("[1..n];");
+            expect(ast).toBeDefined();
+            console.log("\r\n =========== \r\n" + JSON.stringify(ast) + "\r\n ======== \r\n", ast);
+
+            var range = ast[0];
+            expect(range.type).toBe("range");
+            expect(range.from.value).toBe(1);
+            expect(range.to.name).toBe("n");
         });
 
     it(':: regression test',

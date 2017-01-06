@@ -34,8 +34,9 @@ var D;
     var Store = (function (_super) {
         __extends(Store, _super);
         function Store(value) {
-            _super.call(this, "root", value);
-            this.dirty = [];
+            var _this = _super.call(this, "root", value) || this;
+            _this.dirty = [];
+            return _this;
         }
         Store.prototype.dispatch = function (action) {
             this.dirty.push(action);
@@ -55,11 +56,12 @@ var D;
     var Property = (function (_super) {
         __extends(Property, _super);
         function Property(dispatcher, parent, name, value) {
-            _super.call(this, name, value);
-            this.dispatcher = dispatcher;
-            this.parent = parent;
+            var _this = _super.call(this, name, value) || this;
+            _this.dispatcher = dispatcher;
+            _this.parent = parent;
             // list of actions to be dispatched on value change
-            this.observers = [];
+            _this.observers = [];
+            return _this;
         }
         Property.prototype.create = function (propertyName, initialValue) {
             return new Property(this.dispatcher, this, propertyName, initialValue);

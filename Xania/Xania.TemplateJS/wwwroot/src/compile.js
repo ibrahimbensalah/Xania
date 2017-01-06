@@ -117,7 +117,7 @@ var Xania;
                 return function () {
                     var models = [];
                     for (var _i = 0; _i < arguments.length; _i++) {
-                        models[_i - 0] = arguments[_i];
+                        models[_i] = arguments[_i];
                     }
                     var childScope = new Scope(scope);
                     for (var i = 0; i < _this.modelNames.length; i++) {
@@ -233,11 +233,12 @@ var Xania;
         var Group = (function (_super) {
             __extends(Group, _super);
             function Group(parent, key, into) {
-                _super.call(this, parent);
-                this.key = key;
-                this.into = into;
-                this.scopes = [];
-                _super.prototype.set.call(this, into, this);
+                var _this = _super.call(this, parent) || this;
+                _this.key = key;
+                _this.into = into;
+                _this.scopes = [];
+                _super.prototype.set.call(_this, into, _this);
+                return _this;
             }
             Group.prototype.count = function () {
                 return this.scopes.length;

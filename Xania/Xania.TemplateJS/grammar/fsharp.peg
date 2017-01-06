@@ -15,7 +15,7 @@ Expression
   / PipeExpression
 
 LambdaExpression
-  = "fun" _ param:IdentifierName _ "->" _ body:Expression {
+  = "fun" _ param:IdentifierName _ "->" _ body:PipeExpression {
 	return { type: "lambda", param, body };
   }
   / "." ident:Identifier {
@@ -70,8 +70,14 @@ AdditiveBinder
 Term
   = String
   / Number
+  / Range
   / "(" _ expr:Expression? _ ")" {
   	return expr === null ? { type: 'unit' } : expr 
+  }
+
+Range
+  = "[" _ from:(Term / Identifier) _ ".." _ to:(Term / Identifier) _ "]" {
+	return { type: "range", from, to }
   }
 
 ApplicativeExpression
