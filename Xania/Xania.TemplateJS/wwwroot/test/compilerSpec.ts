@@ -1,6 +1,6 @@
 ﻿/// <reference path="../../node_modules/@types/jasmine/index.d.ts" />
 /// <reference path="../src/core.ts" />
-///// <reference path="interceptreporter.ts" />
+/// <reference path="interceptreporter.ts" />
 /// <reference path="../src/store.ts" />
 /// <reference path="../src/compile.ts" />
 
@@ -182,7 +182,7 @@ describe("fsharp parser", () => {
         () => {
             var ast = fsharp.parse("fun x -> x;");
             expect(ast).toBeDefined();
-            console.log("\r\n =========== \r\n" + JSON.stringify(ast) + "\r\n ======== \r\n", ast);
+            console.log("\r\n =========== \r\n" + JSON.stringify(ast, null, 2) + "\r\n ======== \r\n", ast);
 
             var compose = ast[0];
             expect(compose.type).toBe("lambda");
@@ -194,7 +194,7 @@ describe("fsharp parser", () => {
         () => {
             var ast = fsharp.parse(".firstName;");
             expect(ast).toBeDefined();
-            console.log("\r\n =========== \r\n" + JSON.stringify(ast) + "\r\n ======== \r\n", ast);
+            console.log("\r\n =========== \r\n" + JSON.stringify(ast, null, 2) + "\r\n ======== \r\n", ast);
 
             var compose = ast[0];
             expect(compose.type).toBe("lambda");
@@ -207,19 +207,19 @@ describe("fsharp parser", () => {
         () => {
             var ast = fsharp.parse("1 + 2;");
             expect(ast).toBeDefined();
-            console.log("\r\n =========== \r\n" + JSON.stringify(ast) + "\r\n ======== \r\n");
+            console.log("\r\n =========== \r\n" + JSON.stringify(ast, null, 2) + "\r\n ======== \r\n");
 
             var expr = ast[0];
             expect(expr.type).toBe('app');
 
-            console.log(JSON.stringify(ast));
+            console.log(JSON.stringify(ast, null, 2));
         });
 
     it(':: fn a',
         () => {
             var ast = fsharp.parse("fun a;");
             expect(ast).toBeDefined();
-            console.log("\r\n =========== \r\n" + JSON.stringify(ast) + "\r\n ======== \r\n");
+            console.log("\r\n =========== \r\n" + JSON.stringify(ast, null, 2) + "\r\n ======== \r\n");
 
             var expr = ast[0];
             expect(expr.type).toBe('app');
@@ -231,7 +231,7 @@ describe("fsharp parser", () => {
         () => {
             var ast = fsharp.parse("fun ();");
             expect(ast).toBeDefined();
-            console.log("\r\n =========== \r\n" + JSON.stringify(ast) + "\r\n ======== \r\n");
+            console.log("\r\n =========== \r\n" + JSON.stringify(ast, null, 2) + "\r\n ======== \r\n");
 
             var expr = ast[0];
             expect(expr.type).toBe('app');
@@ -243,7 +243,7 @@ describe("fsharp parser", () => {
         () => {
             var ast = fsharp.parse("(+) a b;");
             expect(ast).toBeDefined();
-            console.log("\r\n =========== \r\n" + JSON.stringify(ast) + "\r\n ======== \r\n");
+            console.log("\r\n =========== \r\n" + JSON.stringify(ast, null, 2) + "\r\n ======== \r\n");
 
             var expr = ast[0];
             expect(expr).toEqual({ "type": "app", "fun": "+", "args": [{ "type": "ident", "name": "a" }, { "type": "ident", "name": "b" }] });
@@ -253,7 +253,7 @@ describe("fsharp parser", () => {
         () => {
             var ast = fsharp.parse("a |> b |> c;");
             expect(ast).toBeDefined();
-            console.log("\r\n =========== \r\n" + JSON.stringify(ast) + "\r\n ======== \r\n");
+            console.log("\r\n =========== \r\n" + JSON.stringify(ast, null, 2) + "\r\n ======== \r\n");
 
             var pipe1 = ast[0];
             expect(pipe1.type).toBe("pipe");
@@ -267,21 +267,20 @@ describe("fsharp parser", () => {
             expect(pipe2.args[1]).toEqual({ "type": "ident", "name": "a" });
         });
 
-    it(':: a |> b + c',
+    it(':: a + b |> c',
         () => {
-            var ast = fsharp.parse("a |> b + c;");
+            var ast = fsharp.parse("a + b |> c;");
             expect(ast).toBeDefined();
-            console.log("\r\n =========== \r\n" + JSON.stringify(ast) + "\r\n ======== \r\n");
+            console.log("\r\n =========== \r\n" + JSON.stringify(ast, null, 2) + "\r\n ======== \r\n");
 
             var pipe = ast[0];
             expect(pipe.type).toBe("pipe");
             expect(pipe.fun).toBe("|>");
-            expect(pipe.args[0].fun).toBe("+");
-            expect(pipe.args[1].name).toBe("a");
+            expect(pipe.args[0]).toEqual({ type: "ident", name: "c" });
 
-            var add = pipe.args[0];
-            expect(add.args[0].name).toBe("c");
-            expect(add.args[1].name).toBe("b");
+            var add = pipe.args[1];
+            expect(add.args[0].name).toBe("b");
+            expect(add.args[1].name).toBe("a");
 
             // [{"type":"pipe","fun":"|>","args":[{"type":"ident","name":"c"},{"type":"pipe","fun":"|>","args":[{"type":"ident","name":"b"},{"type":"ident","name":"a"}]}]}]
         });
@@ -290,7 +289,7 @@ describe("fsharp parser", () => {
         () => {
             var ast = fsharp.parse("a >> b;");
             expect(ast).toBeDefined();
-            console.log("\r\n =========== \r\n" + JSON.stringify(ast) + "\r\n ======== \r\n", ast);
+            console.log("\r\n =========== \r\n" + JSON.stringify(ast, null, 2) + "\r\n ======== \r\n", ast);
 
             var compose = ast[0];
             expect(compose.type).toBe("compose");
@@ -303,7 +302,7 @@ describe("fsharp parser", () => {
         () => {
             var ast = fsharp.parse("a.b;");
             expect(ast).toBeDefined();
-            console.log("\r\n =========== \r\n" + JSON.stringify(ast) + "\r\n ======== \r\n", ast);
+            console.log("\r\n =========== \r\n" + JSON.stringify(ast, null, 2) + "\r\n ======== \r\n", ast);
 
             var compose = ast[0];
             expect(compose.type).toBe("member");
@@ -315,12 +314,25 @@ describe("fsharp parser", () => {
         () => {
             var ast = fsharp.parse("[1..n];");
             expect(ast).toBeDefined();
-            console.log("\r\n =========== \r\n" + JSON.stringify(ast) + "\r\n ======== \r\n", ast);
+            console.log("\r\n =========== \r\n" + JSON.stringify(ast, null, 2) + "\r\n ======== \r\n", ast);
 
             var range = ast[0];
             expect(range.type).toBe("range");
             expect(range.from.value).toBe(1);
             expect(range.to.name).toBe("n");
+        });
+
+    it(':: for p in people where p.adult ',
+        () => {
+            var ast = fsharp.parse("for p in people where p.adult;");
+            expect(ast).toBeDefined();
+            console.log("\r\n =========== \r\n" + JSON.stringify(ast, null, 2) + "\r\n ======== \r\n", ast);
+
+            var where = ast[0];
+
+            expect(where.type).toBe("where");
+            expect(where.predicate.type).toBe("member");
+            expect(where.source.type).toBe("query");
         });
 
     it(':: regression test',
@@ -337,7 +349,7 @@ describe("fsharp parser", () => {
             if (elapsed > 2000)
                 fail("too slow");
 
-            console.log("\r\n =========== \r\n" + JSON.stringify(ast) + "\r\n ======== \r\n", ast);
+            console.log("\r\n =========== \r\n" + JSON.stringify(ast, null, 2) + "\r\n ======== \r\n", ast);
 
             expect(ast).toEqual(
                 [

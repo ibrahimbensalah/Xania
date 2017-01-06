@@ -6,29 +6,39 @@
  */
 
 Program
-  = exprs:(_ Expression ";" _ ?)* {
-  	return exprs.map(x => x[1])
-  }
+	= exprs:(_ Expression ";" _ ?)* {
+		return exprs.map(x => x[1])
+	}
 
 Expression
-  = LambdaExpression
-  / PipeExpression
+	= LambdaExpression
+	/ QueryExpression
+	/ PipeExpression
 
 LambdaExpression
-  = "fun" _ param:IdentifierName _ "->" _ body:PipeExpression {
-	return { type: "lambda", param, body };
-  }
-  / "." ident:Identifier {
-	return { type: "lambda", param:"x", body: { type: "member", target: { type: "ident", name: "x" }, member: ident } };
-  }
+	= "fun" _ param:IdentifierName _ "->" _ body:PipeExpression {
+		return { type: "lambda", param, body };
+	}
+	/ "." ident:Identifier {
+		return { type: "lambda", param:"x", body: { type: "member", target: { type: "ident", name: "x" }, member: ident } };
+	}
 
 QueryExpression
-  = "for" - param:IdentifierName _ "in" _+ source:Term _+ "do"? _ where:WhereExpression? {
-	return { type: "query",  }
-  }
+	= "for" _ param:IdentifierName _ "in" _ source:Identifier where:(_ WhereExpression)* {
+		var query = { type: "query", param, source }
+
+		function reducer(source, predicate) {
+			return { type: "where", predicate, source };
+		}
+
+		return where.map(x => x[1]).reduce(reducer, query);
+	}
+
+WhereExpression
+  = "where" _ predicate:ApplicativeExpression { return predicate }
 
 PipeExpression
-  = head:CompositionExpression pipes:( _ PipeBinder )* {
+  = head:AdditiveExpression pipes:( _ PipeBinder )* {
 	var reducer = (prev, binder) => { 
 		var op = binder[1].op;
 		var operand = binder[1].operand;
@@ -38,22 +48,7 @@ PipeExpression
   }
 
 PipeBinder
-  = op:"|>" _ operand:CompositionExpression {
-     return { op, operand }
-  }
-
-CompositionExpression
-  = head:AdditiveExpression comps:( _ CompositionBinder )* {
-		var reducer = (prev, binder) => { 
-			var op = binder[1].op;
-			var operand = binder[1].operand;
-			return { type: "compose", fun: op, args: [ operand, prev ] };
-		};
-	return comps.reduce(reducer, head);
-  }
-
-CompositionBinder
-  = op:">>" _ operand:AdditiveExpression {
+  = op:"|>" _ operand:ApplicativeExpression {
      return { op, operand }
   }
 
@@ -86,15 +81,32 @@ Range
   }
 
 ApplicativeExpression
-  = fun:Function args:(_ (Term / Identifier))* {
-  	if (args.length == 0)
-    	return fun;
-  	return { type: "app", fun, args: args.filter(x => x[1].type != 'unit').map(x => x[1])}
+  = fun:Application args:(_ (Term / Identifier))* comps:( _ CompositionBinder )* {
+		var head = args.length == 0
+			? fun
+  			: { type: "app", fun, args: args.filter(x => x[1].type != 'unit').map(x => x[1]) };
+
+		var reducer = (prev, binder) => { 
+			var op = binder[1].op;
+			var operand = binder[1].operand;
+			return { type: "compose", fun: op, args: [ operand, prev ] };
+		};
+
+		return comps.reduce(reducer, head);
   }
 
-Function
-  = Identifier
-  / "(" _ op:Operator _ ")" { return op }
+CompositionBinder
+  = op:">>" _ operand:ApplicativeExpression {
+     return { op, operand }
+  }
+
+Application
+	= fun:Identifier {
+		return fun;
+	}
+	/ "(" _ op:Operator _ ")" { 
+		return op
+	}
   
 Identifier
   = name:IdentifierName members:( "." IdentifierName)* {
