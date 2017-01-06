@@ -22,6 +22,11 @@ LambdaExpression
 	return { type: "lambda", param:"x", body: { type: "member", target: { type: "ident", name: "x" }, member: ident } };
   }
 
+QueryExpression
+  = "for" - param:IdentifierName _ "in" _+ source:Term _+ "do"? _ where:WhereExpression? {
+	return { type: "query",  }
+  }
+
 PipeExpression
   = head:CompositionExpression pipes:( _ PipeBinder )* {
 	var reducer = (prev, binder) => { 
