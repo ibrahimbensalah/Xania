@@ -27,7 +27,6 @@ var Xania;
             }
             if (Array.isArray(value)) {
                 for (var i = 0; i < value.length; i++) {
-                    // TODO, refactor .value
                     value[i] = this.$unwrap(value[i]);
                 }
             }

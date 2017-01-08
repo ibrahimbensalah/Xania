@@ -1,4 +1,4 @@
-﻿module Xania {
+﻿export module Xania {
     var undefined = void 0;
 
     export module Data {

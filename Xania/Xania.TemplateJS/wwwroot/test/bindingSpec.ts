@@ -1,7 +1,7 @@
 ﻿/// <reference path="../../node_modules/@types/jasmine/index.d.ts" />
 /// <reference path="../src/core.ts" />
 /// <reference path="../src/store.ts" />
-/// <reference path="../src/compile.ts" />
+/// <reference path="../src/expression.ts" />
 /// <reference path="interceptreporter.ts" />
 
 module D {

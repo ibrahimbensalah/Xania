@@ -1,4 +1,4 @@
-﻿module Xania.Core {
+﻿export module Xania.Core {
     export function State(initialValue) {
         var fn = function (x) {
             if (x !== undefined)
@@ -11,6 +11,8 @@
 
         return fn;
     };
+
+    var i = 0;
 
     export class Dates {
         static addDays(days: number, date: Date) {

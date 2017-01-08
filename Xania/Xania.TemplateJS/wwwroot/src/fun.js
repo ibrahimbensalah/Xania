@@ -318,12 +318,6 @@ var Xania;
             };
             DefaultRuntimeProvider.invoke = function (context, invocable, args) {
                 return invocable.apply(context, args);
-                //if (typeof target.execute === "function")
-                //    return provider.invoke(target, args);
-                //// return target.execute.apply(target, args);
-                //else if (typeof target.apply === "function")
-                //    return target.apply(this, args);
-                //throw new Error(`${this.targetExpr.toString()} is not a function`);
             };
             return DefaultRuntimeProvider;
         }());
@@ -383,7 +377,6 @@ var Xania;
                 while (this.parsePattern("navigate", stream)) {
                     this.ws(stream);
                     var member = this.parsePattern("ident", stream);
-                    // const member = this.parseMember(stream);
                     if (!!member)
                         ident = new Member(ident, member);
                     else
@@ -546,8 +539,6 @@ var Xania;
                         break;
                     }
                 }
-                //if (parts.length === 1 && typeof parts[0] === "string")
-                //    return new Const(parts[0]);
                 return new Template(parts);
             };
             Compiler.patterns = {
@@ -556,8 +547,7 @@ var Xania;
                 whitespace: /^\s+/g,
                 ident: /^[a-zA-Z_\$][a-zA-Z_\$0-9]*\b/g,
                 number: /^[\+\-]?\d+(?:\.\d+)?(?:e[+-]?\d+)?/g,
-                booleanOrNull: /^(?:true|false|null)/g // /^(?:true|false|null)/g
-                ,
+                booleanOrNull: /^(?:true|false|null)/g,
                 lparen: /^\s*\(\s*/g,
                 rparen: /^\s*\)\s*/g,
                 lbrack: /^\s*\[\s*/g,

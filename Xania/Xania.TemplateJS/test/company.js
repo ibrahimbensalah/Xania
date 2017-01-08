@@ -1,4 +1,3 @@
-/// <reference path="../wwwroot/src/dom.ts" />
 var __extends = (this && this.__extends) || function (d, b) {
     for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
     function __() { this.constructor = d; }
@@ -107,17 +106,14 @@ var Url = (function () {
             request.open("GET", href, true);
             request.onload = function () {
                 if (request.status >= 200 && request.status < 400) {
-                    // Success!
                     var data = JSON.parse(request.responseText);
                     resolve(data);
                 }
                 else {
-                    // We reached our target server, but it returned an error
                     reject({ status: request.status, statusText: request.statusText });
                 }
             };
             request.onerror = function () {
-                // There was a connection error of some sort
                 reject({ status: request.status, statusText: request.statusText });
             };
             request.send();

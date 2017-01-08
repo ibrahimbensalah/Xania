@@ -6,8 +6,8 @@
  */
 
 Program
-	= exprs:(_ Expression ";" _ ?)* {
-		return exprs.map(x => x[1])
+	= _ expr:Expression _ {
+		return expr;
 	}
 
 Expression
@@ -24,18 +24,26 @@ LambdaExpression
 	}
 
 QueryExpression
-	= "for" _ param:IdentifierName _ "in" _ source:Identifier where:(_ WhereExpression)* {
+	= "for" _ param:IdentifierName _ "in" _ source:Identifier where:(_ WhereExpression)* selector:(_ SelectExpression)? {
 		var query = { type: "query", param, source }
 
 		function reducer(source, predicate) {
 			return { type: "where", predicate, source };
 		}
 
-		return where.map(x => x[1]).reduce(reducer, query);
+		var filtered = where.map(x => x[1]).reduce(reducer, query);
+
+		if (selector)
+			return { type: "select", selector: selector[1], source: filtered }
+
+		return filtered;
 	}
 
 WhereExpression
   = "where" _ predicate:ApplicativeExpression { return predicate }
+
+SelectExpression
+  = "select" _ selector:AdditiveExpression { return selector }
 
 PipeExpression
   = head:AdditiveExpression pipes:( _ PipeBinder )* {
@@ -109,7 +117,7 @@ Application
 	}
   
 Identifier
-  = name:IdentifierName members:( "." IdentifierName)* {
+  = !"select" name:IdentifierName members:( "." IdentifierName)* {
 		var reducer = (prev, next) => { 
 			var member = next[1];
 			return { type: "member", target: prev, member };

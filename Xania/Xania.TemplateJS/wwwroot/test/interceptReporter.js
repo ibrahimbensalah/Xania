@@ -44,4 +44,4 @@ if (document.readyState !== "loading") {
 else {
     document.addEventListener("DOMContentLoaded", interceptReporter);
 }
-//# sourceMappingURL=interceptreporter.js.map
+//# sourceMappingURL=interceptReporter.js.map

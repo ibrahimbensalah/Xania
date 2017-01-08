@@ -1,15 +1,44 @@
-﻿module Xania.Compile {
+﻿export module Expression {
     var undefined = void 0;
+
+    export function build(ast: any): IExpr {
+        if (ast === null || ast === undefined)
+            return null;
+
+        if (ast.type === undefined)
+            return ast;
+
+        switch (ast.type) {
+            case "where":
+                return new Where(build(ast.source), build(ast.predicate));
+            case "query":
+                return new Query(ast.param, build(ast.source));
+            case "ident":
+                return new Ident(ast.name);
+            case "member":
+                return new Member(build(ast.target), build(ast.member));
+            case "app":
+                return new App(build(ast.fun), ast.args.map(build));
+            case "select":
+                return new Select(build(ast.source), build(ast.selector));
+            default:
+                console.log(ast);
+                throw new Error("not supported type " + ast.type);
+        }
+    }
+
     export interface IScope {
-        get(object: any, name: string): any;
+        // get(object: any, name: string): any;
         // apply(fun: Function, args: any[], context?: any);
-        variable(name: string): any;
+        get(name: string): any;
     }
 
     export class Scope implements IScope {
-        private scope = {};
+        constructor(private scope = {}, private parent: IScope = DefaultScope) {
+        }
 
-        constructor(private parent: IScope = DefaultScope, private globals = {}) {
+        valueOf() {
+            return this.scope;
         }
 
         set(name: string, value: any) {
@@ -17,7 +46,7 @@
                 throw new Error("value is undefined");
             }
 
-            if (this.variable(name) !== undefined) {
+            if (this.get(name) !== undefined) {
                 throw new Error("modifying value is not permitted.");
             }
 
@@ -25,52 +54,47 @@
             return this;
         }
 
-        get(object, name: string) {
-            return this.parent.get(object, name);
-        }
+        get(name: string) {
+            // current scope
+            var value = this.scope[name];
 
-        variable(name: string) {
-            var value;
-            value = this.scope[name];
-            if (value !== undefined) {
+            if (typeof value === "undefined")
+                return this.parent.get(name);
+
+            if (value === null || value instanceof Date)
                 return value;
-            }
-            value = this.globals[name];
-            if (value !== undefined) {
-                return value;
-            }
-            return this.parent.variable(name);
+
+            if (typeof value === "function")
+                return value.bind(this.scope);
+
+            if (typeof value === "object")
+                return new Scope(value, this);
+
+            return value;
         }
     }
 
     interface IExpr {
         execute(scope: IScope);
 
-        app(args: IExpr[]): IExpr;
+        app?(args: IExpr[]): IExpr;
     }
 
     class DefaultScope {
-        static get(context: any, name: string): any {
-            var value = context[name];
-
-            if (typeof value === "function")
-                value = value.bind(context);
-
-            return value;
-        }
-        static apply(fun: Function, args: any[], context: any) {
-            return (<any>fun).apply(context, args);
-        }
-        static variable(name: string) {
+        static get(name: string) {
             return window[name];
         }
     }
 
     export class Ident implements IExpr {
-        constructor(public name: string) { }
+        constructor(public name: string) {
+            if (typeof name !== "string" || name.length === 0) {
+                throw Error("Argument name is null or empty");
+            }
+        }
 
         execute(scope: IScope) {
-            return scope.variable(this.name);
+            return scope.get(this.name);
         }
 
         toString() { return this.name; }
@@ -88,8 +112,8 @@
             var obj = this.target.execute(scope);
 
             if (typeof this.member === "string")
-                return scope.get(obj, this.member as string);
-            return (<IExpr>this.member).execute(new Scope(scope, obj));
+                return obj.get(this.member as string);
+            return (<IExpr>this.member).execute(obj);
         }
 
         toString() {
@@ -117,7 +141,8 @@
 
         execute(scope: IScope = DefaultScope): Function {
             return (...models) => {
-                var childScope = new Scope(scope);
+
+                var childScope = new Scope({}, scope);
 
                 for (var i = 0; i < this.modelNames.length; i++) {
                     var n = this.modelNames[i];
@@ -182,7 +207,7 @@
         }
     }
 
-    interface IQuery {
+    interface IQuery extends IExpr {
         execute(scope: IScope): Array<IScope>;
     }
 
@@ -207,7 +232,9 @@
         constructor(private query: IQuery, private predicate: IExpr) { }
 
         execute(scope: IScope = DefaultScope): IScope[] {
-            return this.query.execute(scope).filter(scope => this.predicate.execute(scope));
+            return this.query.execute(scope).filter(scope => {
+                return this.predicate.execute(scope);
+            });
         }
 
         toString() {
@@ -269,11 +296,15 @@
     }
 
     export class Query implements IQuery {
-        constructor(private itemName: string, private sourceExpr: IExpr) { }
+        constructor(private itemName: string, private sourceExpr: IExpr) {
+            if (typeof itemName !== "string" || itemName.length === 0) {
+                throw new Error("itemName is null");
+            }
+        }
 
         execute(scope: IScope = DefaultScope): Array<IScope> {
-            var source = this.sourceExpr.execute(scope);
-            return source.map(item => new Scope(scope).set(this.itemName, item));
+            var source = this.sourceExpr.execute(scope).valueOf();
+            return source.map(item => new Scope({}, scope).set(this.itemName, item));
         }
 
         toString() {
@@ -285,7 +316,11 @@
         constructor(public fun: IExpr, public args: IExpr[] = []) { }
 
         execute(scope: IScope = DefaultScope) {
-            var args = this.args.map(x => x.execute(scope));
+            var args = this.args.map(x => x.execute(scope).valueOf());
+
+            if (<any>this.fun === "+") {
+                return args[0] + args[1];
+            }
 
             var fun = this.fun.execute(scope);
 

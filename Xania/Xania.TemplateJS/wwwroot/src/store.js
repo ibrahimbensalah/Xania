@@ -1,3 +1,4 @@
+"use strict";
 var __extends = (this && this.__extends) || function (d, b) {
     for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
     function __() { this.constructor = d; }
@@ -349,12 +350,10 @@ var Xania;
                 return comp;
             };
             ObjectContainer.prototype.global = function (name) {
-                // ReSharper disable once MissingHasOwnPropertyInForeach
                 for (var k in window) {
                     if (name.toLowerCase() === k.toLowerCase()) {
                         var v = window[k];
                         if (typeof v === "function")
-                            // ReSharper disable once InconsistentNaming
                             return new v();
                     }
                 }
@@ -396,5 +395,5 @@ var Xania;
         }());
         Data.ObjectContainer = ObjectContainer;
     })(Data = Xania.Data || (Xania.Data = {}));
-})(Xania || (Xania = {}));
+})(Xania = exports.Xania || (exports.Xania = {}));
 //# sourceMappingURL=store.js.map

@@ -1,18 +1,24 @@
 {
   "compileOnSave": true,
   "compilerOptions": {
-    "noImplicitAny": false,
+    "lib": [ "dom", "es2015" ],
+    "module": "commonjs",
     "noEmitOnError": true,
-    "removeComments": false,
+    "noImplicitAny": false,
+    "removeComments": true,
     "sourceMap": true,
-    "target":  "es5",
-    "lib": [ "dom", "es2016" ],
+    "target": "es5",
+    "types": [ "jasmine" ],
     "typeRoots": [
       "grammar"
     ]
   },
   "exclude": [
     "node_modules",
-    "wwwroot/lib"
+    "wwwroot/lib",
+    "wwwroot/sample",
+    "wwwroot/src/boot.ts",
+    "wwwroot/src/dom.ts",
+    "wwwroot/test/bindingSpec.ts"
   ]
 }

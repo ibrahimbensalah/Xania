@@ -1,24 +1,23 @@
-﻿/// <reference path="../../node_modules/@types/jasmine/index.d.ts" />
-/// <reference path="../src/core.ts" />
-/// <reference path="interceptreporter.ts" />
-/// <reference path="../src/store.ts" />
-/// <reference path="../src/compile.ts" />
+﻿import { Xania as Core } from "../src/core";
+import { Expression as XC } from "../src/expression";
 
-var ibrahim: { firstName: string; lastName: string; adult: boolean },
-    ramy: { firstName: string; lastName: string; adult: boolean },
-    rania: { firstName: string; lastName: string; adult: boolean };
+interface IPerson { firstName: string; lastName: string; adult: boolean, age: number }
+var ibrahim: IPerson, ramy: IPerson, rania: IPerson;
 
 ibrahim = {
+    age: 36,
     firstName: "Ibrahim",
     lastName: "ben Salah",
     adult: true
 };
 ramy = {
+    age: 5,
     firstName: "Ramy",
     lastName: "ben Salah",
     adult: false
 };
 rania = {
+    age: 3,
     firstName: "Rania",
     lastName: "ben Salah",
     adult: false
@@ -27,8 +26,7 @@ rania = {
 // ReSharper disable InconsistentNaming
 describe("functional expressions", () => {
 
-    var XC = Xania.Compile;
-    var List = Xania.Core.List;
+    var List = Core.Core.List;
 
     it(":: (.firstName)",
         // .firstName
@@ -36,7 +34,8 @@ describe("functional expressions", () => {
             var expr = XC.Lambda.member("firstName");
             console.log(":: " + expr.toString());
 
-            var actual = expr.execute()(ibrahim);
+            var actual = expr.execute()(ibrahim).valueOf();
+
             expect(actual).toBe("Ibrahim");
         });
 
@@ -45,7 +44,8 @@ describe("functional expressions", () => {
             var expr = new XC.Pipe(new XC.Const(ibrahim, "person"), XC.Lambda.member("firstName"));
             console.log(":: " + expr);
 
-            var actual = expr.execute();
+            var actual = expr.execute().valueOf();
+
             expect(actual).toBe("Ibrahim");
 
         });
@@ -93,7 +93,8 @@ describe("functional expressions", () => {
             var select = new XC.Select(where, new XC.Member(p, "firstName"));
             console.log(`:: ${select}`);
 
-            var actual = select.execute();
+            var actual = select.execute().valueOf();
+            console.log(actual);
             expect(actual).toEqual(["Ibrahim"]);
         });
 
@@ -121,11 +122,8 @@ describe("functional expressions", () => {
             expect(actual).toEqual([2, 1]);
         });
 
-    var defaultRuntime: Xania.Compile.IScope = {
-        get(object: any, name: string): any {
-            return object[name];
-        },
-        variable(name: string) {
+    var defaultRuntime: XC.IScope = {
+        get(name: string) {
             return List[name];
         }
     };
@@ -180,11 +178,11 @@ describe("fsharp parser", () => {
 
     it(':: fun x -> x ',
         () => {
-            var ast = fsharp.parse("fun x -> x;");
+            var ast = fsharp.parse("fun x -> x");
             expect(ast).toBeDefined();
             console.log("\r\n =========== \r\n" + JSON.stringify(ast, null, 2) + "\r\n ======== \r\n", ast);
 
-            var compose = ast[0];
+            var compose = ast;
             expect(compose.type).toBe("lambda");
             expect(compose.param).toBe("x");
             expect(compose.body.name).toBe("x");
@@ -192,11 +190,11 @@ describe("fsharp parser", () => {
 
     it(':: .firstName ',
         () => {
-            var ast = fsharp.parse(".firstName;");
+            var ast = fsharp.parse(".firstName");
             expect(ast).toBeDefined();
             console.log("\r\n =========== \r\n" + JSON.stringify(ast, null, 2) + "\r\n ======== \r\n", ast);
 
-            var compose = ast[0];
+            var compose = ast;
             expect(compose.type).toBe("lambda");
             expect(compose.param).toBe("x");
             expect(compose.body.target.name).toBe("x");
@@ -205,11 +203,11 @@ describe("fsharp parser", () => {
 
     it(':: 1 + 2',
         () => {
-            var ast = fsharp.parse("1 + 2;");
+            var ast = fsharp.parse("1 + 2");
             expect(ast).toBeDefined();
             console.log("\r\n =========== \r\n" + JSON.stringify(ast, null, 2) + "\r\n ======== \r\n");
 
-            var expr = ast[0];
+            var expr = ast;
             expect(expr.type).toBe('app');
 
             console.log(JSON.stringify(ast, null, 2));
@@ -217,11 +215,11 @@ describe("fsharp parser", () => {
 
     it(':: fn a',
         () => {
-            var ast = fsharp.parse("fun a;");
+            var ast = fsharp.parse("fun a");
             expect(ast).toBeDefined();
             console.log("\r\n =========== \r\n" + JSON.stringify(ast, null, 2) + "\r\n ======== \r\n");
 
-            var expr = ast[0];
+            var expr = ast;
             expect(expr.type).toBe('app');
             expect(expr.fun).toEqual({ type: 'ident', name: 'fun' });
             expect(expr.args).toEqual([{ type: "ident", name: "a" }]);
@@ -229,11 +227,11 @@ describe("fsharp parser", () => {
 
     it(':: fn ()',
         () => {
-            var ast = fsharp.parse("fun ();");
+            var ast = fsharp.parse("fun ()");
             expect(ast).toBeDefined();
             console.log("\r\n =========== \r\n" + JSON.stringify(ast, null, 2) + "\r\n ======== \r\n");
 
-            var expr = ast[0];
+            var expr = ast;
             expect(expr.type).toBe('app');
             expect(expr.fun).toEqual({ type: 'ident', name: 'fun' });
             expect(expr.args.length).toBe(0);
@@ -241,21 +239,21 @@ describe("fsharp parser", () => {
 
     it(':: (+) a b',
         () => {
-            var ast = fsharp.parse("(+) a b;");
+            var ast = fsharp.parse("(+) a b");
             expect(ast).toBeDefined();
             console.log("\r\n =========== \r\n" + JSON.stringify(ast, null, 2) + "\r\n ======== \r\n");
 
-            var expr = ast[0];
+            var expr = ast;
             expect(expr).toEqual({ "type": "app", "fun": "+", "args": [{ "type": "ident", "name": "a" }, { "type": "ident", "name": "b" }] });
         });
 
     it(':: a |> b |> c',
         () => {
-            var ast = fsharp.parse("a |> b |> c;");
+            var ast = fsharp.parse("a |> b |> c");
             expect(ast).toBeDefined();
             console.log("\r\n =========== \r\n" + JSON.stringify(ast, null, 2) + "\r\n ======== \r\n");
 
-            var pipe1 = ast[0];
+            var pipe1 = ast;
             expect(pipe1.type).toBe("pipe");
             expect(pipe1.fun).toBe("|>");
             expect(pipe1.args[0]).toEqual({ "type": "ident", "name": "c" });
@@ -269,11 +267,11 @@ describe("fsharp parser", () => {
 
     it(':: a + b |> c',
         () => {
-            var ast = fsharp.parse("a + b |> c;");
+            var ast = fsharp.parse("a + b |> c");
             expect(ast).toBeDefined();
             console.log("\r\n =========== \r\n" + JSON.stringify(ast, null, 2) + "\r\n ======== \r\n");
 
-            var pipe = ast[0];
+            var pipe = ast;
             expect(pipe.type).toBe("pipe");
             expect(pipe.fun).toBe("|>");
             expect(pipe.args[0]).toEqual({ type: "ident", name: "c" });
@@ -287,11 +285,11 @@ describe("fsharp parser", () => {
 
     it(':: a >> b ',
         () => {
-            var ast = fsharp.parse("a >> b;");
+            var ast = fsharp.parse("a >> b");
             expect(ast).toBeDefined();
             console.log("\r\n =========== \r\n" + JSON.stringify(ast, null, 2) + "\r\n ======== \r\n", ast);
 
-            var compose = ast[0];
+            var compose = ast;
             expect(compose.type).toBe("compose");
             expect(compose.fun).toBe(">>");
             expect(compose.args[0].name).toBe("b");
@@ -300,11 +298,11 @@ describe("fsharp parser", () => {
 
     it(':: a.b ',
         () => {
-            var ast = fsharp.parse("a.b;");
+            var ast = fsharp.parse("a.b");
             expect(ast).toBeDefined();
             console.log("\r\n =========== \r\n" + JSON.stringify(ast, null, 2) + "\r\n ======== \r\n", ast);
 
-            var compose = ast[0];
+            var compose = ast;
             expect(compose.type).toBe("member");
             expect(compose.target.name).toBe("a");
             expect(compose.member).toBe("b");
@@ -312,11 +310,11 @@ describe("fsharp parser", () => {
 
     it(':: [1..n] ',
         () => {
-            var ast = fsharp.parse("[1..n];");
+            var ast = fsharp.parse("[1..n]");
             expect(ast).toBeDefined();
             console.log("\r\n =========== \r\n" + JSON.stringify(ast, null, 2) + "\r\n ======== \r\n", ast);
 
-            var range = ast[0];
+            var range = ast;
             expect(range.type).toBe("range");
             expect(range.from.value).toBe(1);
             expect(range.to.name).toBe("n");
@@ -324,11 +322,11 @@ describe("fsharp parser", () => {
 
     it(':: for p in people where p.adult ',
         () => {
-            var ast = fsharp.parse("for p in people where p.adult;");
+            var ast = fsharp.parse("for p in people where p.adult");
             expect(ast).toBeDefined();
             console.log("\r\n =========== \r\n" + JSON.stringify(ast, null, 2) + "\r\n ======== \r\n", ast);
 
-            var where = ast[0];
+            var where = ast;
 
             expect(where.type).toBe("where");
             expect(where.predicate.type).toBe("member");
@@ -340,9 +338,9 @@ describe("fsharp parser", () => {
 
             var start = new Date().getTime();
 
-            var ast = fsharp.parse("a |> b.c >> (+) 1 |> d;");
+            var ast = fsharp.parse("a |> b.c >> (+) 1 |> d");
             for (var i = 0; i < 100; i++) {
-                fsharp.parse("a |> b >> (+) 1 |> d;");
+                fsharp.parse("a |> b >> (+) 1 |> d");
             }
             var elapsed = new Date().getTime() - start;
 
@@ -352,54 +350,65 @@ describe("fsharp parser", () => {
             console.log("\r\n =========== \r\n" + JSON.stringify(ast, null, 2) + "\r\n ======== \r\n", ast);
 
             expect(ast).toEqual(
-                [
-                    {
-                        "type": "pipe",
-                        "fun": "|>",
-                        "args":
-                        [
-                            {
-                                "type": "ident",
-                                "name": "d"
-                            },
-                            {
-                                "type": "pipe",
-                                "fun": "|>",
-                                "args":
-                                [
-                                    {
-                                        "type": "compose",
-                                        "fun": ">>",
-                                        "args": [
-                                            {
-                                                "type": "app",
-                                                "fun": "+",
-                                                "args":
-                                                [
-                                                    {
-                                                        "type": "const",
-                                                        "value": 1
-                                                    }
-                                                ]
-                                            }, {
-                                                "type": "member",
-                                                "target": {
-                                                    "type": "ident",
-                                                    "name": "b"
-                                                },
-                                                "member": "c"
-                                            }
-                                        ]
-                                    }, {
-                                        "type": "ident",
-                                        "name": "a"
-                                    }
-                                ]
-                            }
-                        ]
-                    }
-                ]
+                {
+                    "type": "pipe",
+                    "fun": "|>",
+                    "args":
+                    [
+                        {
+                            "type": "ident",
+                            "name": "d"
+                        },
+                        {
+                            "type": "pipe",
+                            "fun": "|>",
+                            "args":
+                            [
+                                {
+                                    "type": "compose",
+                                    "fun": ">>",
+                                    "args": [
+                                        {
+                                            "type": "app",
+                                            "fun": "+",
+                                            "args":
+                                            [
+                                                {
+                                                    "type": "const",
+                                                    "value": 1
+                                                }
+                                            ]
+                                        }, {
+                                            "type": "member",
+                                            "target": {
+                                                "type": "ident",
+                                                "name": "b"
+                                            },
+                                            "member": "c"
+                                        }
+                                    ]
+                                }, {
+                                    "type": "ident",
+                                    "name": "a"
+                                }
+                            ]
+                        }
+                    ]
+                }
             );
+        });
+});
+
+describe("runtime", () => {
+
+    var fs = (expr: string) => XC.build(fsharp.parse(expr));
+
+    it("execute query",
+        () => {
+            var store = new XC.Scope({ people: [ibrahim, ramy, rania], b: 1 });
+            var result = fs("for p in people where p.adult select p").execute(store);
+
+            expect(result).toEqual([ ibrahim.age + 1 ]);
         });
 });
 

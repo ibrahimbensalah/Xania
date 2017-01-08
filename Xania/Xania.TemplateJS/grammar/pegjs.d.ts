@@ -7,3 +7,5 @@ interface Function {
 }
 
 declare var fsharp;
+
+declare function require(module: string);

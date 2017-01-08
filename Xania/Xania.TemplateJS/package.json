@@ -5,11 +5,17 @@
   "devDependencies": {
     "@types/jasmine": "^2.5.38",
     "phantomjs": "2.1.7",
-    "pegjs":  "0.10.0" 
+    "pegjs": "0.10.0"
   },
-  "dependencies": {
-  },
+  "dependencies": {},
   "scripts": {
     "fsharp": "pegjs -o ./wwwroot/src/fsharp.peg.js --optimize speed --export-var fsharp --format globals ./grammar/fsharp.peg"
+  },
+  "jspm": {
+    "directories": {
+      "baseURL": "wwwroot"
+    },
+    "dependencies": {},
+    "devDependencies": {}
   }
 }
