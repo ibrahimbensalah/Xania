@@ -397,10 +397,14 @@ describe("runtime", () => {
 
     it("execute query",
         () => {
-            var store = new XC.Scope({ people: [ibrahim, ramy, rania], b: 1 });
-            var result = fs("for p in people where p.adult select p.age + 1").execute(store);
+            var root = new XC.Scope({ people: [ibrahim, ramy, rania], b: 1 });
+            var scope = fs("for p in people where p.adult select p").execute(root);
 
-            expect(result).toEqual([ ibrahim.age + 1 ]);
+            expect(scope.length).toBe(1);
+            // scope contains root values.
+            expect(scope[0].parent.parent).toEqual(root);
+            // scope extends root scope.
+            expect(scope[0].get('p').valueOf()).toBe(ibrahim);
         });
 });
 

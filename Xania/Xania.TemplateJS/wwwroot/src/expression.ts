@@ -30,17 +30,24 @@
     }
 
     export interface IScope {
-        // get(object: any, name: string): any;
-        // apply(fun: Function, args: any[], context?: any);
         get(name: string): any;
+        extend?(value): IScope;
     }
 
     export class Scope implements IScope {
-        constructor(private value = {}, private parent: IScope = DefaultScope) {
+        constructor(private value: any = {}, private parent: IScope = DefaultScope) {
         }
 
         valueOf() {
             return this.value;
+        }
+
+        map(fn) {
+            return this.value.map(fn);
+        }
+
+        extend(value: any) {
+            return new Scope(value, this);
         }
 
         set(name: string, value: any) {
@@ -74,6 +81,15 @@
 
             return value;
         }
+
+        toJSON() {
+            var parent: any = this.parent;
+            return (<any>Object).assign({}, this.value, parent.toJSON ? parent.toJSON() : {});
+        }
+
+        toString() {
+            return JSON.stringify(this.toJSON(), null, 4);
+        }
     }
 
     interface IExpr {
@@ -85,6 +101,9 @@
     class DefaultScope {
         static get(name: string) {
             return window[name];
+        }
+        static extend(value: any): IScope {
+            return new Scope(value);
         }
     }
 
@@ -211,7 +230,7 @@
     }
 
     interface IQuery extends IExpr {
-        execute(scope: IScope): Array<IScope>;
+        execute(scope: IScope): { map, filter, sort, forEach };
     }
 
     export class Select implements IExpr {
@@ -219,7 +238,7 @@
         }
 
         execute(scope: IScope = DefaultScope) {
-            return this.query.execute(scope).map(scope => this.selector.execute(scope));
+            return this.query.execute(scope).map(s => this.selector.execute(s));
         }
 
         toString() {
@@ -306,8 +325,12 @@
         }
 
         execute(scope: IScope = DefaultScope): Array<IScope> {
-            var source = this.sourceExpr.execute(scope).valueOf();
-            return source.map(item => new Scope({}, scope).set(this.itemName, item));
+            var source = this.sourceExpr.execute(scope);
+            return source.map(item => {
+                var child = {};
+                child[this.itemName] = item;
+                return scope.extend(child);
+            });
         }
 
         toString() {
