@@ -21,6 +21,8 @@
                 return new App(build(ast.fun), ast.args.map(build));
             case "select":
                 return new Select(build(ast.source), build(ast.selector));
+            case "const":
+                return new Const(build(ast.value));
             default:
                 console.log(ast);
                 throw new Error("not supported type " + ast.type);
@@ -34,11 +36,11 @@
     }
 
     export class Scope implements IScope {
-        constructor(private scope = {}, private parent: IScope = DefaultScope) {
+        constructor(private value = {}, private parent: IScope = DefaultScope) {
         }
 
         valueOf() {
-            return this.scope;
+            return this.value;
         }
 
         set(name: string, value: any) {
@@ -50,13 +52,13 @@
                 throw new Error("modifying value is not permitted.");
             }
 
-            this.scope[name] = value;
+            this.value[name] = value;
             return this;
         }
 
         get(name: string) {
             // current scope
-            var value = this.scope[name];
+            var value = this.value[name];
 
             if (typeof value === "undefined")
                 return this.parent.get(name);
@@ -65,7 +67,7 @@
                 return value;
 
             if (typeof value === "function")
-                return value.bind(this.scope);
+                return value.bind(this.value);
 
             if (typeof value === "object")
                 return new Scope(value, this);
@@ -109,11 +111,12 @@
         }
 
         execute(scope: IScope = DefaultScope): Function {
-            var obj = this.target.execute(scope);
+            var obj = this.target.execute(scope) as IScope;
 
             if (typeof this.member === "string")
                 return obj.get(this.member as string);
-            return (<IExpr>this.member).execute(obj);
+
+            return (this.member as IExpr).execute(obj);
         }
 
         toString() {

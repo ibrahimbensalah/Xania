@@ -1,10 +1,10 @@
-System.register([], function(exports_1, context_1) {
+System.register([], function (exports_1, context_1) {
     "use strict";
     var __moduleName = context_1 && context_1.id;
     var Xania;
     return {
-        setters:[],
-        execute: function() {
+        setters: [],
+        execute: function () {
             (function (Xania) {
                 var Core;
                 (function (Core) {
@@ -112,9 +112,9 @@ System.register([], function(exports_1, context_1) {
                     }());
                     Core.List = List;
                 })(Core = Xania.Core || (Xania.Core = {}));
-            })(Xania = Xania || (Xania = {}));
+            })(Xania || (Xania = {}));
             exports_1("Xania", Xania);
         }
-    }
+    };
 });
 //# sourceMappingURL=core.js.map

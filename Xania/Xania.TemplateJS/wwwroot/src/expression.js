@@ -1,15 +1,15 @@
-System.register([], function(exports_1, context_1) {
+System.register([], function (exports_1, context_1) {
     "use strict";
-    var __moduleName = context_1 && context_1.id;
     var __extends = (this && this.__extends) || function (d, b) {
         for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
         function __() { this.constructor = d; }
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
     };
+    var __moduleName = context_1 && context_1.id;
     var Expression;
     return {
-        setters:[],
-        execute: function() {
+        setters: [],
+        execute: function () {
             (function (Expression) {
                 var undefined = void 0;
                 function build(ast) {
@@ -30,6 +30,8 @@ System.register([], function(exports_1, context_1) {
                             return new App(build(ast.fun), ast.args.map(build));
                         case "select":
                             return new Select(build(ast.source), build(ast.selector));
+                        case "const":
+                            return new Const(build(ast.value));
                         default:
                             console.log(ast);
                             throw new Error("not supported type " + ast.type);
@@ -37,14 +39,14 @@ System.register([], function(exports_1, context_1) {
                 }
                 Expression.build = build;
                 var Scope = (function () {
-                    function Scope(scope, parent) {
-                        if (scope === void 0) { scope = {}; }
+                    function Scope(value, parent) {
+                        if (value === void 0) { value = {}; }
                         if (parent === void 0) { parent = DefaultScope; }
-                        this.scope = scope;
+                        this.value = value;
                         this.parent = parent;
                     }
                     Scope.prototype.valueOf = function () {
-                        return this.scope;
+                        return this.value;
                     };
                     Scope.prototype.set = function (name, value) {
                         if (value === undefined) {
@@ -53,17 +55,17 @@ System.register([], function(exports_1, context_1) {
                         if (this.get(name) !== undefined) {
                             throw new Error("modifying value is not permitted.");
                         }
-                        this.scope[name] = value;
+                        this.value[name] = value;
                         return this;
                     };
                     Scope.prototype.get = function (name) {
-                        var value = this.scope[name];
+                        var value = this.value[name];
                         if (typeof value === "undefined")
                             return this.parent.get(name);
                         if (value === null || value instanceof Date)
                             return value;
                         if (typeof value === "function")
-                            return value.bind(this.scope);
+                            return value.bind(this.value);
                         if (typeof value === "object")
                             return new Scope(value, this);
                         return value;
@@ -138,7 +140,7 @@ System.register([], function(exports_1, context_1) {
                         return function () {
                             var models = [];
                             for (var _i = 0; _i < arguments.length; _i++) {
-                                models[_i - 0] = arguments[_i];
+                                models[_i] = arguments[_i];
                             }
                             var childScope = new Scope({}, scope);
                             for (var i = 0; i < _this.modelNames.length; i++) {
@@ -256,11 +258,12 @@ System.register([], function(exports_1, context_1) {
                 var Group = (function (_super) {
                     __extends(Group, _super);
                     function Group(parent, key, into) {
-                        _super.call(this, parent);
-                        this.key = key;
-                        this.into = into;
-                        this.scopes = [];
-                        _super.prototype.set.call(this, into, this);
+                        var _this = _super.call(this, parent) || this;
+                        _this.key = key;
+                        _this.into = into;
+                        _this.scopes = [];
+                        _super.prototype.set.call(_this, into, _this);
+                        return _this;
                     }
                     Group.prototype.count = function () {
                         return this.scopes.length;
@@ -418,9 +421,9 @@ System.register([], function(exports_1, context_1) {
                     return Not;
                 }());
                 Expression.Not = Not;
-            })(Expression = Expression || (Expression = {}));
+            })(Expression || (Expression = {}));
             exports_1("Expression", Expression);
         }
-    }
+    };
 });
 //# sourceMappingURL=expression.js.map

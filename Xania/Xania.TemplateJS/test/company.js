@@ -7,6 +7,7 @@ var A = (function () {
     function A() {
     }
     A.prototype.getZero = function () {
+        var d = new Date();
         return 0;
     };
     return A;
@@ -14,9 +15,10 @@ var A = (function () {
 var Role = (function (_super) {
     __extends(Role, _super);
     function Role(prefix, emp) {
-        _super.call(this);
-        this.prefix = prefix;
-        this.emp = emp;
+        var _this = _super.call(this) || this;
+        _this.prefix = prefix;
+        _this.emp = emp;
+        return _this;
     }
     Object.defineProperty(Role.prototype, "name", {
         get: function () {
@@ -42,7 +44,7 @@ var Employee = (function () {
     });
     Object.defineProperty(Employee.prototype, "random", {
         get: function () {
-            return Math.random();
+            return 1;
         },
         enumerable: true,
         configurable: true
@@ -58,9 +60,10 @@ var Employee = (function () {
 var Company = (function (_super) {
     __extends(Company, _super);
     function Company(name, employees) {
-        _super.call(this);
-        this.name = name;
-        this.employees = employees;
+        var _this = _super.call(this) || this;
+        _this.name = name;
+        _this.employees = employees;
+        return _this;
     }
     Company.xania = function () {
         return new Company("Xania", [
@@ -78,10 +81,8 @@ var Company = (function (_super) {
         return this.name;
     };
     Company.prototype.count = function () {
-        return this.employees.length;
     };
     Company.prototype.addEmployee = function () {
-        this.employees.push(new Employee('bla ' + this.employees.length, 'di bla'));
     };
     Company.prototype.clearFirstNames = function () {
         var employees = this.employees;

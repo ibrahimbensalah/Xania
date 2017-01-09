@@ -1,17 +1,17 @@
-System.register(["../src/core", "../src/expression"], function(exports_1, context_1) {
+System.register(["../src/core", "../src/expression"], function (exports_1, context_1) {
     "use strict";
     var __moduleName = context_1 && context_1.id;
-    var core_1, expression_1;
-    var ibrahim, ramy, rania;
+    var core_1, expression_1, ibrahim, ramy, rania;
     return {
-        setters:[
+        setters: [
             function (core_1_1) {
                 core_1 = core_1_1;
             },
             function (expression_1_1) {
                 expression_1 = expression_1_1;
-            }],
-        execute: function() {
+            }
+        ],
+        execute: function () {
             ibrahim = {
                 age: 36,
                 firstName: "Ibrahim",
@@ -212,30 +212,27 @@ System.register(["../src/core", "../src/expression"], function(exports_1, contex
                 it(':: a >> b ', function () {
                     var ast = fsharp.parse("a >> b");
                     expect(ast).toBeDefined();
-                    console.log("\r\n =========== \r\n" + JSON.stringify(ast, null, 2) + "\r\n ======== \r\n", ast);
                     var compose = ast;
-                    expect(compose.type).toBe("compose");
-                    expect(compose.fun).toBe(">>");
-                    expect(compose.args[0].name).toBe("b");
-                    expect(compose.args[1].name).toBe("a");
+                    expect(compose.type).toBe("compose", JSON.stringify(ast, null, 2));
+                    expect(compose.fun).toBe(">>", JSON.stringify(ast, null, 2));
+                    expect(compose.args[0].name).toBe("b", JSON.stringify(compose.args[0], null, 2));
+                    expect(compose.args[1].name).toBe("a", JSON.stringify(compose.args[1], null, 2));
                 });
                 it(':: a.b ', function () {
                     var ast = fsharp.parse("a.b");
                     expect(ast).toBeDefined();
-                    console.log("\r\n =========== \r\n" + JSON.stringify(ast, null, 2) + "\r\n ======== \r\n", ast);
                     var compose = ast;
-                    expect(compose.type).toBe("member");
-                    expect(compose.target.name).toBe("a");
-                    expect(compose.member).toBe("b");
+                    expect(compose.type).toBe("member", JSON.stringify(ast, null, 2));
+                    expect(compose.target.name).toBe("a", JSON.stringify(ast, null, 2));
+                    expect(compose.member).toBe("b", JSON.stringify(ast, null, 2));
                 });
                 it(':: [1..n] ', function () {
                     var ast = fsharp.parse("[1..n]");
                     expect(ast).toBeDefined();
-                    console.log("\r\n =========== \r\n" + JSON.stringify(ast, null, 2) + "\r\n ======== \r\n", ast);
                     var range = ast;
-                    expect(range.type).toBe("range");
-                    expect(range.from.value).toBe(1);
-                    expect(range.to.name).toBe("n");
+                    expect(range.type).toBe("range", JSON.stringify(ast, null, 2));
+                    expect(range.from.value).toBe(1, JSON.stringify(ast, null, 2));
+                    expect(range.to.name).toBe("n", JSON.stringify(ast, null, 2));
                 });
                 it(':: for p in people where p.adult ', function () {
                     var ast = fsharp.parse("for p in people where p.adult");
@@ -249,13 +246,12 @@ System.register(["../src/core", "../src/expression"], function(exports_1, contex
                 it(':: regression test', function () {
                     var start = new Date().getTime();
                     var ast = fsharp.parse("a |> b.c >> (+) 1 |> d");
-                    for (var i = 0; i < 100; i++) {
+                    for (var i = 0; i < 1000; i++) {
                         fsharp.parse("a |> b >> (+) 1 |> d");
                     }
                     var elapsed = new Date().getTime() - start;
                     if (elapsed > 2000)
                         fail("too slow");
-                    console.log("\r\n =========== \r\n" + JSON.stringify(ast, null, 2) + "\r\n ======== \r\n", ast);
                     expect(ast).toEqual({
                         "type": "pipe",
                         "fun": "|>",
@@ -304,11 +300,11 @@ System.register(["../src/core", "../src/expression"], function(exports_1, contex
                 var fs = function (expr) { return expression_1.Expression.build(fsharp.parse(expr)); };
                 it("execute query", function () {
                     var store = new expression_1.Expression.Scope({ people: [ibrahim, ramy, rania], b: 1 });
-                    var result = fs("for p in people where p.adult select p").execute(store);
+                    var result = fs("for p in people where p.adult select p.age + 1").execute(store);
                     expect(result).toEqual([ibrahim.age + 1]);
                 });
             });
         }
-    }
+    };
 });
 //# sourceMappingURL=compilerSpec.js.map

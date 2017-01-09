@@ -1,7 +1,7 @@
 ﻿/// <reference path="../wwwroot/src/dom.ts" />
-
 class A {
     getZero() {
+        var d = new Date();
         return 0;
     }
 }
@@ -28,7 +28,7 @@ class Employee {
     }
 
     get random() {
-        return Math.random();
+        return 1;//Math.random();
     }
 
     sayHello(prefix) {
@@ -63,11 +63,11 @@ class Company extends A {
     }
 
     count() {
-        return this.employees.length;
+        //return this.employees.length;
     }
 
     addEmployee() {
-        this.employees.push(new Employee('bla ' + this.employees.length, 'di bla'));
+       // this.employees.push(new Employee('bla ' + this.employees.length, 'di bla'));
     }
 
     clearFirstNames() {

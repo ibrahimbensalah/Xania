@@ -287,37 +287,34 @@ describe("fsharp parser", () => {
         () => {
             var ast = fsharp.parse("a >> b");
             expect(ast).toBeDefined();
-            console.log("\r\n =========== \r\n" + JSON.stringify(ast, null, 2) + "\r\n ======== \r\n", ast);
 
             var compose = ast;
-            expect(compose.type).toBe("compose");
-            expect(compose.fun).toBe(">>");
-            expect(compose.args[0].name).toBe("b");
-            expect(compose.args[1].name).toBe("a");
+            expect(compose.type).toBe("compose", JSON.stringify(ast, null, 2));
+            expect(compose.fun).toBe(">>", JSON.stringify(ast, null, 2));
+            expect(compose.args[0].name).toBe("b", JSON.stringify(compose.args[0], null, 2));
+            expect(compose.args[1].name).toBe("a", JSON.stringify(compose.args[1], null, 2));
         });
 
     it(':: a.b ',
         () => {
             var ast = fsharp.parse("a.b");
             expect(ast).toBeDefined();
-            console.log("\r\n =========== \r\n" + JSON.stringify(ast, null, 2) + "\r\n ======== \r\n", ast);
 
             var compose = ast;
-            expect(compose.type).toBe("member");
-            expect(compose.target.name).toBe("a");
-            expect(compose.member).toBe("b");
+            expect(compose.type).toBe("member", JSON.stringify(ast, null, 2));
+            expect(compose.target.name).toBe("a", JSON.stringify(ast, null, 2));
+            expect(compose.member).toBe("b", JSON.stringify(ast, null, 2));
         });
 
     it(':: [1..n] ',
         () => {
             var ast = fsharp.parse("[1..n]");
             expect(ast).toBeDefined();
-            console.log("\r\n =========== \r\n" + JSON.stringify(ast, null, 2) + "\r\n ======== \r\n", ast);
 
             var range = ast;
-            expect(range.type).toBe("range");
-            expect(range.from.value).toBe(1);
-            expect(range.to.name).toBe("n");
+            expect(range.type).toBe("range", JSON.stringify(ast, null, 2));
+            expect(range.from.value).toBe(1, JSON.stringify(ast, null, 2));
+            expect(range.to.name).toBe("n", JSON.stringify(ast, null, 2));
         });
 
     it(':: for p in people where p.adult ',
@@ -339,18 +336,14 @@ describe("fsharp parser", () => {
             var start = new Date().getTime();
 
             var ast = fsharp.parse("a |> b.c >> (+) 1 |> d");
-            for (var i = 0; i < 100; i++) {
+            for (var i = 0; i < 1000; i++) {
                 fsharp.parse("a |> b >> (+) 1 |> d");
             }
             var elapsed = new Date().getTime() - start;
 
-            if (elapsed > 2000)
-                fail("too slow");
+            if (elapsed > 2000) fail("too slow");
 
-            console.log("\r\n =========== \r\n" + JSON.stringify(ast, null, 2) + "\r\n ======== \r\n", ast);
-
-            expect(ast).toEqual(
-                {
+            expect(ast).toEqual({
                     "type": "pipe",
                     "fun": "|>",
                     "args":
@@ -394,8 +387,7 @@ describe("fsharp parser", () => {
                             ]
                         }
                     ]
-                }
-            );
+                });
         });
 });
 
@@ -406,7 +398,7 @@ describe("runtime", () => {
     it("execute query",
         () => {
             var store = new XC.Scope({ people: [ibrahim, ramy, rania], b: 1 });
-            var result = fs("for p in people where p.adult select p").execute(store);
+            var result = fs("for p in people where p.adult select p.age + 1").execute(store);
 
             expect(result).toEqual([ ibrahim.age + 1 ]);
         });

@@ -13,7 +13,8 @@
       "grammar"
     ]
   },
-  "exclude": [
+  "exclude": [ 
+    "node_modules/@types/core-js/index.d.ts",
     "node_modules",
     "wwwroot/lib",
     "wwwroot/sample",
