@@ -1,8 +1,21 @@
-﻿import { Xania as Core } from "../src/core";
-import { Expression as XC } from "../src/expression";
+﻿import { Expression as XC } from "../src/expression";
+import { Reactive } from "../src/rebind";
 
 interface IPerson { firstName: string; lastName: string; adult: boolean, age: number }
 var ibrahim: IPerson, ramy: IPerson, rania: IPerson;
+
+
+var defaultRuntime = {
+    map(fn, list) {
+        return list.map(fn);
+    },
+    filter(fn, list) {
+        return list.filter(fn);
+    },
+    get(name: string) {
+        return this[name];
+    }
+};
 
 ibrahim = {
     age: 36,
@@ -26,7 +39,7 @@ rania = {
 // ReSharper disable InconsistentNaming
 describe("functional expressions", () => {
 
-    var List = Core.Core.List;
+    // var List = Core.Core.List;
 
     it(":: (.firstName)",
         // .firstName
@@ -77,7 +90,7 @@ describe("functional expressions", () => {
         // 
         () => {
             var notAdult = new XC.Not(XC.Lambda.member("adult"));
-            var mapExpr = new XC.App(new XC.Const(List.map, "map"), [notAdult, new XC.Const([ibrahim], " [ibrahim] ")]);
+            var mapExpr = new XC.App(new XC.Const(defaultRuntime.map, "map"), [notAdult, new XC.Const([ibrahim], " [ibrahim] ")]);
             console.log(`:: ${mapExpr}`);
 
             var actual = mapExpr.execute();
@@ -121,12 +134,6 @@ describe("functional expressions", () => {
             var actual = select.execute();
             expect(actual).toEqual([2, 1]);
         });
-
-    var defaultRuntime: XC.IScope = {
-        get(name: string) {
-            return List[name];
-        }
-    };
 
     it(":: persons |> map (not .adult)",
         () => {
@@ -391,6 +398,7 @@ describe("fsharp parser", () => {
         });
 });
 
+
 describe("runtime", () => {
 
     var fs = (expr: string) => XC.build(fsharp.parse(expr));
@@ -405,6 +413,16 @@ describe("runtime", () => {
             expect(scope[0].parent.parent).toEqual(root);
             // scope extends root scope.
             expect(scope[0].get('p').valueOf()).toBe(ibrahim);
+        });
+
+    var ReStore = Reactive.Store;
+    it("reactive store",
+        () => {
+            var person = { firstName: "I", lastName: "am Reactive" };
+            var store = new ReStore({ people: [ person ]});
+            store.bind(fs("for p in people select p.age"), ages => {
+                expect(ages).toEqual([36, 5, 3]);
+            });
         });
 });
 
