@@ -9,7 +9,7 @@
   },
   "dependencies": {},
   "scripts": {
-    "fsharp": "pegjs -o ./wwwroot/src/fsharp.peg.js --optimize speed --export-var fsharp --format globals ./grammar/fsharp.peg"
+    "fsharp": "pegjs -o ./wwwroot/src/fsharp.peg.js --optimize speed --export-var fsharp --format globals --plugin ./grammar/visitor.js ./grammar/fsharp.peg"
   },
   "jspm": {
     "directories": {
