@@ -1,27 +1,41 @@
-﻿export module Reactive {
+﻿import { Core } from "./core";
+
+export module Reactive {
 
     interface IExpressionParser {
         parse(expr: string): { execute(scope: { get (name: string) }) };
     }
 
     export class Store {
-        constructor(private model: any) { }
+
+        private rootBinding: Binding;
+
+        constructor(private model: any) {
+            this.rootBinding = new Binding(new Core.Scope(model));
+        }
 
         bind(selector: { execute(scope: { get(name: string) }) }, handler) {
-            var result = selector.execute(this);
+            const result = selector.execute(this.rootBinding);
             handler(result);
         }
 
         get(name: string) {
-            return this.model[name];
+            return new Store(this.model[name]);
         }
 
         extend(object: any) {
-            return new Store(object, this);
+            return new Store(object);
         }
     }
 
-    export class Binding {
-        
+    export class Binding implements Core.IScope {
+        constructor(private scope: Core.Scope) {  }
+
+        get(name: string): any {
+        }
+
+        extend(): Core.IScope {
+            return this;
+        }
     }
 }

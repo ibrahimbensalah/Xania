@@ -1,5 +1,6 @@
 ﻿import { Expression as XC } from "../src/expression";
-import { Reactive } from "../src/rebind";
+import { Reactive as Re } from "../src/rebind";
+import { Core } from "../src/core";
 
 interface IPerson { firstName: string; lastName: string; adult: boolean, age: number }
 var ibrahim: IPerson, ramy: IPerson, rania: IPerson;
@@ -351,50 +352,50 @@ describe("fsharp parser", () => {
             if (elapsed > 2000) fail("too slow");
 
             expect(ast).toEqual({
-                    "type": "pipe",
-                    "fun": "|>",
-                    "args":
-                    [
-                        {
-                            "type": "ident",
-                            "name": "d"
-                        },
-                        {
-                            "type": "pipe",
-                            "fun": "|>",
-                            "args":
-                            [
-                                {
-                                    "type": "compose",
-                                    "fun": ">>",
-                                    "args": [
-                                        {
-                                            "type": "app",
-                                            "fun": "+",
-                                            "args":
-                                            [
-                                                {
-                                                    "type": "const",
-                                                    "value": 1
-                                                }
-                                            ]
-                                        }, {
-                                            "type": "member",
-                                            "target": {
-                                                "type": "ident",
-                                                "name": "b"
-                                            },
-                                            "member": "c"
-                                        }
-                                    ]
-                                }, {
-                                    "type": "ident",
-                                    "name": "a"
-                                }
-                            ]
-                        }
-                    ]
-                });
+                "type": "pipe",
+                "fun": "|>",
+                "args":
+                [
+                    {
+                        "type": "ident",
+                        "name": "d"
+                    },
+                    {
+                        "type": "pipe",
+                        "fun": "|>",
+                        "args":
+                        [
+                            {
+                                "type": "compose",
+                                "fun": ">>",
+                                "args": [
+                                    {
+                                        "type": "app",
+                                        "fun": "+",
+                                        "args":
+                                        [
+                                            {
+                                                "type": "const",
+                                                "value": 1
+                                            }
+                                        ]
+                                    }, {
+                                        "type": "member",
+                                        "target": {
+                                            "type": "ident",
+                                            "name": "b"
+                                        },
+                                        "member": "c"
+                                    }
+                                ]
+                            }, {
+                                "type": "ident",
+                                "name": "a"
+                            }
+                        ]
+                    }
+                ]
+            });
         });
 });
 
@@ -403,23 +404,30 @@ describe("runtime", () => {
 
     var fs = (expr: string) => XC.build(fsharp.parse(expr));
 
-    it("execute query",
+    it("expression dependencies",
         () => {
-            var root = new XC.Scope({ people: [ibrahim, ramy, rania], b: 1 });
-            var scope = fs("for p in people where p.adult select p").execute(root);
+            var root = new Core.Scope({ p: ibrahim });
+            var result = fs("p.firstName").execute(root);
 
-            expect(scope.length).toBe(1);
-            // scope contains root values.
-            expect(scope[0].parent.parent).toEqual(root);
-            // scope extends root scope.
-            expect(scope[0].get('p').valueOf()).toBe(ibrahim);
+            expect(result.dependencies.length).toBe(1);
         });
 
-    var ReStore = Reactive.Store;
+    it("execute query",
+        () => {
+            var root = new Core.Scope({ people: [ibrahim, ramy, rania], b: 1 });
+            var result = fs("for p in people where p.adult select p").execute(root);
+
+            expect(result.length).toBe(1);
+            // scope contains root values.
+            expect(result[0].parent.parent).toEqual(root);
+            // scope extends root scope.
+            expect(result[0].get('p').valueOf()).toBe(ibrahim);
+        });
+
     it("reactive store",
         () => {
             var person = { firstName: "I", lastName: "am Reactive" };
-            var store = new ReStore({ people: [ person ]});
+            var store = new Re.Store({ people: [person] });
             store.bind(fs("for p in people select p.age"), ages => {
                 expect(ages).toEqual([36, 5, 3]);
             });

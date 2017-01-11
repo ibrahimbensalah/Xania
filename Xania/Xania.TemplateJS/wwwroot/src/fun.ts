@@ -316,7 +316,7 @@
         static extend(context, varName: string, x: any) {
             var item = {};
             item[varName] = x;
-            return Object.assign(item, context);
+            return (<any>Object).assign(item, context);
         }
         static forEach(arr, fn) {
             return arr.forEach(fn);

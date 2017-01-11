@@ -2,24 +2,19 @@
   "compileOnSave": true,
   "compilerOptions": {
     "lib": [ "dom", "es2015" ],
-    "module": "commonjs",
+    "module": "system",
     "noEmitOnError": true,
     "noImplicitAny": false,
     "removeComments": true,
     "sourceMap": true,
     "target": "es5",
-    "types": [ "jasmine" ],
-    "typeRoots": [
-      "grammar"
-    ]
+    "types": [ "jasmine" ]
   },
-  "exclude": [ 
-    "node_modules/@types/core-js/index.d.ts",
-    "node_modules",
-    "wwwroot/lib",
-    "wwwroot/sample",
-    "wwwroot/src/boot.ts",
-    "wwwroot/src/dom.ts",
-    "wwwroot/test/bindingSpec.ts"
+  "include": [
+    "grammar/pegjs.d.ts",
+    "wwwroot/src/expression.ts",
+    "wwwroot/src/core.ts",
+    "wwwroot/src/rebind.ts",
+    "wwwroot/test/compilerSpec.ts"
   ]
 }
