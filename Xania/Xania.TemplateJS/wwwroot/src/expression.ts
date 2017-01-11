@@ -3,7 +3,7 @@
 export module Expression {
     var undefined = void 0;
 
-    export function build(ast: any): IExpr {
+    export function accept(ast: any, visitor: IAstVisitor = AstVisitor) {
         if (ast === null || ast === undefined)
             return null;
 
@@ -12,22 +12,55 @@ export module Expression {
 
         switch (ast.type) {
             case "where":
-                return new Where(build(ast.source), build(ast.predicate));
+                return visitor.where(accept(ast.source, visitor), accept(ast.predicate, visitor));
             case "query":
-                return new Query(ast.param, build(ast.source));
+                return visitor.query(ast.param, accept(ast.source, visitor));
             case "ident":
-                return new Ident(ast.name);
+                return visitor.ident(ast.name);
             case "member":
-                return new Member(build(ast.target), build(ast.member));
+                return visitor.member(accept(ast.target, visitor), accept(ast.member, visitor));
             case "app":
-                return new App(build(ast.fun), ast.args.map(build));
+                const args = [];
+                for (let i = 0; i < ast.args.length; i++) {
+                    args.push(accept(args[i], visitor));
+                }
+                return visitor.app(accept(ast.fun, visitor), args);
             case "select":
-                return new Select(build(ast.source), build(ast.selector));
+                return visitor.select(accept(ast.source, visitor), accept(ast.selector, visitor));
             case "const":
-                return new Const(build(ast.value));
+                return visitor.const(ast.value);
             default:
-                console.log(ast);
-                throw new Error("not supported type " + ast.type);
+                throw new Error(`not supported type ${ast.type}`);
+        }
+    }
+
+    class AstVisitor {
+        static where(source, predicate) {
+            return new Where(source, predicate);
+        }
+
+        static select(source, selector) {
+            return new Select(source, selector);
+        }
+
+        static query(param, source) {
+            return new Query(param, source);
+        }
+
+        static ident(name) {
+            return new Ident(name);
+        }
+
+        static member(target, name) {
+            return new Member(target, name);
+        }
+
+        static app(fun, args: any[]) {
+            return new App(fun, args);
+        }
+
+        static const(value) {
+            return new Const(value);
         }
     }
 
@@ -75,7 +108,7 @@ export module Expression {
                 throw new Error(`${this.target} is null`);
 
             if (typeof this.member === "string") {
-                return new Core.Property(obj, this.member as string);
+                return obj.get(this.member as string);
             }
 
             return (this.member as IExpr).execute(obj);

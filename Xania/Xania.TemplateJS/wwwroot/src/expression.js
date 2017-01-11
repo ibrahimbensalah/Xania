@@ -1,47 +1,77 @@
-System.register(["./core"], function(exports_1, context_1) {
+System.register(["./core"], function (exports_1, context_1) {
     "use strict";
-    var __moduleName = context_1 && context_1.id;
     var __extends = (this && this.__extends) || function (d, b) {
         for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
         function __() { this.constructor = d; }
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
     };
-    var core_1;
-    var Expression;
+    var __moduleName = context_1 && context_1.id;
+    var core_1, Expression;
     return {
-        setters:[
+        setters: [
             function (core_1_1) {
                 core_1 = core_1_1;
-            }],
-        execute: function() {
+            }
+        ],
+        execute: function () {
             (function (Expression) {
                 var undefined = void 0;
-                function build(ast) {
+                function accept(ast, visitor) {
+                    if (visitor === void 0) { visitor = AstVisitor; }
                     if (ast === null || ast === undefined)
                         return null;
                     if (ast.type === undefined)
                         return ast;
                     switch (ast.type) {
                         case "where":
-                            return new Where(build(ast.source), build(ast.predicate));
+                            return visitor.where(accept(ast.source, visitor), accept(ast.predicate, visitor));
                         case "query":
-                            return new Query(ast.param, build(ast.source));
+                            return visitor.query(ast.param, accept(ast.source, visitor));
                         case "ident":
-                            return new Ident(ast.name);
+                            return visitor.ident(ast.name);
                         case "member":
-                            return new Member(build(ast.target), build(ast.member));
+                            return visitor.member(accept(ast.target, visitor), accept(ast.member, visitor));
                         case "app":
-                            return new App(build(ast.fun), ast.args.map(build));
+                            var args = [];
+                            for (var i = 0; i < ast.args.length; i++) {
+                                args.push(accept(args[i], visitor));
+                            }
+                            return visitor.app(accept(ast.fun, visitor), args);
                         case "select":
-                            return new Select(build(ast.source), build(ast.selector));
+                            return visitor.select(accept(ast.source, visitor), accept(ast.selector, visitor));
                         case "const":
-                            return new Const(build(ast.value));
+                            return visitor.const(ast.value);
                         default:
-                            console.log(ast);
                             throw new Error("not supported type " + ast.type);
                     }
                 }
-                Expression.build = build;
+                Expression.accept = accept;
+                var AstVisitor = (function () {
+                    function AstVisitor() {
+                    }
+                    AstVisitor.where = function (source, predicate) {
+                        return new Where(source, predicate);
+                    };
+                    AstVisitor.select = function (source, selector) {
+                        return new Select(source, selector);
+                    };
+                    AstVisitor.query = function (param, source) {
+                        return new Query(param, source);
+                    };
+                    AstVisitor.ident = function (name) {
+                        return new Ident(name);
+                    };
+                    AstVisitor.member = function (target, name) {
+                        return new Member(target, name);
+                    };
+                    AstVisitor.app = function (fun, args) {
+                        return new App(fun, args);
+                    };
+                    AstVisitor.const = function (value) {
+                        return new Const(value);
+                    };
+                    return AstVisitor;
+                }());
                 var DefaultScope = (function () {
                     function DefaultScope() {
                     }
@@ -81,7 +111,7 @@ System.register(["./core"], function(exports_1, context_1) {
                         if (!obj || !obj.get)
                             throw new Error(this.target + " is null");
                         if (typeof this.member === "string") {
-                            return new core_1.Core.Property(obj, this.member);
+                            return obj.get(this.member);
                         }
                         return this.member.execute(obj);
                     };
@@ -115,7 +145,7 @@ System.register(["./core"], function(exports_1, context_1) {
                         return function () {
                             var models = [];
                             for (var _i = 0; _i < arguments.length; _i++) {
-                                models[_i - 0] = arguments[_i];
+                                models[_i] = arguments[_i];
                             }
                             var childScope = new core_1.Core.Scope({}, scope);
                             for (var i = 0; i < _this.modelNames.length; i++) {
@@ -233,11 +263,12 @@ System.register(["./core"], function(exports_1, context_1) {
                 var Group = (function (_super) {
                     __extends(Group, _super);
                     function Group(parent, key, into) {
-                        _super.call(this, parent, DefaultScope);
-                        this.key = key;
-                        this.into = into;
-                        this.scopes = [];
-                        _super.prototype.set.call(this, into, this);
+                        var _this = _super.call(this, parent, DefaultScope) || this;
+                        _this.key = key;
+                        _this.into = into;
+                        _this.scopes = [];
+                        _super.prototype.set.call(_this, into, _this);
+                        return _this;
                     }
                     Group.prototype.count = function () {
                         return this.scopes.length;
@@ -399,9 +430,9 @@ System.register(["./core"], function(exports_1, context_1) {
                     return Not;
                 }());
                 Expression.Not = Not;
-            })(Expression = Expression || (Expression = {}));
+            })(Expression || (Expression = {}));
             exports_1("Expression", Expression);
         }
-    }
+    };
 });
 //# sourceMappingURL=expression.js.map

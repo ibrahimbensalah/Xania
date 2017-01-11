@@ -1,14 +1,14 @@
-System.register(["./core"], function(exports_1, context_1) {
+System.register(["./core"], function (exports_1, context_1) {
     "use strict";
     var __moduleName = context_1 && context_1.id;
-    var core_1;
-    var Reactive;
+    var core_1, Reactive;
     return {
-        setters:[
+        setters: [
             function (core_1_1) {
                 core_1 = core_1_1;
-            }],
-        execute: function() {
+            }
+        ],
+        execute: function () {
             (function (Reactive) {
                 var Store = (function () {
                     function Store(model) {
@@ -40,9 +40,9 @@ System.register(["./core"], function(exports_1, context_1) {
                     return Binding;
                 }());
                 Reactive.Binding = Binding;
-            })(Reactive = Reactive || (Reactive = {}));
+            })(Reactive || (Reactive = {}));
             exports_1("Reactive", Reactive);
         }
-    }
+    };
 });
 //# sourceMappingURL=rebind.js.map

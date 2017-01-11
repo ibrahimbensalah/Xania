@@ -1,10 +1,9 @@
-System.register(["../src/expression", "../src/rebind", "../src/core"], function(exports_1, context_1) {
+System.register(["../src/expression", "../src/rebind", "../src/core"], function (exports_1, context_1) {
     "use strict";
     var __moduleName = context_1 && context_1.id;
-    var expression_1, rebind_1, core_1;
-    var ibrahim, ramy, rania, defaultRuntime;
+    var expression_1, rebind_1, core_1, ibrahim, ramy, rania, defaultRuntime;
     return {
-        setters:[
+        setters: [
             function (expression_1_1) {
                 expression_1 = expression_1_1;
             },
@@ -13,8 +12,9 @@ System.register(["../src/expression", "../src/rebind", "../src/core"], function(
             },
             function (core_1_1) {
                 core_1 = core_1_1;
-            }],
-        execute: function() {
+            }
+        ],
+        execute: function () {
             defaultRuntime = {
                 map: function (fn, list) {
                     return list.map(fn);
@@ -305,7 +305,7 @@ System.register(["../src/expression", "../src/rebind", "../src/core"], function(
                 });
             });
             describe("runtime", function () {
-                var fs = function (expr) { return expression_1.Expression.build(fsharp.parse(expr)); };
+                var fs = function (expr) { return expression_1.Expression.accept(fsharp.parse(expr)); };
                 it("expression dependencies", function () {
                     var root = new core_1.Core.Scope({ p: ibrahim });
                     var result = fs("p.firstName").execute(root);
@@ -327,6 +327,6 @@ System.register(["../src/expression", "../src/rebind", "../src/core"], function(
                 });
             });
         }
-    }
+    };
 });
 //# sourceMappingURL=compilerSpec.js.map

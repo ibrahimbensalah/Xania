@@ -402,7 +402,7 @@ describe("fsharp parser", () => {
 
 describe("runtime", () => {
 
-    var fs = (expr: string) => XC.build(fsharp.parse(expr));
+    var fs = (expr: string) => XC.accept(fsharp.parse(expr));
 
     it("expression dependencies",
         () => {
