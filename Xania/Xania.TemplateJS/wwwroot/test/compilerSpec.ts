@@ -2,10 +2,6 @@
 import { Reactive as Re } from "../src/rebind";
 import { Core } from "../src/core";
 
-interface IPerson { firstName: string; lastName: string; adult: boolean, age: number }
-var ibrahim: IPerson, ramy: IPerson, rania: IPerson;
-
-
 var defaultRuntime = {
     map(fn, list) {
         return list.map(fn);
@@ -18,19 +14,21 @@ var defaultRuntime = {
     }
 };
 
-ibrahim = {
+interface IPerson { firstName: string; lastName: string; adult: boolean, age: number }
+
+var ibrahim: IPerson = {
     age: 36,
     firstName: "Ibrahim",
     lastName: "ben Salah",
     adult: true
 };
-ramy = {
+var ramy: IPerson = {
     age: 5,
     firstName: "Ramy",
     lastName: "ben Salah",
     adult: false
 };
-rania = {
+var rania: IPerson = {
     age: 3,
     firstName: "Rania",
     lastName: "ben Salah",
@@ -402,35 +400,45 @@ describe("fsharp parser", () => {
 
 describe("runtime", () => {
 
-    var fs = (expr: string) => XC.accept(fsharp.parse(expr));
+    var fs = fsharp.parse;
 
     it("expression dependencies",
         () => {
-            var root = new Core.Scope({ p: ibrahim });
-            var result = fs("p.firstName").execute(root);
+            var store = new Re.Store({ p: ibrahim });
+            var binding = new Re.Binding(store, fs("p.firstName"));
+            var result = binding.execute();
 
-            expect(result.dependencies.length).toBe(1);
+            expect(result).toBe("Ibrahim");
+            expect(binding.subscriptions.length).toBe(2);
+
+            expect(store.dirty.length).toBe(0);
+
+            store.get("p").get("firstName").set("Khalil");
+
+            expect(store.dirty).toEqual([binding]);
+
+            store.flush();
         });
 
-    it("execute query",
-        () => {
-            var root = new Core.Scope({ people: [ibrahim, ramy, rania], b: 1 });
-            var result = fs("for p in people where p.adult select p").execute(root);
+    //it("execute query",
+    //    () => {
+    //        var root = new Core.Scope({ people: [ibrahim, ramy, rania], b: 1 });
+    //        var result = fs("for p in people where p.adult select p").execute(root);
 
-            expect(result.length).toBe(1);
-            // scope contains root values.
-            expect(result[0].parent.parent).toEqual(root);
-            // scope extends root scope.
-            expect(result[0].get('p').valueOf()).toBe(ibrahim);
-        });
+    //        expect(result.length).toBe(1);
+    //        // scope contains root values.
+    //        expect(result[0].parent.parent).toEqual(root);
+    //        // scope extends root scope.
+    //        expect(result[0].get('p').valueOf()).toBe(ibrahim);
+    //    });
 
-    it("reactive store",
-        () => {
-            var person = { firstName: "I", lastName: "am Reactive" };
-            var store = new Re.Store({ people: [person] });
-            store.bind(fs("for p in people select p.age"), ages => {
-                expect(ages).toEqual([36, 5, 3]);
-            });
-        });
+    //it("reactive store",
+    //    () => {
+    //        var person = { firstName: "I", lastName: "am Reactive" };
+    //        var store = new Re.Store({ people: [person] });
+    //        store.bind(fs("for p in people select p.age"), ages => {
+    //            expect(ages).toEqual([36, 5, 3]);
+    //        });
+    //    });
 });
 

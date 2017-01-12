@@ -1,20 +1,17 @@
-System.register(["../src/expression", "../src/rebind", "../src/core"], function (exports_1, context_1) {
+System.register(["../src/expression", "../src/rebind"], function(exports_1, context_1) {
     "use strict";
     var __moduleName = context_1 && context_1.id;
-    var expression_1, rebind_1, core_1, ibrahim, ramy, rania, defaultRuntime;
+    var expression_1, rebind_1;
+    var defaultRuntime, ibrahim, ramy, rania;
     return {
-        setters: [
+        setters:[
             function (expression_1_1) {
                 expression_1 = expression_1_1;
             },
             function (rebind_1_1) {
                 rebind_1 = rebind_1_1;
-            },
-            function (core_1_1) {
-                core_1 = core_1_1;
-            }
-        ],
-        execute: function () {
+            }],
+        execute: function() {
             defaultRuntime = {
                 map: function (fn, list) {
                     return list.map(fn);
@@ -305,28 +302,20 @@ System.register(["../src/expression", "../src/rebind", "../src/core"], function 
                 });
             });
             describe("runtime", function () {
-                var fs = function (expr) { return expression_1.Expression.accept(fsharp.parse(expr)); };
+                var fs = fsharp.parse;
                 it("expression dependencies", function () {
-                    var root = new core_1.Core.Scope({ p: ibrahim });
-                    var result = fs("p.firstName").execute(root);
-                    expect(result.dependencies.length).toBe(1);
-                });
-                it("execute query", function () {
-                    var root = new core_1.Core.Scope({ people: [ibrahim, ramy, rania], b: 1 });
-                    var result = fs("for p in people where p.adult select p").execute(root);
-                    expect(result.length).toBe(1);
-                    expect(result[0].parent.parent).toEqual(root);
-                    expect(result[0].get('p').valueOf()).toBe(ibrahim);
-                });
-                it("reactive store", function () {
-                    var person = { firstName: "I", lastName: "am Reactive" };
-                    var store = new rebind_1.Reactive.Store({ people: [person] });
-                    store.bind(fs("for p in people select p.age"), function (ages) {
-                        expect(ages).toEqual([36, 5, 3]);
-                    });
+                    var store = new rebind_1.Reactive.Store({ p: ibrahim });
+                    var binding = new rebind_1.Reactive.Binding(store, fs("p.firstName"));
+                    var result = binding.execute();
+                    expect(result).toBe("Ibrahim");
+                    expect(binding.subscriptions.length).toBe(2);
+                    expect(store.dirty.length).toBe(0);
+                    store.get("p").get("firstName").set("Khalil");
+                    expect(store.dirty).toEqual([binding]);
+                    store.flush();
                 });
             });
         }
-    };
+    }
 });
 //# sourceMappingURL=compilerSpec.js.map
