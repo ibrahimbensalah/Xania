@@ -2,18 +2,6 @@
 import { Reactive as Re } from "../src/rebind";
 import { Core } from "../src/core";
 
-var defaultRuntime = {
-    map(fn, list) {
-        return list.map(fn);
-    },
-    filter(fn, list) {
-        return list.filter(fn);
-    },
-    get(name: string) {
-        return this[name];
-    }
-};
-
 interface IPerson { firstName: string; lastName: string; adult: boolean, age: number }
 
 var ibrahim: IPerson = {
@@ -33,6 +21,20 @@ var rania: IPerson = {
     firstName: "Rania",
     lastName: "ben Salah",
     adult: false
+};
+
+{
+/*
+var defaultRuntime = {
+    map(fn, list) {
+        return list.map(fn);
+    },
+    filter(fn, list) {
+        return list.filter(fn);
+    },
+    get(name: string) {
+        return this[name];
+    }
 };
 
 // ReSharper disable InconsistentNaming
@@ -179,6 +181,9 @@ describe("functional expressions", () => {
             expect(actual(1, 2)).toBe(3);
         });
 });
+
+*/
+}
 
 describe("fsharp parser", () => {
 
@@ -409,13 +414,13 @@ describe("runtime", () => {
             var result = binding.execute();
 
             expect(result).toBe("Ibrahim");
-            expect(binding.subscriptions.length).toBe(2);
+            expect(binding.dependencies.length).toBe(2);
 
             expect(store.dirty.length).toBe(0);
 
-            store.get("p").get("firstName").set("Khalil");
-
+            store.get("p").get("firstName").set("Mr Ibraihm");
             expect(store.dirty).toEqual([binding]);
+            expect(binding.dependencies.length).toBe(2);
 
             store.flush();
         });

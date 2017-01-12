@@ -1,19 +1,19 @@
-System.register(["./expression"], function(exports_1, context_1) {
+System.register(["./expression"], function (exports_1, context_1) {
     "use strict";
-    var __moduleName = context_1 && context_1.id;
     var __extends = (this && this.__extends) || function (d, b) {
         for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
         function __() { this.constructor = d; }
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
     };
-    var expression_1;
-    var Reactive;
+    var __moduleName = context_1 && context_1.id;
+    var expression_1, Reactive;
     return {
-        setters:[
+        setters: [
             function (expression_1_1) {
                 expression_1 = expression_1_1;
-            }],
-        execute: function() {
+            }
+        ],
+        execute: function () {
             (function (Reactive) {
                 var Value = (function () {
                     function Value(value) {
@@ -41,31 +41,29 @@ System.register(["./expression"], function(exports_1, context_1) {
                 var Property = (function (_super) {
                     __extends(Property, _super);
                     function Property(dispatcher, parent, name, value) {
-                        _super.call(this, value);
-                        this.dispatcher = dispatcher;
-                        this.parent = parent;
-                        this.name = name;
-                        this.actions = [];
+                        var _this = _super.call(this, value) || this;
+                        _this.dispatcher = dispatcher;
+                        _this.parent = parent;
+                        _this.name = name;
+                        _this.actions = [];
+                        return _this;
                     }
                     Property.prototype.create = function (propertyName, initialValue) {
                         return new Property(this.dispatcher, this, propertyName, initialValue);
                     };
-                    Property.prototype.listen = function (action) {
+                    Property.prototype.change = function (action) {
                         if (this.actions.indexOf(action) < 0) {
                             this.actions.push(action);
-                            return {
-                                actions: this.actions,
-                                action: action,
-                                dispose: function () {
-                                    var idx = this.actions.indexOf(this.action);
-                                    if (idx < 0)
-                                        return false;
-                                    this.actions.splice(idx, 1);
-                                    return true;
-                                }
-                            };
+                            return this;
                         }
                         return false;
+                    };
+                    Property.prototype.unbind = function (action) {
+                        var idx = this.actions.indexOf(action);
+                        if (idx < 0)
+                            return false;
+                        this.actions.splice(idx, 1);
+                        return true;
                     };
                     Property.prototype.set = function (value) {
                         if (this.value !== value) {
@@ -96,9 +94,10 @@ System.register(["./expression"], function(exports_1, context_1) {
                 var Scope = (function (_super) {
                     __extends(Scope, _super);
                     function Scope(store, value, parent) {
-                        _super.call(this, value);
-                        this.store = store;
-                        this.parent = parent;
+                        var _this = _super.call(this, value) || this;
+                        _this.store = store;
+                        _this.parent = parent;
+                        return _this;
                     }
                     Scope.prototype.create = function (propertyName, initialValue) {
                         return new Property(this.store, this, propertyName, initialValue);
@@ -163,13 +162,13 @@ System.register(["./expression"], function(exports_1, context_1) {
                     function Binding(context, ast) {
                         this.context = context;
                         this.ast = ast;
-                        this.subscriptions = [];
+                        this.dependencies = [];
                     }
                     Binding.prototype.execute = function () {
-                        for (var i = 0; i < this.subscriptions.length; i++) {
-                            this.subscriptions[i].dispose();
+                        for (var i = 0; i < this.dependencies.length; i++) {
+                            this.dependencies[i].unbind(this);
                         }
-                        this.subscriptions.length = 0;
+                        this.dependencies.length = 0;
                         var result = expression_1.Expression.accept(this.ast, this).valueOf();
                         console.log(result);
                         return result;
@@ -194,10 +193,10 @@ System.register(["./expression"], function(exports_1, context_1) {
                     };
                     Binding.prototype.member = function (target, name) {
                         var value = target.get(name);
-                        if (value && value.listen) {
-                            var subscription = value.listen(this);
-                            if (!!subscription)
-                                this.subscriptions.push(subscription);
+                        if (value && value.change) {
+                            var dependency = value.change(this);
+                            if (!!dependency)
+                                this.dependencies.push(dependency);
                         }
                         return value;
                     };
@@ -210,9 +209,9 @@ System.register(["./expression"], function(exports_1, context_1) {
                     return Binding;
                 }());
                 Reactive.Binding = Binding;
-            })(Reactive = Reactive || (Reactive = {}));
+            })(Reactive || (Reactive = {}));
             exports_1("Reactive", Reactive);
         }
-    }
+    };
 });
 //# sourceMappingURL=rebind.js.map

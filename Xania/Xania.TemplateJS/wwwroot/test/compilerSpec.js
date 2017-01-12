@@ -1,28 +1,14 @@
-System.register(["../src/expression", "../src/rebind"], function(exports_1, context_1) {
+System.register(["../src/rebind"], function (exports_1, context_1) {
     "use strict";
     var __moduleName = context_1 && context_1.id;
-    var expression_1, rebind_1;
-    var defaultRuntime, ibrahim, ramy, rania;
+    var rebind_1, ibrahim, ramy, rania;
     return {
-        setters:[
-            function (expression_1_1) {
-                expression_1 = expression_1_1;
-            },
+        setters: [
             function (rebind_1_1) {
                 rebind_1 = rebind_1_1;
-            }],
-        execute: function() {
-            defaultRuntime = {
-                map: function (fn, list) {
-                    return list.map(fn);
-                },
-                filter: function (fn, list) {
-                    return list.filter(fn);
-                },
-                get: function (name) {
-                    return this[name];
-                }
-            };
+            }
+        ],
+        execute: function () {
             ibrahim = {
                 age: 36,
                 firstName: "Ibrahim",
@@ -41,100 +27,8 @@ System.register(["../src/expression", "../src/rebind"], function(exports_1, cont
                 lastName: "ben Salah",
                 adult: false
             };
-            describe("functional expressions", function () {
-                it(":: (.firstName)", function () {
-                    var expr = expression_1.Expression.Lambda.member("firstName");
-                    console.log(":: " + expr.toString());
-                    var actual = expr.execute()(ibrahim).valueOf();
-                    expect(actual).toBe("Ibrahim");
-                });
-                it(":: person |> (.firstName)", function () {
-                    var expr = new expression_1.Expression.Pipe(new expression_1.Expression.Const(ibrahim, "person"), expression_1.Expression.Lambda.member("firstName"));
-                    console.log(":: " + expr);
-                    var actual = expr.execute().valueOf();
-                    expect(actual).toBe("Ibrahim");
-                });
-                it(":: inrement 1", function () {
-                    var increment = function (x) { return (x + 1); };
-                    var expr = new expression_1.Expression.App(new expression_1.Expression.Const(increment, "increment"), [new expression_1.Expression.Const(1)]);
-                    console.log(":: " + expr);
-                    var actual = expr.execute();
-                    expect(actual).toBe(2);
-                });
-                it(":: not (.adult)", function () {
-                    var notAdult = new expression_1.Expression.Not(expression_1.Expression.Lambda.member("adult"));
-                    console.log(":: " + notAdult);
-                    var actual = notAdult.execute();
-                    if (typeof actual === "function")
-                        expect(actual(ibrahim)).toBe(false);
-                    else
-                        fail("expected a function");
-                });
-                it(":: map (not (.adult)) persons", function () {
-                    var notAdult = new expression_1.Expression.Not(expression_1.Expression.Lambda.member("adult"));
-                    var mapExpr = new expression_1.Expression.App(new expression_1.Expression.Const(defaultRuntime.map, "map"), [notAdult, new expression_1.Expression.Const([ibrahim], " [ibrahim] ")]);
-                    console.log(":: " + mapExpr);
-                    var actual = mapExpr.execute();
-                    expect(actual).toEqual([false]);
-                });
-                it(":: for p in people do where p.adult select p.firstName", function () {
-                    var p = new expression_1.Expression.Ident("p");
-                    var query = new expression_1.Expression.Query("p", new expression_1.Expression.Const([ibrahim, ramy], "[ibrahim, ramy]"));
-                    var where = new expression_1.Expression.Where(query, new expression_1.Expression.Member(p, "adult"));
-                    var select = new expression_1.Expression.Select(where, new expression_1.Expression.Member(p, "firstName"));
-                    console.log(":: " + select);
-                    var actual = select.execute().valueOf();
-                    console.log(actual);
-                    expect(actual).toEqual(["Ibrahim"]);
-                });
-                it(":: for p in people do orderBy p.firstName select p.firstName", function () {
-                    var p = new expression_1.Expression.Ident("p");
-                    var query = new expression_1.Expression.Query("p", new expression_1.Expression.Const([ramy, ibrahim], "[ramy, ibrahim]"));
-                    var orderBy = new expression_1.Expression.OrderBy(query, new expression_1.Expression.Member(p, "firstName"));
-                    var select = new expression_1.Expression.Select(orderBy, new expression_1.Expression.Member(p, "firstName"));
-                    console.log(":: " + select);
-                    var actual = select.execute();
-                    expect(actual).toEqual(["Ibrahim", "Ramy"]);
-                });
-                it(":: for p in people do groupBy p.adult into g select g.count ()", function () {
-                    var p = new expression_1.Expression.Ident("p");
-                    var query = new expression_1.Expression.Query("p", new expression_1.Expression.Const([ramy, ibrahim, rania], "[ramy, ibrahim, rania]"));
-                    var groupBy = new expression_1.Expression.GroupBy(query, new expression_1.Expression.Member(p, "adult"), "g");
-                    var select = new expression_1.Expression.Select(groupBy, new expression_1.Expression.Member(new expression_1.Expression.Ident("g"), "count").app([]));
-                    console.log(":: " + select);
-                    var actual = select.execute();
-                    expect(actual).toEqual([2, 1]);
-                });
-                it(":: persons |> map (not .adult)", function () {
-                    var notAdult = new expression_1.Expression.Not(expression_1.Expression.Lambda.member("adult"));
-                    var mapExpr = new expression_1.Expression.Pipe(new expression_1.Expression.Const([ibrahim], "everybody"), new expression_1.Expression.App(new expression_1.Expression.Ident("map"), [notAdult]));
-                    console.log(":: " + mapExpr);
-                    var actual = mapExpr.execute(defaultRuntime);
-                    expect(actual).toEqual([false]);
-                });
-                it(":: persons |> filter (not .adult) |> map (.firstName)", function () {
-                    var notAdult = new expression_1.Expression.Not(expression_1.Expression.Lambda.member("adult"));
-                    var filterExpr = new expression_1.Expression.Pipe(new expression_1.Expression.Const([ibrahim, ramy], "everybody"), new expression_1.Expression.App(new expression_1.Expression.Ident("filter"), [notAdult]));
-                    var mapExpr = new expression_1.Expression.Pipe(filterExpr, new expression_1.Expression.App(new expression_1.Expression.Ident("map"), [expression_1.Expression.Lambda.member("firstName")]));
-                    console.log(":: " + mapExpr);
-                    var actual = mapExpr.execute(defaultRuntime);
-                    expect(actual).toEqual(["Ramy"]);
-                });
-                it(":: unary expression", function () {
-                    var add = function (x, y) { return x + y; };
-                    var lambda = new expression_1.Expression.Unary(new expression_1.Expression.Const(add, "add"), [new expression_1.Expression.Const(2)]);
-                    console.log(":: " + lambda);
-                    var actual = lambda.execute();
-                    expect(actual(1)).toBe(3);
-                });
-                it(":: binary expression", function () {
-                    var add = function (x, y) { return x + y; };
-                    var lambda = new expression_1.Expression.Binary(new expression_1.Expression.Const(add, "add"), [new expression_1.Expression.Const(2)]);
-                    console.log(":: " + lambda);
-                    var actual = lambda.execute();
-                    expect(actual(1, 2)).toBe(3);
-                });
-            });
+            {
+            }
             describe("fsharp parser", function () {
                 it(':: fun x -> x ', function () {
                     var ast = fsharp.parse("fun x -> x");
@@ -308,14 +202,15 @@ System.register(["../src/expression", "../src/rebind"], function(exports_1, cont
                     var binding = new rebind_1.Reactive.Binding(store, fs("p.firstName"));
                     var result = binding.execute();
                     expect(result).toBe("Ibrahim");
-                    expect(binding.subscriptions.length).toBe(2);
+                    expect(binding.dependencies.length).toBe(2);
                     expect(store.dirty.length).toBe(0);
-                    store.get("p").get("firstName").set("Khalil");
+                    store.get("p").get("firstName").set("Mr Ibraihm");
                     expect(store.dirty).toEqual([binding]);
+                    expect(binding.dependencies.length).toBe(2);
                     store.flush();
                 });
             });
         }
-    }
+    };
 });
 //# sourceMappingURL=compilerSpec.js.map

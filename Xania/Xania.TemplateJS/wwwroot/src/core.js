@@ -1,10 +1,10 @@
-System.register([], function(exports_1, context_1) {
+System.register([], function (exports_1, context_1) {
     "use strict";
     var __moduleName = context_1 && context_1.id;
     var Core;
     return {
-        setters:[],
-        execute: function() {
+        setters: [],
+        execute: function () {
             (function (Core) {
                 function State(initialValue) {
                     var fn = function (x) {
@@ -157,9 +157,9 @@ System.register([], function(exports_1, context_1) {
                     return Scope;
                 }());
                 Core.Scope = Scope;
-            })(Core = Core || (Core = {}));
+            })(Core || (Core = {}));
             exports_1("Core", Core);
         }
-    }
+    };
 });
 //# sourceMappingURL=core.js.map

@@ -1,19 +1,19 @@
-System.register(["./core"], function(exports_1, context_1) {
+System.register(["./core"], function (exports_1, context_1) {
     "use strict";
-    var __moduleName = context_1 && context_1.id;
     var __extends = (this && this.__extends) || function (d, b) {
         for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
         function __() { this.constructor = d; }
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
     };
-    var core_1;
-    var Expression;
+    var __moduleName = context_1 && context_1.id;
+    var core_1, Expression;
     return {
-        setters:[
+        setters: [
             function (core_1_1) {
                 core_1 = core_1_1;
-            }],
-        execute: function() {
+            }
+        ],
+        execute: function () {
             (function (Expression) {
                 var undefined = void 0;
                 function accept(ast, visitor) {
@@ -145,7 +145,7 @@ System.register(["./core"], function(exports_1, context_1) {
                         return function () {
                             var models = [];
                             for (var _i = 0; _i < arguments.length; _i++) {
-                                models[_i - 0] = arguments[_i];
+                                models[_i] = arguments[_i];
                             }
                             var childScope = new core_1.Core.Scope({}, scope);
                             for (var i = 0; i < _this.modelNames.length; i++) {
@@ -263,11 +263,12 @@ System.register(["./core"], function(exports_1, context_1) {
                 var Group = (function (_super) {
                     __extends(Group, _super);
                     function Group(parent, key, into) {
-                        _super.call(this, parent, DefaultScope);
-                        this.key = key;
-                        this.into = into;
-                        this.scopes = [];
-                        _super.prototype.set.call(this, into, this);
+                        var _this = _super.call(this, parent, DefaultScope) || this;
+                        _this.key = key;
+                        _this.into = into;
+                        _this.scopes = [];
+                        _super.prototype.set.call(_this, into, _this);
+                        return _this;
                     }
                     Group.prototype.count = function () {
                         return this.scopes.length;
@@ -429,9 +430,9 @@ System.register(["./core"], function(exports_1, context_1) {
                     return Not;
                 }());
                 Expression.Not = Not;
-            })(Expression = Expression || (Expression = {}));
+            })(Expression || (Expression = {}));
             exports_1("Expression", Expression);
         }
-    }
+    };
 });
 //# sourceMappingURL=expression.js.map

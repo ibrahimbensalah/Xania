@@ -7,36 +7,12 @@ export module Reactive {
         parse(expr: string): { execute(scope: { get(name: string) }) };
     }
 
-
-    interface IScope {
-        get(name: string): any;
-        extend?(value): IScope;
-    }
-
-    interface IObserver {
-        onNext?(v);
-        onDone?();
-        onError?();
-    }
-
     interface IAction {
         execute();
     }
 
     interface IDispatcher {
-        dispatch(observer: IObserver);
-    }
-
-
-    interface IValue {
-        name;
-        value;
-        get(name: string): IValue;
-
-        // implement optional members for mutable values.
-        subscribe?(observer: IObserver);
-        observers?: IObserver[];
-        update?();
+        dispatch(action: IAction);
     }
 
     abstract class Value {
@@ -69,7 +45,11 @@ export module Reactive {
         abstract create(propertyName: string, initialValue): { name: string, value, update() };
     }
 
-    class Property extends Value {
+    interface IDependency<T> {
+        unbind(action: T);
+    }
+
+    class Property extends Value implements IDependency<IAction> {
         // list of observers to be dispatched on value change
         public actions: IAction[] = [];
 
@@ -81,22 +61,21 @@ export module Reactive {
             return new Property(this.dispatcher, this, propertyName, initialValue);
         }
 
-        listen(action: IAction): any {
+        change(action: IAction): IDependency<IAction> |  boolean {
             if (this.actions.indexOf(action) < 0) {
                 this.actions.push(action);
-                return {
-                    actions: this.actions,
-                    action,
-                    dispose() {
-                        var idx = this.actions.indexOf(this.action);
-                        if (idx < 0)
-                            return false;
-                        this.actions.splice(idx, 1);
-                        return true;
-                    }
-                }
+                return this;
             }
             return false;
+        }
+
+        unbind(action: IAction) {
+            var idx = this.actions.indexOf(action);
+            if (idx < 0)
+                return false;
+
+            this.actions.splice(idx, 1);
+            return true;
         }
 
         set(value: any) {
@@ -184,7 +163,7 @@ export module Reactive {
             this.root = new Scope(this, value);
         }
 
-        dispatch(action: IObserver) {
+        dispatch(action: IAction) {
             this.dirty.push(action);
         }
 
@@ -212,15 +191,15 @@ export module Reactive {
 
     export class Binding {
 
-        public subscriptions: any[] = [];
+        public dependencies: IDependency<IAction>[] = [];
 
         constructor(private context: { get(name: string) }, private ast: any) { }
 
         execute() {
-            for (var i = 0; i < this.subscriptions.length; i++) {
-                this.subscriptions[i].dispose();
+            for (var i = 0; i < this.dependencies.length; i++) {
+                this.dependencies[i].unbind(this);
             }
-            this.subscriptions.length = 0;
+            this.dependencies.length = 0;
 
             var result = Expression.accept(this.ast, this).valueOf();
 
@@ -256,10 +235,10 @@ export module Reactive {
         member(target: { get(name: string) }, name) {
             var value = target.get(name);
 
-            if (value && value.listen) {
-                var subscription = value.listen(this);
-                if (!!subscription)
-                    this.subscriptions.push(subscription);
+            if (value && value.change) {
+                var dependency = value.change(this);
+                if (!!dependency)
+                    this.dependencies.push(dependency);
             }
 
             return value;
