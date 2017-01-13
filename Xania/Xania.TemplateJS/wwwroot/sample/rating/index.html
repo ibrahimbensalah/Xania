@@ -4,15 +4,20 @@
     <title></title>
     <meta charset="utf-8" />
     <link href="app.css" rel="stylesheet" />
-    <script src="../../src/store.js"></script>
-    <script src="../../src/fun.js"></script>
-    <script src="../../src/template.js"></script>
-    <script src="../../src/dom.js"></script>
-    <script src="../../src/zone.js"></script>
-    <script src="../../src/core.js"></script>
-    <script src="../../src/boot.js"></script>
     <script src="app.js"></script>
     <script src="../../lib/webcomponentsjs/webcomponents-lite.js"></script>
+    <script src="../../lib/system.js/dist/system.js"></script>
+    <script>
+        System.config({
+            packages: {
+                src: {
+                    defaultExtension: "js"
+                }
+            }
+        });
+
+        System.import("app.js").then(window.onload);
+    </script>
 </head>
 <body>
     <div style="margin: 40px;">

@@ -1,13 +1,9 @@
-System.register(["./dom"], function (exports_1, context_1) {
+System.register([], function (exports_1, context_1) {
     "use strict";
     var __moduleName = context_1 && context_1.id;
-    var dom_1, Template;
+    var Template;
     return {
-        setters: [
-            function (dom_1_1) {
-                dom_1 = dom_1_1;
-            }
-        ],
+        setters: [],
         execute: function () {
             (function (Template) {
                 var TextTemplate = (function () {
@@ -17,10 +13,8 @@ System.register(["./dom"], function (exports_1, context_1) {
                     TextTemplate.prototype.toString = function () {
                         return this.tpl.toString();
                     };
-                    TextTemplate.prototype.bind = function (result) {
-                        var newBinding = new dom_1.Dom.TextBinding(this.tpl, result);
-                        newBinding.update(result);
-                        return newBinding;
+                    TextTemplate.prototype.accept = function (visitor) {
+                        return visitor.text(this.tpl);
                     };
                     return TextTemplate;
                 }());
@@ -36,20 +30,9 @@ System.register(["./dom"], function (exports_1, context_1) {
                         this._children.push(child);
                         return this;
                     };
-                    ContentTemplate.prototype.bind = function (context) {
-                        var newBinding = new dom_1.Dom.ContentBinding();
-                        this.children()
-                            .reduce(ContentTemplate.reduceChild, { context: context, offset: 0, parentBinding: newBinding });
-                        newBinding.update(context);
-                        return newBinding;
-                    };
-                    ContentTemplate.reduceChild = function (prev, cur) {
-                        var parentBinding = prev.parentBinding, context = prev.context, offset = prev.offset;
-                        prev.offset = dom_1.ready(offset, function (p) {
-                            var state = dom_1.Dom.executeTemplate(context, cur, parentBinding.dom, p);
-                            return dom_1.ready(state, function (x) { return p + x.bindings.length; });
-                        });
-                        return prev;
+                    ContentTemplate.prototype.accept = function (visitor) {
+                        var children = this._children.map(function (x) { return x.accept(visitor); });
+                        return visitor.content(children);
                     };
                     return ContentTemplate;
                 }());
@@ -94,12 +77,10 @@ System.register(["./dom"], function (exports_1, context_1) {
                         this.modelAccessor = modelAccessor;
                         return this;
                     };
-                    TagTemplate.prototype.bind = function (context) {
-                        var newBinding = new dom_1.Dom.TagBinding(this.name, this.ns, this.attributes, this.events);
-                        this.children()
-                            .reduce(ContentTemplate.reduceChild, { context: context, offset: 0, parentBinding: newBinding, modelAccessor: this.modelAccessor });
-                        newBinding.update(context);
-                        return newBinding;
+                    TagTemplate.prototype.accept = function (visitor) {
+                        var children = this._children.map(function (x) { return x.accept(visitor); });
+                        var content = visitor.content(children);
+                        return visitor.tag(this.name, this.ns, this.attributes, this.events, content);
                     };
                     return TagTemplate;
                 }());

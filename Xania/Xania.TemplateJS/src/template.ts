@@ -1,9 +1,16 @@
 ﻿import { Core } from "./core"
 
 module Template {
+
+    export interface IVisitor {
+        text(tpl);
+        content(children: any[]);
+        tag(name, ns, attr, events, content);
+    }
+
     export interface INodeTemplate {
         modelAccessor?;
-        bind(context);
+        accept(visitor: IVisitor);
     }
 
     export class TextTemplate implements INodeTemplate {
@@ -14,11 +21,15 @@ module Template {
             return this.tpl.toString();
         }
 
-        bind(result) {
-            var newBinding = new Dom.TextBinding(this.tpl, result);
-            newBinding.update(result);
-            return newBinding;
+        accept(visitor: IVisitor) {
+            return visitor.text(this.tpl);
         }
+
+        //bind(result) {
+        //    var newBinding = new Dom.TextBinding(this.tpl, result);
+        //    newBinding.update(result);
+        //    return newBinding;
+        //}
     }
 
     export class ContentTemplate implements INodeTemplate {
@@ -34,29 +45,34 @@ module Template {
             return this;
         }
 
-        bind(context) {
-            const newBinding = new Dom.ContentBinding();
-            this.children()
-                // ReSharper disable once TsResolvedFromInaccessibleModule
-                .reduce(ContentTemplate.reduceChild,
-                { context, offset: 0, parentBinding: newBinding });
-
-            newBinding.update(context);
-
-            return newBinding;
+        accept(visitor: IVisitor) {
+            var children = this._children.map(x => x.accept(visitor));
+            return visitor.content(children);
         }
 
-        static reduceChild(prev, cur: INodeTemplate) {
-            var { parentBinding, context, offset } = prev;
+        //bind(context) {
+        //    const newBinding = new Dom.ContentBinding();
+        //    this.children()
+        //        // ReSharper disable once TsResolvedFromInaccessibleModule
+        //        .reduce(ContentTemplate.reduceChild,
+        //        { context, offset: 0, parentBinding: newBinding });
 
-            prev.offset = Core.ready(offset,
-                p => {
-                    var state = Dom.executeTemplate(context, cur, parentBinding.dom, p);
-                    return Core.ready(state, x => { return p + x.bindings.length });
-                });
+        //    newBinding.update(context);
 
-            return prev;
-        }
+        //    return newBinding;
+        //}
+
+        //static reduceChild(prev, cur: INodeTemplate) {
+        //    var { parentBinding, context, offset } = prev;
+
+        //    prev.offset = Core.ready(offset,
+        //        p => {
+        //            var state = Dom.executeTemplate(context, cur, parentBinding.dom, p);
+        //            return Core.ready(state, x => { return p + x.bindings.length });
+        //        });
+
+        //    return prev;
+        //}
     }
 
     export class TagTemplate implements INodeTemplate {
@@ -108,15 +124,22 @@ module Template {
             return this;
         }
 
-        bind(context) {
-            const newBinding = new Dom.TagBinding(this.name, this.ns, this.attributes, this.events);
-            this.children()
-                .reduce(ContentTemplate.reduceChild,
-                { context, offset: 0, parentBinding: newBinding, modelAccessor: this.modelAccessor });
+        accept(visitor: IVisitor) {
+            var children = this._children.map(x => x.accept(visitor));
+            var content = visitor.content(children);
 
-            newBinding.update(context);
-
-            return newBinding;
+            return visitor.tag(this.name, this.ns, this.attributes, this.events, content);
         }
+
+        //bind(context) {
+        //    const newBinding = new Dom.TagBinding(this.name, this.ns, this.attributes, this.events);
+        //    this.children()
+        //        .reduce(ContentTemplate.reduceChild,
+        //        { context, offset: 0, parentBinding: newBinding, modelAccessor: this.modelAccessor });
+
+        //    newBinding.update(context);
+
+        //    return newBinding;
+        //}
     }
 }

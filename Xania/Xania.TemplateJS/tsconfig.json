@@ -17,7 +17,7 @@
     "src/expression.ts",
     "src/rebind.ts",
     // "src/dom.ts",
-    // "src/template.ts",
+    "src/template.ts",
     "spec/compilerSpec.ts"
   ]
 }
