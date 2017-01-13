@@ -1,6 +1,8 @@
-﻿import { Expression as XC } from "../src/expression";
+﻿/// <reference path="../node_modules/@types/jasmine/index.d.ts" />
+
+import { Expression as XC } from "../src/expression";
 import { Reactive as Re } from "../src/rebind";
-import { Core } from "../src/core";
+// import { Core } from "../src/core";
 
 interface IPerson { firstName: string; lastName: string; adult: boolean, age: number }
 
@@ -403,6 +405,16 @@ describe("fsharp parser", () => {
 });
 
 
+class LogBinding extends Re.Binding {
+    constructor(private ast) {
+        super();
+    }
+
+    render(context) {
+        return XC.accept(this.ast, this).valueOf();
+    }
+}
+
 describe("runtime", () => {
 
     var fs = fsharp.parse;
@@ -410,10 +422,10 @@ describe("runtime", () => {
     it("expression dependencies",
         () => {
             var store = new Re.Store({ p: ibrahim });
-            var binding = new Re.Binding(store, fs("p.firstName"));
-            var result = binding.execute();
+            var binding = new LogBinding(fs("p.firstName"));
+            binding.update(store);
 
-            expect(result).toBe("Ibrahim");
+            expect(binding.state).toBe("Ibrahim");
             expect(binding.dependencies.length).toBe(2);
 
             expect(store.dirty.length).toBe(0);

@@ -1,5 +1,4 @@
 ﻿import { Core } from "./core";
-import { Expression } from "./expression";
 
 export module Reactive {
 
@@ -61,7 +60,7 @@ export module Reactive {
             return new Property(this.dispatcher, this, propertyName, initialValue);
         }
 
-        change(action: IAction): IDependency<IAction> |  boolean {
+        change(action: IAction): IDependency<IAction> | boolean {
             if (this.actions.indexOf(action) < 0) {
                 this.actions.push(action);
                 return this;
@@ -192,8 +191,8 @@ export module Reactive {
     export class Binding {
 
         public dependencies: IDependency<IAction>[] = [];
-
-        constructor(private context: { get(name: string) }, private ast: any) { }
+        protected context;
+        public state;
 
         execute() {
             for (var i = 0; i < this.dependencies.length; i++) {
@@ -201,18 +200,27 @@ export module Reactive {
             }
             this.dependencies.length = 0;
 
-            var result = Expression.accept(this.ast, this).valueOf();
+            this.update(this.context);
+        }
 
-            console.log(result);
+        update(context) {
+            this.context = context;
 
-            return result;
+            return Core.ready(this.state,
+                s => {
+                    return this.state = this.render(context, s);
+                });
+        }
+
+        render(context, state) {
+            console.log(context);
         }
 
         get(name: string): any {
             throw new Error("Not implemented");
         }
 
-        extend(): Core.IScope {
+        extend(): any {
             throw new Error("Not implemented");
         }
 

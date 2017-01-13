@@ -5,7 +5,8 @@
   "devDependencies": {
     "@types/jasmine": "^2.5.38",
     "phantomjs": "2.1.7",
-    "pegjs": "0.10.0"
+    "pegjs": "0.10.0",
+    "@types/core-js": "" 
   },
   "dependencies": {},
   "scripts": {

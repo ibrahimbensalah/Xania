@@ -1,4 +1,4 @@
-System.register([], function (exports_1, context_1) {
+System.register(["./core"], function (exports_1, context_1) {
     "use strict";
     var __extends = (this && this.__extends) || function (d, b) {
         for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
@@ -6,9 +6,13 @@ System.register([], function (exports_1, context_1) {
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
     };
     var __moduleName = context_1 && context_1.id;
-    var Expression;
+    var core_1, Expression;
     return {
-        setters: [],
+        setters: [
+            function (core_1_1) {
+                core_1 = core_1_1;
+            }
+        ],
         execute: function () {
             (function (Expression) {
                 var undefined = void 0;
@@ -68,56 +72,6 @@ System.register([], function (exports_1, context_1) {
                     };
                     return AstVisitor;
                 }());
-                var Scope = (function () {
-                    function Scope(value, parent) {
-                        if (value === void 0) { value = {}; }
-                        this.value = value;
-                        this.parent = parent;
-                    }
-                    Scope.prototype.valueOf = function () {
-                        return this.value;
-                    };
-                    Scope.prototype.map = function (fn) {
-                        return this.value.map(fn);
-                    };
-                    Scope.prototype.extend = function (value) {
-                        return new Scope(value, this);
-                    };
-                    Scope.prototype.set = function (name, value) {
-                        if (value === undefined) {
-                            throw new Error("value is undefined");
-                        }
-                        if (this.get(name) !== undefined) {
-                            throw new Error("modifying value is not permitted.");
-                        }
-                        this.value[name] = value;
-                        return this;
-                    };
-                    Scope.prototype.get = function (name) {
-                        var value = this.value[name];
-                        if (typeof value === "undefined") {
-                            if (this.parent)
-                                return this.parent.get(name);
-                            return value;
-                        }
-                        if (value === null || value instanceof Date)
-                            return value;
-                        if (typeof value === "function")
-                            return value.bind(this.value);
-                        if (typeof value === "object")
-                            return new Scope(value, this);
-                        return value;
-                    };
-                    Scope.prototype.toJSON = function () {
-                        var parent = this.parent;
-                        return Object.assign({}, this.value, parent.toJSON ? parent.toJSON() : {});
-                    };
-                    Scope.prototype.toString = function () {
-                        return JSON.stringify(this.toJSON(), null, 4);
-                    };
-                    return Scope;
-                }());
-                Expression.Scope = Scope;
                 var DefaultScope = (function () {
                     function DefaultScope() {
                     }
@@ -125,7 +79,7 @@ System.register([], function (exports_1, context_1) {
                         return undefined;
                     };
                     DefaultScope.extend = function (value) {
-                        return new Scope(value, DefaultScope);
+                        return new core_1.Core.Scope(value, DefaultScope);
                     };
                     return DefaultScope;
                 }());
@@ -193,7 +147,7 @@ System.register([], function (exports_1, context_1) {
                             for (var _i = 0; _i < arguments.length; _i++) {
                                 models[_i] = arguments[_i];
                             }
-                            var childScope = new Scope({}, scope);
+                            var childScope = new core_1.Core.Scope({}, scope);
                             for (var i = 0; i < _this.modelNames.length; i++) {
                                 var n = _this.modelNames[i];
                                 var v = models[i];
@@ -320,7 +274,7 @@ System.register([], function (exports_1, context_1) {
                         return this.scopes.length;
                     };
                     return Group;
-                }(Scope));
+                }(core_1.Core.Scope));
                 var GroupBy = (function () {
                     function GroupBy(query, selector, into) {
                         this.query = query;

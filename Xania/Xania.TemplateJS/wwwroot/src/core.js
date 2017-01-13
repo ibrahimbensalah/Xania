@@ -107,56 +107,14 @@ System.register([], function (exports_1, context_1) {
                     return List;
                 }());
                 Core.List = List;
-                var Scope = (function () {
-                    function Scope(value, parent) {
-                        if (value === void 0) { value = {}; }
-                        this.value = value;
-                        this.parent = parent;
-                    }
-                    Scope.prototype.valueOf = function () {
-                        return this.value;
-                    };
-                    Scope.prototype.map = function (fn) {
-                        return this.value.map(fn);
-                    };
-                    Scope.prototype.extend = function (value) {
-                        return new Scope(value, this);
-                    };
-                    Scope.prototype.set = function (name, value) {
-                        if (value === undefined) {
-                            throw new Error("value is undefined");
-                        }
-                        if (this.get(name) !== undefined) {
-                            throw new Error("modifying value is not permitted.");
-                        }
-                        this.value[name] = value;
-                        return this;
-                    };
-                    Scope.prototype.get = function (name) {
-                        var value = this.value[name];
-                        if (typeof value === "undefined") {
-                            if (this.parent)
-                                return this.parent.get(name);
-                            return value;
-                        }
-                        if (value === null || value instanceof Date)
-                            return value;
-                        if (typeof value === "function")
-                            return value.bind(this.value);
-                        if (typeof value === "object")
-                            return new Scope(value, this);
-                        return value;
-                    };
-                    Scope.prototype.toJSON = function () {
-                        var parent = this.parent;
-                        return Object.assign({}, this.value, parent.toJSON ? parent.toJSON() : {});
-                    };
-                    Scope.prototype.toString = function () {
-                        return JSON.stringify(this.toJSON(), null, 4);
-                    };
-                    return Scope;
-                }());
-                Core.Scope = Scope;
+                function ready(data, resolve) {
+                    if (data !== null && data !== void 0 && !!data.then)
+                        return data.then(resolve);
+                    if (!!resolve.execute)
+                        return resolve.execute.call(resolve, data);
+                    return resolve.call(resolve, data);
+                }
+                Core.ready = ready;
             })(Core || (Core = {}));
             exports_1("Core", Core);
         }

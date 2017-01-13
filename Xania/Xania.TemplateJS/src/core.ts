@@ -113,71 +113,15 @@
         }
     }
 
+    export function ready(data, resolve) {
 
-    export interface IScope {
-        get(name: string): any;
-        extend?(value): IScope;
+        if (data !== null && data !== void 0 && !!data.then)
+            return data.then(resolve);
+
+        if (!!resolve.execute)
+            return resolve.execute.call(resolve, data);
+
+        return resolve.call(resolve, data);
     }
 
-    export class Scope implements IScope {
-
-        constructor(private value: any = {}, private parent?: IScope) {
-        }
-
-        valueOf() {
-            return this.value;
-        }
-
-        map(fn) {
-            return this.value.map(fn);
-        }
-
-        extend(value: any) {
-            return new Scope(value, this);
-        }
-
-        set(name: string, value: any) {
-            if (value === undefined) {
-                throw new Error("value is undefined");
-            }
-
-            if (this.get(name) !== undefined) {
-                throw new Error("modifying value is not permitted.");
-            }
-
-            this.value[name] = value;
-            return this;
-        }
-
-        get(name: string) {
-            var value = this.value[name];
-
-            if (typeof value === "undefined") {
-                if (this.parent)
-                    return this.parent.get(name);
-
-                return value;
-            }
-
-            if (value === null || value instanceof Date)
-                return value;
-
-            if (typeof value === "function")
-                return value.bind(this.value);
-
-            if (typeof value === "object")
-                return new Scope(value, this);
-
-            return value;
-        }
-
-        toJSON() {
-            var parent: any = this.parent;
-            return (<any>Object).assign({}, this.value, parent.toJSON ? parent.toJSON() : {});
-        }
-
-        toString() {
-            return JSON.stringify(this.toJSON(), null, 4);
-        }
-    }
 }

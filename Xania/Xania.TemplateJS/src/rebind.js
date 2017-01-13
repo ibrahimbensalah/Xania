@@ -1,4 +1,4 @@
-System.register(["./core"], function (exports_1, context_1) {
+System.register(["./expression"], function (exports_1, context_1) {
     "use strict";
     var __extends = (this && this.__extends) || function (d, b) {
         for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
@@ -6,11 +6,11 @@ System.register(["./core"], function (exports_1, context_1) {
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
     };
     var __moduleName = context_1 && context_1.id;
-    var core_1, Reactive;
+    var expression_1, Reactive;
     return {
         setters: [
-            function (core_1_1) {
-                core_1 = core_1_1;
+            function (expression_1_1) {
+                expression_1 = expression_1_1;
             }
         ],
         execute: function () {
@@ -159,7 +159,9 @@ System.register(["./core"], function (exports_1, context_1) {
                 }());
                 Reactive.Store = Store;
                 var Binding = (function () {
-                    function Binding() {
+                    function Binding(context, ast) {
+                        this.context = context;
+                        this.ast = ast;
                         this.dependencies = [];
                     }
                     Binding.prototype.execute = function () {
@@ -167,17 +169,9 @@ System.register(["./core"], function (exports_1, context_1) {
                             this.dependencies[i].unbind(this);
                         }
                         this.dependencies.length = 0;
-                        this.update(this.context);
-                    };
-                    Binding.prototype.update = function (context) {
-                        var _this = this;
-                        this.context = context;
-                        return core_1.Core.ready(this.state, function (s) {
-                            return _this.state = _this.render(context, s);
-                        });
-                    };
-                    Binding.prototype.render = function (context, state) {
-                        console.log(context);
+                        var result = expression_1.Expression.accept(this.ast, this).valueOf();
+                        console.log(result);
+                        return result;
                     };
                     Binding.prototype.get = function (name) {
                         throw new Error("Not implemented");
