@@ -23,7 +23,7 @@
     "src/expression.ts",
     "src/rebind.ts",
     "src/fsharp.ts",
-    // "src/dom.ts",
+    "src/dom.ts",
     "src/template.ts",
     "spec/*Spec.ts"
   ]

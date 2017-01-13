@@ -3,9 +3,9 @@
 export module Template {
 
     export interface IVisitor {
-        text(tpl);
-        content(children: any[]);
-        tag(name, ns, attr, events, content);
+        text?(tpl);
+        content?(children: any[]);
+        tag?(name, ns, attr, events, content);
     }
 
     export interface INodeTemplate {
@@ -14,15 +14,15 @@ export module Template {
     }
 
     export class TextTemplate implements INodeTemplate {
-        constructor(private tpl) {
+        constructor(private expr : string) {
         }
 
         toString() {
-            return this.tpl.toString();
+            return this.expr.toString();
         }
 
         accept(visitor: IVisitor): any {
-            return visitor.text(this.tpl);
+            return visitor.text(this.expr);
         }
 
         //bind(result) {

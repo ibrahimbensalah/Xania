@@ -188,7 +188,7 @@ export module Reactive {
         }
     }
 
-    export class Binding {
+    export abstract class Binding {
 
         public dependencies: IDependency<IAction>[] = [];
         protected context;
@@ -212,9 +212,7 @@ export module Reactive {
                 });
         }
 
-        render(context, state) {
-            console.log(context);
-        }
+        public abstract render(context?, state?) : any;
 
         get(name: string): any {
             throw new Error("Not implemented");
