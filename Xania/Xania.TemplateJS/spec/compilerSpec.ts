@@ -2,6 +2,7 @@
 
 import { Expression as XC } from "../src/expression";
 import { Reactive as Re } from "../src/rebind";
+import { fsharp as fs, accept } from "../src/fsharp";
 // import { Core } from "../src/core";
 
 interface IPerson { firstName: string; lastName: string; adult: boolean, age: number }
@@ -191,7 +192,7 @@ describe("fsharp parser", () => {
 
     it(':: fun x -> x ',
         () => {
-            var ast = fsharp.parse("fun x -> x");
+            var ast = fs("fun x -> x");
             expect(ast).toBeDefined();
             console.log("\r\n =========== \r\n" + JSON.stringify(ast, null, 2) + "\r\n ======== \r\n", ast);
 
@@ -203,7 +204,7 @@ describe("fsharp parser", () => {
 
     it(':: .firstName ',
         () => {
-            var ast = fsharp.parse(".firstName");
+            var ast = fs(".firstName");
             expect(ast).toBeDefined();
             console.log("\r\n =========== \r\n" + JSON.stringify(ast, null, 2) + "\r\n ======== \r\n", ast);
 
@@ -216,7 +217,7 @@ describe("fsharp parser", () => {
 
     it(':: 1 + 2',
         () => {
-            var ast = fsharp.parse("1 + 2");
+            var ast = fs("1 + 2");
             expect(ast).toBeDefined();
             console.log("\r\n =========== \r\n" + JSON.stringify(ast, null, 2) + "\r\n ======== \r\n");
 
@@ -228,7 +229,7 @@ describe("fsharp parser", () => {
 
     it(':: fn a',
         () => {
-            var ast = fsharp.parse("fun a");
+            var ast = fs("fun a");
             expect(ast).toBeDefined();
             console.log("\r\n =========== \r\n" + JSON.stringify(ast, null, 2) + "\r\n ======== \r\n");
 
@@ -240,7 +241,7 @@ describe("fsharp parser", () => {
 
     it(':: fn ()',
         () => {
-            var ast = fsharp.parse("fun ()");
+            var ast = fs("fun ()");
             expect(ast).toBeDefined();
             console.log("\r\n =========== \r\n" + JSON.stringify(ast, null, 2) + "\r\n ======== \r\n");
 
@@ -252,7 +253,7 @@ describe("fsharp parser", () => {
 
     it(':: (+) a b',
         () => {
-            var ast = fsharp.parse("(+) a b");
+            var ast = fs("(+) a b");
             expect(ast).toBeDefined();
             console.log("\r\n =========== \r\n" + JSON.stringify(ast, null, 2) + "\r\n ======== \r\n");
 
@@ -262,7 +263,7 @@ describe("fsharp parser", () => {
 
     it(':: a |> b |> c',
         () => {
-            var ast = fsharp.parse("a |> b |> c");
+            var ast = fs("a |> b |> c");
             expect(ast).toBeDefined();
             console.log("\r\n =========== \r\n" + JSON.stringify(ast, null, 2) + "\r\n ======== \r\n");
 
@@ -280,7 +281,7 @@ describe("fsharp parser", () => {
 
     it(':: a + b |> c',
         () => {
-            var ast = fsharp.parse("a + b |> c");
+            var ast = fs("a + b |> c");
             expect(ast).toBeDefined();
             console.log("\r\n =========== \r\n" + JSON.stringify(ast, null, 2) + "\r\n ======== \r\n");
 
@@ -298,7 +299,7 @@ describe("fsharp parser", () => {
 
     it(':: a >> b ',
         () => {
-            var ast = fsharp.parse("a >> b");
+            var ast = fs("a >> b");
             expect(ast).toBeDefined();
 
             var compose = ast;
@@ -310,7 +311,7 @@ describe("fsharp parser", () => {
 
     it(':: a.b ',
         () => {
-            var ast = fsharp.parse("a.b");
+            var ast = fs("a.b");
             expect(ast).toBeDefined();
 
             var compose = ast;
@@ -321,7 +322,7 @@ describe("fsharp parser", () => {
 
     it(':: [1..n] ',
         () => {
-            var ast = fsharp.parse("[1..n]");
+            var ast = fs("[1..n]");
             expect(ast).toBeDefined();
 
             var range = ast;
@@ -332,7 +333,7 @@ describe("fsharp parser", () => {
 
     it(':: for p in people where p.adult ',
         () => {
-            var ast = fsharp.parse("for p in people where p.adult");
+            var ast = fs("for p in people where p.adult");
             expect(ast).toBeDefined();
             console.log("\r\n =========== \r\n" + JSON.stringify(ast, null, 2) + "\r\n ======== \r\n", ast);
 
@@ -348,9 +349,9 @@ describe("fsharp parser", () => {
 
             var start = new Date().getTime();
 
-            var ast = fsharp.parse("a |> b.c >> (+) 1 |> d");
+            var ast = fs("a |> b.c >> (+) 1 |> d");
             for (var i = 0; i < 1000; i++) {
-                fsharp.parse("a |> b >> (+) 1 |> d");
+                fs("a |> b >> (+) 1 |> d");
             }
             var elapsed = new Date().getTime() - start;
 
@@ -411,13 +412,11 @@ class LogBinding extends Re.Binding {
     }
 
     render(context) {
-        return XC.accept(this.ast, this).valueOf();
+        return accept(this.ast, this).valueOf();
     }
 }
 
 describe("runtime", () => {
-
-    var fs = fsharp.parse;
 
     it("expression dependencies",
         () => {

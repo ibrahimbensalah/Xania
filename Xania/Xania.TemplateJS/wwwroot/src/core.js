@@ -1,123 +1,114 @@
-System.register([], function (exports_1, context_1) {
-    "use strict";
-    var __moduleName = context_1 && context_1.id;
-    var Core;
-    return {
-        setters: [],
-        execute: function () {
-            (function (Core) {
-                function State(initialValue) {
-                    var fn = function (x) {
-                        if (x !== undefined)
-                            fn['id'] = x;
-                        return fn['id'];
-                    };
-                    fn['id'] = initialValue;
-                    fn['valueOf'] = function () { return initialValue; };
-                    return fn;
-                }
-                Core.State = State;
-                var Dates = (function () {
-                    function Dates() {
-                    }
-                    Dates.addDays = function (days, date) {
-                        var retval = new Date(date.getTime());
-                        retval.setDate(date.getDate() + days);
-                        console.debug("addDays result", retval);
-                        return retval;
-                    };
-                    Dates.addYears = function (years, date) {
-                        var retval = new Date(date.getTime());
-                        retval.setFullYear(date.getFullYear() + years);
-                        console.debug("addYears result", retval);
-                        return retval;
-                    };
-                    Dates.addMonths = function (months, date) {
-                        var retval = new Date(date.getTime());
-                        retval.setMonth(date.getMonth() + months);
-                        console.debug("addMonths result", retval);
-                        return retval;
-                    };
-                    Dates.dayOf = function (date) {
-                        return date.getDate();
-                    };
-                    Dates.yearOf = function (date) {
-                        return date.getFullYear();
-                    };
-                    Dates.monthOf = function (date) {
-                        return date.getMonth();
-                    };
-                    Dates.formatDate = function (format, date) {
-                        return date.toString();
-                    };
-                    return Dates;
-                }());
-                Core.Dates = Dates;
-                var Math = (function () {
-                    function Math() {
-                    }
-                    Math.le = function (rating, max) {
-                        return rating <= max;
-                    };
-                    Math.assign = function (property, value) {
-                        console.debug(property, value);
-                    };
-                    return Math;
-                }());
-                Core.Math = Math;
-                var List = (function () {
-                    function List() {
-                    }
-                    List.count = function (fn, list) {
-                        if (!list)
-                            return 0;
-                        var result = 0;
-                        for (var i = 0; i < list.length; i++)
-                            if (fn(list[i]))
-                                result++;
-                        return result;
-                    };
-                    List.any = function (fn, list) {
-                        return List.count(fn, list) > 0;
-                    };
-                    List.all = function (fn, list) {
-                        return List.count(fn, list) === list.length;
-                    };
-                    List.filter = function (fn, list) {
-                        var retval = [];
-                        for (var i = 0; i < list.length; i++) {
-                            var item = list[i];
-                            if (!!fn(item)) {
-                                retval.push(item);
-                            }
-                        }
-                        return retval;
-                    };
-                    List.map = function (fn, list) {
-                        if (!list)
-                            return [];
-                        return list.map(fn);
-                    };
-                    List.empty = function (list) {
-                        return !list || list.length === 0;
-                    };
-                    List.reduce = function (fn, initialValue, list) {
-                        return !list && list.reduce(fn, initialValue);
-                    };
-                    return List;
-                }());
-                Core.List = List;
-                function ready(data, resolve) {
-                    if (data !== null && data !== void 0 && !!data.then)
-                        return data.then(resolve);
-                    if (!!resolve.execute)
-                        return resolve.execute.call(resolve, data);
-                    return resolve.call(resolve, data);
-                }
-                Core.ready = ready;
-            })(Core || (Core = {}));
-            exports_1("Core", Core);
+"use strict";
+var Core;
+(function (Core) {
+    function State(initialValue) {
+        var fn = function (x) {
+            if (x !== undefined)
+                fn['id'] = x;
+            return fn['id'];
+        };
+        fn['id'] = initialValue;
+        fn['valueOf'] = function () { return initialValue; };
+        return fn;
+    }
+    Core.State = State;
+    var Dates = (function () {
+        function Dates() {
         }
-    };
-});
-//# sourceMappingURL=core.js.map
+        Dates.addDays = function (days, date) {
+            var retval = new Date(date.getTime());
+            retval.setDate(date.getDate() + days);
+            console.debug("addDays result", retval);
+            return retval;
+        };
+        Dates.addYears = function (years, date) {
+            var retval = new Date(date.getTime());
+            retval.setFullYear(date.getFullYear() + years);
+            console.debug("addYears result", retval);
+            return retval;
+        };
+        Dates.addMonths = function (months, date) {
+            var retval = new Date(date.getTime());
+            retval.setMonth(date.getMonth() + months);
+            console.debug("addMonths result", retval);
+            return retval;
+        };
+        Dates.dayOf = function (date) {
+            return date.getDate();
+        };
+        Dates.yearOf = function (date) {
+            return date.getFullYear();
+        };
+        Dates.monthOf = function (date) {
+            return date.getMonth();
+        };
+        Dates.formatDate = function (format, date) {
+            return date.toString();
+        };
+        return Dates;
+    }());
+    Core.Dates = Dates;
+    var Math = (function () {
+        function Math() {
+        }
+        Math.le = function (rating, max) {
+            return rating <= max;
+        };
+        Math.assign = function (property, value) {
+            console.debug(property, value);
+        };
+        return Math;
+    }());
+    Core.Math = Math;
+    var List = (function () {
+        function List() {
+        }
+        List.count = function (fn, list) {
+            if (!list)
+                return 0;
+            var result = 0;
+            for (var i = 0; i < list.length; i++)
+                if (fn(list[i]))
+                    result++;
+            return result;
+        };
+        List.any = function (fn, list) {
+            return List.count(fn, list) > 0;
+        };
+        List.all = function (fn, list) {
+            return List.count(fn, list) === list.length;
+        };
+        List.filter = function (fn, list) {
+            var retval = [];
+            for (var i = 0; i < list.length; i++) {
+                var item = list[i];
+                if (!!fn(item)) {
+                    retval.push(item);
+                }
+            }
+            return retval;
+        };
+        List.map = function (fn, list) {
+            if (!list)
+                return [];
+            return list.map(fn);
+        };
+        List.empty = function (list) {
+            return !list || list.length === 0;
+        };
+        List.reduce = function (fn, initialValue, list) {
+            return !list && list.reduce(fn, initialValue);
+        };
+        return List;
+    }());
+    Core.List = List;
+    function ready(data, resolve) {
+        if (data !== null && data !== void 0 && !!data.then)
+            return data.then(resolve);
+        if (!!resolve.execute)
+            return resolve.execute.call(resolve, data);
+        return resolve.call(resolve, data);
+    }
+    Core.ready = ready;
+})(Core = exports.Core || (exports.Core = {}));
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoiY29yZS5qcyIsInNvdXJjZVJvb3QiOiIiLCJzb3VyY2VzIjpbIi4uLy4uL3NyYy9jb3JlLnRzIl0sIm5hbWVzIjpbXSwibWFwcGluZ3MiOiI7QUFBQSxJQUFjLElBQUksQ0E4SGpCO0FBOUhELFdBQWMsSUFBSTtJQUNkLGVBQXNCLFlBQVk7UUFDOUIsSUFBSSxFQUFFLEdBQUcsVUFBVSxDQUFDO1lBQ2hCLEVBQUUsQ0FBQyxDQUFDLENBQUMsS0FBSyxTQUFTLENBQUM7Z0JBQ2hCLEVBQUUsQ0FBQyxJQUFJLENBQUMsR0FBRyxDQUFDLENBQUM7WUFFakIsTUFBTSxDQUFDLEVBQUUsQ0FBQyxJQUFJLENBQUMsQ0FBQztRQUNwQixDQUFDLENBQUM7UUFDRixFQUFFLENBQUMsSUFBSSxDQUFDLEdBQUcsWUFBWSxDQUFDO1FBQ3hCLEVBQUUsQ0FBQyxTQUFTLENBQUMsR0FBRyxjQUFNLE9BQUEsWUFBWSxFQUFaLENBQVksQ0FBQztRQUVuQyxNQUFNLENBQUMsRUFBRSxDQUFDO0lBQ2QsQ0FBQztJQVhlLFVBQUssUUFXcEIsQ0FBQTtJQUVEO1FBQUE7UUF3Q0EsQ0FBQztRQXZDVSxhQUFPLEdBQWQsVUFBZSxJQUFZLEVBQUUsSUFBVTtZQUNuQyxJQUFJLE1BQU0sR0FBRyxJQUFJLElBQUksQ0FBQyxJQUFJLENBQUMsT0FBTyxFQUFFLENBQUMsQ0FBQztZQUN0QyxNQUFNLENBQUMsT0FBTyxDQUFDLElBQUksQ0FBQyxPQUFPLEVBQUUsR0FBRyxJQUFJLENBQUMsQ0FBQztZQUV0QyxPQUFPLENBQUMsS0FBSyxDQUFDLGdCQUFnQixFQUFFLE1BQU0sQ0FBQyxDQUFDO1lBQ3hDLE1BQU0sQ0FBQyxNQUFNLENBQUM7UUFDbEIsQ0FBQztRQUVNLGNBQVEsR0FBZixVQUFnQixLQUFhLEVBQUUsSUFBVTtZQUNyQyxJQUFJLE1BQU0sR0FBRyxJQUFJLElBQUksQ0FBQyxJQUFJLENBQUMsT0FBTyxFQUFFLENBQUMsQ0FBQztZQUN0QyxNQUFNLENBQUMsV0FBVyxDQUFDLElBQUksQ0FBQyxXQUFXLEVBQUUsR0FBRyxLQUFLLENBQUMsQ0FBQztZQUUvQyxPQUFPLENBQUMsS0FBSyxDQUFDLGlCQUFpQixFQUFFLE1BQU0sQ0FBQyxDQUFDO1lBQ3pDLE1BQU0sQ0FBQyxNQUFNLENBQUM7UUFDbEIsQ0FBQztRQUVNLGVBQVMsR0FBaEIsVUFBaUIsTUFBYyxFQUFFLElBQVU7WUFDdkMsSUFBSSxNQUFNLEdBQUcsSUFBSSxJQUFJLENBQUMsSUFBSSxDQUFDLE9BQU8sRUFBRSxDQUFDLENBQUM7WUFDdEMsTUFBTSxDQUFDLFFBQVEsQ0FBQyxJQUFJLENBQUMsUUFBUSxFQUFFLEdBQUcsTUFBTSxDQUFDLENBQUM7WUFFMUMsT0FBTyxDQUFDLEtBQUssQ0FBQyxrQkFBa0IsRUFBRSxNQUFNLENBQUMsQ0FBQztZQUMxQyxNQUFNLENBQUMsTUFBTSxDQUFDO1FBQ2xCLENBQUM7UUFFTSxXQUFLLEdBQVosVUFBYSxJQUFVO1lBQ25CLE1BQU0sQ0FBQyxJQUFJLENBQUMsT0FBTyxFQUFFLENBQUM7UUFDMUIsQ0FBQztRQUVNLFlBQU0sR0FBYixVQUFjLElBQVU7WUFDcEIsTUFBTSxDQUFDLElBQUksQ0FBQyxXQUFXLEVBQUUsQ0FBQztRQUM5QixDQUFDO1FBRU0sYUFBTyxHQUFkLFVBQWUsSUFBVTtZQUNyQixNQUFNLENBQUMsSUFBSSxDQUFDLFFBQVEsRUFBRSxDQUFDO1FBQzNCLENBQUM7UUFFTSxnQkFBVSxHQUFqQixVQUFrQixNQUFNLEVBQUUsSUFBVTtZQUNoQyxNQUFNLENBQUMsSUFBSSxDQUFDLFFBQVEsRUFBRSxDQUFDO1FBQzNCLENBQUM7UUFDTCxZQUFDO0lBQUQsQ0FBQyxBQXhDRCxJQXdDQztJQXhDWSxVQUFLLFFBd0NqQixDQUFBO0lBRUQ7UUFBQTtRQVFBLENBQUM7UUFQVSxPQUFFLEdBQVQsVUFBVSxNQUFNLEVBQUUsR0FBRztZQUNqQixNQUFNLENBQUMsTUFBTSxJQUFJLEdBQUcsQ0FBQztRQUN6QixDQUFDO1FBRU0sV0FBTSxHQUFiLFVBQWMsUUFBUSxFQUFFLEtBQUs7WUFDekIsT0FBTyxDQUFDLEtBQUssQ0FBQyxRQUFRLEVBQUUsS0FBSyxDQUFDLENBQUM7UUFDbkMsQ0FBQztRQUNMLFdBQUM7SUFBRCxDQUFDLEFBUkQsSUFRQztJQVJZLFNBQUksT0FRaEIsQ0FBQTtJQUVEO1FBQUE7UUErQ0EsQ0FBQztRQTlDVSxVQUFLLEdBQVosVUFBYSxFQUFFLEVBQUUsSUFBSTtZQUNqQixFQUFFLENBQUMsQ0FBQyxDQUFDLElBQUksQ0FBQztnQkFDTixNQUFNLENBQUMsQ0FBQyxDQUFDO1lBQ2IsSUFBSSxNQUFNLEdBQUcsQ0FBQyxDQUFDO1lBQ2YsR0FBRyxDQUFDLENBQUMsSUFBSSxDQUFDLEdBQUcsQ0FBQyxFQUFFLENBQUMsR0FBRyxJQUFJLENBQUMsTUFBTSxFQUFFLENBQUMsRUFBRTtnQkFDaEMsRUFBRSxDQUFDLENBQUMsRUFBRSxDQUFDLElBQUksQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDO29CQUNaLE1BQU0sRUFBRSxDQUFDO1lBRWpCLE1BQU0sQ0FBQyxNQUFNLENBQUM7UUFDbEIsQ0FBQztRQUVNLFFBQUcsR0FBVixVQUFXLEVBQUUsRUFBRSxJQUFJO1lBQ2YsTUFBTSxDQUFDLElBQUksQ0FBQyxLQUFLLENBQUMsRUFBRSxFQUFFLElBQUksQ0FBQyxHQUFHLENBQUMsQ0FBQztRQUNwQyxDQUFDO1FBRU0sUUFBRyxHQUFWLFVBQVcsRUFBRSxFQUFFLElBQUk7WUFDZixNQUFNLENBQUMsSUFBSSxDQUFDLEtBQUssQ0FBQyxFQUFFLEVBQUUsSUFBSSxDQUFDLEtBQUssSUFBSSxDQUFDLE1BQU0sQ0FBQztRQUNoRCxDQUFDO1FBRU0sV0FBTSxHQUFiLFVBQWMsRUFBRSxFQUFFLElBQUk7WUFDbEIsSUFBSSxNQUFNLEdBQUcsRUFBRSxDQUFDO1lBRWhCLEdBQUcsQ0FBQyxDQUFDLElBQUksQ0FBQyxHQUFHLENBQUMsRUFBRSxDQUFDLEdBQUcsSUFBSSxDQUFDLE1BQU0sRUFBRSxDQUFDLEVBQUUsRUFBRSxDQUFDO2dCQUNuQyxJQUFJLElBQUksR0FBRyxJQUFJLENBQUMsQ0FBQyxDQUFDLENBQUM7Z0JBQ25CLEVBQUUsQ0FBQyxDQUFDLENBQUMsQ0FBQyxFQUFFLENBQUMsSUFBSSxDQUFDLENBQUMsQ0FBQyxDQUFDO29CQUNiLE1BQU0sQ0FBQyxJQUFJLENBQUMsSUFBSSxDQUFDLENBQUM7Z0JBQ3RCLENBQUM7WUFDTCxDQUFDO1lBRUQsTUFBTSxDQUFDLE1BQU0sQ0FBQztRQUNsQixDQUFDO1FBRU0sUUFBRyxHQUFWLFVBQVcsRUFBRSxFQUFFLElBQUk7WUFDZixFQUFFLENBQUMsQ0FBQyxDQUFDLElBQUksQ0FBQztnQkFDTixNQUFNLENBQUMsRUFBRSxDQUFDO1lBRWQsTUFBTSxDQUFDLElBQUksQ0FBQyxHQUFHLENBQUMsRUFBRSxDQUFDLENBQUM7UUFDeEIsQ0FBQztRQUVNLFVBQUssR0FBWixVQUFhLElBQUk7WUFDYixNQUFNLENBQUMsQ0FBQyxJQUFJLElBQUksSUFBSSxDQUFDLE1BQU0sS0FBSyxDQUFDLENBQUM7UUFDdEMsQ0FBQztRQUVNLFdBQU0sR0FBYixVQUFjLEVBQUUsRUFBRSxZQUFZLEVBQUUsSUFBSTtZQUNoQyxNQUFNLENBQUMsQ0FBQyxJQUFJLElBQUksSUFBSSxDQUFDLE1BQU0sQ0FBQyxFQUFFLEVBQUUsWUFBWSxDQUFDLENBQUM7UUFDbEQsQ0FBQztRQUNMLFdBQUM7SUFBRCxDQUFDLEFBL0NELElBK0NDO0lBL0NZLFNBQUksT0ErQ2hCLENBQUE7SUFFRCxlQUFzQixJQUFJLEVBQUUsT0FBTztRQUUvQixFQUFFLENBQUMsQ0FBQyxJQUFJLEtBQUssSUFBSSxJQUFJLElBQUksS0FBSyxLQUFLLENBQUMsSUFBSSxDQUFDLENBQUMsSUFBSSxDQUFDLElBQUksQ0FBQztZQUNoRCxNQUFNLENBQUMsSUFBSSxDQUFDLElBQUksQ0FBQyxPQUFPLENBQUMsQ0FBQztRQUU5QixFQUFFLENBQUMsQ0FBQyxDQUFDLENBQUMsT0FBTyxDQUFDLE9BQU8sQ0FBQztZQUNsQixNQUFNLENBQUMsT0FBTyxDQUFDLE9BQU8sQ0FBQyxJQUFJLENBQUMsT0FBTyxFQUFFLElBQUksQ0FBQyxDQUFDO1FBRS9DLE1BQU0sQ0FBQyxPQUFPLENBQUMsSUFBSSxDQUFDLE9BQU8sRUFBRSxJQUFJLENBQUMsQ0FBQztJQUN2QyxDQUFDO0lBVGUsVUFBSyxRQVNwQixDQUFBO0FBRUwsQ0FBQyxFQTlIYSxJQUFJLEdBQUosWUFBSSxLQUFKLFlBQUksUUE4SGpCIiwic291cmNlc0NvbnRlbnQiOlsiZXhwb3J0IG1vZHVsZSBDb3JlIHtcclxuICAgIGV4cG9ydCBmdW5jdGlvbiBTdGF0ZShpbml0aWFsVmFsdWUpIHtcclxuICAgICAgICB2YXIgZm4gPSBmdW5jdGlvbiAoeCkge1xyXG4gICAgICAgICAgICBpZiAoeCAhPT0gdW5kZWZpbmVkKVxyXG4gICAgICAgICAgICAgICAgZm5bJ2lkJ10gPSB4O1xyXG5cclxuICAgICAgICAgICAgcmV0dXJuIGZuWydpZCddO1xyXG4gICAgICAgIH07XHJcbiAgICAgICAgZm5bJ2lkJ10gPSBpbml0aWFsVmFsdWU7XHJcbiAgICAgICAgZm5bJ3ZhbHVlT2YnXSA9ICgpID0+IGluaXRpYWxWYWx1ZTtcclxuXHJcbiAgICAgICAgcmV0dXJuIGZuO1xyXG4gICAgfVxyXG5cclxuICAgIGV4cG9ydCBjbGFzcyBEYXRlcyB7XHJcbiAgICAgICAgc3RhdGljIGFkZERheXMoZGF5czogbnVtYmVyLCBkYXRlOiBEYXRlKSB7XHJcbiAgICAgICAgICAgIHZhciByZXR2YWwgPSBuZXcgRGF0ZShkYXRlLmdldFRpbWUoKSk7XHJcbiAgICAgICAgICAgIHJldHZhbC5zZXREYXRlKGRhdGUuZ2V0RGF0ZSgpICsgZGF5cyk7XHJcblxyXG4gICAgICAgICAgICBjb25zb2xlLmRlYnVnKFwiYWRkRGF5cyByZXN1bHRcIiwgcmV0dmFsKTtcclxuICAgICAgICAgICAgcmV0dXJuIHJldHZhbDtcclxuICAgICAgICB9XHJcblxyXG4gICAgICAgIHN0YXRpYyBhZGRZZWFycyh5ZWFyczogbnVtYmVyLCBkYXRlOiBEYXRlKSB7XHJcbiAgICAgICAgICAgIHZhciByZXR2YWwgPSBuZXcgRGF0ZShkYXRlLmdldFRpbWUoKSk7XHJcbiAgICAgICAgICAgIHJldHZhbC5zZXRGdWxsWWVhcihkYXRlLmdldEZ1bGxZZWFyKCkgKyB5ZWFycyk7XHJcblxyXG4gICAgICAgICAgICBjb25zb2xlLmRlYnVnKFwiYWRkWWVhcnMgcmVzdWx0XCIsIHJldHZhbCk7XHJcbiAgICAgICAgICAgIHJldHVybiByZXR2YWw7XHJcbiAgICAgICAgfVxyXG5cclxuICAgICAgICBzdGF0aWMgYWRkTW9udGhzKG1vbnRoczogbnVtYmVyLCBkYXRlOiBEYXRlKSB7XHJcbiAgICAgICAgICAgIHZhciByZXR2YWwgPSBuZXcgRGF0ZShkYXRlLmdldFRpbWUoKSk7XHJcbiAgICAgICAgICAgIHJldHZhbC5zZXRNb250aChkYXRlLmdldE1vbnRoKCkgKyBtb250aHMpO1xyXG5cclxuICAgICAgICAgICAgY29uc29sZS5kZWJ1ZyhcImFkZE1vbnRocyByZXN1bHRcIiwgcmV0dmFsKTtcclxuICAgICAgICAgICAgcmV0dXJuIHJldHZhbDtcclxuICAgICAgICB9XHJcblxyXG4gICAgICAgIHN0YXRpYyBkYXlPZihkYXRlOiBEYXRlKSB7XHJcbiAgICAgICAgICAgIHJldHVybiBkYXRlLmdldERhdGUoKTtcclxuICAgICAgICB9XHJcblxyXG4gICAgICAgIHN0YXRpYyB5ZWFyT2YoZGF0ZTogRGF0ZSkge1xyXG4gICAgICAgICAgICByZXR1cm4gZGF0ZS5nZXRGdWxsWWVhcigpO1xyXG4gICAgICAgIH1cclxuXHJcbiAgICAgICAgc3RhdGljIG1vbnRoT2YoZGF0ZTogRGF0ZSkge1xyXG4gICAgICAgICAgICByZXR1cm4gZGF0ZS5nZXRNb250aCgpO1xyXG4gICAgICAgIH1cclxuXHJcbiAgICAgICAgc3RhdGljIGZvcm1hdERhdGUoZm9ybWF0LCBkYXRlOiBEYXRlKSB7XHJcbiAgICAgICAgICAgIHJldHVybiBkYXRlLnRvU3RyaW5nKCk7XHJcbiAgICAgICAgfVxyXG4gICAgfVxyXG5cclxuICAgIGV4cG9ydCBjbGFzcyBNYXRoIHtcclxuICAgICAgICBzdGF0aWMgbGUocmF0aW5nLCBtYXgpIHtcclxuICAgICAgICAgICAgcmV0dXJuIHJhdGluZyA8PSBtYXg7XHJcbiAgICAgICAgfVxyXG5cclxuICAgICAgICBzdGF0aWMgYXNzaWduKHByb3BlcnR5LCB2YWx1ZSkge1xyXG4gICAgICAgICAgICBjb25zb2xlLmRlYnVnKHByb3BlcnR5LCB2YWx1ZSk7XHJcbiAgICAgICAgfVxyXG4gICAgfVxyXG5cclxuICAgIGV4cG9ydCBjbGFzcyBMaXN0IHtcclxuICAgICAgICBzdGF0aWMgY291bnQoZm4sIGxpc3QpIHtcclxuICAgICAgICAgICAgaWYgKCFsaXN0KVxyXG4gICAgICAgICAgICAgICAgcmV0dXJuIDA7XHJcbiAgICAgICAgICAgIHZhciByZXN1bHQgPSAwO1xyXG4gICAgICAgICAgICBmb3IgKHZhciBpID0gMDsgaSA8IGxpc3QubGVuZ3RoOyBpKyspXHJcbiAgICAgICAgICAgICAgICBpZiAoZm4obGlzdFtpXSkpXHJcbiAgICAgICAgICAgICAgICAgICAgcmVzdWx0Kys7XHJcblxyXG4gICAgICAgICAgICByZXR1cm4gcmVzdWx0O1xyXG4gICAgICAgIH1cclxuXHJcbiAgICAgICAgc3RhdGljIGFueShmbiwgbGlzdCkge1xyXG4gICAgICAgICAgICByZXR1cm4gTGlzdC5jb3VudChmbiwgbGlzdCkgPiAwO1xyXG4gICAgICAgIH1cclxuXHJcbiAgICAgICAgc3RhdGljIGFsbChmbiwgbGlzdCkge1xyXG4gICAgICAgICAgICByZXR1cm4gTGlzdC5jb3VudChmbiwgbGlzdCkgPT09IGxpc3QubGVuZ3RoO1xyXG4gICAgICAgIH1cclxuXHJcbiAgICAgICAgc3RhdGljIGZpbHRlcihmbiwgbGlzdCkge1xyXG4gICAgICAgICAgICB2YXIgcmV0dmFsID0gW107XHJcblxyXG4gICAgICAgICAgICBmb3IgKHZhciBpID0gMDsgaSA8IGxpc3QubGVuZ3RoOyBpKyspIHtcclxuICAgICAgICAgICAgICAgIHZhciBpdGVtID0gbGlzdFtpXTtcclxuICAgICAgICAgICAgICAgIGlmICghIWZuKGl0ZW0pKSB7XHJcbiAgICAgICAgICAgICAgICAgICAgcmV0dmFsLnB1c2goaXRlbSk7XHJcbiAgICAgICAgICAgICAgICB9XHJcbiAgICAgICAgICAgIH1cclxuXHJcbiAgICAgICAgICAgIHJldHVybiByZXR2YWw7XHJcbiAgICAgICAgfVxyXG5cclxuICAgICAgICBzdGF0aWMgbWFwKGZuLCBsaXN0KSB7XHJcbiAgICAgICAgICAgIGlmICghbGlzdClcclxuICAgICAgICAgICAgICAgIHJldHVybiBbXTtcclxuXHJcbiAgICAgICAgICAgIHJldHVybiBsaXN0Lm1hcChmbik7XHJcbiAgICAgICAgfVxyXG5cclxuICAgICAgICBzdGF0aWMgZW1wdHkobGlzdCkge1xyXG4gICAgICAgICAgICByZXR1cm4gIWxpc3QgfHwgbGlzdC5sZW5ndGggPT09IDA7XHJcbiAgICAgICAgfVxyXG5cclxuICAgICAgICBzdGF0aWMgcmVkdWNlKGZuLCBpbml0aWFsVmFsdWUsIGxpc3QpIHtcclxuICAgICAgICAgICAgcmV0dXJuICFsaXN0ICYmIGxpc3QucmVkdWNlKGZuLCBpbml0aWFsVmFsdWUpO1xyXG4gICAgICAgIH1cclxuICAgIH1cclxuXHJcbiAgICBleHBvcnQgZnVuY3Rpb24gcmVhZHkoZGF0YSwgcmVzb2x2ZSkge1xyXG5cclxuICAgICAgICBpZiAoZGF0YSAhPT0gbnVsbCAmJiBkYXRhICE9PSB2b2lkIDAgJiYgISFkYXRhLnRoZW4pXHJcbiAgICAgICAgICAgIHJldHVybiBkYXRhLnRoZW4ocmVzb2x2ZSk7XHJcblxyXG4gICAgICAgIGlmICghIXJlc29sdmUuZXhlY3V0ZSlcclxuICAgICAgICAgICAgcmV0dXJuIHJlc29sdmUuZXhlY3V0ZS5jYWxsKHJlc29sdmUsIGRhdGEpO1xyXG5cclxuICAgICAgICByZXR1cm4gcmVzb2x2ZS5jYWxsKHJlc29sdmUsIGRhdGEpO1xyXG4gICAgfVxyXG5cclxufSJdfQ==

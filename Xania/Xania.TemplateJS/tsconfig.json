@@ -2,22 +2,29 @@
   "compileOnSave": true,
   "compilerOptions": {
     "lib": [ "dom", "es6" ],
-    "module": "system",
+    "module": "commonjs",
     "noEmitOnError": true,
     "noImplicitAny": false,
     "removeComments": true,
-    "sourceMap": true,
+    // "sourceMap": true,
+    // "sourceRoot": "",
+    "inlineSourceMap": true,
+    "inlineSources": true,
     "target": "es5",
     "types": [ "jasmine" ],
     "outDir": "wwwroot"
   },
+  "exclude": [
+    "src/fsharp.peg.ts"
+  ],
   "include": [
     "grammar/fsharp.d.ts",
     "src/core.ts",
     "src/expression.ts",
     "src/rebind.ts",
+    "src/fsharp.ts",
     // "src/dom.ts",
     "src/template.ts",
-    "spec/compilerSpec.ts"
+    "spec/*Spec.ts"
   ]
 }

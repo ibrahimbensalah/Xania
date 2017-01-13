@@ -1,6 +1,6 @@
 ﻿import { Core } from "./core"
 
-module Template {
+export module Template {
 
     export interface IVisitor {
         text(tpl);
@@ -21,7 +21,7 @@ module Template {
             return this.tpl.toString();
         }
 
-        accept(visitor: IVisitor) {
+        accept(visitor: IVisitor): any {
             return visitor.text(this.tpl);
         }
 
@@ -46,7 +46,7 @@ module Template {
         }
 
         accept(visitor: IVisitor) {
-            var children = this._children.map(x => x.accept(visitor));
+            var children: any[] = this._children.map(h => h.accept(visitor));
             return visitor.content(children);
         }
 
@@ -142,4 +142,8 @@ module Template {
         //    return newBinding;
         //}
     }
+}
+
+export {
+    Template as t
 }
