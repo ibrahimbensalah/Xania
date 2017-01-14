@@ -15,7 +15,8 @@ export module Reactive {
     }
 
     abstract class Value {
-        private properties: { name: string, value: any }[] = [];
+        private properties: { name: string; value: any; update(): boolean }[] = [];
+        private $reactive = true;
 
         constructor(public value) {
         }
@@ -27,11 +28,17 @@ export module Reactive {
             }
 
             var initialValue = this.value[propertyName];
+
             if (initialValue === void 0)
                 return void 0;
 
             if (typeof initialValue === "function") {
                 return initialValue.bind(this.value);
+            }
+
+            if (!!initialValue && typeof initialValue.$reactive !== "undefined") {
+                this.properties.push(initialValue);
+                return initialValue;
             }
 
             var child = this.create(propertyName, initialValue);
@@ -41,7 +48,36 @@ export module Reactive {
             return child;
         }
 
+        protected updateProperties() {
+            var properties = this.properties.slice(0);
+            this.properties = [];
+            for (var i = 0; i < properties.length; i++) {
+                var property = properties[i];
+                if (property.update() || typeof property.value !== "undefined") {
+                    this.properties.push(property);
+                }
+            }
+        }
+
         abstract create(propertyName: string, initialValue): { name: string, value, update() };
+
+        private extensions: { key: any, value: Scope }[] = [];
+        extendValue(dispatcher: IDispatcher, name: string, value: any) {
+            for (var i = 0; i < this.extensions.length; i++) {
+                var x = this.extensions[i];
+                if (x.key === value) {
+                    return x.value;
+                }
+            }
+
+            var child = {};
+            child[name] = value;
+            var scope = new Scope(dispatcher, child, this);
+
+            this.extensions.push({ key: value, value: scope });
+
+            return scope;
+        }
     }
 
     interface IDependency<T> {
@@ -52,12 +88,24 @@ export module Reactive {
         // list of observers to be dispatched on value change
         public actions: IAction[] = [];
 
-        constructor(private dispatcher: IDispatcher, private parent: { value; }, public name, value) {
+        constructor(private dispatcher: IDispatcher, private parent: { value; get(name: string) }, public name, value) {
             super(value);
         }
 
         create(propertyName: string, initialValue): { name: string, value, update() } {
             return new Property(this.dispatcher, this, propertyName, initialValue);
+        }
+
+        extend(name: string, value: any) {
+            return super.extendValue(this.dispatcher, name, value);
+        }
+
+        get(name: string) {
+            var result = super.get(name);
+            if (typeof result !== "undefined")
+                return result;
+
+            return this.parent.get(name);
         }
 
         change(action: IAction): IDependency<IAction> | boolean {
@@ -94,29 +142,39 @@ export module Reactive {
 
             if (this.value === void 0) {
                 // notify done
+                return true;
             } else {
                 // notify next
                 var actions = this.actions.slice(0);
                 for (var i = 0; i < actions.length; i++) {
                     this.dispatcher.dispatch(actions[i]);
                 }
-            }
 
-            return true;
+                super.updateProperties();
+                return true;
+            }
         }
 
         valueOf() {
             return this.value;
         }
+
+        map(fn) {
+            return this.value.map((item, idx) => fn(super.get(idx), idx));
+        }
+
+        toString() {
+            return this.value === null || this.value === void 0 ? "null" : this.value.toString();
+        }
     }
 
     export class Scope extends Value {
-        constructor(private store: Store, value: any, private parent?: { get(name: string); }) {
+        constructor(private dispatcher: IDispatcher, value: any, private parent?: { get(name: string); }) {
             super(value);
         }
 
         create(propertyName: string, initialValue): { name: string, value, update() } {
-            return new Property(this.store, this, propertyName, initialValue);
+            return new Property(this.dispatcher, this, propertyName, initialValue);
         }
 
         valueOf() {
@@ -127,8 +185,8 @@ export module Reactive {
             return this.value.map(fn);
         }
 
-        extend(value: any) {
-            return new Scope(value, this);
+        extend(name: string, value: any) {
+            return super.extendValue(this.dispatcher, name, value);
         }
 
         get(name: string) {
@@ -145,12 +203,19 @@ export module Reactive {
         }
 
         toJSON() {
+
             var parent: any = this.parent;
-            return (<any>Object).assign({}, this.value, parent && parent.toJSON ? parent.toJSON() : {});
+
+            if (typeof (<any>this)._json === "undefined") {
+                (<any>this)._json = "*recursive*";
+                (<any>this)._json = (<any>Object).assign({}, this.value, parent && parent.toJSON ? parent.toJSON() : {});
+            }
+
+            return (<any>this)._json;
         }
 
         toString() {
-            return JSON.stringify(this.toJSON(), null, 4);
+            return this.value;
         }
     }
 
@@ -183,6 +248,10 @@ export module Reactive {
             return value;
         }
 
+        extend(name: string, value: any) {
+            return this.root.extend(name, value);
+        }
+
         toString() {
             return JSON.stringify(this.root.toJSON(), null, 4);
         }
@@ -206,10 +275,20 @@ export module Reactive {
         update(context) {
             this.context = context;
 
-            return Core.ready(this.state,
+            this.state = Core.ready(this.state,
                 s => {
-                    return this.state = this.render(context, s);
+                    return this.render(context, s);
                 });
+
+            return this;
+        }
+
+        public static observe(value, observer) {
+            if (value && value.change) {
+                var dependency = value.change(observer);
+                if (!!dependency)
+                    observer.dependencies.push(dependency);
+            }
         }
 
         public abstract render(context?, state?) : any;
@@ -227,35 +306,35 @@ export module Reactive {
         }
 
         select(source, selector) {
-            throw new Error("Not implemented");
+            return source.map(selector);
         }
 
         query(param, source) {
-            throw new Error("Not implemented");
-        }
-
-        ident(name) {
-            return this.member(this.context, name);
+            Binding.observe(source, this);
+            return source.map(item => {
+                return this.context.extend(param, item);
+            });
         }
 
         member(target: { get(name: string) }, name) {
             var value = target.get(name);
 
-            if (value && value.change) {
-                var dependency = value.change(this);
-                if (!!dependency)
-                    this.dependencies.push(dependency);
-            }
+            Binding.observe(value, this);
 
             return value;
         }
 
+
         app(fun, args: any[]) {
+            if (fun === "+") {
+                return args[1] + args[0];
+            }
+
             throw new Error("Not implemented");
         }
 
         const(value) {
-            throw new Error("Not implemented");
+            return value;
         }
     }
 

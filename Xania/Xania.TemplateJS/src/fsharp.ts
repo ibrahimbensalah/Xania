@@ -2,7 +2,6 @@
     where(source, predicate);
     select(source, selector);
     query(param, source);
-    ident(name);
     member(target, name);
     app(fun, args: any[]);
     const(value);
@@ -14,7 +13,7 @@ var peg = require("./fsharp.peg");
 
 // var fsharp = peg.parse;
 
-export function accept(ast: any, visitor: IAstVisitor) {
+export function accept(ast: any, visitor: IAstVisitor, context) {
     if (ast === null || ast === undefined)
         return null;
 
@@ -23,21 +22,21 @@ export function accept(ast: any, visitor: IAstVisitor) {
 
     switch (ast.type) {
         case "where":
-            return visitor.where(accept(ast.source, visitor), accept(ast.predicate, visitor));
+            return visitor.where(accept(ast.source, visitor, context), accept(ast.predicate, visitor, context));
         case "query":
-            return visitor.query(ast.param, accept(ast.source, visitor));
+            return visitor.query(ast.param, accept(ast.source, visitor, context));
         case "ident":
-            return visitor.ident(ast.name);
+            return visitor.member(context, ast.name);
         case "member":
-            return visitor.member(accept(ast.target, visitor), accept(ast.member, visitor));
+            return visitor.member(accept(ast.target, visitor, context), accept(ast.member, visitor, context));
         case "app":
             const args = [];
             for (let i = 0; i < ast.args.length; i++) {
-                args.push(accept(args[i], visitor));
+                args.push(accept(ast.args[i], visitor, context));
             }
-            return visitor.app(accept(ast.fun, visitor), args);
+            return visitor.app(accept(ast.fun, visitor, context), args);
         case "select":
-            return visitor.select(accept(ast.source, visitor), accept(ast.selector, visitor));
+            return visitor.select(accept(ast.source, visitor, context), s => accept(ast.selector, visitor, s));
         case "const":
             return visitor.const(ast.value);
         default:

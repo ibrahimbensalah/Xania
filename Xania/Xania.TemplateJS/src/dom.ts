@@ -1,46 +1,119 @@
 ﻿import { Core } from './core'
 import { Reactive as Re } from './rebind'
 import { accept } from './fsharp'
+import { Template } from './template'
 
 export module Dom {
 
-    var document:Document = window.document;
+    var document = window.document;
 
-    interface IBinding {
-        dom;
+    interface IVisitor extends Template.IVisitor<Re.Binding> {
     }
 
-    export class ContentBinding extends Re.Binding implements IBinding {
-        public dom;
+    //export class TemplateVisitor implements IVisitor {
+    //    public text(ast): TextBinding {
+    //        return new TextBinding(ast);
+    //    }
 
-        constructor() {
+    //    public content(ast, children: Template.INode[]): ContentBinding {
+    //        var fragment = document.createDocumentFragment();
+    //        return new ContentBinding(ast, dom => fragment.appendChild(dom), children);
+    //    }
+    //}
+
+    export class ContentBinding extends Re.Binding implements IVisitor {
+        private fragments: ContentFragment[] = [];
+
+        constructor(private ast, public parentInsert: (n: Node, idx: number) => void, public children: Template.INode[]) {
             super();
-            this.dom = document.createDocumentFragment();
         }
 
         render() {
-            return this.dom;
+            var stream = accept(this.ast, this, this.context);
+
+            var offset = 0;
+            for (var i = 0; i < stream.length; i++) {
+                var context = stream[i];
+
+                var fragment = null;
+                for (var e = i; e < this.fragments.length; e++) {
+                    var f = this.fragments[e];
+                    if (f.context === context) {
+                        fragment = f;
+                        if (e !== i) {
+                            /* found fragment at e by should be located at i */
+                            this.fragments.splice(e, 1);
+                        }
+                    }
+                }
+
+                if (fragment === null /* not found */) {
+                    fragment = new ContentFragment(this, context, offset).update();
+                }
+
+                if (i < this.fragments.length) {
+                    this.fragments.splice(i, 0, fragment);
+                } else {
+                    this.fragments.push(fragment);
+                }
+
+                offset += this.children.length;
+            }
+
+            return stream;
+        }
+
+        public text(ast, options: { fragment: ContentFragment, child: number }): TextBinding {
+
+            var binding = new TextBinding(ast);
+
+            options.fragment.insert(binding.dom, options.child);
+
+            return binding;
+        }
+
+        public content(ast, children, options: { fragment: ContentFragment, child: number }): ContentBinding {
+            var binding = new ContentBinding(ast, dom => options.fragment.insert(dom, options.child), children);
+            return binding;
         }
     }
 
-    export class TextBinding extends Re.Binding implements IBinding {
+    class ContentFragment {
+        public bindings: Re.Binding[] = [];
+
+        constructor(private owner: ContentBinding, public context, private offset: number) { }
+
+        insert(dom, index) {
+            this.owner.parentInsert(dom, this.offset + index);
+        }
+
+        update() {
+            var context = this.context;
+            for (var e = 0; e < this.owner.children.length; e++) {
+                this.bindings[e] =
+                    this.owner.children[e].accept(this.owner as IVisitor, { fragment: this, child: e }).update(context);
+            }
+
+            return this;
+        }
+    }
+
+    export class TextBinding extends Re.Binding {
         public dom;
 
-        constructor(private modelAccessor) {
+        constructor(private ast) {
             super();
             this.dom = (<any>document).createTextNode("");
         }
 
         render(context) {
-            const newValue = accept(this.modelAccessor, this);
+            const newValue = accept(this.ast, this, context);
 
             if (!!newValue && !!newValue.onNext) {
                 newValue.subscribe(this);
             } else {
                 this.onNext(newValue.valueOf());
             }
-
-            return newValue.valueOf();
         }
 
         onNext(newValue) {
@@ -48,7 +121,7 @@ export module Dom {
         }
     }
 
-    export class TagBinding extends Re.Binding implements IBinding {
+    export class TagBinding extends Re.Binding {
         public dom;
         private attributeBindings = [];
 
@@ -114,7 +187,7 @@ export module Dom {
         }
     }
 
-    export class ClassBinding extends Re.Binding implements IBinding {
+    export class ClassBinding extends Re.Binding {
         public dom;
         private conditions = [];
         private oldValue;
@@ -171,7 +244,7 @@ export module Dom {
 
     }
 
-    export class AttributeBinding extends Re.Binding implements IBinding {
+    export class AttributeBinding extends Re.Binding {
         public dom;
         private oldValue;
 
@@ -227,7 +300,7 @@ export module Dom {
     //    private stream;
     //    private length;
 
-    //    constructor(private tpl: Template.INodeTemplate, private target, private offset) {
+    //    constructor(private tpl: Template.INode, private target, private offset) {
     //        super();
     //    }
 
@@ -283,7 +356,7 @@ export module Dom {
     //    }
     //}
 
-    //export function executeTemplate(observable, tpl: Template.INodeTemplate, target, offset) {
+    //export function executeTemplate(observable, tpl: Template.INode, target, offset) {
     //    return new ReactiveBinding(tpl, target, offset).update(observable);
     //}
 
@@ -352,7 +425,7 @@ export module Dom {
     //        }
     //    }
 
-    //    parseDom(rootDom: Node): Template.INodeTemplate {
+    //    parseDom(rootDom: Node): Template.INode {
     //        const stack = [];
     //        let i: number;
     //        var rootTpl;

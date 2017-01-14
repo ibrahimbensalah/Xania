@@ -124,4 +124,19 @@
         return resolve.call(resolve, data);
     }
 
+    export function forEach(data, resolve) {
+        if (data === void 0)
+            throw new Error("undefined");
+        if (data === null)
+            return resolve(null);
+
+        if (!!data.forEach)
+            return data.forEach(resolve);
+
+        if (!!data.then)
+            return data.then(d => forEach(d, resolve));
+
+        return resolve(data);
+    }
+
 }

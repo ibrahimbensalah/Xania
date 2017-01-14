@@ -92,7 +92,13 @@ export module Expression {
 
         toJSON() {
             var parent: any = this.parent;
-            return (<any>Object).assign({}, this.value, parent.toJSON ? parent.toJSON() : {});
+
+            if (typeof (<any>this)._json === "undefined") {
+                (<any>this)._json = "*recursive*";
+                (<any>this)._json = (<any>Object).assign({}, this.value, parent.toJSON ? parent.toJSON() : {});
+            }
+
+            return (<any>this)._json;
         }
 
         toString() {

@@ -406,13 +406,14 @@ describe("fsharp parser", () => {
 });
 
 
-class LogBinding extends Re.Binding {
+class TestBinding extends Re.Binding {
     constructor(private ast) {
         super();
     }
 
     render(context) {
-        return accept(this.ast, this).valueOf();
+        this.context = context;
+        return accept(this.ast, this, context).valueOf();
     }
 }
 
@@ -421,7 +422,7 @@ describe("runtime", () => {
     it("expression dependencies",
         () => {
             var store = new Re.Store({ p: ibrahim });
-            var binding = new LogBinding(fs("p.firstName"));
+            var binding = new TestBinding(fs("p.firstName"));
             binding.update(store);
 
             expect(binding.state).toBe("Ibrahim");
@@ -435,6 +436,27 @@ describe("runtime", () => {
 
             store.flush();
         });
+
+    it("consistent variable identity",
+        () => {
+            var store = new Re.Store({ p: ibrahim });
+
+            var binding = new TestBinding(fs("p"));
+
+            expect(binding.render(store)).toBe(binding.render(store));
+        });
+
+    it("consistent member identity", () => {
+        var store = new Re.Store({ xania: { owner: ibrahim } });
+        var binding = new TestBinding(fs("xania.owner"));
+        expect(binding.render(store)).toBe(binding.render(store));
+    });
+
+    it("consistent query identity", () => {
+        var store = new Re.Store({ xania: { employees: [ ibrahim ] } });
+        var binding = new TestBinding(fs("for e in xania.employees"));
+        expect(binding.render(store)[0]).toBe(binding.render(store)[0], "not identical");
+    });
 
     //it("execute query",
     //    () => {

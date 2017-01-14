@@ -2,18 +2,17 @@
 
 export module Template {
 
-    export interface IVisitor {
-        text?(tpl);
-        content?(children: any[]);
-        tag?(name, ns, attr, events, content);
+    export interface IVisitor<T> {
+        text?(tpl, options: any): T;
+        content?(ast, children: INode[], options: any): T;
+        tag?(name, ns, attr, events, children: T[], options: any): T;
     }
 
-    export interface INodeTemplate {
-        modelAccessor?;
-        accept(visitor: IVisitor);
+    export interface INode {
+        accept<T>(visitor: IVisitor<T>, options: any): T;
     }
 
-    export class TextTemplate implements INodeTemplate {
+    export class TextTemplate implements INode {
         constructor(private expr : string) {
         }
 
@@ -21,33 +20,18 @@ export module Template {
             return this.expr.toString();
         }
 
-        accept(visitor: IVisitor): any {
-            return visitor.text(this.expr);
+        accept<T>(visitor: IVisitor<T>, options: any): T {
+            return visitor.text(this.expr, options);
         }
-
-        //bind(result) {
-        //    var newBinding = new Dom.TextBinding(this.tpl, result);
-        //    newBinding.update(result);
-        //    return newBinding;
-        //}
     }
 
-    export class ContentTemplate implements INodeTemplate {
+    export class ContentTemplate implements INode {
         // ReSharper disable once InconsistentNaming
-        private _children: TagTemplate[] = [];
 
-        public children() {
-            return this._children;
-        }
+        constructor(private ast, private children: INode[]) { }
 
-        public addChild(child: TagTemplate) {
-            this._children.push(child);
-            return this;
-        }
-
-        accept(visitor: IVisitor) {
-            var children: any[] = this._children.map(h => h.accept(visitor));
-            return visitor.content(children);
+        accept<T>(visitor: IVisitor<T>, options: any): T {
+            return visitor.content(this.ast, this.children, options);
         }
 
         //bind(context) {
@@ -62,7 +46,7 @@ export module Template {
         //    return newBinding;
         //}
 
-        //static reduceChild(prev, cur: INodeTemplate) {
+        //static reduceChild(prev, cur: INode) {
         //    var { parentBinding, context, offset } = prev;
 
         //    prev.offset = Core.ready(offset,
@@ -75,17 +59,17 @@ export module Template {
         //}
     }
 
-    export class TagTemplate implements INodeTemplate {
+    export class TagTemplate implements INode {
         private attributes: { name: string; tpl }[] = [];
         private events = new Map<string, any>();
         // ReSharper disable once InconsistentNaming
-        private _children: INodeTemplate[] = [];
+        private _children: INode[] = [];
         public modelAccessor;
 
         constructor(public name: string, private ns: string) {
         }
 
-        public children(): INodeTemplate[] {
+        public children(): INode[] {
             return this._children;
         }
 
@@ -124,11 +108,11 @@ export module Template {
             return this;
         }
 
-        accept(visitor: IVisitor) {
-            var children = this._children.map(x => x.accept(visitor));
-            var content = visitor.content(children);
+        accept<T>(visitor: IVisitor<T>) {
+            // var children = this._children.map(x => x.accept(visitor));
+            // var content = visitor.content(null, children);
 
-            return visitor.tag(this.name, this.ns, this.attributes, this.events, content);
+            // return visitor.tag(this.name, this.ns, this.attributes, this.events, content);
         }
 
         //bind(context) {
