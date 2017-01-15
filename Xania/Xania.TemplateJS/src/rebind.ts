@@ -14,14 +14,21 @@ export module Reactive {
         dispatch(action: IAction);
     }
 
-    abstract class Value {
-        private properties: { name: string; value: any; update(): boolean }[] = [];
-        private $reactive = true;
+    interface IProperty {
+        name: string;
+        value: any;
+        update(): boolean;
+        get(name: string | number);
+    }
 
-        constructor(public value) {
+    abstract class Value {
+        protected properties: IProperty[] = [];
+        protected extensions: { name: any, value: Extension }[] = [];
+
+        constructor(public value, protected dispatcher: IDispatcher) {
         }
 
-        get(propertyName: string): { value; } {
+        get(propertyName: string): IProperty {
             for (var i = 0; i < this.properties.length; i++) {
                 if (this.properties[i].name === propertyName)
                     return this.properties[i];
@@ -36,16 +43,10 @@ export module Reactive {
                 return initialValue.bind(this.value);
             }
 
-            if (!!initialValue && typeof initialValue.$reactive !== "undefined") {
-                this.properties.push(initialValue);
-                return initialValue;
-            }
+            var property = new Property(this.dispatcher, this, propertyName, initialValue);
+            this.properties.push(property);
 
-            var child = this.create(propertyName, initialValue);
-            child.update();
-            this.properties.push(child);
-
-            return child;
+            return property;
         }
 
         protected updateProperties() {
@@ -59,22 +60,17 @@ export module Reactive {
             }
         }
 
-        abstract create(propertyName: string, initialValue): { name: string, value, update() };
-
-        private extensions: { key: any, value: Scope }[] = [];
-        extendValue(dispatcher: IDispatcher, name: string, value: any) {
+        extend(name: string, value: any) {
             for (var i = 0; i < this.extensions.length; i++) {
                 var x = this.extensions[i];
-                if (x.key === value) {
+                if (x.name === value) {
                     return x.value;
                 }
             }
 
-            var child = {};
-            child[name] = value;
-            var scope = new Scope(dispatcher, child, this);
+            var scope = new Extension(this.dispatcher, this).add(name, value);
 
-            this.extensions.push({ key: value, value: scope });
+            this.extensions.push({ name: value, value: scope });
 
             return scope;
         }
@@ -88,16 +84,8 @@ export module Reactive {
         // list of observers to be dispatched on value change
         public actions: IAction[] = [];
 
-        constructor(private dispatcher: IDispatcher, private parent: { value; get(name: string) }, public name, value) {
-            super(value);
-        }
-
-        create(propertyName: string, initialValue): { name: string, value, update() } {
-            return new Property(this.dispatcher, this, propertyName, initialValue);
-        }
-
-        extend(name: string, value: any) {
-            return super.extendValue(this.dispatcher, name, value);
+        constructor(dispatcher: IDispatcher, private parent: { value; get(name: string) }, public name, value) {
+            super(value, dispatcher);
         }
 
         get(name: string) {
@@ -140,19 +128,20 @@ export module Reactive {
 
             this.value = newValue;
 
-            if (this.value === void 0) {
-                // notify done
-                return true;
-            } else {
-                // notify next
-                var actions = this.actions.slice(0);
-                for (var i = 0; i < actions.length; i++) {
-                    this.dispatcher.dispatch(actions[i]);
-                }
-
-                super.updateProperties();
-                return true;
+            // notify next
+            var actions = this.actions.slice(0);
+            for (var i = 0; i < actions.length; i++) {
+                this.dispatcher.dispatch(actions[i]);
             }
+
+            if (this.value === void 0) {
+                this.extensions = [];
+                this.properties = [];
+            } else {
+                super.updateProperties();
+            }
+
+            return this.value;
         }
 
         valueOf() {
@@ -168,29 +157,26 @@ export module Reactive {
         }
     }
 
-    export class Scope extends Value {
-        constructor(private dispatcher: IDispatcher, value: any, private parent?: { get(name: string); }) {
-            super(value);
+    export class Extension {
+
+        private values = {};
+
+        constructor(private dispatcher: IDispatcher, private parent?: { get(name: string); }) {
         }
 
-        create(propertyName: string, initialValue): { name: string, value, update() } {
-            return new Property(this.dispatcher, this, propertyName, initialValue);
+        add(name: string, value: Value) {
+            this.values[name] = value;
+
+            return this;
         }
 
-        valueOf() {
-            return this.value;
-        }
-
-        map(fn) {
-            return this.value.map(fn);
-        }
-
-        extend(name: string, value: any) {
-            return super.extendValue(this.dispatcher, name, value);
+        extend(name: string, value: Value) {
+            return new Extension(this.dispatcher, this)
+                .add(name, value);
         }
 
         get(name: string) {
-            var value = super.get(name);
+            var value = this.values[name];
 
             if (typeof value === "undefined") {
                 if (this.parent)
@@ -202,29 +188,17 @@ export module Reactive {
             return value;
         }
 
-        toJSON() {
-
-            var parent: any = this.parent;
-
-            if (typeof (<any>this)._json === "undefined") {
-                (<any>this)._json = "*recursive*";
-                (<any>this)._json = (<any>Object).assign({}, this.value, parent && parent.toJSON ? parent.toJSON() : {});
-            }
-
-            return (<any>this)._json;
-        }
-
         toString() {
-            return this.value;
+            return this.values;
         }
     }
 
-    export class Store implements IDispatcher {
+    export class Store extends Value implements IDispatcher {
         public dirty = [];
-        public root: Scope;
 
-        constructor(value: any = {}) {
-            this.root = new Scope(this, value);
+        constructor(value: any) {
+            super(value, null);
+            this.dispatcher = this;
         }
 
         dispatch(action: IAction) {
@@ -239,7 +213,7 @@ export module Reactive {
         }
 
         get(name: string) {
-            var value = this.root.get(name);
+            var value = super.get(name);
 
             if (typeof value === "undefined") {
                 throw new Error("Cannot resolve variable " + name);
@@ -248,12 +222,8 @@ export module Reactive {
             return value;
         }
 
-        extend(name: string, value: any) {
-            return this.root.extend(name, value);
-        }
-
         toString() {
-            return JSON.stringify(this.root.toJSON(), null, 4);
+            return JSON.stringify(this.value, null, 4);
         }
     }
 
