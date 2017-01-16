@@ -1,5 +1,5 @@
 ﻿import { Core } from './core'
-import { Reactive as Re } from './rebind'
+import { Reactive as Re } from './reactive'
 import { accept } from './fsharp'
 import { Template } from './template'
 
@@ -9,17 +9,6 @@ export module Dom {
 
     interface IVisitor extends Template.IVisitor<Re.Binding> {
     }
-
-    //export class TemplateVisitor implements IVisitor {
-    //    public text(ast): TextBinding {
-    //        return new TextBinding(ast);
-    //    }
-
-    //    public content(ast, children: Template.INode[]): ContentBinding {
-    //        var fragment = document.createDocumentFragment();
-    //        return new ContentBinding(ast, dom => fragment.appendChild(dom), children);
-    //    }
-    //}
 
     export class ContentBinding extends Re.Binding implements IVisitor {
         private fragments: ContentFragment[] = [];
@@ -48,7 +37,8 @@ export module Dom {
                 }
 
                 if (fragment === null /* not found */) {
-                    fragment = new ContentFragment(this, context, offset).update();
+
+                    fragment = new ContentFragment(this, context, offset);
                 }
 
                 if (i < this.fragments.length) {
@@ -81,20 +71,15 @@ export module Dom {
     class ContentFragment {
         public bindings: Re.Binding[] = [];
 
-        constructor(private owner: ContentBinding, public context, private offset: number) { }
+        constructor(private owner: ContentBinding, public context, private offset: number) {
+            for (var e = 0; e < owner.children.length; e++) {
+                this.bindings[e] =
+                    owner.children[e].accept(owner as IVisitor, { fragment: this, child: e }).update(context);
+            }
+        }
 
         insert(dom, index) {
             this.owner.parentInsert(dom, this.offset + index);
-        }
-
-        update() {
-            var context = this.context;
-            for (var e = 0; e < this.owner.children.length; e++) {
-                this.bindings[e] =
-                    this.owner.children[e].accept(this.owner as IVisitor, { fragment: this, child: e }).update(context);
-            }
-
-            return this;
         }
     }
 

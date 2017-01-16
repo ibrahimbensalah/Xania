@@ -3,7 +3,7 @@
 import { Template } from "../src/template";
 import { fsharp as fs } from "../src/fsharp";
 import { Dom } from "../src/dom";
-import { Reactive as Re } from '../src/rebind';
+import { Reactive as Re } from '../src/reactive';
 // import { Core } from "../src/core";
 
 interface IPerson { firstName: string; lastName: string; adult: boolean, age: number, roles: string[] }

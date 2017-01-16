@@ -1,7 +1,7 @@
 ﻿/// <reference path="../node_modules/@types/jasmine/index.d.ts" />
 
 import { Expression as XC } from "../src/expression";
-import { Reactive as Re } from "../src/rebind";
+import { Reactive as Re } from "../src/reactive";
 import { fsharp as fs, accept } from "../src/fsharp";
 // import { Core } from "../src/core";
 
