@@ -21,7 +21,7 @@
     "grammar/fsharp.d.ts",
     "src/core.ts",
     "src/expression.ts",
-    "src/rebind.ts",
+    "src/reactive.ts",
     "src/fsharp.ts",
     "src/dom.ts",
     "src/template.ts",

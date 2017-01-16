@@ -1,5 +1,5 @@
 ﻿import { Core } from './core'
-import { Reactive as Re } from './rebind'
+import { Reactive as Re } from './reactive'
 import { accept } from './fsharp'
 import { Template } from './template'
 
@@ -9,17 +9,6 @@ export module Dom {
 
     interface IVisitor extends Template.IVisitor<Re.Binding> {
     }
-
-    //export class TemplateVisitor implements IVisitor {
-    //    public text(ast): TextBinding {
-    //        return new TextBinding(ast);
-    //    }
-
-    //    public content(ast, children: Template.INode[]): ContentBinding {
-    //        var fragment = document.createDocumentFragment();
-    //        return new ContentBinding(ast, dom => fragment.appendChild(dom), children);
-    //    }
-    //}
 
     export class ContentBinding extends Re.Binding implements IVisitor {
         private fragments: ContentFragment[] = [];
@@ -48,7 +37,8 @@ export module Dom {
                 }
 
                 if (fragment === null /* not found */) {
-                    fragment = new ContentFragment(this, context, offset).update();
+
+                    fragment = new ContentFragment(this, context, offset);
                 }
 
                 if (i < this.fragments.length) {
@@ -64,11 +54,8 @@ export module Dom {
         }
 
         public text(ast, options: { fragment: ContentFragment, child: number }): TextBinding {
-
             var binding = new TextBinding(ast);
-
             options.fragment.insert(binding.dom, options.child);
-
             return binding;
         }
 
@@ -81,20 +68,15 @@ export module Dom {
     class ContentFragment {
         public bindings: Re.Binding[] = [];
 
-        constructor(private owner: ContentBinding, public context, private offset: number) { }
+        constructor(private owner: ContentBinding, public context, private offset: number) {
+            for (var e = 0; e < owner.children.length; e++) {
+                this.bindings[e] =
+                    owner.children[e].accept(owner as IVisitor, { fragment: this, child: e }).update(context);
+            }
+        }
 
         insert(dom, index) {
             this.owner.parentInsert(dom, this.offset + index);
-        }
-
-        update() {
-            var context = this.context;
-            for (var e = 0; e < this.owner.children.length; e++) {
-                this.bindings[e] =
-                    this.owner.children[e].accept(this.owner as IVisitor, { fragment: this, child: e }).update(context);
-            }
-
-            return this;
         }
     }
 
@@ -121,49 +103,79 @@ export module Dom {
         }
     }
 
-    export class TagBinding extends Re.Binding {
+    export class TagBinding extends Re.Binding implements IVisitor {
         public dom;
         private attributeBindings = [];
+        private childBindings: Re.Binding[] = [];
+        private events = {};
+        private appendChild = dom => this.dom.appendChild(dom);
+        private classBinding = new ClassBinding(this);
 
-        constructor(name: string, private ns: string, attributes: { name; tpl }[], private events) {
+        constructor(tagName: string, private ns: string = null) {
             super();
             if (ns === null)
-                this.dom = document.createElement(name);
+                this.dom = document.createElement(tagName);
             else {
-                this.dom = (<any>document).createElementNS(ns, name.toLowerCase());
+                this.dom = (<any>document).createElementNS(ns, tagName.toLowerCase());
             }
 
             this.dom.attributes["__binding"] = this;
+        }
 
-            var classBinding = new ClassBinding(this);
-            const length = attributes.length;
-            for (var i = 0; i < length; i++) {
-                var attr = attributes[i];
+        attr(name, ast): this {
+            if (name === "class") {
+                this.classBinding.setBaseClass(ast);
+            } else if (name.startsWith("class.")) {
+                this.classBinding.addClass(name.substr(6), ast);
+            } else {
+                var attrBinding = new AttributeBinding(this, name, ast);
+                this.attributeBindings.push(attrBinding);
+            }
 
-                var attrTpl = attr.tpl;
-                var attrName = attr.name;
+            return this;
+        }
 
-                if (attrName === "class") {
-                    classBinding.setBaseClass(attrTpl);
-                } else if (attrName.startsWith("class.")) {
-                    classBinding.addClass(attrName.substr(6), attrTpl);
-                } else {
-                    var attrBinding = new AttributeBinding(this, attrName, attrTpl);
-                    this.attributeBindings.push(attrBinding);
-                }
-            };
-            this.attributeBindings.push(classBinding);
+        add(child: Template.INode): this {
+            var binding = child.accept(this as IVisitor);
+
+            if (!!this.context)
+                binding.update(this.context);
+
+            this.childBindings.push(binding);
+            return this;
+        }
+
+        public text(ast): TextBinding {
+            var binding = new TextBinding(ast);
+            this.appendChild(binding.dom);
+            return binding;
+        }
+
+        public content(ast, children: Template.INode[]): ContentBinding {
+            var binding = new ContentBinding(ast, this.appendChild, children);
+            return binding;
+        }
+
+        update(context): this {
+            super.update(context);
+
+            this.classBinding.update(context);
+            for (var i = 0; i < this.childBindings.length; i++) {
+                this.childBindings[i].update(context);
+            }
+
+            return this;
         }
 
         render(context) {
             for (var i = 0; i < this.attributeBindings.length; i++) {
-                this.attributeBindings[i].render(context);
+                this.attributeBindings[i].update(context);
             }
             return this.dom;
         }
 
         trigger(name) {
-            var handler = this.events.get(name);
+            var handler = this.events[name];
             if (!!handler) {
                 var result = handler.execute(this.context, {
                     get(obj, name) {
@@ -209,13 +221,13 @@ export module Dom {
             this.context = context;
             const classes = [];
             if (!!this.baseClassTpl) {
-                var value = this.baseClassTpl.execute(context, this).valueOf();
+                var value = accept(this.baseClassTpl, this, context).valueOf();
                 classes.push(value);
             }
 
             for (var i = 0; i < this.conditions.length; i++) {
                 var { className, condition } = this.conditions[i];
-                if (!!condition.execute(context, this).valueOf()) {
+                if (!!accept(condition, this, context).valueOf()) {
                     classes.push(className);
                 }
             }
@@ -254,7 +266,7 @@ export module Dom {
 
         render(context) {
             this.context = context;
-            var value = this.tpl.execute(context, this);
+            var value = accept(this.tpl, this, context);
 
             if (!!value && !!value.onNext) {
                 value.subscribe(this);

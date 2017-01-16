@@ -9,7 +9,7 @@ export module Template {
     }
 
     export interface INode {
-        accept<T>(visitor: IVisitor<T>, options: any): T;
+        accept<T>(visitor: IVisitor<T>, options?: any): T;
     }
 
     export class TextTemplate implements INode {
