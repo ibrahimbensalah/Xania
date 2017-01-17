@@ -91,7 +91,7 @@ describe("templating",
 
         it("tag class binding",
             () => {
-                var binding = new Dom.TagBinding("div", null)
+                var binding = new Dom.TagBinding("div")
                     .attr("class", fs("p.firstName"))
                     .attr("class.adult-person", fs("p.adult"));
 
@@ -104,7 +104,7 @@ describe("templating",
 
         it("tag attribute binding",
             () => {
-                var binding = new Dom.TagBinding("div", null)
+                var binding = new Dom.TagBinding("div")
                     .attr("id", fs('p.age'));
 
                 binding.update(new Re.Store({ p: ibrahim }));
@@ -118,7 +118,8 @@ describe("templating",
             () => {
                 var store = new Re.Store({ p: ibrahim });
                 var div = new Dom.TagBinding("div")
-                    .add(new Template.TextTemplate(fs("p.firstName")))
+                    .attr("data-age", fs("p.age"))
+                    .child(new Template.TextTemplate(fs("p.firstName")))
                     .update(store);
 
                 expect(div.dom.childNodes.length).toBe(1);
@@ -128,5 +129,27 @@ describe("templating",
                 store.flush();
 
                 expect(div.dom.textContent).toBe('IBRAHIM');
+                console.log(div.dom);
             });
+
+
+        it("tag event binding",
+            () => {
+                var store = new Re.Store({
+                    p: {
+                        message: null,
+                        sayHello(user = 'Jasmine') {
+                            this.message = "Hello, " + user + "!";
+                        }
+                    }
+                });
+                var button = new Dom.TagBinding("button")
+                    .on("click", fs("p.sayHello"))
+                    .update(store);
+
+                button.trigger('click');
+
+                expect(store.get('p').get('message').valueOf()).toBe("Hello, Jasmine!");
+            });
+
     });

@@ -135,13 +135,19 @@ export module Dom {
             return this;
         }
 
-        add(child: Template.INode): this {
+        child(child: Template.INode): this {
             var binding = child.accept(this as IVisitor);
 
             if (!!this.context)
                 binding.update(this.context);
 
             this.childBindings.push(binding);
+            return this;
+        }
+
+        on(name, ast) : this {
+            this.events[name] = ast;
+
             return this;
         }
 
@@ -164,37 +170,23 @@ export module Dom {
                 this.childBindings[i].update(context);
             }
 
+            for (var e = 0; e < this.attributeBindings.length; e++) {
+                this.attributeBindings[e].update(context);
+            }
             return this;
         }
 
         render(context) {
-            for (var i = 0; i < this.attributeBindings.length; i++) {
-                this.attributeBindings[i].update(context);
-            }
             return this.dom;
         }
 
         trigger(name) {
             var handler = this.events[name];
             if (!!handler) {
-                var result = handler.execute(this.context, {
-                    get(obj, name) {
-                        return obj.get(name);
-                    },
-                    set(obj: any, name: string, value: any) {
-                        obj.get(name).set(value);
-                    },
-                    invoke(_, fn, args) {
-                        if (!!fn.invoke) {
-                            var xs = args.map(x => x.valueOf());
-                            return fn.invoke(xs);
-                        }
-                        return fn;
-                    }
-                });
+                var result = accept(handler, this, this.context);
 
-                if (!!result && typeof result.value === "function")
-                    result.invoke();
+                if (typeof result === "function")
+                    result();
             }
         }
     }

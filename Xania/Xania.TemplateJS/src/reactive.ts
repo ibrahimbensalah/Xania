@@ -300,7 +300,7 @@ export module Reactive {
                 return args[1] + args[0];
             }
 
-            throw new Error("Not implemented");
+            return fun.apply(null, args);
         }
 
         const(value) {
