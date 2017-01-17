@@ -18,7 +18,7 @@ export module Dom {
         }
 
         render() {
-            var stream = accept(this.ast, this, this.context);
+            var stream = this.ast === null ? [ this.context ] : accept(this.ast, this, this.context);
 
             var offset = 0;
             for (var i = 0; i < stream.length; i++) {
@@ -63,6 +63,22 @@ export module Dom {
             var binding = new ContentBinding(ast, dom => options.fragment.insert(dom, options.child), children);
             return binding;
         }
+
+        public tag(tagName: string, ns: string, attrs, events, children: Re.Binding[], options: any) : TagBinding {
+            var tag = new TagBinding(tagName, ns);
+
+            for (var i = 0; i < attrs.length; i++) {
+                tag.attr(attrs[i].name, attrs[i].tpl);
+            }
+
+            for (var e = 0; e < children.length; e++) {
+                tag.child(children[e]);
+            }
+
+            options.fragment.insert(tag.dom, options.child);
+
+            return tag;
+        }
     }
 
     class ContentFragment {
@@ -83,13 +99,13 @@ export module Dom {
     export class TextBinding extends Re.Binding {
         public dom;
 
-        constructor(private ast) {
+        constructor(private parts) {
             super();
             this.dom = (<any>document).createTextNode("");
         }
 
         render(context) {
-            const result = accept(this.ast, this, context);
+            const result = this.evaluate(this.parts, context);
 
             if (result === undefined) {
                 this.dom.detach();
@@ -106,6 +122,24 @@ export module Dom {
 
         onNext(newValue) {
             this.dom.textContent = newValue;
+        }
+
+        evaluate(parts, context): any {
+            if (this.parts.length === 0)
+                return "";
+
+            if (this.parts.length === 1)
+                return this.evaluatePart(this.parts[0], context);
+
+            return this.parts.map(p => this.evaluatePart(p, context)).join("");
+        }
+
+        evaluatePart(part: any, context) {
+            if (typeof part === "string")
+                return part;
+            else {
+                return accept(part, this, context);
+            }
         }
     }
 
@@ -141,13 +175,11 @@ export module Dom {
             return this;
         }
 
-        child(child: Template.INode): this {
-            var binding = child.accept(this as IVisitor);
-
+        child(child: Re.Binding): this {
             if (!!this.context)
-                binding.update(this.context);
+                child.update(this.context);
 
-            this.childBindings.push(binding);
+            this.childBindings.push(child);
             return this;
         }
 

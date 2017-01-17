@@ -1,9 +1,7 @@
-﻿/// <reference path="dom.ts" />
-/// <reference path="fsharp.ts" />
-import { Dom } from "./dom"
-import { Reactive as Re } from './reactive'
+﻿import { Dom } from "./dom"
 import { Core } from './core'
 import { Template } from "./template"
+import { fsharp as fs } from "./fsharp"
 
 declare function require(module: string);
 
@@ -34,10 +32,10 @@ module Loader {
 
                 var parts = name.split('.');
 
-                var module = require(parts[0]);
-                var component = module[parts[1]];
+                // var module = require(parts[0]);
+                // var component = module[parts[1]];
 
-                console.log(component);
+                // console.log(component);
 
                 // parseDom(dom);
                 // Dom.bind(dom, store);
@@ -72,57 +70,109 @@ module Loader {
         }
     }
 
-    export function bind(dom: Node, store: Re.Store) {
+    //     domReady(init, document.body);
+}
 
+class Parser {
+
+    static parseText(text): any[] {
+        var parts: any[] = [];
+
+        var appendText = (x) => {
+            var s = x.trim();
+            if (s.length > 0)
+                parts.push(x);
+        };
+
+        var offset = 0;
+        while (offset < text.length) {
+            var begin = text.indexOf("{{", offset);
+            if (begin >= 0) {
+                if (begin > offset)
+                    appendText(text.substring(offset, begin));
+
+                offset = begin + 2;
+                const end = text.indexOf("}}", offset);
+                if (end >= 0) {
+                    parts.push(fs(text.substring(offset, end)));
+                    offset = end + 2;
+                } else {
+                    throw new SyntaxError("Expected '}}' but not found starting from index: " + offset);
+                }
+            } else {
+                appendText(text.substring(offset));
+                break;
+            }
+        }
+
+        if (parts.length === 1)
+            return parts[0];
+
+        return parts;
     }
 
-    function parseDom(rootDom: Node): Template.INode {
-        const stack = [];
-        let i: number;
-        var rootTpl;
-        stack.push({
-            node: rootDom,
-            push(e) {
-                rootTpl = e;
+    static parseAttr(tagElement: Template.TagTemplate, attr: Attr) {
+        const name = attr.name;
+        if (name === "click" || name.startsWith("keyup.")) {
+            const fn = this.parseText(attr.value);
+            tagElement.addEvent(name, fn);
+        } else if (name === "data-select" || name === "data-from") {
+            const fn = this.parseText(attr.value);
+            tagElement.select(fn);
+        } else if (name === "checked") {
+            const fn = this.parseText(attr.value);
+            tagElement.attr(name, Core.compose(ctx => !!ctx ? "checked" : null, fn));
+        } else {
+            const tpl = this.parseText(attr.value);
+            tagElement.attr(name, tpl || attr.value);
+
+            // conventions
+            if (!!tagElement.name.match(/^input$/i) && !!attr.name.match(/^name$/i) && tagElement.getAttribute("value") != undefined) {
+                const valueAccessor = this.parseText(attr.value);
+                tagElement.attr("value", valueAccessor);
             }
-        });
+        }
+    }
+
+    static parseNode(root: Node): Template.INode {
+        var stack = [root];
 
         while (stack.length > 0) {
-            const cur = stack.pop();
-            const node: Node = cur.node;
-            const push = cur.push;
+            var node = stack.pop();
 
-            if (!!node["content"]) {
-                const elt = <HTMLElement>node["content"];
-                var template = new Template.ContentTemplate(node.attributes["model"]);
-                for (i = elt.childNodes.length - 1; i >= 0; i--) {
-                    stack.push({ node: elt.childNodes[i], push: template.child.bind(template) });
-                }
-                push(template);
-            } else if (node.nodeType === 1) {
+            if (node.nodeType === 1) {
                 const elt = <HTMLElement>node;
                 const template = new Template.TagTemplate(elt.tagName, elt.namespaceURI);
 
-                for (i = 0; !!elt.attributes && i < elt.attributes.length; i++) {
+                for (var i = 0; !!elt.attributes && i < elt.attributes.length; i++) {
                     var attribute = elt.attributes[i];
                     this.parseAttr(template, attribute);
                 }
 
-                for (i = elt.childNodes.length - 1; i >= 0; i--) {
-                    stack.push({ node: elt.childNodes[i], push: template.addChild.bind(template) });
-                }
-                push(template);
+                return template;
             } else if (node.nodeType === 3) {
                 var textContent = node.textContent;
                 if (textContent.trim().length > 0) {
-                    const tpl = this.compile(textContent);
-                    push(new Template.TextTemplate(tpl || node.textContent));
+                    const tpl = this.parseText(textContent);
+                    return new Template.TextTemplate(tpl || node.textContent);
                 }
             }
         }
+        return undefined;
+    }
+}
 
-        return rootTpl;
+export function bind(node) {
+    var children = [];
+    if (!!node["content"]) {
+        const content = <HTMLElement>node["content"];
+        for (var i = content.childNodes.length - 1; i >= 0; i--) {
+            var tpl = Parser.parseNode(content.childNodes[i]);
+            if (tpl)
+                children.push(tpl);
+        }
     }
 
-    domReady(init, document.body);
+    console.log(node, node.parentElement);
+    return new Dom.ContentBinding(null, dom => node.parentElement.insertBefore(dom, node), children);
 }

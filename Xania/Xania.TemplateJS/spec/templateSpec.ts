@@ -71,8 +71,8 @@ describe("templating",
                 var binding = new Dom.ContentBinding(fs("for p in people"), fragment.insert.bind(fragment),
                     [
                         new Template.TextTemplate(fs("p.firstName + ' ' + p.lastName")),
-                        new Template.ContentTemplate(fs("for r in p.roles"),
-                            [new Template.TextTemplate(fs("':: ' + r"))])
+                        new Template.ContentTemplate(fs("for r in p.roles"))
+                            .child(new Template.TextTemplate(fs("':: ' + r")))
                     ])
                     .update(store);
 
@@ -120,7 +120,7 @@ describe("templating",
                 var store = new Re.Store({ p: ibrahim });
                 var div = new Dom.TagBinding("div")
                     .attr("data-age", fs("p.age"))
-                    .child(new Template.TextTemplate(fs("p.firstName")))
+                    .child(new Dom.TextBinding(fs("p.firstName")))
                     .update(store);
 
                 expect(div.dom.childNodes.length).toBe(1);

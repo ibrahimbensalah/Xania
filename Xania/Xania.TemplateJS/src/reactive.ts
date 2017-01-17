@@ -196,7 +196,7 @@ export module Reactive {
     export class Store extends Value implements IDispatcher {
         public dirty = [];
 
-        constructor(value: any, private globals: any) {
+        constructor(value: any, private globals: any = {}) {
             super(value, null);
             this.dispatcher = this;
         }

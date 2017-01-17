@@ -8,13 +8,16 @@
 
     <script>
         System.config({ packages: { '/': {} } });
-        System.import("../../src/loader");
+        System.import("app").then(app => {
+            var tpl = app.init(document.body.querySelector("template"), 123);
+            console.log(tpl);
+        });
     </script>
 
 </head>
 <body>
     <div style="margin: 40px;">
-        <template name="app.ClockApp">
+        <template model="app.ClockApp">
 
             <div>
                 Timer: {{ timer.map displayTime }} sec

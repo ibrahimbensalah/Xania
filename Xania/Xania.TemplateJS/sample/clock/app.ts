@@ -1,6 +1,8 @@
 ﻿import { Observables } from "../../src/observables"
+import { bind } from "../../src/loader"
+import { Reactive as Re } from '../../src/reactive'
 
-export default class ClockApp {
+class ClockApp {
     public timer = new Observables.Timer();
     public seconds = this.timer.map(ClockApp.getSeconds);
 
@@ -25,3 +27,6 @@ export default class ClockApp {
     // static map(format: (time: any) => string) { throw new Error("Not implemented"); }
 }
 
+export function init(dom, count: number) {
+    return bind(dom).update(new Re.Store(new ClockApp(), {}));
+}

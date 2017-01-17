@@ -4,8 +4,8 @@ export module Template {
 
     export interface IVisitor<T> {
         text?(tpl, options: any): T;
-        content?(ast, children: INode[], options: any): T;
-        tag?(name, ns, attr, events, children: T[], options: any): T;
+        content?(ast, children: INode[], options?: any): T;
+        tag?(name, ns, attr, events, children: T[], options?: any): T;
     }
 
     export interface INode {
@@ -13,15 +13,11 @@ export module Template {
     }
 
     export class TextTemplate implements INode {
-        constructor(private expr : string) {
-        }
-
-        toString() {
-            return this.expr.toString();
+        constructor(private parts : any[] | string) {
         }
 
         accept<T>(visitor: IVisitor<T>, options: any): T {
-            return visitor.text(this.expr, options);
+            return visitor.text(this.parts, options);
         }
     }
 
@@ -82,7 +78,7 @@ export module Template {
         public attr(name: string, tpl: any) {
             return this.addAttribute(name, tpl);
         }
-
+        
         public addAttribute(name: string, tpl: any) {
             var attr = this.getAttribute(name);
             if (!attr)
@@ -97,7 +93,7 @@ export module Template {
                 if (attr.name === key)
                     return attr;
             }
-            return null;
+            return undefined;
         }
 
         public addEvent(name, callback) {
@@ -114,8 +110,9 @@ export module Template {
             return this;
         }
 
-        accept<T>(visitor: IVisitor<T>) {
-            // var children = this._children.map(x => x.accept(visitor));
+        accept<T>(visitor: IVisitor<T>, options: any) {
+            var children = this._children.map(x => x.accept(visitor));
+            return visitor.tag(this.name, this.ns, this.attributes, null, children, options);
             // var content = visitor.content(null, children);
 
             // return visitor.tag(this.name, this.ns, this.attributes, this.events, content);
