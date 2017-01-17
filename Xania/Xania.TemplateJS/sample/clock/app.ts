@@ -1,9 +1,7 @@
-﻿
+﻿import { Observables } from "../../src/observables"
 
-import Store = require("../../src/store");
-
-class ClockApp {
-    public timer = new Store.Xania.Data.Timer();
+export default class ClockApp {
+    public timer = new Observables.Timer();
     public seconds = this.timer.map(ClockApp.getSeconds);
 
     static getSeconds(time) {

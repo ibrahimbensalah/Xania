@@ -196,7 +196,7 @@ export module Reactive {
     export class Store extends Value implements IDispatcher {
         public dirty = [];
 
-        constructor(value: any) {
+        constructor(value: any, private globals: any) {
             super(value, null);
             this.dispatcher = this;
         }
@@ -215,11 +215,17 @@ export module Reactive {
         get(name: string) {
             var value = super.get(name);
 
-            if (typeof value === "undefined") {
-                throw new Error("Cannot resolve variable " + name);
+            if (typeof value !== "undefined") {
+                return value;
             }
 
-            return value;
+            for (var i = 0; i < this.globals.length; i++) {
+                var g = this.globals[i][name];
+                if (typeof g !== "undefined")
+                    return g;
+            }
+
+            throw new Error("Cannot resolve variable " + name);
         }
 
         toString() {

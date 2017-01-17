@@ -25,6 +25,8 @@
     "src/fsharp.ts",
     "src/dom.ts",
     "src/template.ts",
-    "spec/*Spec.ts"
+    "src/loader.ts",
+    "spec/*Spec.ts",
+    "sample/**/*.ts"
   ]
 }

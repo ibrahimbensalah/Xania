@@ -27,8 +27,14 @@ export module Template {
 
     export class ContentTemplate implements INode {
         // ReSharper disable once InconsistentNaming
+        private children: INode[] = [];
 
-        constructor(private ast, private children: INode[]) { }
+        constructor(private ast) { }
+
+        child(child: INode) {
+            this.children.push(child);
+            return this;
+        }
 
         accept<T>(visitor: IVisitor<T>, options: any): T {
             return visitor.content(this.ast, this.children, options);
