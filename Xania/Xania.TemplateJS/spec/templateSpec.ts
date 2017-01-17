@@ -4,6 +4,7 @@ import { Template } from "../src/template";
 import { fsharp as fs } from "../src/fsharp";
 import { Dom } from "../src/dom";
 import { Reactive as Re } from '../src/reactive';
+import { Observables } from '../src/observables';
 // import { Core } from "../src/core";
 
 interface IPerson { firstName: string; lastName: string; adult: boolean, age: number, roles: string[] }
@@ -152,4 +153,17 @@ describe("templating",
                 expect(store.get('p').get('message').valueOf()).toBe("Hello, Jasmine!");
             });
 
+        it("supports streams",
+            () => {
+                var stream = new Observables.Observable<number>();
+
+                var binding = new Dom.TextBinding(fs("stream")).update(new Re.Store({ stream }));
+                expect(binding.dom.textContent).toBe("");
+
+                stream.onNext(123);
+                expect(binding.dom.textContent).toBe("123");
+
+                stream.onNext(456);
+                expect(binding.dom.textContent).toBe("456");
+            });
     });

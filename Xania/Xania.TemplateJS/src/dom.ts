@@ -89,12 +89,18 @@ export module Dom {
         }
 
         render(context) {
-            const newValue = accept(this.ast, this, context);
+            const result = accept(this.ast, this, context);
 
-            if (!!newValue && !!newValue.onNext) {
-                newValue.subscribe(this);
+            if (result === undefined) {
+                this.dom.detach();
             } else {
-                this.onNext(newValue.valueOf());
+                var newValue = result && result.valueOf();
+
+                if (!!newValue && !!newValue.onNext) {
+                    newValue.subscribe(this);
+                } else {
+                    this.onNext(newValue);
+                }
             }
         }
 
