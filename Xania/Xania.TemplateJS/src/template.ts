@@ -100,7 +100,7 @@ export module Template {
             this.events.set(name, callback);
         }
 
-        public addChild(child: TagTemplate) {
+        public addChild(child: INode) {
             this._children.push(child);
             return this;
         }

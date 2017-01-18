@@ -125,13 +125,17 @@ export module Dom {
         }
 
         evaluate(parts, context): any {
-            if (this.parts.length === 0)
-                return "";
+            if (typeof this.parts.length === "number") {
+                if (this.parts.length === 0)
+                    return "";
 
-            if (this.parts.length === 1)
-                return this.evaluatePart(this.parts[0], context);
+                if (this.parts.length === 1)
+                    return this.evaluatePart(this.parts[0], context);
 
-            return this.parts.map(p => this.evaluatePart(p, context)).join("");
+                return this.parts.map(p => this.evaluatePart(p, context)).join("");
+            } else {
+                return this.evaluatePart(this.parts, context);
+            }
         }
 
         evaluatePart(part: any, context) {

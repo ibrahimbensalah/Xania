@@ -134,30 +134,31 @@ class Parser {
         }
     }
 
-    static parseNode(root: Node): Template.INode {
-        var stack = [root];
+    static parseNode(node: Node): Template.INode {
+        if (node.nodeType === 1) {
+            const elt = <HTMLElement>node;
+            const template = new Template.TagTemplate(elt.tagName, elt.namespaceURI);
 
-        while (stack.length > 0) {
-            var node = stack.pop();
+            for (var i = 0; !!elt.attributes && i < elt.attributes.length; i++) {
+                var attribute = elt.attributes[i];
+                this.parseAttr(template, attribute);
+            }
 
-            if (node.nodeType === 1) {
-                const elt = <HTMLElement>node;
-                const template = new Template.TagTemplate(elt.tagName, elt.namespaceURI);
+            for (var e = 0; e < elt.childNodes.length; e++) {
+                var child = this.parseNode(elt.childNodes[e]);
+                if (child)
+                    template.addChild(child);
+            }
 
-                for (var i = 0; !!elt.attributes && i < elt.attributes.length; i++) {
-                    var attribute = elt.attributes[i];
-                    this.parseAttr(template, attribute);
-                }
-
-                return template;
-            } else if (node.nodeType === 3) {
-                var textContent = node.textContent;
-                if (textContent.trim().length > 0) {
-                    const tpl = this.parseText(textContent);
-                    return new Template.TextTemplate(tpl || node.textContent);
-                }
+            return template;
+        } else if (node.nodeType === 3) {
+            var textContent = node.textContent;
+            if (textContent.trim().length > 0) {
+                const tpl = this.parseText(textContent);
+                return new Template.TextTemplate(tpl || node.textContent);
             }
         }
+
         return undefined;
     }
 }
