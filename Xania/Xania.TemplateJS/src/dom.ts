@@ -64,15 +64,11 @@ export module Dom {
             return binding;
         }
 
-        public tag(tagName: string, ns: string, attrs, events, children: Re.Binding[], options: any) : TagBinding {
+        public tag(tagName: string, ns: string, attrs, events, options: any) : TagBinding {
             var tag = new TagBinding(tagName, ns);
 
             for (var i = 0; i < attrs.length; i++) {
                 tag.attr(attrs[i].name, attrs[i].tpl);
-            }
-
-            for (var e = 0; e < children.length; e++) {
-                tag.child(children[e]);
             }
 
             options.fragment.insert(tag.dom, options.child);
@@ -105,7 +101,7 @@ export module Dom {
         }
 
         render(context) {
-            const result = this.evaluate(this.parts, context);
+            const result = TextBinding.evaluate(this.parts, this, context);
 
             if (result === undefined) {
                 this.dom.detach();
@@ -124,25 +120,28 @@ export module Dom {
             this.dom.textContent = newValue;
         }
 
-        evaluate(parts, context): any {
-            if (typeof this.parts.length === "number") {
-                if (this.parts.length === 0)
+        static evaluate(parts, binding, context): any {
+            if (typeof parts === "object" && typeof parts.length === "number") {
+                if (parts.length === 0)
                     return "";
 
-                if (this.parts.length === 1)
-                    return this.evaluatePart(this.parts[0], context);
+                if (parts.length === 1)
+                    return this.evaluatePart(parts[0], binding, context);
 
-                return this.parts.map(p => this.evaluatePart(p, context)).join("");
+                return parts.map(p => this.evaluatePart(p, binding, context).valueOf()).join("");
             } else {
-                return this.evaluatePart(this.parts, context);
+                return this.evaluatePart(parts, binding, context);
             }
         }
 
-        evaluatePart(part: any, context) {
+        static evaluatePart(part: any, binding, context) {
             if (typeof part === "string")
                 return part;
             else {
-                return accept(part, this, context);
+                var result = accept(part, binding, context);
+                Re.Binding.observe(result, binding);
+
+                return result;
             }
         }
     }
@@ -179,13 +178,14 @@ export module Dom {
             return this;
         }
 
-        child(child: Re.Binding): this {
-            if (!!this.context)
-                child.update(this.context);
+        //child(child: Re.Binding): this {
+        //    if (!!this.context)
+        //        child.update(this.context);
 
-            this.childBindings.push(child);
-            return this;
-        }
+        //    this.childBindings.push(child);
+        //    this.appendChild(child.dom);
+        //    return this;
+        //}
 
         on(name, ast) : this {
             this.events[name] = ast;
@@ -193,28 +193,46 @@ export module Dom {
             return this;
         }
 
-        public text(ast): TextBinding {
+        public text(ast): this {
             var binding = new TextBinding(ast);
+            this.childBindings.push(binding);
+
+            if (!!this.context)
+                binding.update(this.context);
+
             this.appendChild(binding.dom);
-            return binding;
+            return this;
         }
 
-        public content(ast, children: Template.INode[]): ContentBinding {
-            var binding = new ContentBinding(ast, this.appendChild, children);
-            return binding;
+        public content(ast, children: Template.INode[]): this {
+            var binding = new ContentBinding(ast, this.appendChild, children).update(this.context);
+            this.childBindings.push(binding);
+            return this;
+        }
+
+        public tag(tagName: string, ns: string, attrs, events, options: any): this {
+            var tag = new TagBinding(tagName, ns);
+            this.childBindings.push(tag);
+
+            for (var i = 0; i < attrs.length; i++) {
+                tag.attr(attrs[i].name, attrs[i].tpl);
+            }
+
+            return this;
         }
 
         update(context): this {
             super.update(context);
 
             this.classBinding.update(context);
+            for (var e = 0; e < this.attributeBindings.length; e++) {
+                this.attributeBindings[e].update(context);
+            }
+
             for (var i = 0; i < this.childBindings.length; i++) {
                 this.childBindings[i].update(context);
             }
 
-            for (var e = 0; e < this.attributeBindings.length; e++) {
-                this.attributeBindings[e].update(context);
-            }
             return this;
         }
 
@@ -300,7 +318,7 @@ export module Dom {
 
         render(context) {
             this.context = context;
-            var value = accept(this.tpl, this, context);
+            const value = TextBinding.evaluate(this.tpl, this, context);
 
             if (!!value && !!value.onNext) {
                 value.subscribe(this);

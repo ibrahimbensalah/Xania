@@ -219,6 +219,10 @@ export module Reactive {
                 return value;
             }
 
+            var statiq = this.value.constructor && this.value.constructor[name];
+            if (typeof statiq !== "undefined")
+                return statiq;
+
             for (var i = 0; i < this.globals.length; i++) {
                 var g = this.globals[i][name];
                 if (typeof g !== "undefined")

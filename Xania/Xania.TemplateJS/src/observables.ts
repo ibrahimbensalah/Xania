@@ -19,6 +19,7 @@
 
         private subscriptions: ISubscription[] = [];
         private current: T;
+        public actions: any[] = [];
 
         subscribe(observer: IObserver<T> | Function): ISubscription {
             return new Subscription(this.subscriptions, observer).notify(this.current);
@@ -33,11 +34,39 @@
         onNext(value: T) {
             if (this.current !== value) {
                 this.current = value;
-                if (this.current !== undefined)
+                if (this.current !== undefined) {
                     for (var i = 0; i < this.subscriptions.length; i++) {
                         this.subscriptions[i].notify(this.current);
                     }
+
+                    // notify next
+                    var actions = this.actions.slice(0);
+                    for (var i = 0; i < actions.length; i++) {
+                        actions[i].execute();
+                    }
+                }
             }
+        }
+
+        valueOf() {
+            return this.current;
+        }
+
+        change(action): this | boolean {
+            if (this.actions.indexOf(action) < 0) {
+                this.actions.push(action);
+                return this;
+            }
+            return false;
+        }
+
+        unbind(action) : boolean {
+            var idx = this.actions.indexOf(action);
+            if (idx < 0)
+                return false;
+
+            this.actions.splice(idx, 1);
+            return true;
         }
     }
 

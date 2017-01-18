@@ -120,7 +120,7 @@ describe("templating",
                 var store = new Re.Store({ p: ibrahim });
                 var div = new Dom.TagBinding("div")
                     .attr("data-age", fs("p.age"))
-                    .child(new Dom.TextBinding(fs("p.firstName")))
+                    .text(fs("p.firstName"))
                     .update(store);
 
                 expect(div.dom.childNodes.length).toBe(1);
