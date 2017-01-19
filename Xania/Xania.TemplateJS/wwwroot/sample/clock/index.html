@@ -9,8 +9,7 @@
     <script>
         System.config({ packages: { '/': {} } });
         System.import("app").then(app => {
-            var tpl = app.init(document.body.querySelector("template"), 123);
-            console.log(tpl);
+            app.init(document.body.querySelector("template"), 123);
         });
     </script>
 
@@ -20,12 +19,11 @@
         <template model="app.ClockApp">
 
             <div>
-                Timer: {{ timer.map displayTime }} sec
+                Time: {{ time.map displayTime }} sec
             </div>
-            <div>{{ timer.map getSeconds }}</div>
-            <button click="{{ timer.toggle () }}">toggle</button>
-
-            <!--<svg viewBox="0 0 100 100">
+            <button click="{{ time.toggle () }}">toggle</button>
+            
+            <svg viewBox="0 0 100 100">
                 <g transform="translate(50,50)">
                     <circle class="clock-face" r="48"></circle>
                     <line class="minor" y1="42" y2="45" transform="rotate( 0 )"></line>
@@ -100,14 +98,14 @@
                     <line class="major" y1="35" y2="45" transform="rotate( 270 )"></line>
                     <line class="major" y1="35" y2="45" transform="rotate( 300 )"></line>
                     <line class="major" y1="35" y2="45" transform="rotate( 330 )"></line>
-                    <line class="hour" y1="2" y2="-20" transform="rotate( 302.5 )"></line>
-                    <line class="minute" y1="4" y2="-30" transform="rotate( 33.4 )"></line>
-                    <g transform="rotate( {{ timer.map getAngle }} )">
+                    <line class="hour" y1="2" y2="-20" transform="rotate( {{ time.map hoursAngle }} )"></line>
+                    <line class="minute" y1="4" y2="-30" transform="rotate( {{ time.map minutesAngle }} )"></line>
+                    <g transform="rotate( {{ time.map secondsAngle }} )">
                         <line class="second" y1="10" y2="-38"></line>
                         <line class="second-counterweight" y1="10" y2="2"></line>
                     </g>
                 </g>
-            </svg>-->
+            </svg>
         </template>
     </div>
 

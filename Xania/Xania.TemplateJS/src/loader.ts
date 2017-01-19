@@ -167,13 +167,12 @@ export function bind(node) {
     var children = [];
     if (!!node["content"]) {
         const content = <HTMLElement>node["content"];
-        for (var i = content.childNodes.length - 1; i >= 0; i--) {
+        for (var i = 0; i < content.childNodes.length; i++) {
             var tpl = Parser.parseNode(content.childNodes[i]);
             if (tpl)
                 children.push(tpl);
         }
     }
-
-    console.log(node, node.parentElement);
+    
     return new Dom.ContentBinding(null, dom => node.parentElement.insertBefore(dom, node), children);
 }

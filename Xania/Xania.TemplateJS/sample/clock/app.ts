@@ -3,23 +3,45 @@ import { bind } from "../../src/loader"
 import { Reactive as Re } from '../../src/reactive'
 
 class ClockApp {
-    public timer = new Observables.Timer();
-    public seconds = this.timer.map(ClockApp.getSeconds);
+    public time = new Observables.Time();
+
+    static getTime() {
+        return new Date().getTime();
+    }
 
     static getSeconds(time) {
         var totalSec = Math.floor(time / 1000);
         return totalSec % 60;
     }
 
-    static getAngle(time) {
-        return 360 * ClockApp.getSeconds(time) / 60;
+    static secondsAngle(time) {
+        var f = 4;
+        return 360 * (Math.floor(time / (1000 / f)) % (60 * f)) / (60 * f);
+    }
+
+    static minutesAngle(time) {
+        var f = 10;
+        return 360 * (Math.floor(time / (60000 / f)) % (60 * f)) / (60 * f);
+    }
+
+    static hoursAngle(time) {
+        var f = 12 * 60 * 60 * 1000;
+        return 360 * (time % f) / f;
     }
 
     static displayTime(time) {
         var totalSec = Math.floor(time / 1000);
-        var frac = time % 1000;
-        var sec = totalSec % 60;
-        var totalMin = Math.floor(totalSec / 60);
+        var frac: any = time % 1000;
+        var sec: any = totalSec % 60;
+        var totalMin = Math.floor(totalSec / 60) % 60;
+
+        if (sec < 10)
+            sec = "0" + sec;
+
+        if (frac < 10)
+            frac = frac + "00";
+        if (frac < 100)
+            frac = frac + "0";
 
         return totalMin + ":" + sec + "," + frac;
     }

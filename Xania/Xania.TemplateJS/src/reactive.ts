@@ -325,28 +325,27 @@ export module Reactive {
         }
 
 
-        evaluate(parts, accept, context): any {
+        evaluate(accept, parts): any {
             if (typeof parts === "object" && typeof parts.length === "number") {
                 if (parts.length === 0)
                     return "";
 
                 if (parts.length === 1)
-                    return this.evaluatePart(parts[0], accept, context);
+                    return this.evaluatePart(accept, parts[0]);
 
-                return parts.map(p => this.evaluatePart(p, accept, context).valueOf()).join("");
+                return parts.map(p => this.evaluatePart(accept, p)).join("");
             } else {
-                return this.evaluatePart(parts, accept, context);
+                return this.evaluatePart(accept, parts);
             }
         }
 
-        evaluatePart(part: any, accept, context) {
+        evaluatePart(accept, part: any) {
             if (typeof part === "string")
                 return part;
             else {
-                const result = accept(part, this, context);
+                const result = accept(part, this, this.context);
 
                 if (!!result && result.subscribe) {
-                    debugger;
                     this.subscriptions.push(result.subscribe(this));
                 }
 

@@ -30,7 +30,7 @@
         }
 
         map(mapper: Function) {
-            var observable = new MappedObservable<T>(mapper, mapper(this.current));
+            var observable = new MappedObservable<T>(mapper, this.current);
             this.subscribe(observable);
             return observable;
         }
@@ -112,12 +112,20 @@
                 console.warn("timer is already running");
             } else {
                 var startTime = new Date().getTime() - this.currentTime;
+                var inProgress = false;
                 this.handle = setInterval(
                     () => {
-                        var currentTime = new Date().getTime();
-                        super.onNext(this.currentTime = (currentTime - startTime));
+                        if (inProgress)
+                            return;
+                        try {
+                            inProgress = true;
+                            var currentTime = new Date().getTime();
+                            super.onNext(this.currentTime = (currentTime - startTime));
+                        } finally {
+                            inProgress = false;
+                        }
                     },
-                    60);
+                    10);
             }
 
             return this;
@@ -136,6 +144,60 @@
 
         toString() {
             return this.currentTime;
+        }
+    }
+
+    export class Time extends Observable<number> {
+        private handle;
+
+        constructor() {
+            super(Time.getTime());
+            this.resume();
+        }
+
+        toggle() {
+            if (!!this.handle)
+                this.pause();
+            else
+                this.resume();
+        }
+
+        static getTime() {
+            var d = new Date();
+            return d.getTime() - (d.getTimezoneOffset() * 60 * 1000);
+        }
+
+        resume(): this {
+            if (!!this.handle) {
+                console.warn("timer is already running");
+            } else {
+                var inProgress = false;
+                this.handle = setInterval(
+                    () => {
+                        if (inProgress)
+                            return;
+                        try {
+                            inProgress = true;
+                            super.onNext(Time.getTime());
+                        } finally {
+                            inProgress = false;
+                        }
+                    },
+                    10);
+            }
+
+            return this;
+        }
+
+        pause(): this {
+            if (!!this.handle) {
+                clearInterval(this.handle);
+            } else {
+                console.warn("timer is not running");
+            }
+            this.handle = null;
+
+            return this;
         }
     }
 }

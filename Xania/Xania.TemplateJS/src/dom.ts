@@ -37,7 +37,6 @@ export module Dom {
                 }
 
                 if (fragment === null /* not found */) {
-
                     fragment = new ContentFragment(this, context, offset);
                 }
 
@@ -95,16 +94,16 @@ export module Dom {
     export class TextBinding extends Re.Binding {
         public dom;
 
-        constructor(private parts) {
+        constructor(private expr) {
             super();
             this.dom = (<any>document).createTextNode("");
         }
 
-        render(context) {
-            const result = this.evaluate(this.parts, accept, context);
+        render() {
+            const result = this.evaluate(accept, this.expr);
 
             if (result === undefined) {
-                this.dom.detach();
+                // this.dom.detach();
             } else {
                 this.dom.textContent = result && result.valueOf();
             }
@@ -162,7 +161,7 @@ export module Dom {
             return this;
         }
 
-        public text(ast): this {
+        public text(ast): TextBinding {
             var binding = new TextBinding(ast);
             this.childBindings.push(binding);
 
@@ -170,16 +169,16 @@ export module Dom {
                 binding.update(this.context);
 
             this.appendChild(binding.dom);
-            return this;
+            return binding;
         }
 
-        public content(ast, children: Template.INode[]): this {
+        public content(ast, children: Template.INode[]): ContentBinding {
             var binding = new ContentBinding(ast, this.appendChild, children).update(this.context);
             this.childBindings.push(binding);
-            return this;
+            return binding;
         }
 
-        public tag(tagName: string, ns: string, attrs, events, options: any): this {
+        public tag(tagName: string, ns: string, attrs, events, options: any): TagBinding {
             var tag = new TagBinding(tagName, ns);
             this.childBindings.push(tag);
 
@@ -187,7 +186,8 @@ export module Dom {
                 tag.attr(attrs[i].name, attrs[i].tpl);
             }
 
-            return this;
+            this.appendChild(tag.dom);
+            return tag;
         }
 
         update(context): this {
@@ -281,22 +281,17 @@ export module Dom {
         public dom;
         private oldValue;
 
-        constructor(private parent: TagBinding, private name, private tpl) {
+        constructor(private parent: TagBinding, private name, private expr) {
             super();
         }
 
-        render(context) {
-            this.context = context;
-            const result = this.evaluate(this.tpl, accept, context);
-
-            if (!!result && !!result.onNext) {
-                result.subscribe(this);
-            } else {
-                this.onNext(result);
-            }
+        onNext() {
+            this.execute();
         }
 
-        public onNext(value) {
+        render() {
+            let value = this.evaluate(accept, this.expr);
+
             if (value !== null && value !== void 0 && !!value.valueOf)
                 value = value.valueOf();
 
@@ -320,7 +315,7 @@ export module Dom {
                     attr.value = newValue;
                     tag.setAttributeNode(attr);
                 } else {
-                    tag[attrName] = newValue;
+                    // tag[attrName] = newValue;
                     tag.setAttribute(attrName, newValue);
                 }
             }
