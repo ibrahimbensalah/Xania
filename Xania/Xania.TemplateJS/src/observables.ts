@@ -21,12 +21,16 @@
         private current: T;
         public actions: any[] = [];
 
+        constructor(current?: T) {
+            this.current = current;
+        }
+
         subscribe(observer: IObserver<T> | Function): ISubscription {
-            return new Subscription(this.subscriptions, observer).notify(this.current);
+            return new Subscription(this.subscriptions, observer);
         }
 
         map(mapper: Function) {
-            var observable = new MappedObservable<T>(mapper);
+            var observable = new MappedObservable<T>(mapper, mapper(this.current));
             this.subscribe(observable);
             return observable;
         }
@@ -41,8 +45,8 @@
 
                     // notify next
                     var actions = this.actions.slice(0);
-                    for (var i = 0; i < actions.length; i++) {
-                        actions[i].execute();
+                    for (var e = 0; e < actions.length; e++) {
+                        actions[e].execute();
                     }
                 }
             }
@@ -50,23 +54,6 @@
 
         valueOf() {
             return this.current;
-        }
-
-        change(action): this | boolean {
-            if (this.actions.indexOf(action) < 0) {
-                this.actions.push(action);
-                return this;
-            }
-            return false;
-        }
-
-        unbind(action) : boolean {
-            var idx = this.actions.indexOf(action);
-            if (idx < 0)
-                return false;
-
-            this.actions.splice(idx, 1);
-            return true;
         }
     }
 
@@ -94,8 +81,8 @@
     }
 
     class MappedObservable<T> extends Observable<T> {
-        constructor(private mapper: Function) {
-            super();
+        constructor(private mapper: Function, init) {
+            super(mapper(init));
         }
 
         onNext(value: T): void {

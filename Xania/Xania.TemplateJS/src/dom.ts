@@ -101,48 +101,17 @@ export module Dom {
         }
 
         render(context) {
-            const result = TextBinding.evaluate(this.parts, this, context);
+            const result = this.evaluate(this.parts, accept, context);
 
             if (result === undefined) {
                 this.dom.detach();
             } else {
-                var newValue = result && result.valueOf();
-
-                if (!!newValue && !!newValue.onNext) {
-                    newValue.subscribe(this);
-                } else {
-                    this.onNext(newValue);
-                }
+                this.dom.textContent = result && result.valueOf();
             }
         }
 
         onNext(newValue) {
-            this.dom.textContent = newValue;
-        }
-
-        static evaluate(parts, binding, context): any {
-            if (typeof parts === "object" && typeof parts.length === "number") {
-                if (parts.length === 0)
-                    return "";
-
-                if (parts.length === 1)
-                    return this.evaluatePart(parts[0], binding, context);
-
-                return parts.map(p => this.evaluatePart(p, binding, context).valueOf()).join("");
-            } else {
-                return this.evaluatePart(parts, binding, context);
-            }
-        }
-
-        static evaluatePart(part: any, binding, context) {
-            if (typeof part === "string")
-                return part;
-            else {
-                var result = accept(part, binding, context);
-                Re.Binding.observe(result, binding);
-
-                return result;
-            }
+            this.execute();
         }
     }
 
@@ -318,12 +287,12 @@ export module Dom {
 
         render(context) {
             this.context = context;
-            const value = TextBinding.evaluate(this.tpl, this, context);
+            const result = this.evaluate(this.tpl, accept, context);
 
-            if (!!value && !!value.onNext) {
-                value.subscribe(this);
+            if (!!result && !!result.onNext) {
+                result.subscribe(this);
             } else {
-                this.onNext(value);
+                this.onNext(result);
             }
         }
 

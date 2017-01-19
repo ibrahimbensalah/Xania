@@ -1,4 +1,5 @@
 ﻿import { Core } from "./core";
+import { Observables } from './observables'
 
 export module Reactive {
 
@@ -240,6 +241,7 @@ export module Reactive {
     export abstract class Binding {
 
         public dependencies: IDependency<IAction>[] = [];
+        private subscriptions: Observables.ISubscription[] = [];
         protected context;
         public state;
 
@@ -248,6 +250,11 @@ export module Reactive {
                 this.dependencies[i].unbind(this);
             }
             this.dependencies.length = 0;
+
+            for (var e = 0; e < this.subscriptions.length; e++) {
+                this.subscriptions[e].dispose();
+            }
+            this.subscriptions.length = 0;
 
             this.update(this.context);
         }
@@ -315,6 +322,36 @@ export module Reactive {
 
         const(value) {
             return value;
+        }
+
+
+        evaluate(parts, accept, context): any {
+            if (typeof parts === "object" && typeof parts.length === "number") {
+                if (parts.length === 0)
+                    return "";
+
+                if (parts.length === 1)
+                    return this.evaluatePart(parts[0], accept, context);
+
+                return parts.map(p => this.evaluatePart(p, accept, context).valueOf()).join("");
+            } else {
+                return this.evaluatePart(parts, accept, context);
+            }
+        }
+
+        evaluatePart(part: any, accept, context) {
+            if (typeof part === "string")
+                return part;
+            else {
+                const result = accept(part, this, context);
+
+                if (!!result && result.subscribe) {
+                    debugger;
+                    this.subscriptions.push(result.subscribe(this));
+                }
+
+                return result.valueOf();
+            }
         }
     }
 
