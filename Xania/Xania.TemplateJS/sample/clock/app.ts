@@ -3,7 +3,7 @@ import { bind } from "../../src/loader"
 import { Reactive as Re } from '../../src/reactive'
 
 class ClockApp {
-    public time = new Observables.Time();
+    time = new Observables.Time();
 
     static getTime() {
         return new Date().getTime();

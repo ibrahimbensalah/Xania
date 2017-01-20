@@ -306,6 +306,8 @@ export module Reactive {
         member(target: { get(name: string) }, name) {
             var value = target.get(name);
 
+            debugger;
+
             Binding.observe(value, this);
 
             return value;
@@ -324,6 +326,9 @@ export module Reactive {
             return value;
         }
 
+        onNext(newValue) {
+            this.execute();
+        }
 
         evaluate(accept, parts): any {
             if (typeof parts === "object" && typeof parts.length === "number") {

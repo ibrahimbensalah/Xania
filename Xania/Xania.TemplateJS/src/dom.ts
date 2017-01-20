@@ -108,10 +108,6 @@ export module Dom {
                 this.dom.textContent = result && result.valueOf();
             }
         }
-
-        onNext(newValue) {
-            this.execute();
-        }
     }
 
     export class TagBinding extends Re.Binding implements IVisitor {
@@ -283,10 +279,6 @@ export module Dom {
 
         constructor(private parent: TagBinding, private name, private expr) {
             super();
-        }
-
-        onNext() {
-            this.execute();
         }
 
         render() {
