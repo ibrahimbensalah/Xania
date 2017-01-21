@@ -17,16 +17,15 @@
 
     export class Observable<T> implements IObserver<T> {
 
-        private subscriptions: ISubscription[] = [];
-        private current: T;
-        public actions: any[] = [];
+        public subscriptions: ISubscription[] = [];
+        public current: T;
 
         constructor(current?: T) {
             this.current = current;
         }
 
         subscribe(observer: IObserver<T> | Function): ISubscription {
-            return new Subscription(this.subscriptions, observer);
+            return new Subscription(this, observer);
         }
 
         map(mapper: Function) {
@@ -36,19 +35,9 @@
         }
 
         onNext(value: T) {
-            if (this.current !== value) {
-                this.current = value;
-                if (this.current !== undefined) {
-                    for (var i = 0; i < this.subscriptions.length; i++) {
-                        this.subscriptions[i].notify(this.current);
-                    }
-
-                    // notify next
-                    var actions = this.actions.slice(0);
-                    for (var e = 0; e < actions.length; e++) {
-                        actions[e].execute();
-                    }
-                }
+            this.current = value;
+            for (var i = 0; i < this.subscriptions.length; i++) {
+                this.subscriptions[i].notify(this.current);
             }
         }
 
@@ -58,8 +47,12 @@
     }
 
     class Subscription<T> implements ISubscription {
-        constructor(private subscriptions, private observer: IObserver<T> | Function) {
-            subscriptions.push(this);
+
+        private current: T;
+
+        constructor(private observable: Observable<T>, private observer: IObserver<T> | Function) {
+            observable.subscriptions.push(this);
+            this.current = observable.current;
         }
 
         notify(value) {
@@ -72,9 +65,9 @@
         }
 
         dispose() {
-            var idx = this.subscriptions.indexOf(this);
+            var idx = this.observable.subscriptions.indexOf(this);
             if (idx >= 0)
-                this.subscriptions.splice(idx, 1);
+                this.observable.subscriptions.splice(idx, 1);
             else
                 console.warn("subscription is not found");
         }
@@ -168,23 +161,15 @@
         }
 
         resume(): this {
-            if (!!this.handle) {
-                console.warn("timer is already running");
-            } else {
-                var inProgress = false;
-                this.handle = setInterval(
-                    () => {
-                        if (inProgress)
-                            return;
-                        try {
-                            inProgress = true;
-                            super.onNext(Time.getTime());
-                        } finally {
-                            inProgress = false;
-                        }
-                    },
-                    10);
-            }
+            this.handle = setTimeout(
+                () => {
+                    try {
+                        super.onNext(Time.getTime());
+                    } finally {
+                        this.resume();
+                    }
+                },
+                10);
 
             return this;
         }

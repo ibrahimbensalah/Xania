@@ -25,8 +25,9 @@ export module Reactive {
     abstract class Value {
         protected properties: IProperty[] = [];
         protected extensions: { name: any, value: Extension }[] = [];
+        public value;
 
-        constructor(public value, protected dispatcher: IDispatcher) {
+        constructor(protected dispatcher: IDispatcher) {
         }
 
         get(propertyName: string): IProperty {
@@ -44,7 +45,8 @@ export module Reactive {
                 return initialValue.bind(this.value);
             }
 
-            var property = new Property(this.dispatcher, this, propertyName, initialValue);
+            var property = new Property(this.dispatcher, this, propertyName);
+            property.update();
             this.properties.push(property);
 
             return property;
@@ -84,9 +86,10 @@ export module Reactive {
     class Property extends Value implements IDependency<IAction> {
         // list of observers to be dispatched on value change
         public actions: IAction[] = [];
+        public subscribe: (v) => void;
 
-        constructor(dispatcher: IDispatcher, private parent: { value; get(name: string) }, public name, value) {
-            super(value, dispatcher);
+        constructor(dispatcher: IDispatcher, private parent: { value; get(name: string) }, public name) {
+            super(dispatcher);
         }
 
         get(name: string) {
@@ -127,22 +130,31 @@ export module Reactive {
             if (newValue === this.value)
                 return false;
 
-            this.value = newValue;
+            if (typeof newValue === "undefined")
+                throw new Error("Undefined value is not supported");
 
-            // notify next
-            var actions = this.actions.slice(0);
-            for (var i = 0; i < actions.length; i++) {
-                this.dispatcher.dispatch(actions[i]);
+            this.value = newValue;
+            delete this.subscribe;
+            if (!!newValue && newValue.subscribe) {
+                this.subscribe = newValue.subscribe.bind(newValue);
             }
 
             if (this.value === void 0) {
                 this.extensions = [];
                 this.properties = [];
             } else {
-                super.updateProperties();
+                this.updateProperties();
             }
 
-            return this.value;
+            if (this.actions) {
+                // notify next
+                var actions = this.actions.slice(0);
+                for (var i = 0; i < actions.length; i++) {
+                    this.dispatcher.dispatch(actions[i]);
+                }
+            }
+
+            return true;
         }
 
         valueOf() {
@@ -194,23 +206,63 @@ export module Reactive {
         }
     }
 
-    export class Store extends Value implements IDispatcher {
-        public dirty = [];
+    class DefaultDispatcher {
+        static dispatch(action: IAction) {
+            action.execute();
+        }
+    }
 
-        constructor(value: any, private globals: any = {}) {
-            super(value, null);
-            this.dispatcher = this;
+    class Stream extends Value {
+        private actions: IAction[] = [];
+        subscription: Observables.ISubscription;
+
+        constructor(dispatcher: IDispatcher, observable) {
+            super(dispatcher);
+            this.value = observable.valueOf();
+            this.subscription = observable.subscribe(this);
         }
 
-        dispatch(action: IAction) {
-            this.dirty.push(action);
+        change(action: IAction): IDependency<IAction> | boolean {
+            if (this.actions.indexOf(action) < 0) {
+                this.actions.push(action);
+                return this;
+            }
+            return false;
         }
 
-        flush() {
-            this.dirty.forEach(d => {
-                d.execute();
-            });
-            this.dirty.length = 0;
+        unbind(action: IAction) {
+            var idx = this.actions.indexOf(action);
+            if (idx < 0)
+                return false;
+
+            this.actions.splice(idx, 1);
+            return true;
+        }
+
+        onNext(newValue) {
+            if (this.value === newValue)
+                return;
+
+            this.value = newValue;
+
+            // notify next
+            var actions = this.actions.slice(0);
+            for (var i = 0; i < actions.length; i++) {
+                this.dispatcher.dispatch(actions[i]);
+            }
+        }
+
+        valueOf() {
+            return this.value;
+        }
+    }
+
+    export class Store extends Value {
+        private animHandler: number = 0;
+
+        constructor(value: any, private globals: any = {}, dispatcher: IDispatcher = DefaultDispatcher) {
+            super(dispatcher);
+            this.value = value;
         }
 
         get(name: string) {
@@ -221,8 +273,12 @@ export module Reactive {
             }
 
             var statiq = this.value.constructor && this.value.constructor[name];
-            if (typeof statiq !== "undefined")
+            if (typeof statiq === "function")
+                return statiq.bind(this.value.constructor);
+
+            if (typeof statiq !== "undefined") {
                 return statiq;
+            }
 
             for (var i = 0; i < this.globals.length; i++) {
                 var g = this.globals[i][name];
@@ -241,20 +297,16 @@ export module Reactive {
     export abstract class Binding {
 
         public dependencies: IDependency<IAction>[] = [];
-        private subscriptions: Observables.ISubscription[] = [];
         protected context;
         public state;
+
+        constructor(private dispatcher: IDispatcher = DefaultDispatcher) { }
 
         execute() {
             for (var i = 0; i < this.dependencies.length; i++) {
                 this.dependencies[i].unbind(this);
             }
             this.dependencies.length = 0;
-
-            for (var e = 0; e < this.subscriptions.length; e++) {
-                this.subscriptions[e].dispose();
-            }
-            this.subscriptions.length = 0;
 
             this.update(this.context);
         }
@@ -271,18 +323,16 @@ export module Reactive {
         }
 
         public static observe(value, observer) {
-            if (value && value.change) {
-                var dependency = value.change(observer);
-                if (!!dependency)
-                    observer.dependencies.push(dependency);
+            if (value) {
+                if (value.change) {
+                    var dependency = value.change(observer);
+                    if (!!dependency)
+                        observer.dependencies.push(dependency);
+                }
             }
         }
 
-        public abstract render(context?, state?) : any;
-
-        get(name: string): any {
-            throw new Error("Not implemented");
-        }
+        public abstract render(context?, state?): any;
 
         extend(): any {
             throw new Error("Not implemented");
@@ -306,9 +356,19 @@ export module Reactive {
         member(target: { get(name: string) }, name) {
             var value = target.get(name);
 
-            debugger;
-
             Binding.observe(value, this);
+
+            if (!!value && !!value.subscribe) {
+                // unwrap current value of observable
+                var subscription = value.subscribe(newValue => {
+                    if (newValue !== subscription.current) {
+                        subscription.dispose();
+                        this.dispatcher.dispatch(this);
+                    }
+                });
+
+                return subscription.current;
+            }
 
             return value;
         }
@@ -348,13 +408,8 @@ export module Reactive {
             if (typeof part === "string")
                 return part;
             else {
-                const result = accept(part, this, this.context);
-
-                if (!!result && result.subscribe) {
-                    this.subscriptions.push(result.subscribe(this));
-                }
-
-                return result.valueOf();
+                var value = accept(part, this, this.context);
+                return value && value.valueOf();
             }
         }
     }

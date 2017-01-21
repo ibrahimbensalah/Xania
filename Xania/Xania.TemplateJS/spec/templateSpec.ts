@@ -56,11 +56,8 @@ describe("templating",
                 var binding = new Dom.TextBinding(fs("p.firstName")).update(store);
 
                 store.get("p").get("firstName").set("bla");
-                expect(binding.dom.textContent).toBe("Ibrahim");
-                store.flush();
-                expect(binding.dom.textContent).toBe("bla");
 
-                expect(store.dirty.length).toBe(0);
+                expect(binding.dom.textContent).toBe("bla");
                 expect(binding.dependencies.length).toBe(2);
             });
 
@@ -80,13 +77,11 @@ describe("templating",
                 expect(fragment.childNodes.length).toBe(3);
 
                 store.get("people").get(1).get("roles").set(["zoon"]);
-                store.flush();
 
                 console.log(fragment.childNodes);
                 expect(fragment.childNodes.length).toBe(4);
 
                 store.get("people").get(0).get("roles").set(["papa"]);
-                store.flush();
                 console.log(fragment.childNodes);
             });
 
@@ -119,15 +114,14 @@ describe("templating",
             () => {
                 var store = new Re.Store({ p: ibrahim });
                 var div = new Dom.TagBinding("div")
-                    .attr("data-age", fs("p.age"))
-                    .text(fs("p.firstName"))
-                    .update(store);
+                    .attr("data-age", fs("p.age"));
+                div.text(fs("p.firstName"));
+                div.update(store);
 
                 expect(div.dom.childNodes.length).toBe(1);
                 expect(div.dom.textContent).toBe('Ibrahim');
 
                 store.get('p').get('firstName').set('IBRAHIM');
-                store.flush();
 
                 expect(div.dom.textContent).toBe('IBRAHIM');
                 console.log(div.dom);
@@ -157,7 +151,7 @@ describe("templating",
             () => {
                 var stream = new Observables.Observable<number>();
 
-                var binding = new Dom.TextBinding(fs("stream")).update(new Re.Store({ stream }));
+                var binding = new Dom.TextBinding(fs("value")).update(new Re.Store({ value: stream }));
                 expect(binding.dom.textContent).toBe("");
 
                 stream.onNext(123);

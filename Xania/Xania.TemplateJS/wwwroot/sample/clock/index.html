@@ -17,15 +17,9 @@
 <body>
     <div style="margin: 40px;">
         <template model="app.ClockApp">
-
-            <div>
-                Time: {{ time.map displayTime }} sec
-            </div>
-            <button click="{{ time.toggle () }}">toggle</button>
-            
             <svg viewBox="0 0 100 100">
                 <g transform="translate(50,50)">
-                    <circle class="clock-face" r="48"></circle>
+                    <circle class="clock-face" r="34"></circle>
                     <line class="minor" y1="42" y2="45" transform="rotate( 0 )"></line>
                     <line class="minor" y1="42" y2="45" transform="rotate( 6 )"></line>
                     <line class="minor" y1="42" y2="45" transform="rotate( 12 )"></line>
@@ -98,9 +92,9 @@
                     <line class="major" y1="35" y2="45" transform="rotate( 270 )"></line>
                     <line class="major" y1="35" y2="45" transform="rotate( 300 )"></line>
                     <line class="major" y1="35" y2="45" transform="rotate( 330 )"></line>
-                    <line class="hour" y1="2" y2="-20" transform="rotate( {{ time.map hoursAngle }} )"></line>
-                    <line class="minute" y1="4" y2="-30" transform="rotate( {{ time.map minutesAngle }} )"></line>
-                    <g transform="rotate( {{ time.map secondsAngle }} )">
+                    <line class="hour" y1="2" y2="-20" transform="rotate( {{ hoursAngle time }} )"></line>
+                    <line class="minute" y1="4" y2="-30" transform="rotate( {{ minutesAngle time }} )"></line>
+                    <g transform="rotate( {{ secondsAngle time }} )">
                         <line class="second" y1="10" y2="-38"></line>
                         <line class="second-counterweight" y1="10" y2="2"></line>
                     </g>

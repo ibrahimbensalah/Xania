@@ -428,13 +428,12 @@ describe("runtime", () => {
             expect(binding.state).toBe("Ibrahim");
             expect(binding.dependencies.length).toBe(2);
 
-            expect(store.dirty.length).toBe(0);
+            // expect(store.dirty.length).toBe(0);
 
             store.get("p").get("firstName").set("Mr Ibraihm");
-            expect(store.dirty).toEqual([binding]);
-            expect(binding.dependencies.length).toBe(2);
+            expect(binding.state).toBe("Mr Ibraihm");
 
-            store.flush();
+            expect(binding.dependencies.length).toBe(2);
         });
 
     it("consistent variable identity",
