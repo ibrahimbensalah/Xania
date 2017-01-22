@@ -1,5 +1,6 @@
-﻿<!-- ReSharper disable Html.TagNotResolved -->
-<template>
+﻿<link rel="import" href="hello-app.html" />
+<!-- ReSharper disable Html.TagNotResolved -->
+<template3>
     <div class="example-container">
         <p class="current-rating">
             current rating: <strong>{{ rating }}</strong>
@@ -8,7 +9,7 @@
             <h3>Clickable Rating</h3>
             <div class="rating">
                 <span data-select="{{ for r in [ 1..10 ] }}"
-                      class="star" 
+                      class="star"
                       class.selected="{{ le r rating }}"
                       class.highlighted="{{ le r highlighted }}"
                       mouseover="{{ highlighted <- r }}"
@@ -22,6 +23,45 @@
                       class.selected="{{ le r rating }}">★</span>
             </div>
         </div>
-    </div>  
-</template>    
+    </div>
+</template3>
+<template>
+    <div class="example-container">
+        <p class="current-rating">
+            current rating: <strong>{{ rating }}</strong>
+        </p>
+        <div class="ratings">
+            <h3>Clickable Rating</h3>
+            <div class="rating">
+                <span data-repeat="{{ for r in [ 1..10 ] }}"
+                      class="star"
+                      class.selected="{{ le r rating }}"
+                      class.highlighted="{{ le r highlighted }}">★</span>
+            </div>
+            <h3>Readonly rating</h3>
+            <div class="rating readonly">
+                <span class="star" data-repeat="{{ for r in [ 1..10 ] }}"
+                      class.highlighted="{{ le r highlighted }}"
+                      class.selected="{{ le r rating }}">★</span>
+            </div>
+        </div>
+    </div>
+</template>
 <!-- ReSharper restore Html.TagNotResolved -->
+
+<script>
+    var template = document.currentScript.ownerDocument.querySelector("template");
+
+    Promise.all([System.import("app"), System.import("../../src/loader")]).then(function (arr) {
+        var app = arr[0];
+        var loader = arr[1];
+
+        var bind = loader.parseFragment(template);
+
+        var proto = Object.create(HTMLElement.prototype);
+        proto.createdCallback = function () {
+            bind(this).update(app.store());
+        };
+        document.registerElement('rating-app', { prototype: proto });
+    });
+</script>

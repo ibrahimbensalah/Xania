@@ -4,36 +4,27 @@
     <title></title>
     <meta charset="utf-8" />
     <link href="app.css" rel="stylesheet" />
-    <script src="app.js"></script>
-    <script src="../../lib/webcomponentsjs/webcomponents-lite.js"></script>
-    <script src="../../lib/system.js/dist/system.js"></script>
+    <script src="../../lib/system.js/dist/system.src.js"></script>
     <script>
-        System.config({
-            packages: {
-                src: {
-                    defaultExtension: "js"
-                }
-            }
-        });
-
-        System.import("app.js").then(window.onload);
+        System.config({ packages: { '/': {} } });
     </script>
+    <link rel="import" href="rating-app.html" async>
 </head>
 <body>
     <div style="margin: 40px;">
         <rating-app rating="3"></rating-app>
-        
+
         <hr style="clear: both;" />
 
         <rating-app rating="1"></rating-app>
 
         <hr style="clear: both;" />
-        
+
         <template model="{ rating: 123 }">
             <div>
                 What is your rating?
             </div>
-            <input type="text" name="rating"/>
+            <input type="text" name="rating" />
             <div>
                 Current rating is: {{ rating }}
             </div>

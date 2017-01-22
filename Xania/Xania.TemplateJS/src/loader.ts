@@ -169,6 +169,21 @@ class Parser {
     }
 }
 
+export function parseFragment(node) {
+    var children = [];
+    if (!!node["content"]) {
+        const content = <HTMLElement>node["content"];
+        for (var i = 0; i < content.childNodes.length; i++) {
+            var tpl = Parser.parseNode(content.childNodes[i]);
+            if (tpl)
+                children.push(tpl);
+        }
+    }
+
+    return target => 
+            new Dom.ContentBinding(null, dom => target.appendChild(dom), children);
+}
+
 export function bind(node) {
     var children = [];
     if (!!node["content"]) {

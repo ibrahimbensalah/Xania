@@ -5,14 +5,12 @@
     <meta charset="utf-8" />
     <link href="app.css" rel="stylesheet" />
     <script src="../../lib/system.js/dist/system.src.js"></script>
-
     <script>
         System.config({ packages: { '/': {} } });
         System.import("app").then(app => {
-            app.init(document.body.querySelector("template"), 123);
+            app.init(document.body.querySelector("template"));
         });
     </script>
-
 </head>
 <body>
     <div style="margin: 40px;">
