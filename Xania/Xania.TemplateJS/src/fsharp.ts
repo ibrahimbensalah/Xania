@@ -39,6 +39,13 @@ export function accept(ast: any, visitor: IAstVisitor, context) {
             return visitor.select(accept(ast.source, visitor, context), s => accept(ast.selector, visitor, s));
         case "const":
             return visitor.const(ast.value);
+        case "range":
+            var first = accept(ast.from, visitor, context);
+            var last = accept(ast.to, visitor, context);
+            var arr = [];
+            for (var i = first; i <= last; i++)
+                arr.push(i);
+            return arr;
         default:
             throw new Error(`not supported type ${ast.type}`);
     }

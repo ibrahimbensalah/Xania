@@ -137,11 +137,17 @@ class Parser {
     static parseNode(node: Node): Template.INode {
         if (node.nodeType === 1) {
             const elt = <HTMLElement>node;
+
             const template = new Template.TagTemplate(elt.tagName, elt.namespaceURI);
+            var content = null;
 
             for (var i = 0; !!elt.attributes && i < elt.attributes.length; i++) {
                 var attribute = elt.attributes[i];
-                this.parseAttr(template, attribute);
+                if (attribute.name === "data-repeat") {
+                    content = new Template.ContentTemplate(this.parseText(attribute.value)).child(template);
+                } else {
+                    this.parseAttr(template, attribute);
+                }
             }
 
             for (var e = 0; e < elt.childNodes.length; e++) {
@@ -150,7 +156,7 @@ class Parser {
                     template.addChild(child);
             }
 
-            return template;
+            return content || template;
         } else if (node.nodeType === 3) {
             var textContent = node.textContent;
             if (textContent.trim().length > 0) {
@@ -173,6 +179,6 @@ export function bind(node) {
                 children.push(tpl);
         }
     }
-    
+
     return new Dom.ContentBinding(null, dom => node.parentElement.insertBefore(dom, node), children);
 }

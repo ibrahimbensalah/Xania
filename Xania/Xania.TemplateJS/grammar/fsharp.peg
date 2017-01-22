@@ -24,7 +24,7 @@ LambdaExpression
 	}
 
 QueryExpression
-	= "for" _ param:IdentifierName _ "in" _ source:Identifier where:(_ WhereExpression)* selector:(_ SelectExpression)? {
+	= "for" _ param:IdentifierName _ "in" _ source:(Identifier / Range) where:(_ WhereExpression)* selector:(_ SelectExpression)? {
 		var query = { type: "query", param, source }
 
 		function reducer(source, predicate) {
@@ -61,7 +61,7 @@ PipeBinder
   }
 
 AdditiveExpression
-  = head:(Term / ApplicativeExpression) adds:( _ AdditiveBinder )* {
+  = head:MultiplicativeExpression adds:( _ AdditiveBinder )* {
 		var reducer = (prev, binder) => { 
 			var op = binder[1].op;
 			var operand = binder[1].operand;
@@ -71,8 +71,24 @@ AdditiveExpression
   }
 
 AdditiveBinder
-  = op:[+-] _ operand:(Term / ApplicativeExpression) {
+  = op:[+-] _ operand:MultiplicativeExpression {
      return { op, operand }
+  }
+
+MultiplicativeExpression
+  = head:(Term / ApplicativeExpression) mults:( _ MultiplicativeBinder )* {
+		var reducer = (prev, binder) => { 
+			var op = binder[1].op;
+			var operand = binder[1].operand;
+			return { type: "app", fun: op, args: [ operand, prev ] };
+		};
+		return mults.reduce(reducer, head);
+  }
+
+
+MultiplicativeBinder
+  = op:[\*] _ operand:(Term / ApplicativeExpression) {
+	return { op, operand } 
   }
 
 Term

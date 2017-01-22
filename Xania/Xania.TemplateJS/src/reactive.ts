@@ -354,8 +354,7 @@ export module Reactive {
         }
 
         member(target: { get(name: string) }, name) {
-            var value = target.get(name);
-
+            var value = target.get ? target.get(name) : target[name];
             Binding.observe(value, this);
 
             if (!!value && !!value.subscribe) {
@@ -377,6 +376,10 @@ export module Reactive {
         app(fun, args: any[]) {
             if (fun === "+") {
                 return args[1] + args[0];
+            } else if (fun === "-") {
+                return args[1] - args[0];
+            } else if (fun === "*") {
+                return args[1] * args[0];
             }
 
             return fun.apply(null, args);

@@ -11,8 +11,8 @@ class ClockApp {
     }
 
     static minutesAngle(time) {
-        var f = 10;
-        return 360 * (Math.floor(time / (60000 / f)) % (60 * f)) / (60 * f);
+        var f = 60 * 60 * 1000;
+        return 360 * (time % f) / f;
     }
 
     static hoursAngle(time) {
@@ -22,5 +22,5 @@ class ClockApp {
 }
 
 export function init(dom) {
-    return bind(dom).update(new Re.Store(new ClockApp(), {}));
+    return bind(dom).update(new Re.Store(new ClockApp(), [ { Math } ]));
 }

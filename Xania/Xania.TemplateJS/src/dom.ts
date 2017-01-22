@@ -169,7 +169,11 @@ export module Dom {
         }
 
         public content(ast, children: Template.INode[]): ContentBinding {
-            var binding = new ContentBinding(ast, this.appendChild, children).update(this.context);
+            var binding = new ContentBinding(ast, this.appendChild, children);
+
+            if (!!this.context)
+                binding.update(this.context);
+
             this.childBindings.push(binding);
             return binding;
         }
