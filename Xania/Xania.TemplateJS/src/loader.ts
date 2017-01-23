@@ -113,24 +113,13 @@ class Parser {
 
     static parseAttr(tagElement: Template.TagTemplate, attr: Attr) {
         const name = attr.name;
-        if (name === "click" || name.startsWith("keyup.")) {
-            const fn = this.parseText(attr.value);
-            tagElement.addEvent(name, fn);
-        } else if (name === "data-select" || name === "data-from") {
-            const fn = this.parseText(attr.value);
-            tagElement.select(fn);
-        } else if (name === "checked") {
-            const fn = this.parseText(attr.value);
-            tagElement.attr(name, Core.compose(ctx => !!ctx ? "checked" : null, fn));
-        } else {
-            const tpl = this.parseText(attr.value);
-            tagElement.attr(name, tpl || attr.value);
+        const tpl = this.parseText(attr.value);
+        tagElement.attr(name, tpl || attr.value);
 
-            // conventions
-            if (!!tagElement.name.match(/^input$/i) && !!attr.name.match(/^name$/i) && tagElement.getAttribute("value") != undefined) {
-                const valueAccessor = this.parseText(attr.value);
-                tagElement.attr("value", valueAccessor);
-            }
+        // conventions
+        if (!!tagElement.name.match(/^input$/i) && !!attr.name.match(/^name$/i) && tagElement.getAttribute("value") != undefined) {
+            const valueAccessor = this.parseText(attr.value);
+            tagElement.attr("value", valueAccessor);
         }
     }
 
@@ -180,8 +169,8 @@ export function parseFragment(node) {
         }
     }
 
-    return target => 
-            new Dom.ContentBinding(null, dom => target.appendChild(dom), children);
+    return target =>
+        new Dom.ContentBinding(null, dom => target.appendChild(dom), children);
 }
 
 export function bind(node) {

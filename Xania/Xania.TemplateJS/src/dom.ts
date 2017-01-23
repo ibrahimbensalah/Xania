@@ -125,15 +125,18 @@ export module Dom {
             else {
                 this.dom = (<any>document).createElementNS(ns, tagName.toLowerCase());
             }
-
-            this.dom.attributes["__binding"] = this;
         }
+
+        static eventNames = [ "click", "mouseover", "mouseout", "blur", "change" ];
 
         attr(name, ast): this {
             if (name === "class") {
                 this.classBinding.setBaseClass(ast);
             } else if (name.startsWith("class.")) {
                 this.classBinding.addClass(name.substr(6), ast);
+            } else if (TagBinding.eventNames.indexOf(name) >= 0) {
+                var eventBinding = new EventBinding(this, name, ast);
+                this.attributeBindings.push(eventBinding);
             } else {
                 var attrBinding = new AttributeBinding(this, name, ast);
                 this.attributeBindings.push(attrBinding);
@@ -141,15 +144,6 @@ export module Dom {
 
             return this;
         }
-
-        //child(child: Re.Binding): this {
-        //    if (!!this.context)
-        //        child.update(this.context);
-
-        //    this.childBindings.push(child);
-        //    this.appendChild(child.dom);
-        //    return this;
-        //}
 
         on(name, ast) : this {
             this.events[name] = ast;
@@ -277,6 +271,29 @@ export module Dom {
 
     }
 
+    export class EventBinding extends Re.Binding {
+        constructor(private parent: TagBinding, private name, private expr) {
+            super();
+        }
+
+        render() {
+            var tag = this.parent.dom;
+            tag.addEventListener(this.name, () => {
+                let value = this.evaluate(accept, this.expr);
+            });
+        }
+
+        app(fun, args: any[]) {
+            if (fun === "=") {
+                var value = args[0].valueOf();
+                args[1].set(value);
+                return value;
+            }
+
+            return super.app(fun, args);
+        }
+    }
+
     export class AttributeBinding extends Re.Binding {
         public dom;
         private oldValue;
@@ -319,208 +336,6 @@ export module Dom {
         }
     }
 
-    //class ReactiveBinding extends DomBinding {
-    //    private bindings = [];
-    //    private stream;
-    //    private length;
-
-    //    constructor(private tpl: Template.INode, private target, private offset) {
-    //        super();
-    //    }
-
-    //    render(context) {
-    //        var { bindings, target, tpl } = this;
-    //        if (!!tpl.modelAccessor) {
-    //            var stream = tpl.modelAccessor.execute(context, this);
-    //            this.length = 0;
-
-    //            stream.forEach((ctx, idx) => {
-    //                this.length = idx + 1;
-    //                for (var i = 0; i < bindings.length; i++) {
-    //                    var binding = bindings[i];
-    //                    if (binding.context.value === ctx.value) {
-    //                        if (i !== idx) {
-    //                            bindings[i] = bindings[idx];
-    //                            bindings[idx] = binding;
-    //                        }
-    //                        return;
-    //                    }
-    //                }
-    //                this.execute(ctx, idx);
-    //            });
-    //        } else {
-    //            this.execute(context, 0);
-    //            this.length = 1;
-    //        }
-
-    //        while (bindings.length > this.length) {
-    //            const oldBinding = bindings.pop();
-    //            target.removeChild(oldBinding.dom);
-    //        }
-
-    //        return this;
-    //    }
-
-    //    execute(result, idx) {
-    //        this.addBinding(this.tpl.bind(result), idx);
-    //    }
-
-    //    addBinding(newBinding, idx) {
-    //        var { offset, target, bindings } = this;
-    //        var insertAt = offset + idx;
-
-    //        if (insertAt < target.childNodes.length) {
-    //            var beforeElement = target.childNodes[insertAt];
-    //            target.insertBefore(newBinding.dom, beforeElement);
-    //        } else {
-    //            target.appendChild(newBinding.dom);
-    //        }
-
-    //        bindings.splice(idx, 0, newBinding);
-    //    }
-    //}
-
-    //export function executeTemplate(observable, tpl: Template.INode, target, offset) {
-    //    return new ReactiveBinding(tpl, target, offset).update(observable);
-    //}
-
-    //class Binder {
-    //    private compile: Function;
-    //    private compiler: Ast.Compiler;
-    //    public contexts: Data4.IValue[] = [];
-
-    //    constructor(private libs: any[]) {
-    //        this.compiler = new Ast.Compiler();
-    //        this.compile = this.compiler.template.bind(this.compiler);
-    //    }
-
-    //    static listen(target, store: Data5.Store) {
-    //        var eventHandler = (target, name) => {
-    //            var binding = target.attributes["__binding"];
-    //            if (!!binding) {
-    //                binding.trigger(name);
-    //                store.update();
-    //            }
-    //        };
-
-    //        target.addEventListener("click", evt => eventHandler(evt.target, evt.type));
-
-    //        const onchange = evt => {
-    //            var binding = evt.target.attributes["__binding"];
-    //            if (binding != null) {
-    //                const nameAttr = evt.target.attributes["name"];
-    //                if (!!nameAttr) {
-    //                    var arr = nameAttr.value.split('.');
-    //                    var context = binding.context;
-    //                    for (var i = 0; i < arr.length; i++) {
-    //                        var p = arr[i];
-    //                        context = context.get(p);
-    //                    }
-    //                    context.set(evt.target.value);
-
-    //                    store.update();
-    //                }
-    //            }
-    //        };
-    //        target.addEventListener("keyup",
-    //            evt => {
-    //                if (evt.keyCode === 13) {
-    //                    eventHandler(evt.target, "keyup.enter");
-    //                } else {
-    //                    onchange(evt);
-    //                }
-    //            });
-    //        target.addEventListener("mouseover",
-    //            evt => {
-    //                eventHandler(evt.target, "mouseover");
-    //            }
-    //        );
-    //        target.addEventListener("mouseout",
-    //            evt => {
-    //                eventHandler(evt.target, "mouseout");
-    //            }
-    //        );
-    //    }
-
-    //    public update2() {
-    //        for (let i = 0; i < this.contexts.length; i++) {
-    //            var ctx = this.contexts[i];
-    //            ctx.update(null);
-    //        }
-    //    }
-
-    //    parseDom(rootDom: Node): Template.INode {
-    //        const stack = [];
-    //        let i: number;
-    //        var rootTpl;
-    //        stack.push({
-    //            node: rootDom,
-    //            push(e) {
-    //                rootTpl = e;
-    //            }
-    //        });
-
-    //        while (stack.length > 0) {
-    //            const cur = stack.pop();
-    //            const node: Node = cur.node;
-    //            const push = cur.push;
-
-    //            if (!!node["content"]) {
-    //                const elt = <HTMLElement>node["content"];
-    //                var template = new Template.ContentTemplate();
-    //                for (i = elt.childNodes.length - 1; i >= 0; i--) {
-    //                    stack.push({ node: elt.childNodes[i], push: template.addChild.bind(template) });
-    //                }
-    //                push(template);
-    //            } else if (node.nodeType === 1) {
-    //                const elt = <HTMLElement>node;
-    //                const template = new Template.TagTemplate(elt.tagName, elt.namespaceURI);
-
-    //                for (i = 0; !!elt.attributes && i < elt.attributes.length; i++) {
-    //                    var attribute = elt.attributes[i];
-    //                    this.parseAttr(template, attribute);
-    //                }
-
-    //                for (i = elt.childNodes.length - 1; i >= 0; i--) {
-    //                    stack.push({ node: elt.childNodes[i], push: template.addChild.bind(template) });
-    //                }
-    //                push(template);
-    //            } else if (node.nodeType === 3) {
-    //                var textContent = node.textContent;
-    //                if (textContent.trim().length > 0) {
-    //                    const tpl = this.compile(textContent);
-    //                    push(new Template.TextTemplate(tpl || node.textContent));
-    //                }
-    //            }
-    //        }
-
-    //        return rootTpl;
-    //    }
-
-    //    parseAttr(tagElement: Template.TagTemplate, attr: Attr) {
-    //        const name = attr.name;
-    //        if (name === "click" || name.match(/keyup\./) || name === "mouseover" || name === "mouseout") {
-    //            const fn = this.compile(attr.value);
-    //            tagElement.addEvent(name, fn);
-    //        } else if (name === "data-select" || name === "data-from") {
-    //            const fn = this.compile(attr.value);
-    //            tagElement.select(fn);
-    //        } else {
-    //            const tpl = this.compile(attr.value);
-    //            tagElement.attr(name, tpl || attr.value);
-
-    //            // conventions
-    //            if (!!tagElement.name.match(/^input$/i) &&
-    //                !!attr.name.match(/^name$/i) &&
-    //                !tagElement.getAttribute("value")) {
-    //                const valueAccessor = this.compile(`{{ ${attr.value} }}`);
-    //                tagElement.attr("value", valueAccessor);
-    //            }
-    //        }
-    //    }
-
-    //}
-
     //export function importView(view: string, ...args): any {
     //    if (!("import" in document.createElement("link"))) {
     //        throw new Error("HTML import is not supported in this browser");
@@ -539,44 +354,6 @@ export module Dom {
     //    document.head.appendChild(link);
 
     //    return deferred;
-    //}
-
-    //function defer() {
-    //    return {
-    //        value: void 0,
-    //        resolvers: [],
-    //        notify(value) {
-    //            if (value === void 0)
-    //                throw new Error("undefined result");
-
-    //            this.value = value;
-
-    //            for (var i = 0; i < this.resolvers.length; i++) {
-    //                this.resolvers[i].call(null, value);
-    //            }
-    //        },
-    //        then(resolve) {
-    //            if (this.value === void 0) {
-    //                this.resolvers.push(resolve);
-    //            } else {
-    //                resolve.call(null, this.value);
-    //            }
-    //        }
-    //    };
-    //}
-
-    //export function bind(dom: Node, store) {
-
-    //    var binder = new Binder([Core.List, Core.Math, Core.Dates]);
-
-    //    let fragment = document.createDocumentFragment();
-    //    Dom.executeTemplate(store, binder.parseDom(dom), fragment, 0);
-    //    for (var i = 0; i < fragment.childNodes.length; i++) {
-    //        var child = fragment.childNodes[i];
-    //        Binder.listen(child, store);
-    //    }
-
-    //    return fragment;
     //}
 }
 

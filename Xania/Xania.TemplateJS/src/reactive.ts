@@ -380,6 +380,11 @@ export module Reactive {
                 return args[1] - args[0];
             } else if (fun === "*") {
                 return args[1] * args[0];
+            } else if (fun === "=") {
+                throw new Error("assignment is only allow in EventBinding");
+                //var value = args[0].valueOf();
+                //args[1].set(value);
+                //return value;
             }
 
             return fun.apply(null, args);

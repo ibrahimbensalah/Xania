@@ -133,12 +133,15 @@ Application
 	}
   
 Identifier
-  = !"select" name:IdentifierName members:( "." IdentifierName)* {
+  = !"select" name:IdentifierName members:( "." IdentifierName)* assign:( _ "<-" _ AdditiveExpression )? {
 		var reducer = (prev, next) => { 
 			var member = next[1];
 			return { type: "member", target: prev, member };
 		};
-		return members.reduce(reducer, { type: "ident", name });
+		var ident = members.reduce(reducer, { type: "ident", name });
+		if (!!assign)
+			return { type: "binary", op: "=", left: ident, right: assign[3] };
+		return ident;
   }
   
 Operator

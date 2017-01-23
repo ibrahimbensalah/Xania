@@ -1,6 +1,6 @@
 ﻿export module Core {
     export function State(initialValue) {
-        var fn = function (x) {
+        var fn = x => {
             if (x !== undefined)
                 fn['id'] = x;
 
@@ -149,4 +149,27 @@
         };
     }
 
+    export function defer() {
+        return {
+            value: void 0,
+            resolvers: [],
+            notify(value) {
+                if (value === void 0)
+                    throw new Error("undefined result");
+
+                this.value = value;
+
+                for (var i = 0; i < this.resolvers.length; i++) {
+                    this.resolvers[i].call(null, value);
+                }
+            },
+            then(resolve) {
+                if (this.value === void 0) {
+                    this.resolvers.push(resolve);
+                } else {
+                    resolve.call(null, this.value);
+                }
+            }
+        };
+    }
 }

@@ -1,49 +1,24 @@
-﻿<link rel="import" href="hello-app.html" />
-<!-- ReSharper disable Html.TagNotResolved -->
-<template3>
-    <div class="example-container">
-        <p class="current-rating">
-            current rating: <strong>{{ rating }}</strong>
-        </p>
-        <div class="ratings">
-            <h3>Clickable Rating</h3>
-            <div class="rating">
-                <span data-select="{{ for r in [ 1..10 ] }}"
-                      class="star"
-                      class.selected="{{ le r rating }}"
-                      class.highlighted="{{ le r highlighted }}"
-                      mouseover="{{ highlighted <- r }}"
-                      mouseout="{{ highlighted <- 0 }}"
-                      click="{{ rating <- r }}">★</span>
-            </div>
-            <h3>Readonly rating</h3>
-            <div class="rating readonly">
-                <span class="star" data-select="{{ for r in [ 1..10 ] }}"
-                      class.highlighted="{{ le r highlighted }}"
-                      class.selected="{{ le r rating }}">★</span>
-            </div>
-        </div>
-    </div>
-</template3>
+﻿<!-- ReSharper disable Html.TagNotResolved -->
 <template>
-    <div class="example-container">
-        <p class="current-rating">
-            current rating: <strong>{{ rating }}</strong>
-        </p>
-        <div class="ratings">
-            <h3>Clickable Rating</h3>
-            <div class="rating">
-                <span data-repeat="{{ for r in [ 1..10 ] }}"
-                      class="star"
-                      class.selected="{{ le r rating }}"
-                      class.highlighted="{{ le r highlighted }}">★</span>
-            </div>
-            <h3>Readonly rating</h3>
-            <div class="rating readonly">
-                <span class="star" data-repeat="{{ for r in [ 1..10 ] }}"
-                      class.highlighted="{{ le r highlighted }}"
-                      class.selected="{{ le r rating }}">★</span>
-            </div>
+    <p class="current-rating">
+        current rating: <strong>{{ rating }}</strong>
+    </p>
+    <div class="ratings">
+        <h3>Clickable Rating</h3>
+        <div class="rating">
+            <span data-repeat="{{ for r in [ 1..10 ] }}"
+                  class="star"
+                  class.selected="{{ le r rating }}"
+                  class.highlighted="{{ le r highlighted }}"
+                  mouseover="{{ highlighted <- r }}"
+                  mouseout="{{ highlighted <- 0 }}"
+                  click="{{ rating <- r }}">★</span>
+        </div>
+        <h3>Readonly rating</h3>
+        <div class="rating readonly">
+            <span class="star" data-repeat="{{ for r in [ 1..10 ] }}"
+                  class.highlighted="{{ le r highlighted }}"
+                  class.selected="{{ le r rating }}">★</span>
         </div>
     </div>
 </template>
@@ -52,15 +27,20 @@
 <script>
     var template = document.currentScript.ownerDocument.querySelector("template");
 
-    Promise.all([System.import("app"), System.import("../../src/loader")]).then(function (arr) {
-        var app = arr[0];
-        var loader = arr[1];
+    Promise.all([
+        System.import("../../src/loader"),
+        System.import("../../src/core"),
+        System.import("app")
+    ]).then(function (arr) {
+        var loader = arr[0];
+        var core = arr[1].Core;
+        var app = arr[2];
 
         var bind = loader.parseFragment(template);
 
         var proto = Object.create(HTMLElement.prototype);
         proto.createdCallback = function () {
-            bind(this).update(app.store());
+            bind(this).update(app.store([ core.Math ]));
         };
         document.registerElement('rating-app', { prototype: proto });
     });

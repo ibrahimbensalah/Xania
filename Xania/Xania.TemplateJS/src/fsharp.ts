@@ -46,6 +46,11 @@ export function accept(ast: any, visitor: IAstVisitor, context) {
             for (var i = first; i <= last; i++)
                 arr.push(i);
             return arr;
+        case "binary":
+            var left = accept(ast.left, visitor, context);
+            var right = accept(ast.right, visitor, context);
+
+            return visitor.app(ast.op, [right, left]);
         default:
             throw new Error(`not supported type ${ast.type}`);
     }
