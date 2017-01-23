@@ -1,5 +1,5 @@
 ﻿import { Observables } from "../../src/observables"
-import { bind } from "../../src/loader"
+import { Dom } from "../../src/dom"
 import { Reactive as Re } from '../../src/reactive'
 
 class ClockApp {
@@ -21,6 +21,13 @@ class ClockApp {
     }
 }
 
-export function init(dom) {
-    return bind(dom).update(new Re.Store(new ClockApp(), [ { Math } ]));
+export function init(clockTpl) {
+    var target = {
+        appendChild(child) {
+            clockTpl.parentElement.insertBefore(child, clockTpl);
+        }
+    };
+    var store = new Re.Store(new ClockApp());
+
+    Dom.parse(clockTpl).bind(target, store);
 }

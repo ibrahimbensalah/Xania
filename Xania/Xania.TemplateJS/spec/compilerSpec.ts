@@ -1,6 +1,5 @@
 ﻿/// <reference path="../node_modules/@types/jasmine/index.d.ts" />
 
-import { Expression as XC } from "../src/expression";
 import { Reactive as Re } from "../src/reactive";
 import { fsharp as fs, accept } from "../src/fsharp";
 // import { Core } from "../src/core";
@@ -252,6 +251,16 @@ class TestBinding extends Re.Binding {
     render(context) {
         this.context = context;
         return accept(this.ast, this, context).valueOf();
+    }
+
+    app(fun, args: any[]) {
+        if (fun === "assign") {
+            var value = args[0].valueOf();
+            args[1].set(value);
+            return value;
+        }
+
+        return super.app(fun, args);
     }
 }
 

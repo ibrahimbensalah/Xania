@@ -262,7 +262,7 @@ function peg$parse(input, options) {
       		};
       		var ident = members.reduce(reducer, { type: "ident", name });
       		if (!!assign)
-      			return { type: "binary", op: "=", left: ident, right: assign[3] };
+      			return { type: "binary", op: "assign", left: ident, right: assign[3] };
       		return ident;
         },
       peg$c51 = /^[=+\-|>]/,

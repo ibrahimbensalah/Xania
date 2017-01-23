@@ -25,22 +25,31 @@
 <!-- ReSharper restore Html.TagNotResolved -->
 
 <script>
-    var template = document.currentScript.ownerDocument.querySelector("template");
-
+    var ratingTpl = document.currentScript.ownerDocument.querySelector("template");
     Promise.all([
-        System.import("../../src/loader"),
+        System.import("../../src/dom"),
+        System.import("../../src/reactive"),
         System.import("../../src/core"),
         System.import("app")
     ]).then(function (arr) {
-        var loader = arr[0];
-        var core = arr[1].Core;
-        var app = arr[2];
+        var dom = arr[0].Dom;
+        var re = arr[1].Reactive;
+        var core = arr[2].Core;
+        var app = arr[3];
 
-        var bind = loader.parseFragment(template);
+        var binder = dom.parse(ratingTpl);
 
         var proto = Object.create(HTMLElement.prototype);
         proto.createdCallback = function () {
-            bind(this).update(app.store([ core.Math ]));
+            var model = new app.RatingApp();
+            for (var i = 0; i < this.attributes.length; i++) {
+                var attr = this.attributes[i];
+                var name = attr.name;
+                var value = attr.value;
+                model[name] = value;
+            }
+            var store = new re.Store(model, [core.Math]);
+            binder.bind(this, store);
         };
         document.registerElement('rating-app', { prototype: proto });
     });

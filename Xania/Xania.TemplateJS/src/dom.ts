@@ -2,12 +2,137 @@
 import { Reactive as Re } from './reactive'
 import { accept } from './fsharp'
 import { Template } from './template'
+import { fsharp as fs } from "./fsharp"
 
 export module Dom {
 
     var document = window.document;
 
     interface IVisitor extends Template.IVisitor<Re.Binding> {
+    }
+
+    interface IView {
+        bind(target: { appendChild(dom) }, store);
+    }
+
+    class DomBinding {
+        constructor(private target) { }
+
+        text(expr): Re.Binding {
+            return new TextBinding(expr);
+        }
+        content(ast, children: Template.INode[]): Re.Binding {
+            return new ContentBinding(ast, child => this.target.appendChild(child), children);
+        }
+        tag(name, ns, attrs): IVisitor {
+            var tag = new TagBinding(name, ns);
+
+            for (var i = 0; i < attrs.length; i++) {
+                tag.attr(attrs[i].name, attrs[i].tpl);
+            }
+
+            return tag;
+        }
+    }
+
+    export function parse(node) : IView {
+        return {
+            template: parseNode(node),
+            bind(target, store) {
+                return this.template.accept(new DomBinding(target)).update(store);
+            }
+        } as IView;
+    }
+
+    function parseText(text): any[] {
+        var parts: any[] = [];
+
+        var appendText = (x) => {
+            var s = x.trim();
+            if (s.length > 0)
+                parts.push(x);
+        };
+
+        var offset = 0;
+        while (offset < text.length) {
+            var begin = text.indexOf("{{", offset);
+            if (begin >= 0) {
+                if (begin > offset)
+                    appendText(text.substring(offset, begin));
+
+                offset = begin + 2;
+                const end = text.indexOf("}}", offset);
+                if (end >= 0) {
+                    parts.push(fs(text.substring(offset, end)));
+                    offset = end + 2;
+                } else {
+                    throw new SyntaxError("Expected '}}' but not found starting from index: " + offset);
+                }
+            } else {
+                appendText(text.substring(offset));
+                break;
+            }
+        }
+
+        if (parts.length === 1)
+            return parts[0];
+
+        return parts;
+    }
+
+    function parseAttr(tagElement: Template.TagTemplate, attr: Attr) {
+        const name = attr.name;
+        const tpl = parseText(attr.value);
+        tagElement.attr(name, tpl || attr.value);
+
+        // conventions
+        if (!!tagElement.name.match(/^input$/i) && !!attr.name.match(/^name$/i) && tagElement.getAttribute("value") != undefined) {
+            const valueAccessor = parseText(attr.value);
+            tagElement.attr("value", valueAccessor);
+        }
+    }
+
+    function parseNode(node: Node): Template.INode {
+        if (node.nodeType === 1 && node.nodeName === "TEMPLATE") {
+            const content = <HTMLElement>node["content"];
+            var template = new Template.ContentTemplate(null);
+            for (var i = 0; i < content.childNodes.length; i++) {
+                var tpl = parseNode(content.childNodes[i]);
+                if (tpl)
+                    template.child(tpl);
+            }
+            return template;
+        } else if (node.nodeType === 1) {
+            const elt = <HTMLElement>node;
+
+            const template = new Template.TagTemplate(elt.tagName, elt.namespaceURI);
+            var content = null;
+
+            for (var i = 0; !!elt.attributes && i < elt.attributes.length; i++) {
+                var attribute = elt.attributes[i];
+                if (attribute.name === "data-repeat") {
+                    content = new Template.ContentTemplate(parseText(attribute.value)).child(template);
+                } else {
+                    parseAttr(template, attribute);
+                }
+            }
+
+            for (var e = 0; e < elt.childNodes.length; e++) {
+                var child = parseNode(elt.childNodes[e]);
+                if (child)
+                    template.addChild(child);
+            }
+
+            return content || template;
+        } else if (node.nodeType === 3) {
+            var textContent = node.textContent;
+            if (textContent.trim().length > 0) {
+                const tpl = parseText(textContent);
+                return new Template.TextTemplate(tpl || node.textContent);
+            }
+        }
+
+        return undefined;
     }
 
     export class ContentBinding extends Re.Binding implements IVisitor {
@@ -18,7 +143,7 @@ export module Dom {
         }
 
         render() {
-            var stream = this.ast === null ? [ this.context ] : accept(this.ast, this, this.context);
+            var stream = this.ast === null ? [this.context] : accept(this.ast, this, this.context);
 
             var offset = 0;
             for (var i = 0; i < stream.length; i++) {
@@ -63,7 +188,7 @@ export module Dom {
             return binding;
         }
 
-        public tag(tagName: string, ns: string, attrs, events, options: any) : TagBinding {
+        public tag(tagName: string, ns: string, attrs, options: any): TagBinding {
             var tag = new TagBinding(tagName, ns);
 
             for (var i = 0; i < attrs.length; i++) {
@@ -127,7 +252,7 @@ export module Dom {
             }
         }
 
-        static eventNames = [ "click", "mouseover", "mouseout", "blur", "change" ];
+        static eventNames = ["click", "mouseover", "mouseout", "blur", "change"];
 
         attr(name, ast): this {
             if (name === "class") {
@@ -145,7 +270,7 @@ export module Dom {
             return this;
         }
 
-        on(name, ast) : this {
+        on(name, ast): this {
             this.events[name] = ast;
 
             return this;
@@ -172,7 +297,7 @@ export module Dom {
             return binding;
         }
 
-        public tag(tagName: string, ns: string, attrs, events, options: any): TagBinding {
+        public tag(tagName: string, ns: string, attrs, options: any): TagBinding {
             var tag = new TagBinding(tagName, ns);
             this.childBindings.push(tag);
 
@@ -284,7 +409,7 @@ export module Dom {
         }
 
         app(fun, args: any[]) {
-            if (fun === "=") {
+            if (fun === "assign") {
                 var value = args[0].valueOf();
                 args[1].set(value);
                 return value;

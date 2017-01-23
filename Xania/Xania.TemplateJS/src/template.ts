@@ -3,9 +3,9 @@
 export module Template {
 
     export interface IVisitor<T> {
-        text?(tpl, options: any): T;
-        content?(ast, children: INode[], options?: any): T;
-        tag?(name, ns, attr, events, options?: any): T;
+        text(expr, options: any): T;
+        content(expr, children: INode[], options?: any): T;
+        tag(name, ns, attrs, options?: any): IVisitor<T>;
     }
 
     export interface INode {
@@ -75,14 +75,14 @@ export module Template {
             return this._children;
         }
 
-        public attr(name: string, tpl: any) {
-            return this.addAttribute(name, tpl);
+        public attr(name: string, expr: any) {
+            return this.addAttribute(name, expr);
         }
         
-        public addAttribute(name: string, tpl: any) {
+        public addAttribute(name: string, expr: any) {
             var attr = this.getAttribute(name);
             if (!attr)
-                this.attributes.push({ name: name.toLowerCase(), tpl });
+                this.attributes.push({ name: name.toLowerCase(), tpl: expr });
             return this;
         }
 
@@ -111,7 +111,7 @@ export module Template {
         }
 
         accept<T>(visitor: IVisitor<T>, options: any) {
-            var tag = visitor.tag(this.name, this.ns, this.attributes, null, options);
+            var tag = visitor.tag(this.name, this.ns, this.attributes, options) as IVisitor<T>;
             this._children.forEach(x => x.accept(tag));
 
             return tag;

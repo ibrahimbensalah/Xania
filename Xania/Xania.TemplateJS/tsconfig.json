@@ -19,13 +19,7 @@
   ],
   "include": [
     "grammar/fsharp.d.ts",
-    "src/core.ts",
-    "src/expression.ts",
-    "src/reactive.ts",
-    "src/fsharp.ts",
-    "src/dom.ts",
-    "src/template.ts",
-    "src/loader.ts",
+    "src/*.ts",
     "spec/*Spec.ts",
     "sample/**/*.ts"
   ]
