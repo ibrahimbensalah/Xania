@@ -387,7 +387,7 @@ export module Reactive {
                 //return value;
             }
 
-            return fun.apply(null, args);
+            return fun.apply(null, args.map(x => x.valueOf()));
         }
 
         const(value) {

@@ -65,7 +65,7 @@ describe("templating",
             () => {
                 var store = new Re.Store({ people: [ibrahim, ramy] });
                 var fragment = new RootDom();
-                var binding = new Dom.ContentBinding(fs("for p in people"), fragment.insert.bind(fragment),
+                var binding = new Dom.ContentBinding(fs("for p in people"), fragment,
                     [
                         new Template.TextTemplate(fs("p.firstName + ' ' + p.lastName")),
                         new Template.ContentTemplate(fs("for r in p.roles"))

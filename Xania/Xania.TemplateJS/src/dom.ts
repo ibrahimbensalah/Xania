@@ -22,7 +22,13 @@ export module Dom {
             return new TextBinding(expr);
         }
         content(ast, children: Template.INode[]): Re.Binding {
-            return new ContentBinding(ast, child => this.target.appendChild(child), children);
+            return new ContentBinding(ast,
+                {
+                    parent: this.target,
+                    insert(child) {
+                        return this.parent.appendChild(child);
+                    }
+                } as any, children);
         }
         tag(name, ns, attrs): IVisitor {
             var tag = new TagBinding(name, ns);
@@ -35,7 +41,7 @@ export module Dom {
         }
     }
 
-    export function parse(node) : IView {
+    export function parse(node): IView {
         return {
             template: parseNode(node),
             bind(target, store) {
@@ -135,84 +141,100 @@ export module Dom {
         return undefined;
     }
 
-    export class ContentBinding extends Re.Binding implements IVisitor {
-        private fragments: ContentFragment[] = [];
+    export class ContentBinding extends Re.Binding {
+        public fragments: ContentFragment[] = [];
 
-        constructor(private ast, public parentInsert: (n: Node, idx: number) => void, public children: Template.INode[]) {
+        constructor(private ast, public parent: { insert(n: Node, idx: number) }, public children: Template.INode[]) {
             super();
         }
 
         render() {
             var stream = this.ast === null ? [this.context] : accept(this.ast, this, this.context);
 
-            var offset = 0;
             for (var i = 0; i < stream.length; i++) {
                 var context = stream[i];
 
-                var fragment = null;
+                var fragment: ContentFragment = null;
                 for (var e = i; e < this.fragments.length; e++) {
                     var f = this.fragments[e];
                     if (f.context === context) {
                         fragment = f;
-                        if (e !== i) {
-                            /* found fragment at e by should be located at i */
-                            this.fragments.splice(e, 1);
-                        }
                     }
                 }
 
                 if (fragment === null /* not found */) {
-                    fragment = new ContentFragment(this, context, offset);
-                }
-
-                if (i < this.fragments.length) {
-                    this.fragments.splice(i, 0, fragment);
-                } else {
+                    fragment = new ContentFragment(this);
                     this.fragments.push(fragment);
                 }
 
-                offset += this.children.length;
+                fragment.setOrder(i);
+                fragment.update(context);
             }
 
             return stream;
         }
+    }
 
-        public text(ast, options: { fragment: ContentFragment, child: number }): TextBinding {
+    class ContentFragment {
+        public bindings: Re.Binding[] = [];
+        private order: number;
+        public context;
+
+        constructor(private owner: ContentBinding) {
+        }
+
+        update(context) {
+            this.context = context;
+            for (var e = 0; e < this.owner.children.length; e++) {
+                this.bindings[e] =
+                    this.owner.children[e].accept(this as IVisitor, e)
+                        .update(this.context);
+            }
+            return this;
+        }
+
+        setOrder(i) {
+            this.order = i;
+        }
+
+        insert(dom, index) {
+            var offset = 0;
+            for (var i = 0; i < this.owner.fragments.length; i++) {
+                var frag = this.owner.fragments[i];
+                if (frag.order < this.order) {
+                    offset += frag.bindings.length;
+                }
+            }
+
+            this.owner.parent.insert(dom, offset + index);
+        }
+
+        public text(ast, childIndex: number): TextBinding {
             var binding = new TextBinding(ast);
-            options.fragment.insert(binding.dom, options.child);
+            this.insert(binding.dom, childIndex);
             return binding;
         }
 
-        public content(ast, children, options: { fragment: ContentFragment, child: number }): ContentBinding {
-            var binding = new ContentBinding(ast, dom => options.fragment.insert(dom, options.child), children);
+        public content(ast, children, childIndex: number): ContentBinding {
+            var frag = this;
+            var binding = new ContentBinding(ast, {
+                insert(dom) {
+                    frag.insert(dom, childIndex);
+                }
+            }, children);
             return binding;
         }
 
-        public tag(tagName: string, ns: string, attrs, options: any): TagBinding {
+        public tag(tagName: string, ns: string, attrs, childIndex: number): TagBinding {
             var tag = new TagBinding(tagName, ns);
 
             for (var i = 0; i < attrs.length; i++) {
                 tag.attr(attrs[i].name, attrs[i].tpl);
             }
 
-            options.fragment.insert(tag.dom, options.child);
+            this.insert(tag.dom, childIndex);
 
             return tag;
-        }
-    }
-
-    class ContentFragment {
-        public bindings: Re.Binding[] = [];
-
-        constructor(private owner: ContentBinding, public context, private offset: number) {
-            for (var e = 0; e < owner.children.length; e++) {
-                this.bindings[e] =
-                    owner.children[e].accept(owner as IVisitor, { fragment: this, child: e }).update(context);
-            }
-        }
-
-        insert(dom, index) {
-            this.owner.parentInsert(dom, this.offset + index);
         }
     }
 
@@ -288,7 +310,13 @@ export module Dom {
         }
 
         public content(ast, children: Template.INode[]): ContentBinding {
-            var binding = new ContentBinding(ast, this.appendChild, children);
+            var target = {
+                parent: this.dom,
+                insert(dom, idx) {
+                    return this.parent.appendChild(dom);
+                }
+            }
+            var binding = new ContentBinding(ast, target, children);
 
             if (!!this.context)
                 binding.update(this.context);

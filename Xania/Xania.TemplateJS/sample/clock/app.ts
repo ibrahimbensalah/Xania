@@ -5,6 +5,28 @@ import { Reactive as Re } from '../../src/reactive'
 class ClockApp {
     time = new Observables.Time();
 
+    values = [1, 2, 3, 4, 5, 6];
+
+    static shuffle(array) {
+        var result = array.slice(0);
+        var currentIndex = result.length, temporaryValue, randomIndex;
+
+        // While there remain elements to shuffle...
+        while (0 !== currentIndex) {
+
+            // Pick a remaining element...
+            randomIndex = Math.floor(Math.random() * currentIndex);
+            currentIndex -= 1;
+
+            // And swap it with the current element.
+            temporaryValue = result[currentIndex];
+            result[currentIndex] = result[randomIndex];
+            result[randomIndex] = temporaryValue;
+        }
+        console.log(result);
+        return result;
+    }
+
     static secondsAngle(time) {
         var f = 4;
         return 360 * (Math.floor(time / (1000 / f)) % (60 * f)) / (60 * f);
