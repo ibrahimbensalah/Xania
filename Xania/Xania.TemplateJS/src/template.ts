@@ -22,10 +22,9 @@ export module Template {
     }
 
     export class ContentTemplate implements INode {
-        // ReSharper disable once InconsistentNaming
         private children: INode[] = [];
 
-        constructor(private ast) { }
+        constructor(private expr) { }
 
         child(child: INode) {
             this.children.push(child);
@@ -33,32 +32,8 @@ export module Template {
         }
 
         accept<T>(visitor: IVisitor<T>, options: any): T {
-            return visitor.content(this.ast, this.children, options);
+            return visitor.content(this.expr, this.children, options);
         }
-
-        //bind(context) {
-        //    const newBinding = new Dom.ContentBinding();
-        //    this.children()
-        //        // ReSharper disable once TsResolvedFromInaccessibleModule
-        //        .reduce(ContentTemplate.reduceChild,
-        //        { context, offset: 0, parentBinding: newBinding });
-
-        //    newBinding.update(context);
-
-        //    return newBinding;
-        //}
-
-        //static reduceChild(prev, cur: INode) {
-        //    var { parentBinding, context, offset } = prev;
-
-        //    prev.offset = Core.ready(offset,
-        //        p => {
-        //            var state = Dom.executeTemplate(context, cur, parentBinding.dom, p);
-        //            return Core.ready(state, x => { return p + x.bindings.length });
-        //        });
-
-        //    return prev;
-        //}
     }
 
     export class TagTemplate implements INode {
@@ -115,21 +90,7 @@ export module Template {
             this._children.forEach(x => x.accept(tag));
 
             return tag;
-            // var content = visitor.content(null, children);
-
-            // return visitor.tag(this.name, this.ns, this.attributes, this.events, content);
         }
-
-        //bind(context) {
-        //    const newBinding = new Dom.TagBinding(this.name, this.ns, this.attributes, this.events);
-        //    this.children()
-        //        .reduce(ContentTemplate.reduceChild,
-        //        { context, offset: 0, parentBinding: newBinding, modelAccessor: this.modelAccessor });
-
-        //    newBinding.update(context);
-
-        //    return newBinding;
-        //}
     }
 }
 

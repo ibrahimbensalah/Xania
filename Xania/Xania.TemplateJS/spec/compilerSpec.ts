@@ -244,13 +244,15 @@ describe("fsharp parser", () => {
 
 
 class TestBinding extends Re.Binding {
+    public value;
+
     constructor(private ast) {
         super();
     }
 
     render(context) {
         this.context = context;
-        return accept(this.ast, this, context).valueOf();
+        return this.value = accept(this.ast, this, context).valueOf();
     }
 
     app(fun, args: any[]) {
@@ -272,13 +274,13 @@ describe("runtime", () => {
             var binding = new TestBinding(fs("p.firstName"));
             binding.update(store);
 
-            expect(binding.state).toBe("Ibrahim");
+            expect(binding.value).toBe("Ibrahim");
             expect(binding.dependencies.length).toBe(2);
 
             // expect(store.dirty.length).toBe(0);
 
             store.get("p").get("firstName").set("Mr Ibraihm");
-            expect(binding.state).toBe("Mr Ibraihm");
+            expect(binding.value).toBe("Mr Ibraihm");
 
             expect(binding.dependencies.length).toBe(2);
         });

@@ -44,12 +44,6 @@ class ClockApp {
 }
 
 export function init(clockTpl) {
-    var target = {
-        appendChild(child) {
-            clockTpl.parentElement.insertBefore(child, clockTpl);
-        }
-    };
     var store = new Re.Store(new ClockApp());
-
-    Dom.parse(clockTpl).bind(target, store);
+    Dom.parse(clockTpl).bind(clockTpl.parentElement, store);
 }

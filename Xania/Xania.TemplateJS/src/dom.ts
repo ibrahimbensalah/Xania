@@ -12,11 +12,12 @@ export module Dom {
     }
 
     interface IView {
-        bind(target: { appendChild(dom) }, store);
+        bind(target: { insert(dom, idx) }, store);
     }
 
     class DomBinding {
-        constructor(private target) { }
+        constructor(private target) {
+        }
 
         text(expr): Re.Binding {
             return new TextBinding(expr);
@@ -25,8 +26,15 @@ export module Dom {
             return new ContentBinding(ast,
                 {
                     parent: this.target,
-                    insert(child) {
-                        return this.parent.appendChild(child);
+                    insert(child, idx) {
+                        if (idx < this.parent.childNodes.length) {
+                            var current = this.parent.childNodes[idx];
+                            if (current !== child) {
+                                this.parent.insertBefore(child, current);
+                            }
+                        } else {
+                            this.parent.appendChild(child);
+                        }
                     }
                 } as any, children);
         }
@@ -148,27 +156,45 @@ export module Dom {
             super();
         }
 
+        private static swap(arr: ContentFragment[], srcIndex, tarIndex) {
+            if (srcIndex > tarIndex) {
+                this.swap(arr, tarIndex, srcIndex);
+            }
+            else if (srcIndex < tarIndex) {
+                var src = arr[srcIndex];
+                arr[srcIndex] = arr[tarIndex];
+                arr[tarIndex] = src;
+            }
+        }
+
         render() {
             var stream = this.ast === null ? [this.context] : accept(this.ast, this, this.context);
-
+            var fr: ContentFragment;
             for (var i = 0; i < stream.length; i++) {
                 var context = stream[i];
 
                 var fragment: ContentFragment = null;
-                for (var e = i; e < this.fragments.length; e++) {
-                    var f = this.fragments[e];
-                    if (f.context === context) {
-                        fragment = f;
+                for (let e = i; e < this.fragments.length; e++) {
+                    fr = this.fragments[e];
+                    if (fr.context === context) {
+                        fragment = fr;
+                        ContentBinding.swap(this.fragments, e, i);
+                        break;
                     }
                 }
 
                 if (fragment === null /* not found */) {
                     fragment = new ContentFragment(this);
                     this.fragments.push(fragment);
+                    ContentBinding.swap(this.fragments, this.fragments.length - 1, i);
                 }
 
                 fragment.setOrder(i);
                 fragment.update(context);
+            }
+
+            for (var j = stream.length; j < this.fragments.length; j++) {
+                fr = this.fragments[j];
             }
 
             return stream;
@@ -197,7 +223,7 @@ export module Dom {
             this.order = i;
         }
 
-        insert(dom, index) {
+        get offset() {
             var offset = 0;
             for (var i = 0; i < this.owner.fragments.length; i++) {
                 var frag = this.owner.fragments[i];
@@ -205,8 +231,11 @@ export module Dom {
                     offset += frag.bindings.length;
                 }
             }
+            return offset;
+        }
 
-            this.owner.parent.insert(dom, offset + index);
+        insert(dom, index) {
+            this.owner.parent.insert(dom, this.offset + index);
         }
 
         public text(ast, childIndex: number): TextBinding {
@@ -313,6 +342,7 @@ export module Dom {
             var target = {
                 parent: this.dom,
                 insert(dom, idx) {
+                    console.log(dom, idx);
                     return this.parent.appendChild(dom);
                 }
             }

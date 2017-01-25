@@ -8,7 +8,7 @@ export module Reactive {
     }
 
     interface IAction {
-        execute();
+        execute(options?: any);
     }
 
     interface IDispatcher {
@@ -298,27 +298,22 @@ export module Reactive {
 
         public dependencies: IDependency<IAction>[] = [];
         protected context;
-        public state;
 
         constructor(private dispatcher: IDispatcher = DefaultDispatcher) { }
 
-        execute() {
+        execute(options?: any) {
             for (var i = 0; i < this.dependencies.length; i++) {
                 this.dependencies[i].unbind(this);
             }
             this.dependencies.length = 0;
 
-            this.update(this.context);
+            this.update(this.context, options);
         }
 
-        update(context) {
+        update(context, options?) {
             this.context = context;
 
-            this.state = Core.ready(this.state,
-                s => {
-                    return this.render(context, s);
-                });
-
+            this.render(context, options);
             return this;
         }
 
@@ -332,7 +327,7 @@ export module Reactive {
             }
         }
 
-        public abstract render(context?, state?): any;
+        public abstract render(context?, options?): any;
 
         extend(): any {
             throw new Error("Not implemented");
