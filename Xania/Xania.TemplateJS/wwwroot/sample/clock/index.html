@@ -1,39 +1,52 @@
 ﻿<!DOCTYPE html>
 <html>
 <head>
-    <title></title>
-    <meta charset="utf-8" />
-    <link href="app.css" rel="stylesheet" />
-    <script src="../../lib/system.js/dist/system.src.js"></script>
-    <script>
-        System.config({ packages: { '/': {} } });
-        System.import("app").then(app => {
-            app.init(document.body.querySelector("template"));
-        });
-    </script>
+  <title></title>
+  <meta charset="utf-8" />
+  <link href="app.css" rel="stylesheet" />
+  <script src="../../lib/system.js/dist/system.src.js"></script>
+  <script>
+    System.config({ packages: { '/': {} } });
+    System.import("app").then(app => {
+      app.init(document.body.querySelector("template"));
+    });
+  </script>
+  <style type="text/css">
+    div.item {
+      border: solid 1px black;
+      background-color: aliceblue;
+      line-height: 20px;
+      height: 20px;
+      margin: 10px;
+      text-align: center;
+    }
+
+    div.item span { margin: 0 4px }
+  </style>
 </head>
 <body>
-    <div style="margin: 40px; ">
-        <template>
-            <button click="{{ values <- shuffle values }}">rearrange</button>
-            <div data-repeat="{{ for v in values }}">
-                {{v}}
-            </div>
-            <svg viewBox="0 0 200 200">
-                <g transform="scale(2) translate(50,50)">
-                    <circle class="clock-face" r="35"></circle>
-                    <line data-repeat="{{ for p in [ 0..59 ] }}" class="minor" y1="42" y2="45" transform="rotate( {{ p * 6 }} )"></line>
-                    <line data-repeat="{{ for p in [ 0..11 ] }}" class="major" y1="35" y2="45" transform="rotate( {{ p * 30 }} )"></line>
-                    <line class="hour" y1="2" y2="-20" transform="rotate( {{ hoursAngle time }} )"></line>
-                    <line class="minute" y1="4" y2="-30" transform="rotate( {{ minutesAngle time }} )"></line>
-                    <g transform="rotate( {{ secondsAngle time }} )">
-                        <line class="second" y1="10" y2="-38"></line>
-                        <line class="second-counterweight" y1="10" y2="2"></line>
-                    </g>
-                </g>
-            </svg>
-        </template>
-    </div>
+  <div style="margin: 40px; ">
+    <template>
+      <button click="{{ values <- shuffle values }}">rearrange</button>
+      <div class="item" data-repeat="{{ for v in values }}">
+        <span>{{v}} : </span>
+        <!--<span class="item" data-repeat="{{ for w in values }}">{{w}}</span>-->
+      </div>
+      <svg viewBox="0 0 200 200">
+          <g transform="scale(2) translate(50,50)">
+              <circle class="clock-face" r="35"></circle>
+              <line data-repeat="{{ for p in [ 0..59 ] }}" class="minor" y1="42" y2="45" transform="rotate( {{ p * 6 }} )"></line>
+              <line data-repeat="{{ for p in [ 0..11 ] }}" class="major" y1="35" y2="45" transform="rotate( {{ p * 30 }} )"></line>
+              <line class="hour" y1="2" y2="-20" transform="rotate( {{ hoursAngle time }} )"></line>
+              <line class="minute" y1="4" y2="-30" transform="rotate( {{ minutesAngle time }} )"></line>
+              <g transform="rotate( {{ secondsAngle time }} )">
+                  <line class="second" y1="10" y2="-38"></line>
+                  <line class="second-counterweight" y1="10" y2="2"></line>
+              </g>
+          </g>
+      </svg>
+    </template>
+  </div>
 
 </body>
 </html>

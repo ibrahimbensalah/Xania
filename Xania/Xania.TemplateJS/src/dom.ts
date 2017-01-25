@@ -19,27 +19,27 @@ export module Dom {
         constructor(private target) {
         }
 
+        insert(dom, idx) {
+            console.log("insert", this.target, dom, idx);
+            var target = this.target;
+            if (idx < target.childNodes.length) {
+                var current = target.childNodes[idx];
+                if (current !== dom) {
+                    target.insertBefore(dom, current);
+                }
+            } else {
+                target.appendChild(dom);
+            }
+        }
+
         text(expr): Re.Binding {
-            return new TextBinding(expr);
+            return new TextBinding(expr, this);
         }
         content(ast, children: Template.INode[]): Re.Binding {
-            return new ContentBinding(ast,
-                {
-                    parent: this.target,
-                    insert(child, idx) {
-                        if (idx < this.parent.childNodes.length) {
-                            var current = this.parent.childNodes[idx];
-                            if (current !== child) {
-                                this.parent.insertBefore(child, current);
-                            }
-                        } else {
-                            this.parent.appendChild(child);
-                        }
-                    }
-                } as any, children);
+            return new ContentBinding(ast, this, children);
         }
         tag(name, ns, attrs): IVisitor {
-            var tag = new TagBinding(name, ns);
+            var tag = new TagBinding(name, ns, this);
 
             for (var i = 0; i < attrs.length; i++) {
                 tag.attr(attrs[i].name, attrs[i].tpl);
@@ -152,7 +152,7 @@ export module Dom {
     export class ContentBinding extends Re.Binding {
         public fragments: ContentFragment[] = [];
 
-        constructor(private ast, public parent: { insert(n: Node, idx: number) }, public children: Template.INode[]) {
+        constructor(private ast, public parent: IBindingTarget, public children: Template.INode[]) {
             super();
         }
 
@@ -207,14 +207,16 @@ export module Dom {
         public context;
 
         constructor(private owner: ContentBinding) {
+            for (var e = 0; e < this.owner.children.length; e++) {
+                this.bindings[e] =
+                    this.owner.children[e].accept(this as IVisitor, e);
+            }
         }
 
         update(context) {
             this.context = context;
             for (var e = 0; e < this.owner.children.length; e++) {
-                this.bindings[e] =
-                    this.owner.children[e].accept(this as IVisitor, e)
-                        .update(this.context);
+                this.bindings[e].update(context);
             }
             return this;
         }
@@ -239,67 +241,65 @@ export module Dom {
         }
 
         public text(ast, childIndex: number): TextBinding {
-            var binding = new TextBinding(ast);
-            this.insert(binding.dom, childIndex);
+            var binding = new TextBinding(ast, this);
             return binding;
         }
 
         public content(ast, children, childIndex: number): ContentBinding {
             var frag = this;
-            var binding = new ContentBinding(ast, {
-                insert(dom) {
-                    frag.insert(dom, childIndex);
-                }
-            }, children);
+            var binding = new ContentBinding(ast, this, children);
             return binding;
         }
 
         public tag(tagName: string, ns: string, attrs, childIndex: number): TagBinding {
-            var tag = new TagBinding(tagName, ns);
+            var tag = new TagBinding(tagName, ns, this);
 
             for (var i = 0; i < attrs.length; i++) {
                 tag.attr(attrs[i].name, attrs[i].tpl);
             }
 
-            this.insert(tag.dom, childIndex);
-
             return tag;
         }
     }
 
-    export class TextBinding extends Re.Binding {
-        public dom;
+    interface IBindingTarget {
+        insert(dom, idx);
+    }
 
-        constructor(private expr) {
+    export class TextBinding extends Re.Binding {
+        public textNode;
+
+        constructor(private expr, private target?: IBindingTarget) {
             super();
-            this.dom = (<any>document).createTextNode("");
         }
 
         render() {
             const result = this.evaluate(accept, this.expr);
 
-            if (result === undefined) {
-                // this.dom.detach();
+            var str = result && result.valueOf();
+            if (this.textNode === undefined) {
+                this.textNode = (<any>document).createTextNode(str);
             } else {
-                this.dom.textContent = result && result.valueOf();
+                this.textNode.textContent = str;
             }
+            if (this.target)
+                this.target.insert(this.textNode, 0);
         }
     }
 
     export class TagBinding extends Re.Binding implements IVisitor {
-        public dom;
+        public tagNode;
         private attributeBindings = [];
         private childBindings: Re.Binding[] = [];
         private events = {};
-        private appendChild = dom => this.dom.appendChild(dom);
         private classBinding = new ClassBinding(this);
 
-        constructor(tagName: string, private ns: string = null) {
+        constructor(tagName: string, private ns: string = null, private target?: IBindingTarget) {
             super();
             if (ns === null)
-                this.dom = document.createElement(tagName);
+                this.tagNode = document.createElement(tagName);
             else {
-                this.dom = (<any>document).createElementNS(ns, tagName.toLowerCase());
+                this.tagNode = (<any>document).createElementNS(ns, tagName.toLowerCase());
             }
         }
 
@@ -321,6 +321,10 @@ export module Dom {
             return this;
         }
 
+        insert(dom, idx) {
+            this.tagNode.appendChild(dom);
+        }
+
         on(name, ast): this {
             this.events[name] = ast;
 
@@ -328,25 +332,17 @@ export module Dom {
         }
 
         public text(ast): TextBinding {
-            var binding = new TextBinding(ast);
+            var binding = new TextBinding(ast, this);
             this.childBindings.push(binding);
 
             if (!!this.context)
                 binding.update(this.context);
 
-            this.appendChild(binding.dom);
             return binding;
         }
 
         public content(ast, children: Template.INode[]): ContentBinding {
-            var target = {
-                parent: this.dom,
-                insert(dom, idx) {
-                    console.log(dom, idx);
-                    return this.parent.appendChild(dom);
-                }
-            }
-            var binding = new ContentBinding(ast, target, children);
+            var binding = new ContentBinding(ast, this, children);
 
             if (!!this.context)
                 binding.update(this.context);
@@ -356,14 +352,13 @@ export module Dom {
         }
 
         public tag(tagName: string, ns: string, attrs, options: any): TagBinding {
-            var tag = new TagBinding(tagName, ns);
+            var tag = new TagBinding(tagName, ns, this);
             this.childBindings.push(tag);
 
             for (var i = 0; i < attrs.length; i++) {
                 tag.attr(attrs[i].name, attrs[i].tpl);
             }
 
-            this.appendChild(tag.dom);
             return tag;
         }
 
@@ -383,7 +378,8 @@ export module Dom {
         }
 
         render(context) {
-            return this.dom;
+            if (this.target)
+                this.target.insert(this.tagNode, 0);
         }
 
         trigger(name) {
@@ -436,7 +432,7 @@ export module Dom {
         public setAttribute(attrName: string, newValue) {
             var oldValue = this.oldValue;
 
-            var tag = this.parent.dom;
+            var tag = this.parent.tagNode;
             if (typeof newValue === "undefined" || newValue === null) {
                 tag[attrName] = void 0;
                 tag.removeAttribute(attrName);
@@ -460,7 +456,7 @@ export module Dom {
         }
 
         render() {
-            var tag = this.parent.dom;
+            var tag = this.parent.tagNode;
             tag.addEventListener(this.name, () => {
                 let value = this.evaluate(accept, this.expr);
             });
@@ -501,7 +497,7 @@ export module Dom {
             var oldValue = this.oldValue;
 
             var attrName = this.name;
-            var tag = this.parent.dom;
+            var tag = this.parent.tagNode;
             if (typeof newValue === "undefined" || newValue === null) {
                 tag[attrName] = void 0;
                 tag.removeAttribute(attrName);

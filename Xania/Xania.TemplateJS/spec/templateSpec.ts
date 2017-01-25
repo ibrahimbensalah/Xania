@@ -57,7 +57,7 @@ describe("templating",
 
                 store.get("p").get("firstName").set("bla");
 
-                expect(binding.dom.textContent).toBe("bla");
+                expect(binding.textNode.textContent).toBe("bla");
                 expect(binding.dependencies.length).toBe(2);
             });
 
@@ -92,10 +92,10 @@ describe("templating",
                     .attr("class.adult-person", fs("p.adult"));
 
                 binding.update(new Re.Store({ p: ibrahim }));
-                expect(binding.dom.className).toBe("Ibrahim adult-person");
+                expect(binding.tagNode.className).toBe("Ibrahim adult-person");
 
                 binding.update(new Re.Store({ p: ramy }));
-                expect(binding.dom.className).toBe("Ramy");
+                expect(binding.tagNode.className).toBe("Ramy");
             });
 
         it("tag attribute binding",
@@ -104,10 +104,10 @@ describe("templating",
                     .attr("id", fs('p.age'));
 
                 binding.update(new Re.Store({ p: ibrahim }));
-                expect(binding.dom.id).toBe('36');
+                expect(binding.tagNode.id).toBe('36');
 
                 binding.update(new Re.Store({ p: ramy }));
-                expect(binding.dom.id).toBe('5');
+                expect(binding.tagNode.id).toBe('5');
             });
 
         it("tag children binding",
@@ -118,13 +118,13 @@ describe("templating",
                 div.text(fs("p.firstName"));
                 div.update(store);
 
-                expect(div.dom.childNodes.length).toBe(1);
-                expect(div.dom.textContent).toBe('Ibrahim');
+                expect(div.tagNode.childNodes.length).toBe(1);
+                expect(div.tagNode.textContent).toBe('Ibrahim');
 
                 store.get('p').get('firstName').set('IBRAHIM');
 
-                expect(div.dom.textContent).toBe('IBRAHIM');
-                console.log(div.dom);
+                expect(div.tagNode.textContent).toBe('IBRAHIM');
+                console.log(div.tagNode);
             });
 
 
@@ -152,12 +152,12 @@ describe("templating",
                 var stream = new Observables.Observable<number>();
 
                 var binding = new Dom.TextBinding(fs("value")).update(new Re.Store({ value: stream }));
-                expect(binding.dom.textContent).toBe("");
+                expect(binding.textNode.textContent).toBe("");
 
                 stream.onNext(123);
-                expect(binding.dom.textContent).toBe("123");
+                expect(binding.textNode.textContent).toBe("123");
 
                 stream.onNext(456);
-                expect(binding.dom.textContent).toBe("456");
+                expect(binding.textNode.textContent).toBe("456");
             });
     });
