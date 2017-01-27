@@ -31,7 +31,6 @@ describe("fsharp parser", () => {
         () => {
             var ast = fs("fun x -> x");
             expect(ast).toBeDefined();
-            console.log("\r\n =========== \r\n" + JSON.stringify(ast, null, 2) + "\r\n ======== \r\n", ast);
 
             var compose = ast;
             expect(compose.type).toBe("lambda");
@@ -43,7 +42,6 @@ describe("fsharp parser", () => {
         () => {
             var ast = fs(".firstName");
             expect(ast).toBeDefined();
-            console.log("\r\n =========== \r\n" + JSON.stringify(ast, null, 2) + "\r\n ======== \r\n", ast);
 
             var compose = ast;
             expect(compose.type).toBe("lambda");
@@ -56,19 +54,15 @@ describe("fsharp parser", () => {
         () => {
             var ast = fs("1 + 2");
             expect(ast).toBeDefined();
-            console.log("\r\n =========== \r\n" + JSON.stringify(ast, null, 2) + "\r\n ======== \r\n");
 
             var expr = ast;
             expect(expr.type).toBe('app');
-
-            console.log(JSON.stringify(ast, null, 2));
         });
 
     it(':: fn a',
         () => {
             var ast = fs("fun a");
             expect(ast).toBeDefined();
-            console.log("\r\n =========== \r\n" + JSON.stringify(ast, null, 2) + "\r\n ======== \r\n");
 
             var expr = ast;
             expect(expr.type).toBe('app');
@@ -80,7 +74,6 @@ describe("fsharp parser", () => {
         () => {
             var ast = fs("fun ()");
             expect(ast).toBeDefined();
-            console.log("\r\n =========== \r\n" + JSON.stringify(ast, null, 2) + "\r\n ======== \r\n");
 
             var expr = ast;
             expect(expr.type).toBe('app');
@@ -92,7 +85,6 @@ describe("fsharp parser", () => {
         () => {
             var ast = fs("(+) a b");
             expect(ast).toBeDefined();
-            console.log("\r\n =========== \r\n" + JSON.stringify(ast, null, 2) + "\r\n ======== \r\n");
 
             var expr = ast;
             expect(expr).toEqual({ "type": "app", "fun": "+", "args": [{ "type": "ident", "name": "a" }, { "type": "ident", "name": "b" }] });
@@ -102,7 +94,6 @@ describe("fsharp parser", () => {
         () => {
             var ast = fs("a |> b |> c");
             expect(ast).toBeDefined();
-            console.log("\r\n =========== \r\n" + JSON.stringify(ast, null, 2) + "\r\n ======== \r\n");
 
             var pipe1 = ast;
             expect(pipe1.type).toBe("pipe");
@@ -120,7 +111,6 @@ describe("fsharp parser", () => {
         () => {
             var ast = fs("a + b |> c");
             expect(ast).toBeDefined();
-            console.log("\r\n =========== \r\n" + JSON.stringify(ast, null, 2) + "\r\n ======== \r\n");
 
             var pipe = ast;
             expect(pipe.type).toBe("pipe");
@@ -172,7 +162,6 @@ describe("fsharp parser", () => {
         () => {
             var ast = fs("for p in people where p.adult");
             expect(ast).toBeDefined();
-            console.log("\r\n =========== \r\n" + JSON.stringify(ast, null, 2) + "\r\n ======== \r\n", ast);
 
             var where = ast;
 

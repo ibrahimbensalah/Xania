@@ -33,7 +33,10 @@ export function accept(ast: any, visitor: IAstVisitor, context) {
         case "app":
             const args = [];
             for (let i = 0; i < ast.args.length; i++) {
-                args.push(accept(ast.args[i], visitor, context));
+                var arg = accept(ast.args[i], visitor, context);
+                if (typeof arg === "undefined")
+                    return undefined;
+                args.push(arg);
             }
             return visitor.app(accept(ast.fun, visitor, context), args);
         case "select":
@@ -43,6 +46,8 @@ export function accept(ast: any, visitor: IAstVisitor, context) {
         case "range":
             var first = accept(ast.from, visitor, context);
             var last = accept(ast.to, visitor, context);
+            if (typeof first === "undefined" || typeof last === "undefined")
+                return undefined;
             var arr = [];
             for (var i = first; i <= last; i++)
                 arr.push(i);
@@ -51,11 +56,14 @@ export function accept(ast: any, visitor: IAstVisitor, context) {
             var left = accept(ast.left, visitor, context);
             var right = accept(ast.right, visitor, context);
 
+            if (typeof left === "undefined" || typeof right === "undefined")
+                return undefined;
+
             return visitor.app(ast.op, [right, left]);
         case "await":
             return visitor.await(accept(ast.expr, visitor, context));
         case "pipe":
-            return visitor.await(accept(ast.expr, visitor, context));
+            throw Error("Not implement yet");
         default:
             throw new Error(`not supported type ${ast.type}`);
     }

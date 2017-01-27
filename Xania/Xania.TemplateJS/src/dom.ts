@@ -10,11 +10,12 @@ export module Dom {
 
     interface IDomBinding {
         length;
-        map(parent) : this;
+        map(parent): this;
         update(context);
+        dispose();
     }
 
-    interface IVisitor extends Template.IVisitor<IDomBinding> {
+    interface IDomVisitor extends Template.IVisitor<IDomBinding> {
     }
 
     interface IView {
@@ -187,33 +188,47 @@ export module Dom {
             super();
         }
 
+        dispose() {
+            for (var i = 0; i < this.fragments.length; i++) {
+                this.fragments[i].dispose();
+            }
+        }
+
         map(parent: IBindingTarget): this {
             this.parent = parent;
-
             return this;
         }
 
         private static swap(arr: Fragment[], srcIndex, tarIndex) {
             if (srcIndex > tarIndex) {
-                this.swap(arr, tarIndex, srcIndex);
+                var i = srcIndex;
+                srcIndex = tarIndex;
+                tarIndex = i;
             }
-            else if (srcIndex < tarIndex) {
+            if (srcIndex < tarIndex) {
                 var src = arr[srcIndex];
                 arr[srcIndex] = arr[tarIndex];
                 arr[tarIndex] = src;
             }
         }
 
-        render() {
-            var stream = this.ast === null ? [this.context] : accept(this.ast, this, this.context);
+        render() { }
+
+        update(context) {
+            super.update(context);
+
+            var stream = this.ast === null
+                ? [context]
+                : accept(this.ast, this, context);
+
             var fr: Fragment;
             for (var i = 0; i < stream.length; i++) {
-                var context = stream[i];
+                var item = stream[i];
 
                 var fragment: Fragment = null;
                 for (let e = i; e < this.fragments.length; e++) {
                     fr = this.fragments[e];
-                    if (fr.context === context) {
+                    if (fr.context === item) {
                         fragment = fr;
                         FragmentBinding.swap(this.fragments, e, i);
                         break;
@@ -226,7 +241,12 @@ export module Dom {
                     FragmentBinding.swap(this.fragments, this.fragments.length - 1, i);
                 }
 
-                fragment.update(context);
+                fragment.update(item);
+            }
+
+            while (this.fragments.length > stream.length) {
+                var frag = this.fragments.pop();
+                frag.dispose();
             }
 
             return stream;
@@ -252,7 +272,13 @@ export module Dom {
         constructor(private owner: FragmentBinding) {
             for (var e = 0; e < this.owner.children.length; e++) {
                 this.bindings[e] =
-                    owner.children[e].accept(this as IVisitor, e).map(this);
+                    owner.children[e].accept(this as IDomVisitor, e).map(this);
+            }
+        }
+
+        dispose() {
+            for (var i = 0; i < this.bindings.length; i++) {
+                this.bindings[i].dispose();
             }
         }
 
@@ -315,6 +341,10 @@ export module Dom {
             this.textNode = (<any>document).createTextNode("");
         }
 
+        dispose() {
+            this.textNode.remove();
+        }
+
         map(target: IBindingTarget): this {
             this.target = target;
             this.target.insert(this, this.textNode, 0);
@@ -323,7 +353,8 @@ export module Dom {
 
         render() {
             const result = this.evaluate(accept, this.expr);
-            this.textNode.textContent = result && result.valueOf();
+            if (typeof result !== "undefined")
+                this.textNode.textContent = result && result.valueOf();
         }
     }
 
@@ -346,6 +377,10 @@ export module Dom {
             for (var i = 0; i < childBindings.length; i++) {
                 childBindings[i].map(this);
             }
+        }
+
+        dispose() {
+            this.tagNode.remove();
         }
 
         map(target: IBindingTarget): this {
@@ -482,16 +517,39 @@ export module Dom {
 
     }
 
-    export class EventBinding extends Re.Binding {
-        constructor(tagNode: any, private name, private expr) {
-            super();
+    export class EventBinding {
+        private context;
+        private values = [];
 
+        constructor(tagNode: any, private name, private expr) {
             tagNode.addEventListener(this.name, () => {
-                this.evaluate(accept, this.expr);
+                accept(this.expr, this, this.context);
+                var values = this.values;
+                this.values = [];
+                for (let i = 0; i < values.length; i++) {
+                    values[i].refresh();
+                }
             });
         }
 
-        render() {
+        update(context) {
+            this.context = context;
+        }
+
+        where(source, predicate) {
+            throw Error("Not implemented yet.");
+        }
+        select(source, selector) {
+            throw Error("Not implemented yet.");
+        }
+        query(param, source) {
+            throw Error("Not implemented yet.");
+        }
+        await(observable) {
+            throw Error("Not implemented yet.");
+        }
+        const(value) {
+            return value;
         }
 
         app(fun, args: any[]) {
@@ -501,7 +559,18 @@ export module Dom {
                 return value;
             }
 
-            return super.app(fun, args);
+            return fun.apply(null, args.map(x => x.valueOf()));
+        }
+
+        member(target: { get(name: string); refresh?(); }, name) {
+            var value = target.get ? target.get(name) : target[name];
+
+            if (value && typeof value.refresh === "function")
+                this.values.push(value);
+            else if (typeof value === "function" && typeof target.refresh === "function")
+                this.values.push(target);
+
+            return value;
         }
     }
 
@@ -516,7 +585,11 @@ export module Dom {
         render() {
             let value = this.evaluate(accept, this.expr);
 
-            if (value !== null && value !== void 0 && !!value.valueOf)
+            if (typeof value === "undefined") {
+                return;
+            }
+
+            if (value !== null && !!value.valueOf)
                 value = value.valueOf();
 
             var newValue;

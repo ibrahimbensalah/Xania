@@ -20,7 +20,6 @@ class RootDom {
         } else {
             this.dom.appendChild(dom);
         }
-        console.log("insert", dom, insertAt);
     }
 
     get childNodes() {
@@ -73,16 +72,13 @@ describe("templating",
                     .map(fragment)
                     .update(store);
 
-                console.log(fragment.childNodes);
                 expect(fragment.childNodes.length).toBe(3);
 
                 store.get("people").get(1).get("roles").set(["zoon"]);
 
-                console.log(fragment.childNodes);
                 expect(fragment.childNodes.length).toBe(4);
 
                 store.get("people").get(0).get("roles").set(["papa"]);
-                console.log(fragment.childNodes);
             });
 
         it("tag class binding",
@@ -124,7 +120,6 @@ describe("templating",
                 store.get('p').get('firstName').set('IBRAHIM');
 
                 expect(div.tagNode.textContent).toBe('IBRAHIM');
-                console.log(div.tagNode);
             });
 
 
@@ -151,7 +146,7 @@ describe("templating",
             () => {
                 var stream = new Observables.Observable<number>();
 
-                var binding = new Dom.TextBinding(fs("value")).update(new Re.Store({ value: stream }));
+                var binding = new Dom.TextBinding(fs("await value")).update(new Re.Store({ value: stream }));
                 expect(binding.textNode.textContent).toBe("");
 
                 stream.onNext(123);

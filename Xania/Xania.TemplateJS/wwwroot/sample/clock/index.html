@@ -28,15 +28,8 @@
   </style>
 </head>
 <body>
-  <div style="margin: 40px; ">
+  <div style="margin: 40px;">
     <template>
-      <button click="{{ values <- shuffle values }}">rearrange</button>
-      <div class="item" data-repeat="{{ for v in values }}">
-        [ {{ (await time) + v * 1000 }} ]
-        <span class="item" data-repeat="{{ for w in values }}">
-          {{w}}
-        </span>
-      </div>
       <svg viewBox="0 0 200 200">
         <g transform="scale(2) translate(50,50)">
           <circle class="clock-face" r="35"></circle>

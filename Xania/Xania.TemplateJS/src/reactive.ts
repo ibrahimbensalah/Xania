@@ -32,8 +32,9 @@ export module Reactive {
 
         get(propertyName: string): IProperty {
             for (var i = 0; i < this.properties.length; i++) {
-                if (this.properties[i].name === propertyName)
+                if (this.properties[i].name === propertyName) {
                     return this.properties[i];
+                }
             }
 
             var initialValue = this.value[propertyName];
@@ -52,14 +53,18 @@ export module Reactive {
             return property;
         }
 
-        protected updateProperties() {
-            var properties = this.properties.slice(0);
-            this.properties = [];
-            for (var i = 0; i < properties.length; i++) {
-                var property = properties[i];
-                if (property.update() || typeof property.value !== "undefined") {
-                    this.properties.push(property);
+        protected refresh() {
+            var disposed = [];
+            for (let i = 0; i < this.properties.length; i++) {
+                var property = this.properties[i];
+                property.update();
+                if (typeof property.valueOf() === "undefined") {
+                    disposed.push(i);
                 }
+            }
+
+            for (let i = disposed.length - 1; i >= 0; i--) {
+                this.properties.splice(disposed[i], 1);
             }
         }
 
@@ -108,7 +113,7 @@ export module Reactive {
         }
 
         unbind(action: IAction) {
-            var idx = this.actions.indexOf(action);
+            const idx = this.actions.indexOf(action);
             if (idx < 0)
                 return false;
 
@@ -134,16 +139,13 @@ export module Reactive {
                 delete this.awaited;
             }
 
-            if (typeof newValue === "undefined")
-                throw new Error("Undefined value is not supported");
-
             this.value = newValue;
 
             if (this.value === void 0) {
                 this.extensions = [];
                 this.properties = [];
             } else {
-                this.updateProperties();
+                this.refresh();
             }
 
             if (this.actions) {
@@ -235,9 +237,8 @@ export module Reactive {
         constructor(private dispatcher: IDispatcher, private parent?: { get(name: string); }) {
         }
 
-        add(name: string, value: Value) {
+        add(name: string, value: Value): this {
             this.values[name] = value;
-
             return this;
         }
 
@@ -259,12 +260,18 @@ export module Reactive {
         get(name: string) {
             var value = this.values[name];
 
+            if (value === null)
+                return null;
+
             if (typeof value === "undefined") {
                 if (this.parent)
                     return this.parent.get(name);
 
                 return value;
             }
+
+            if (typeof value.valueOf() === "undefined")
+                return undefined;
 
             return value;
         }
@@ -412,42 +419,54 @@ export module Reactive {
 
         query(param, source) {
             Binding.observe(source, this);
-            return source.map(item => {
-                return this.context.extend(param, item);
-            });
+
+            if (source.get) {
+                var length = source.get("length");
+                Binding.observe(length, this);
+                var result = [];
+                for (var i = 0; i < length; i++) {
+                    var ext = this.context.extend(param, source.get(i));
+                    result.push(ext);
+                }
+                return result;
+            } else {
+                return source.map(item => {
+                    return this.context.extend(param, item);
+                });
+            }
         }
 
         member(target: { get(name: string) }, name) {
             var value = target.get ? target.get(name) : target[name];
             Binding.observe(value, this);
-
-            //if (!!value && !!value.subscribe) {
-            //    // unwrap current value of observable
-            //    var subscription = value.subscribe(newValue => {
-            //        if (newValue !== subscription.current) {
-            //            subscription.dispose();
-            //            this.dispatcher.dispatch(this);
-            //        }
-            //    });
-
-            //    return subscription.current;
-            //}
-
             return value;
         }
 
         app(fun, args: any[]) {
+            var xs = [];
+            for (var i = 0; i < args.length; i++) {
+                var arg = args[i];
+                if (arg && arg.valueOf) {
+                    var x = arg.valueOf();
+                    if (typeof x === "undefined")
+                        return undefined;
+                    xs.push(x);
+                } else {
+                    xs.push(arg);
+                }
+            }
+
             if (fun === "+") {
-                return args[1] + args[0];
+                return xs[1] + xs[0];
             } else if (fun === "-") {
-                return args[1] - args[0];
+                return xs[1] - xs[0];
             } else if (fun === "*") {
-                return args[1] * args[0];
+                return xs[1] * xs[0];
             } else if (fun === "assign") {
                 throw new Error("assignment is only allow in EventBinding");
             }
 
-            return fun.apply(null, args.map(x => x.valueOf()));
+            return fun.apply(null, xs);
         }
 
         const(value) {
@@ -468,7 +487,18 @@ export module Reactive {
                 if (parts.length === 1)
                     return this.evaluatePart(accept, parts[0]);
 
-                return parts.map(p => this.evaluatePart(accept, p)).join("");
+                var concatenated = "";
+                for (var i = 0; i < parts.length; i++) {
+                    var p = this.evaluatePart(accept, parts[i]);
+                    if (typeof p === "undefined")
+                        return undefined;
+                    var inner = p.valueOf();
+                    if (inner === undefined)
+                        return undefined;
+                    if (inner !== null)
+                        concatenated += inner;
+                }
+                return concatenated;
             } else {
                 return this.evaluatePart(accept, parts);
             }

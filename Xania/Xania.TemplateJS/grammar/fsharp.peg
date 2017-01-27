@@ -4,6 +4,15 @@
  *
  * Accepts expressions like "2 * (3 + 4)" and computes their value.
  */
+{
+	function plus(x, y) {
+		return y + x;
+	}
+
+	function minus(x, y) {
+		return y - x;
+	}
+}
 
 Program
 	= _ expr:Expression _ {
@@ -71,8 +80,13 @@ AdditiveExpression
   }
 
 AdditiveBinder
-  = op:[+-] _ operand:MultiplicativeExpression {
-     return { op, operand }
+  = op:[+-] _ expr:MultiplicativeExpression {
+	 switch(op) {
+		case "+":
+			return { op: plus, operand: expr };
+		default:
+			return { op: minus, operand: expr };
+	 }
   }
 
 MultiplicativeExpression
