@@ -5,7 +5,7 @@ export module Template {
     export interface IVisitor<T> {
         text(expr, options: any): T;
         content(expr, children: INode[], options?: any): T;
-        tag(name, ns, attrs, options?: any): IVisitor<T>;
+        tag(name, ns, attrs, children, options?: any): T;
     }
 
     export interface INode {
@@ -86,10 +86,8 @@ export module Template {
         }
 
         accept<T>(visitor: IVisitor<T>, options: any) {
-            var tag = visitor.tag(this.name, this.ns, this.attributes, options) as IVisitor<T>;
-            this._children.forEach(x => x.accept(tag));
-
-            return tag;
+            var children = this._children.map(x => x.accept(visitor));
+            return visitor.tag(this.name, this.ns, this.attributes, children, options);
         }
     }
 }

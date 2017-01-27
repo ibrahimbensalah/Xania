@@ -29,10 +29,10 @@
     <template>
       <button click="{{ values <- shuffle values }}">rearrange</button>
       <div class="item" data-repeat="{{ for v in values }}">
-        <span>{{v}} : </span>
-        <!--<span class="item" data-repeat="{{ for w in values }}">{{w}}</span>-->
+        {{v}} :
+        <span class="item" data-repeat="{{ for w in [ 1..2 ] }}">{{w}}</span>
       </div>
-      <svg viewBox="0 0 200 200">
+      <!--<svg viewBox="0 0 200 200">
           <g transform="scale(2) translate(50,50)">
               <circle class="clock-face" r="35"></circle>
               <line data-repeat="{{ for p in [ 0..59 ] }}" class="minor" y1="42" y2="45" transform="rotate( {{ p * 6 }} )"></line>
@@ -44,7 +44,7 @@
                   <line class="second-counterweight" y1="10" y2="2"></line>
               </g>
           </g>
-      </svg>
+      </svg>-->
     </template>
   </div>
 
