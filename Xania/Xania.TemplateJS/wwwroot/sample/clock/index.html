@@ -4,11 +4,12 @@
   <title></title>
   <meta charset="utf-8" />
   <link href="app.css" rel="stylesheet" />
-  <script src="../../lib/system.js/dist/system.src.js"></script>
+  <script src="../../lib/system.js/dist/system.js"></script>
   <script>
     System.config({ packages: { '/': {} } });
     System.import("app").then(app => {
-      app.init(document.body.querySelector("template"));
+      var template = document.body.querySelector("template");
+      app.init(template, template.parentElement);
     });
   </script>
   <style type="text/css">
@@ -31,7 +32,7 @@
     <template>
       <button click="{{ values <- shuffle values }}">rearrange</button>
       <div class="item" data-repeat="{{ for v in values }}">
-        [ {{ v }} ]
+        [ {{ (await time) + v * 1000 }} ]
         <span class="item" data-repeat="{{ for w in values }}">
           {{w}}
         </span>
@@ -41,9 +42,9 @@
           <circle class="clock-face" r="35"></circle>
           <line data-repeat="{{ for p in [ 0..59 ] }}" class="minor" y1="42" y2="45" transform="rotate( {{ p * 6 }} )"></line>
           <line data-repeat="{{ for p in [ 0..11 ] }}" class="major" y1="35" y2="45" transform="rotate( {{ p * 30 }} )"></line>
-          <line class="hour" y1="2" y2="-20" transform="rotate( {{ hoursAngle time }} )"></line>
-          <line class="minute" y1="4" y2="-30" transform="rotate( {{ minutesAngle time }} )"></line>
-          <g transform="rotate( {{ secondsAngle time }} )">
+          <line class="hour" y1="2" y2="-20" transform="rotate( {{ hoursAngle (await time) }} )"></line>
+          <line class="minute" y1="4" y2="-30" transform="rotate( {{ minutesAngle (await time) }} )"></line>
+          <g transform="rotate( {{ secondsAngle (await time) }} )">
             <line class="second" y1="10" y2="-38"></line>
             <line class="second-counterweight" y1="10" y2="2"></line>
           </g>

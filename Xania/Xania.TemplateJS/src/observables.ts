@@ -48,11 +48,11 @@
 
     class Subscription<T> implements ISubscription {
 
-        private current: T;
-
         constructor(private observable: Observable<T>, private observer: IObserver<T> | Function) {
+            if (observable.subscriptions.indexOf(this) >= 0)
+                throw Error("mem leak");
+
             observable.subscriptions.push(this);
-            this.current = observable.current;
         }
 
         notify(value) {

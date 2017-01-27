@@ -27,7 +27,7 @@ export module Reactive {
         protected extensions: { name: any, value: Extension }[] = [];
         public value;
 
-        constructor(protected dispatcher: IDispatcher) {
+        constructor(public dispatcher: IDispatcher) {
         }
 
         get(propertyName: string): IProperty {
@@ -86,7 +86,6 @@ export module Reactive {
     class Property extends Value implements IDependency<IAction> {
         // list of observers to be dispatched on value change
         public actions: IAction[] = [];
-        public subscribe: (v) => void;
 
         constructor(dispatcher: IDispatcher, private parent: { value; get(name: string) }, public name) {
             super(dispatcher);
@@ -130,14 +129,15 @@ export module Reactive {
             if (newValue === this.value)
                 return false;
 
+            if (this.awaited) {
+                this.awaited.dispose();
+                delete this.awaited;
+            }
+
             if (typeof newValue === "undefined")
                 throw new Error("Undefined value is not supported");
 
             this.value = newValue;
-            delete this.subscribe;
-            if (!!newValue && newValue.subscribe) {
-                this.subscribe = newValue.subscribe.bind(newValue);
-            }
 
             if (this.value === void 0) {
                 this.extensions = [];
@@ -167,6 +167,63 @@ export module Reactive {
 
         toString() {
             return this.value === null || this.value === void 0 ? "null" : this.value.toString();
+        }
+
+        private awaited: Awaited;
+        await() {
+            if (!this.awaited) {
+                this.awaited = new Awaited(this);
+            }
+            return this.awaited;
+        }
+    }
+
+    class Awaited {
+        private subscription;
+        private actions: IAction[] = [];
+        private current;
+
+        constructor(private property: Property) {
+            this.subscription = property.value.subscribe(this);
+            this.current = property.value.current;
+        }
+
+        onNext(newValue) {
+            if (this.current !== newValue) {
+                this.current = newValue;
+                if (this.actions) {
+                    // notify next
+                    var actions = this.actions.slice(0);
+                    for (var i = 0; i < actions.length; i++) {
+                        this.property.dispatcher.dispatch(actions[i]);
+                    }
+                }
+            }
+        }
+
+        change(action: IAction): IDependency<IAction> | boolean {
+            if (this.actions.indexOf(action) < 0) {
+                this.actions.push(action);
+                return this;
+            }
+            return false;
+        }
+
+        unbind(action: IAction) {
+            var idx = this.actions.indexOf(action);
+            if (idx < 0)
+                return false;
+
+            this.actions.splice(idx, 1);
+            return true;
+        }
+
+        dispose() {
+            this.subscription.dispose();
+        }
+
+        valueOf() {
+            return this.current;
         }
     }
 
@@ -308,6 +365,7 @@ export module Reactive {
     export abstract class Binding {
 
         public dependencies: IDependency<IAction>[] = [];
+        public subscriptions: Observables.ISubscription[] = [];
         protected context;
 
         constructor(private dispatcher: IDispatcher = DefaultDispatcher) { }
@@ -363,21 +421,20 @@ export module Reactive {
             var value = target.get ? target.get(name) : target[name];
             Binding.observe(value, this);
 
-            if (!!value && !!value.subscribe) {
-                // unwrap current value of observable
-                var subscription = value.subscribe(newValue => {
-                    if (newValue !== subscription.current) {
-                        subscription.dispose();
-                        this.dispatcher.dispatch(this);
-                    }
-                });
+            //if (!!value && !!value.subscribe) {
+            //    // unwrap current value of observable
+            //    var subscription = value.subscribe(newValue => {
+            //        if (newValue !== subscription.current) {
+            //            subscription.dispose();
+            //            this.dispatcher.dispatch(this);
+            //        }
+            //    });
 
-                return subscription.current;
-            }
+            //    return subscription.current;
+            //}
 
             return value;
         }
-
 
         app(fun, args: any[]) {
             if (fun === "+") {
@@ -388,9 +445,6 @@ export module Reactive {
                 return args[1] * args[0];
             } else if (fun === "assign") {
                 throw new Error("assignment is only allow in EventBinding");
-                //var value = args[0].valueOf();
-                //args[1].set(value);
-                //return value;
             }
 
             return fun.apply(null, args.map(x => x.valueOf()));
@@ -400,8 +454,10 @@ export module Reactive {
             return value;
         }
 
-        onNext(newValue) {
-            this.execute();
+        await(observable) {
+            var awaitable = observable.await();
+            Binding.observe(awaitable, this);
+            return awaitable;
         }
 
         evaluate(accept, parts): any {

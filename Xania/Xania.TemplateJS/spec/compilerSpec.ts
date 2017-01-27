@@ -2,6 +2,7 @@
 
 import { Reactive as Re } from "../src/reactive";
 import { fsharp as fs, accept } from "../src/fsharp";
+import { Observables } from "../src/observables";
 
 interface IPerson { firstName: string; lastName: string; adult: boolean, age: number }
 
@@ -179,7 +180,6 @@ describe("fsharp parser", () => {
             expect(where.predicate.type).toBe("member");
             expect(where.source.type).toBe("query");
         });
-
     it(':: regression test',
         () => {
 
@@ -312,5 +312,19 @@ describe("runtime", () => {
             binding.render(store);
             expect(store.get("sum").valueOf()).toBe(3);
         });
+
+    it('await observable',
+        () => {
+            var observable = new Observables.Observable(123);
+            var store = new Re.Store({ observable });
+            var binding = new TestBinding(fs("await observable"));
+
+            binding.render(store);
+            expect(binding.value).toBe(123);
+
+            observable.onNext(456);
+            expect(binding.value).toBe(456);
+        });
+
 });
 

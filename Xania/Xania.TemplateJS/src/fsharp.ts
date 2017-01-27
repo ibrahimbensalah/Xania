@@ -4,6 +4,7 @@
     query(param, source);
     member(target, name);
     app(fun, args: any[]);
+    await(observable);
     const(value);
 }
 
@@ -51,6 +52,10 @@ export function accept(ast: any, visitor: IAstVisitor, context) {
             var right = accept(ast.right, visitor, context);
 
             return visitor.app(ast.op, [right, left]);
+        case "await":
+            return visitor.await(accept(ast.expr, visitor, context));
+        case "pipe":
+            return visitor.await(accept(ast.expr, visitor, context));
         default:
             throw new Error(`not supported type ${ast.type}`);
     }

@@ -96,8 +96,14 @@ Term
   / Number
   / Range
   / "(" _ expr:Expression? _ ")" {
-  	return expr === null ? { type: 'unit' } : expr 
+	return expr === null ? { type: 'unit' } : expr 
   }
+  / "await" _ expr:Expression {
+		return {
+			type: "await",
+			expr: expr
+		};
+	}
 
 Range
   = "[" _ from:(Term / Identifier) _ ".." _ to:(Term / Identifier) _ "]" {

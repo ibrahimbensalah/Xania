@@ -5,7 +5,7 @@ import { Reactive as Re } from '../../src/reactive'
 class ClockApp {
     time = new Observables.Time();
 
-    values = [1, 2, 3];
+    values = [1, 2, 3, 4, 5, 6, 7, 8];
 
     static shuffle(array) {
         var result = array.slice(0);
@@ -23,7 +23,6 @@ class ClockApp {
             result[currentIndex] = result[randomIndex];
             result[randomIndex] = temporaryValue;
         }
-        console.log(result);
         return result;
     }
 
@@ -43,7 +42,7 @@ class ClockApp {
     }
 }
 
-export function init(clockTpl) {
+export function init(tpl, target) {
     var store = new Re.Store(new ClockApp());
-    Dom.parse(clockTpl).bind(clockTpl.parentElement, store);
+    Dom.parse(tpl).bind(target, store);
 }
