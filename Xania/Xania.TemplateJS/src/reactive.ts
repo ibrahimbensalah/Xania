@@ -173,6 +173,7 @@ export module Reactive {
     export class Extension {
 
         private values = {};
+        protected extensions: { name: any, value: Extension }[] = [];
 
         constructor(private dispatcher: IDispatcher, private parent?: { get(name: string); }) {
         }
@@ -183,9 +184,19 @@ export module Reactive {
             return this;
         }
 
-        extend(name: string, value: Value) {
-            return new Extension(this.dispatcher, this)
-                .add(name, value);
+        extend(name: string, value: any) {
+            for (var i = 0; i < this.extensions.length; i++) {
+                var x = this.extensions[i];
+                if (x.name === value) {
+                    return x.value;
+                }
+            }
+
+            var scope = new Extension(this.dispatcher, this).add(name, value);
+
+            this.extensions.push({ name: value, value: scope });
+
+            return scope;
         }
 
         get(name: string) {

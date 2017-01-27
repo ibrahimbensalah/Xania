@@ -5,7 +5,7 @@ import { Reactive as Re } from '../../src/reactive'
 class ClockApp {
     time = new Observables.Time();
 
-    values = [1];
+    values = [1, 2, 3];
 
     static shuffle(array) {
         var result = array.slice(0);

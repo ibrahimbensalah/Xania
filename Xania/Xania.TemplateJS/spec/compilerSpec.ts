@@ -2,7 +2,6 @@
 
 import { Reactive as Re } from "../src/reactive";
 import { fsharp as fs, accept } from "../src/fsharp";
-// import { Core } from "../src/core";
 
 interface IPerson { firstName: string; lastName: string; adult: boolean, age: number }
 
@@ -12,18 +11,18 @@ var ibrahim: IPerson = {
     lastName: "ben Salah",
     adult: true
 };
-var ramy: IPerson = {
-    age: 5,
-    firstName: "Ramy",
-    lastName: "ben Salah",
-    adult: false
-};
-var rania: IPerson = {
-    age: 3,
-    firstName: "Rania",
-    lastName: "ben Salah",
-    adult: false
-};
+//var ramy: IPerson = {
+//    age: 5,
+//    firstName: "Ramy",
+//    lastName: "ben Salah",
+//    adult: false
+//};
+//var rania: IPerson = {
+//    age: 3,
+//    firstName: "Rania",
+//    lastName: "ben Salah",
+//    adult: false
+//};
 
 describe("fsharp parser", () => {
 

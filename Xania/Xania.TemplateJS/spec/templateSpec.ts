@@ -5,7 +5,6 @@ import { fsharp as fs } from "../src/fsharp";
 import { Dom } from "../src/dom";
 import { Reactive as Re } from '../src/reactive';
 import { Observables } from '../src/observables';
-// import { Core } from "../src/core";
 
 interface IPerson { firstName: string; lastName: string; adult: boolean, age: number, roles: string[] }
 
@@ -14,7 +13,7 @@ var ibrahim: IPerson, ramy: IPerson;
 class RootDom {
     private dom = document.createDocumentFragment();
 
-    insert(dom, insertAt) {
+    insert(binding, dom, insertAt) {
         if (insertAt < this.dom.childNodes.length) {
             var beforeElement = this.dom.childNodes[insertAt];
             this.dom.insertBefore(dom, beforeElement);
@@ -65,12 +64,13 @@ describe("templating",
             () => {
                 var store = new Re.Store({ people: [ibrahim, ramy] });
                 var fragment = new RootDom();
-                var binding = new Dom.ContentBinding(fs("for p in people"), fragment,
+                var binding = new Dom.FragmentBinding(fs("for p in people"),
                     [
                         new Template.TextTemplate(fs("p.firstName + ' ' + p.lastName")),
-                        new Template.ContentTemplate(fs("for r in p.roles"))
+                        new Template.FragmentTemplate(fs("for r in p.roles"))
                             .child(new Template.TextTemplate(fs("':: ' + r")))
                     ])
+                    .map(fragment)
                     .update(store);
 
                 console.log(fragment.childNodes);
@@ -114,8 +114,8 @@ describe("templating",
             () => {
                 var store = new Re.Store({ p: ibrahim });
                 var div = new Dom.TagBinding("div")
+                    .child(new Dom.TextBinding(fs("p.firstName")))
                     .attr("data-age", fs("p.age"));
-                div.text(fs("p.firstName"));
                 div.update(store);
 
                 expect(div.tagNode.childNodes.length).toBe(1);

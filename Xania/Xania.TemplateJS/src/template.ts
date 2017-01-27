@@ -21,7 +21,7 @@ export module Template {
         }
     }
 
-    export class ContentTemplate implements INode {
+    export class FragmentTemplate implements INode {
         private children: INode[] = [];
 
         constructor(private expr) { }

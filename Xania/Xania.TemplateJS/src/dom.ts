@@ -28,7 +28,6 @@ export module Dom {
         }
 
         static insertDom(target, dom, idx) {
-            console.log("insert dom", { target, dom, idx });
             if (idx < target.childNodes.length) {
                 var current = target.childNodes[idx];
                 if (current !== dom) {
@@ -54,8 +53,8 @@ export module Dom {
             this.childBindings.push(text.map(this));
             return text;
         }
-        content(ast, children: Template.INode[]): ContentBinding {
-            var content = new ContentBinding(ast, children);
+        content(ast, children: Template.INode[]): FragmentBinding {
+            var content = new FragmentBinding(ast, children);
             this.childBindings.push(content.map(this));
             return content;
         }
@@ -129,10 +128,11 @@ export module Dom {
     }
 
     function parseNode(node: Node): Template.INode {
+        var i: number;
         if (node.nodeType === 1 && node.nodeName === "TEMPLATE") {
             const content = <HTMLElement>node["content"];
-            var template = new Template.ContentTemplate(null);
-            for (var i = 0; i < content.childNodes.length; i++) {
+            var template = new Template.FragmentTemplate(null);
+            for (i = 0; i < content.childNodes.length; i++) {
                 var tpl = parseNode(content.childNodes[i]);
                 if (tpl)
                     template.child(tpl);
@@ -142,12 +142,12 @@ export module Dom {
             const elt = <HTMLElement>node;
 
             const template = new Template.TagTemplate(elt.tagName, elt.namespaceURI);
-            var content = null;
+            var fragmentTemplate = null;
 
-            for (var i = 0; !!elt.attributes && i < elt.attributes.length; i++) {
+            for (i = 0; !!elt.attributes && i < elt.attributes.length; i++) {
                 var attribute = elt.attributes[i];
                 if (attribute.name === "data-repeat") {
-                    content = new Template.ContentTemplate(parseText(attribute.value)).child(template);
+                    fragmentTemplate = new Template.FragmentTemplate(parseText(attribute.value)).child(template);
                 } else {
                     parseAttr(template, attribute);
                 }
@@ -159,7 +159,7 @@ export module Dom {
                     template.addChild(child);
             }
 
-            return content || template;
+            return fragmentTemplate || template;
         } else if (node.nodeType === 3) {
             var textContent = node.textContent;
             if (textContent.trim().length > 0) {
@@ -171,8 +171,8 @@ export module Dom {
         return undefined;
     }
 
-    export class ContentBinding extends Re.Binding implements IDomBinding {
-        public fragments: ContentFragment[] = [];
+    export class FragmentBinding extends Re.Binding implements IDomBinding {
+        public fragments: Fragment[] = [];
         public parent: IBindingTarget;
 
         get length() {
@@ -193,7 +193,7 @@ export module Dom {
             return this;
         }
 
-        private static swap(arr: ContentFragment[], srcIndex, tarIndex) {
+        private static swap(arr: Fragment[], srcIndex, tarIndex) {
             if (srcIndex > tarIndex) {
                 this.swap(arr, tarIndex, srcIndex);
             }
@@ -206,37 +206,33 @@ export module Dom {
 
         render() {
             var stream = this.ast === null ? [this.context] : accept(this.ast, this, this.context);
-            var fr: ContentFragment;
+            var fr: Fragment;
             for (var i = 0; i < stream.length; i++) {
                 var context = stream[i];
 
-                var fragment: ContentFragment = null;
+                var fragment: Fragment = null;
                 for (let e = i; e < this.fragments.length; e++) {
                     fr = this.fragments[e];
                     if (fr.context === context) {
                         fragment = fr;
-                        ContentBinding.swap(this.fragments, e, i);
+                        FragmentBinding.swap(this.fragments, e, i);
                         break;
                     }
                 }
 
                 if (fragment === null /* not found */) {
-                    fragment = new ContentFragment(this);
+                    fragment = new Fragment(this);
                     this.fragments.push(fragment);
-                    ContentBinding.swap(this.fragments, this.fragments.length - 1, i);
+                    FragmentBinding.swap(this.fragments, this.fragments.length - 1, i);
                 }
 
                 fragment.update(context);
             }
 
-            for (var j = stream.length; j < this.fragments.length; j++) {
-                fr = this.fragments[j];
-            }
-
             return stream;
         }
 
-        insert(fragment: ContentFragment, dom, idx) {
+        insert(fragment: Fragment, dom, idx) {
             if (this.parent) {
                 var offset = 0;
                 for (var i = 0; i < this.fragments.length; i++) {
@@ -249,11 +245,11 @@ export module Dom {
         }
     }
 
-    class ContentFragment {
+    class Fragment {
         public bindings: IDomBinding[] = [];
         public context;
 
-        constructor(private owner: ContentBinding) {
+        constructor(private owner: FragmentBinding) {
             for (var e = 0; e < this.owner.children.length; e++) {
                 this.bindings[e] =
                     owner.children[e].accept(this as IVisitor, e).map(this);
@@ -290,8 +286,8 @@ export module Dom {
             return new TextBinding(ast);
         }
 
-        public content(ast, children, childIndex: number): ContentBinding {
-            return new ContentBinding(ast, children);
+        public content(ast, children, childIndex: number): FragmentBinding {
+            return new FragmentBinding(ast, children);
         }
 
         public tag(tagName: string, ns: string, attrs, children, childIndex: number): TagBinding {
@@ -316,25 +312,18 @@ export module Dom {
 
         constructor(private expr) {
             super();
+            this.textNode = (<any>document).createTextNode("");
         }
 
         map(target: IBindingTarget): this {
             this.target = target;
-
+            this.target.insert(this, this.textNode, 0);
             return this;
         }
 
         render() {
             const result = this.evaluate(accept, this.expr);
-
-            var str = result && result.valueOf();
-            if (this.textNode === undefined) {
-                this.textNode = (<any>document).createTextNode(str);
-            } else {
-                this.textNode.textContent = str;
-            }
-            if (this.target)
-                this.target.insert(this, this.textNode, 0);
+            this.textNode.textContent = result && result.valueOf();
         }
     }
 
@@ -346,7 +335,7 @@ export module Dom {
         protected target: IBindingTarget;
         public length = 1;
 
-        constructor(tagName: string, private ns: string = null, private childBindings: IDomBinding[]) {
+        constructor(tagName: string, private ns: string = null, private childBindings: IDomBinding[] = []) {
             super();
             if (ns === null)
                 this.tagNode = document.createElement(tagName);
@@ -362,6 +351,14 @@ export module Dom {
         map(target: IBindingTarget): this {
             this.target = target;
 
+            this.target.insert(this, this.tagNode, 0);
+
+            return this;
+        }
+
+        child(child: IDomBinding): this {
+            this.childBindings.push(child.map(this));
+
             return this;
         }
 
@@ -373,7 +370,7 @@ export module Dom {
             } else if (name.startsWith("class.")) {
                 this.classBinding.addClass(name.substr(6), ast);
             } else if (TagBinding.eventNames.indexOf(name) >= 0) {
-                var eventBinding = new EventBinding(this, name, ast);
+                var eventBinding = new EventBinding(this.tagNode, name, ast);
                 this.attributeBindings.push(eventBinding);
             } else {
                 var attrBinding = new AttributeBinding(this, name, ast);
@@ -415,8 +412,6 @@ export module Dom {
         }
 
         render(context) {
-            if (this.target)
-                this.target.insert(this, this.tagNode, 0);
         }
 
         trigger(name) {
@@ -488,15 +483,15 @@ export module Dom {
     }
 
     export class EventBinding extends Re.Binding {
-        constructor(private parent: TagBinding, private name, private expr) {
+        constructor(tagNode: any, private name, private expr) {
             super();
+
+            tagNode.addEventListener(this.name, () => {
+                this.evaluate(accept, this.expr);
+            });
         }
 
         render() {
-            var tag = this.parent.tagNode;
-            tag.addEventListener(this.name, () => {
-                let value = this.evaluate(accept, this.expr);
-            });
         }
 
         app(fun, args: any[]) {
