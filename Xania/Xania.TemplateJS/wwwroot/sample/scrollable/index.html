@@ -5,23 +5,18 @@
   <title>dbmon (template js)</title>
   <meta name="description" content="DBMON Angular Light" />
   <meta charset="utf-8">
-  <link href="styles.css" rel="stylesheet" type="text/css" />
 
   <script src="../../lib/system.js/dist/system.js"></script>
 </head>
 <body>
 
-  <div id="dbmon">
+  <div id="content">
   </div>
-
-  <script src="ENV.js"></script>
-  <script src="memory-stats.js"></script>
-  <script src="monitor.js"></script>
 
   <script>
     System.config({ packages: { '/': {} } });
     System.import("app").then(app => {
-      var target = document.body.querySelector("#dbmon");
+      var target = document.body.querySelector("#content");
       app.bind(target);
     });
   </script>

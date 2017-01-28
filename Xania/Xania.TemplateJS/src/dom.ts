@@ -18,8 +18,8 @@ export module Dom {
     interface IDomVisitor extends Template.IVisitor<IDomBinding> {
     }
 
-    interface IView {
-        bind(target: { insert(dom, idx) }, store);
+    export interface IView {
+        bind(target: Node, store);
     }
 
     class DomBinding {
@@ -74,6 +74,15 @@ export module Dom {
     export function parse(node): IView {
         return {
             template: parseNode(node),
+            bind(target, store) {
+                return this.template.accept(new DomBinding(target)).update(store);
+            }
+        } as IView;
+    }
+
+    export function view(template) {
+        return {
+            template,
             bind(target, store) {
                 return this.template.accept(new DomBinding(target)).update(store);
             }
@@ -649,3 +658,5 @@ export function join(separator: string, value) {
 }
 
     // ReSharper restore InconsistentNaming
+
+export default Dom;

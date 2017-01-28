@@ -12,7 +12,9 @@
     "inlineSources": true,
     "target": "es5",
     "types": [ "jasmine" ],
-    "outDir": "wwwroot"
+    "outDir": "wwwroot",
+    "jsx": "react",
+    "jsxFactory": "Xania.tag"
   },
   "exclude": [
     "src/fsharp.peg.ts"
@@ -21,6 +23,7 @@
     "grammar/fsharp.d.ts",
     "src/*.ts",
     "spec/*Spec.ts",
-    "sample/**/*.ts"
+    "sample/**/*.ts",
+    "sample/**/*.tsx"
   ]
 }

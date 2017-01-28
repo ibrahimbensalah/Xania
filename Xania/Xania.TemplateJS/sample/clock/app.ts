@@ -21,7 +21,7 @@ class ClockApp {
     }
 }
 
-export function init(tpl, target) {
+export function init(tpl, target: Node) {
     var store = new Re.Store(new ClockApp());
     Dom.parse(tpl).bind(target, store);
 }

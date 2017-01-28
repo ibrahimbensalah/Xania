@@ -8,7 +8,7 @@ export module Reactive {
     }
 
     interface IAction {
-        execute(options?: any);
+        execute();
     }
 
     interface IDispatcher {
@@ -23,15 +23,15 @@ export module Reactive {
     }
 
     abstract class Value {
-        protected properties: IProperty[] = [];
-        protected extensions: { name: any, value: Extension }[] = [];
+        public properties: IProperty[];
+        protected extensions: { name: any, value: Extension }[];
         public value;
 
         constructor(public dispatcher: IDispatcher) {
         }
 
         get(propertyName: string): IProperty {
-            for (var i = 0; i < this.properties.length; i++) {
+            for (var i = 0; this.properties && i < this.properties.length; i++) {
                 if (this.properties[i].name === propertyName) {
                     return this.properties[i];
                 }
@@ -48,12 +48,18 @@ export module Reactive {
 
             var property = new Property(this.dispatcher, this, propertyName);
             property.update();
+
+            if (!this.properties)
+                this.properties = [];
             this.properties.push(property);
 
             return property;
         }
 
         protected refresh() {
+            if (!this.properties)
+                return;
+
             var disposed = [];
             for (let i = 0; i < this.properties.length; i++) {
                 var property = this.properties[i];
@@ -69,7 +75,7 @@ export module Reactive {
         }
 
         extend(name: string, value: any) {
-            for (var i = 0; i < this.extensions.length; i++) {
+            for (var i = 0; this.extensions && i < this.extensions.length; i++) {
                 var x = this.extensions[i];
                 if (x.name === value) {
                     return x.value;
@@ -77,6 +83,9 @@ export module Reactive {
             }
 
             var scope = new Extension(this.dispatcher, this).add(name, value);
+
+            if (!this.extensions)
+                this.extensions = [];
 
             this.extensions.push({ name: value, value: scope });
 
@@ -90,7 +99,7 @@ export module Reactive {
 
     class Property extends Value implements IDependency<IAction> {
         // list of observers to be dispatched on value change
-        public actions: IAction[] = [];
+        public actions: IAction[];
 
         constructor(dispatcher: IDispatcher, private parent: { value; get(name: string) }, public name) {
             super(dispatcher);
@@ -105,7 +114,10 @@ export module Reactive {
         }
 
         change(action: IAction): IDependency<IAction> | boolean {
-            if (this.actions.indexOf(action) < 0) {
+            if (!this.actions) {
+                this.actions = [action];
+                return this;
+            } else if (this.actions.indexOf(action) < 0) {
                 this.actions.push(action);
                 return this;
             }
@@ -113,6 +125,9 @@ export module Reactive {
         }
 
         unbind(action: IAction) {
+            if (!this.actions)
+                return false;
+
             const idx = this.actions.indexOf(action);
             if (idx < 0)
                 return false;
@@ -150,8 +165,9 @@ export module Reactive {
 
             if (this.actions) {
                 // notify next
-                var actions = this.actions.slice(0);
-                for (var i = 0; i < actions.length; i++) {
+                const actions = this.actions;
+                delete this.actions;
+                for (let i = 0; i < actions.length; i++) {
                     this.dispatcher.dispatch(actions[i]);
                 }
             }
@@ -161,10 +177,6 @@ export module Reactive {
 
         valueOf() {
             return this.value;
-        }
-
-        map(fn) {
-            return this.value.map((item, idx) => fn(super.get(idx), idx));
         }
 
         toString() {
@@ -182,7 +194,7 @@ export module Reactive {
 
     class Awaited {
         private subscription;
-        private actions: IAction[] = [];
+        private actions: IAction[];
         private current;
 
         constructor(private property: Property) {
@@ -204,7 +216,10 @@ export module Reactive {
         }
 
         change(action: IAction): IDependency<IAction> | boolean {
-            if (this.actions.indexOf(action) < 0) {
+            if (!this.actions) {
+                this.actions = [action];
+                return this;
+            } else if (this.actions.indexOf(action) < 0) {
                 this.actions.push(action);
                 return this;
             }
@@ -212,6 +227,9 @@ export module Reactive {
         }
 
         unbind(action: IAction) {
+            if (!this.actions)
+                return false;
+
             var idx = this.actions.indexOf(action);
             if (idx < 0)
                 return false;
@@ -232,7 +250,7 @@ export module Reactive {
     export class Extension {
 
         private values = {};
-        protected extensions: { name: any, value: Extension }[] = [];
+        protected extensions: { name: any, value: Extension }[];
 
         constructor(private dispatcher: IDispatcher, private parent?: { get(name: string); }) {
         }
@@ -243,11 +261,15 @@ export module Reactive {
         }
 
         extend(name: string, value: any) {
-            for (var i = 0; i < this.extensions.length; i++) {
-                var x = this.extensions[i];
-                if (x.name === value) {
-                    return x.value;
+            if (this.extensions) {
+                for (var i = 0; i < this.extensions.length; i++) {
+                    var x = this.extensions[i];
+                    if (x.name === value) {
+                        return x.value;
+                    }
                 }
+            } else {
+                this.extensions = [];
             }
 
             var scope = new Extension(this.dispatcher, this).add(name, value);
@@ -287,54 +309,7 @@ export module Reactive {
         }
     }
 
-    class Stream extends Value {
-        private actions: IAction[] = [];
-        subscription: Observables.ISubscription;
-
-        constructor(dispatcher: IDispatcher, observable) {
-            super(dispatcher);
-            this.value = observable.valueOf();
-            this.subscription = observable.subscribe(this);
-        }
-
-        change(action: IAction): IDependency<IAction> | boolean {
-            if (this.actions.indexOf(action) < 0) {
-                this.actions.push(action);
-                return this;
-            }
-            return false;
-        }
-
-        unbind(action: IAction) {
-            var idx = this.actions.indexOf(action);
-            if (idx < 0)
-                return false;
-
-            this.actions.splice(idx, 1);
-            return true;
-        }
-
-        onNext(newValue) {
-            if (this.value === newValue)
-                return;
-
-            this.value = newValue;
-
-            // notify next
-            var actions = this.actions.slice(0);
-            for (var i = 0; i < actions.length; i++) {
-                this.dispatcher.dispatch(actions[i]);
-            }
-        }
-
-        valueOf() {
-            return this.value;
-        }
-    }
-
     export class Store extends Value {
-        private animHandler: number = 0;
-
         constructor(value: any, private globals: any = {}, dispatcher: IDispatcher = DefaultDispatcher) {
             super(dispatcher);
             this.value = value;
@@ -364,6 +339,20 @@ export module Reactive {
             return undefined;
         }
 
+        update() {
+            var stack: { properties }[] = [this];
+
+            while (stack.length > 0) {
+                var p = stack.pop();
+
+                for (var i = 0; p.properties && i < p.properties.length; i++) {
+                    var child = p.properties[i];
+                    child.update();
+                    stack.push(child);
+                }
+            }
+        }
+
         toString() {
             return JSON.stringify(this.value, null, 4);
         }
@@ -371,39 +360,42 @@ export module Reactive {
 
     export abstract class Binding {
 
-        public dependencies: IDependency<IAction>[] = [];
-        public subscriptions: Observables.ISubscription[] = [];
+        public dependencies: IDependency<IAction>[];
         protected context;
 
         constructor(private dispatcher: IDispatcher = DefaultDispatcher) { }
 
-        execute(options?: any) {
-            for (var i = 0; i < this.dependencies.length; i++) {
-                this.dependencies[i].unbind(this);
-            }
-            this.dependencies.length = 0;
-
-            this.update(this.context, options);
+        execute() {
+            this.render(this.context);
         }
 
-        update(context, options?) {
-            this.context = context;
-
-            this.render(context, options);
+        update(context) {
+            if (this.context !== context) {
+                this.context = context;
+                if (this.dependencies) {
+                    for (var i = 0; i < this.dependencies.length; i++) {
+                        this.dependencies[i].unbind(this);
+                    }
+                    delete this.dependencies;
+                }
+                this.render(context);
+            }
             return this;
         }
 
         public static observe(value, observer) {
-            if (value) {
-                if (value.change) {
-                    var dependency = value.change(observer);
-                    if (!!dependency)
+            if (value && value.change) {
+                var dependency = value.change(observer);
+                if (!!dependency) {
+                    if (!observer.dependencies)
+                        observer.dependencies = [dependency];
+                    else
                         observer.dependencies.push(dependency);
                 }
             }
         }
 
-        public abstract render(context?, options?): any;
+        public abstract render(context?): any;
 
         extend(): any {
             throw new Error("Not implemented");
@@ -515,3 +507,5 @@ export module Reactive {
     }
 
 }
+
+export default Reactive;

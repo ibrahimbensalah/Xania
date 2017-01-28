@@ -40,10 +40,9 @@ export module Template {
         private attributes: { name: string; tpl }[] = [];
         private events = new Map<string, any>();
         // ReSharper disable once InconsistentNaming
-        private _children: INode[] = [];
         public modelAccessor;
 
-        constructor(public name: string, private ns: string) {
+        constructor(public name: string, private ns: string, private _children: INode[] = []) {
         }
 
         public children(): INode[] {

@@ -15,9 +15,6 @@ var peg = require("./fsharp.peg");
 // var fsharp = peg.parse;
 
 export function accept(ast: any, visitor: IAstVisitor, context) {
-    if (ast === null || ast === undefined)
-        return null;
-
     if (ast.type === undefined)
         return ast;
 
@@ -70,4 +67,3 @@ export function accept(ast: any, visitor: IAstVisitor, context) {
 }
 
 export var fsharp = peg.parse;
-
