@@ -1,7 +1,7 @@
 ﻿/// <reference path="../node_modules/@types/jasmine/index.d.ts" />
 
 import { Template } from "../src/template";
-import { fsharp as fs } from "../src/fsharp";
+import { fs } from "../src/fsharp";
 import { Dom } from "../src/dom";
 import { Reactive as Re } from '../src/reactive';
 import { Observables } from '../src/observables';

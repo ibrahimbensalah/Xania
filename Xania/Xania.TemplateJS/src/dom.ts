@@ -88,7 +88,7 @@ export module Dom {
         } as IView;
     }
 
-    function parseText(text): any[] {
+    function parseText(text): any  {
         var parts: any[] = [];
 
         var appendText = (x) => {
@@ -220,9 +220,7 @@ export module Dom {
             }
         }
 
-        render() { }
-
-        update(context) {
+        render(context) {
             super.update(context);
 
             var stream;
@@ -233,7 +231,6 @@ export module Dom {
             } else {
                 stream = [context];
             }
-
 
             var fr: Fragment;
             for (var i = 0; i < stream.length; i++) {

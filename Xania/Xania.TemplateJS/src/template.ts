@@ -13,7 +13,7 @@ export module Template {
     }
 
     export class TextTemplate implements INode {
-        constructor(private parts : any[] | string) {
+        constructor(private parts : { execute(binding, context); } | string) {
         }
 
         accept<T>(visitor: IVisitor<T>, options: any): T {

@@ -139,7 +139,6 @@ export module Reactive {
         set(value: any) {
             if (this.value !== value) {
                 this.parent.value[this.name] = value;
-
                 this.update();
             }
         }
@@ -366,19 +365,19 @@ export module Reactive {
         constructor(private dispatcher: IDispatcher = DefaultDispatcher) { }
 
         execute() {
+            if (this.dependencies) {
+                for (var i = 0; i < this.dependencies.length; i++) {
+                    this.dependencies[i].unbind(this);
+                }
+                delete this.dependencies;
+            }
             this.render(this.context);
         }
 
         update(context) {
             if (this.context !== context) {
                 this.context = context;
-                if (this.dependencies) {
-                    for (var i = 0; i < this.dependencies.length; i++) {
-                        this.dependencies[i].unbind(this);
-                    }
-                    delete this.dependencies;
-                }
-                this.render(context);
+                this.execute();
             }
             return this;
         }
