@@ -1,9 +1,9 @@
 ﻿import { Template } from "./template"
 import { Dom } from "./dom"
-import { fsharp as fs } from "./fsharp"
-import { Reactive } from "./reactive"
+import { fs } from "./fsharp"
+import { Reactive as Re } from "./reactive"
 
-class Xania {
+export class Xania {
     static templates(elements) {
         var result = [];
         for (var i = 0; i < elements.length; i++) {
@@ -37,7 +37,7 @@ class Xania {
 }
 
 
-class ForEach {
+export class ForEach {
     constructor(private attr, private children) { }
 
     get template() {
@@ -51,6 +51,45 @@ class ForEach {
     }
 }
 
-var Store = Reactive.Store;
+export class Partial extends Re.Binding {
+    private parent;
+    private binding;
 
-export { Xania, ForEach, fs, Store }
+    constructor(private attr, private children) {
+        super(null);
+    }
+
+    get template() {
+        return this;
+    }
+
+    accept(visitor, options: any) {
+        return this;
+    }
+
+    map(parent) {
+        this.parent = parent;
+        if (this.binding)
+            this.binding.map(this);
+        return this;
+    }
+
+    insert(_, dom, idx) {
+        this.parent.insert(this, dom, idx);
+    }
+
+    render(context) {
+        var view = this.evaluate(this.attr.view);
+
+        if (this.binding)
+            this.binding.dispose();
+
+        this.binding = new Dom.FragmentBinding(this.attr.model, [view.template])
+            .map(this);
+        this.binding.update(context);
+    }
+}
+
+export var Store = Re.Store;
+
+export { fs }

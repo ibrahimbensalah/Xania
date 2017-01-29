@@ -1,8 +1,7 @@
 ﻿import { Core } from './core'
 import { Reactive as Re } from './reactive'
-import { accept } from './fsharp'
 import { Template } from './template'
-import { fsharp as fs } from "./fsharp"
+import { fs } from "./fsharp"
 
 export module Dom {
 
@@ -22,7 +21,7 @@ export module Dom {
         bind(target: Node, store);
     }
 
-    class DomBinding {
+    export class DomBinding {
         private childBindings: IDomBinding[] = [];
 
         constructor(private target) {
@@ -226,9 +225,15 @@ export module Dom {
         update(context) {
             super.update(context);
 
-            var stream = this.ast === null
-                ? [context]
-                : accept(this.ast, this, context);
+            var stream;
+            if (!!this.ast && !!this.ast.execute) {
+                stream = this.ast.execute(this, context);
+                if (typeof stream.length === "undefined")
+                    stream = [stream];
+            } else {
+                stream = [context];
+            }
+
 
             var fr: Fragment;
             for (var i = 0; i < stream.length; i++) {
@@ -361,7 +366,7 @@ export module Dom {
         }
 
         render() {
-            const result = this.evaluate(accept, this.expr);
+            const result = this.evaluate(this.expr);
             if (typeof result !== "undefined")
                 this.textNode.textContent = result && result.valueOf();
         }
@@ -461,7 +466,7 @@ export module Dom {
         trigger(name) {
             var handler = this.events[name];
             if (!!handler) {
-                var result = accept(handler, this, this.context);
+                var result = handler.execute(this, this.context);
 
                 if (typeof result === "function")
                     result();
@@ -491,13 +496,13 @@ export module Dom {
             this.context = context;
             const classes = [];
             if (!!this.baseClassTpl) {
-                var value = accept(this.baseClassTpl, this, context).valueOf();
+                var value = this.evaluate(this.baseClassTpl).valueOf();
                 classes.push(value);
             }
 
             for (var i = 0; i < this.conditions.length; i++) {
                 var { className, condition } = this.conditions[i];
-                if (!!accept(condition, this, context).valueOf()) {
+                if (!!condition.execute(this, context).valueOf()) {
                     classes.push(className);
                 }
             }
@@ -532,7 +537,7 @@ export module Dom {
 
         constructor(tagNode: any, private name, private expr) {
             tagNode.addEventListener(this.name, () => {
-                accept(this.expr, this, this.context);
+                this.expr.execute(this, this.context);
                 var values = this.values;
                 this.values = [];
                 for (let i = 0; i < values.length; i++) {
@@ -592,7 +597,7 @@ export module Dom {
         }
 
         render() {
-            let value = this.evaluate(accept, this.expr);
+            let value = this.evaluate(this.expr);
 
             if (typeof value === "undefined") {
                 return;

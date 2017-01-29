@@ -67,3 +67,12 @@ export function accept(ast: any, visitor: IAstVisitor, context) {
 }
 
 export var fsharp = peg.parse;
+
+export function fs(expr) {
+    return {
+        ast: peg.parse(expr),
+        execute(binding: IAstVisitor, context: any) {
+            return accept(this.ast, binding, context);
+        }
+    }
+}

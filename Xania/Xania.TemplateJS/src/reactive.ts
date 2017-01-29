@@ -471,17 +471,17 @@ export module Reactive {
             return awaitable;
         }
 
-        evaluate(accept, parts): any {
+        evaluate(parts): any {
             if (typeof parts === "object" && typeof parts.length === "number") {
                 if (parts.length === 0)
                     return "";
 
                 if (parts.length === 1)
-                    return this.evaluatePart(accept, parts[0]);
+                    return this.evaluatePart(parts[0]);
 
                 var concatenated = "";
                 for (var i = 0; i < parts.length; i++) {
-                    var p = this.evaluatePart(accept, parts[i]);
+                    var p = this.evaluatePart(parts[i]);
                     if (typeof p === "undefined")
                         return undefined;
                     var inner = p.valueOf();
@@ -492,15 +492,15 @@ export module Reactive {
                 }
                 return concatenated;
             } else {
-                return this.evaluatePart(accept, parts);
+                return this.evaluatePart(parts);
             }
         }
 
-        evaluatePart(accept, part: any) {
+        evaluatePart(part: any) {
             if (typeof part === "string")
                 return part;
             else {
-                var value = accept(part, this, this.context);
+                var value = part.execute(this, this.context);
                 return value && value.valueOf();
             }
         }
