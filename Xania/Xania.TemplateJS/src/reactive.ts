@@ -9,6 +9,7 @@ export module Reactive {
 
     interface IAction {
         execute();
+        notify(value: IDependency);
     }
 
     interface IDispatcher {
@@ -54,6 +55,7 @@ export module Reactive {
             }
 
             var property = new Property(this.dispatcher, this, propertyName);
+            property[propertyName] = initialValue;
             property.value = initialValue;
 
             if (!properties)
@@ -103,13 +105,13 @@ export module Reactive {
         }
     }
 
-    interface IDependency<T> {
-        unbind(action: T): number | boolean;
+    interface IDependency {
+        unbind(action: IAction): number | boolean;
     }
 
-    class Property extends Value {
+    class Property extends Value implements IDependency {
         // list of observers to be dispatched on value change
-        public actions: { length };
+        private actions: IAction[];
 
         constructor(dispatcher: IDispatcher, private parent: { value; get(name: string) }, public name) {
             super(dispatcher);
@@ -125,25 +127,27 @@ export module Reactive {
             return this.parent.get(name);
         }
 
-        change(action: IAction): number | boolean {
-            var actions = this.actions;
-            if (!actions) {
-                this.actions = { length: 1 };
-                this.actions[0] = action;
-                return 0;
-            } else {
-                var idx = actions.length;
-                actions[idx] = action;
-                actions.length++;
-                return idx;
+        change(action: IAction): IDependency | boolean {
+            if (!this.actions) {
+                this.actions = [action];
+                return this;
+            } else if (this.actions.indexOf(action) < 0) {
+                this.actions.push(action);
+                return this;
             }
+            return false;
         }
 
-        unbind(idx: number) {
-            var actions = this.actions;
-            if (actions) {
-                delete actions[idx];
-            }
+        unbind(action: IAction) {
+            if (!this.actions)
+                return false;
+
+            var idx = this.actions.indexOf(action);
+            if (idx < 0)
+                return false;
+
+            this.actions.splice(idx, 1);
+            return true;
         }
 
         set(value: any) {
@@ -157,28 +161,27 @@ export module Reactive {
         update(parentValue) {
             var newValue = parentValue[this.name];
             if (newValue !== this.value) {
+                this[this.name] = newValue;
+                this.value = newValue;
+
                 if (this.awaited) {
                     this.awaited.dispose();
                     delete this.awaited;
                 }
-
-                this.value = newValue;
 
                 //if (this.value === void 0) {
                 //    this.extensions = [];
                 //    this.properties = [];
                 //}
 
-                if (this.actions) {
+                const actions = this.actions;
+                if (actions) {
                     // notify next
-                    const actions = this.actions;
-                    var length = actions.length;
-                    actions.length = 0;
-                    for (let i = 0; i < length; i++) {
-                        var action = actions[i];
-                        if (action !== void 0)
-                            this.dispatcher.dispatch(action);
-                    }
+                    // delete this.actions;
+                    var i = actions.length-1, dispatcher = this.dispatcher;
+                    do {
+                        actions[i].notify(this);
+                    } while (i--);
                 }
             }
         }
@@ -219,7 +222,7 @@ export module Reactive {
             }
         }
 
-        change(action: IAction): IDependency<IAction> | boolean {
+        change(action: IAction): IDependency | boolean {
             if (!this.actions) {
                 this.actions = [action];
                 return this;
@@ -335,7 +338,7 @@ export module Reactive {
                     return g;
             }
 
-            return undefined;
+            return void 0;
         }
 
         update() {
@@ -363,23 +366,17 @@ export module Reactive {
     }
 
     export abstract class Binding {
-
-        public dependencies: { value, id }[];
         protected context;
 
         constructor(private dispatcher: IDispatcher = DefaultDispatcher) { }
 
         execute() {
-            var dependencies = this.dependencies;
-            if (dependencies) {
-                var length = dependencies.length;
-                for (var i = 0; i < length; i++) {
-                    var { value, id } = dependencies[i];
-                    value.unbind(id);
-                }
-                delete this.dependencies;
-            }
             this.render(this.context);
+        }
+
+        notify(v: IDependency) {
+            v.unbind(this);
+            this.dispatcher.dispatch(this);
         }
 
         update(context) {
@@ -390,16 +387,9 @@ export module Reactive {
             return this;
         }
 
-        public static observe(value, observer: Binding) {
+        public observe(value) {
             if (value && value.change) {
-                var id = value.change(observer);
-                if (id !== false) {
-                    var dependency = { value, id };
-                    if (!observer.dependencies)
-                        observer.dependencies = [dependency];
-                    else
-                        observer.dependencies.push(dependency);
-                }
+                value.change(this);
             }
         }
 
@@ -418,17 +408,17 @@ export module Reactive {
         }
 
         query(param, source) {
-            Binding.observe(source, this);
+            this.observe(source);
 
             if (source.get) {
-            var length = source.get("length");
-            Binding.observe(length, this);
-            var result = [];
-            for (var i = 0; i < length; i++) {
-                var ext = this.context.extend(param, source.get(i));
-                result.push(ext);
-            }
-            return result;
+                var length = source.get("length");
+                this.observe(length);
+                var result = [];
+                for (var i = 0; i < length; i++) {
+                    var ext = this.context.extend(param, source.get(i));
+                    result.push(ext);
+                }
+                return result;
             } else {
                 return source.map(item => {
                     return this.context.extend(param, item);
@@ -440,7 +430,7 @@ export module Reactive {
             var value = target[name];
             if (value === undefined && target.get)
                 value = target.get(name);
-            Binding.observe(value, this);
+            this.observe(value);
             return value;
         }
 
@@ -477,36 +467,39 @@ export module Reactive {
 
         await(observable) {
             var awaitable = observable.await();
-            Binding.observe(awaitable, this);
+            this.observe(awaitable);
             return awaitable;
         }
 
+        static empty = "";
         evaluate(parts): any {
-            if (this.dependencies && this.dependencies.length > 0) {
-                return Math.random();
-            }
             if (typeof parts === "object" && typeof parts.length === "number") {
-                if (parts.length === 0)
-                    return "";
-
-                if (parts.length === 1)
-                    return this.evaluatePart(parts[0]);
-
-                var concatenated = "";
-                for (var i = 0; i < parts.length; i++) {
-                    var p = this.evaluatePart(parts[i]);
-                    if (p === void 0)
-                        return void 0;
-                    var inner = p.valueOf();
-                    if (inner === void 0)
-                        return void 0;
-                    if (inner !== null)
-                        concatenated += inner;
-                }
-                return concatenated;
+                return this.evaluateParts(parts);
             } else {
                 return this.evaluatePart(parts);
             }
+        }
+
+        evaluateParts(parts): any {
+            var length = parts.length;
+            if (length === 0)
+                return Binding.empty;
+
+            if (length === 1)
+                return this.evaluatePart(parts[0]);
+
+            var concatenated = Binding.empty;
+            for (var i = 0; i < length; i++) {
+                var p = this.evaluatePart(parts[i]);
+                if (p === void 0)
+                    return void 0;
+                var inner = p.valueOf();
+                if (inner === void 0)
+                    return void 0;
+                if (inner !== null)
+                    concatenated += inner;
+            }
+            return concatenated;
         }
 
         evaluatePart(part: any) {
