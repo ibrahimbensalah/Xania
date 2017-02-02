@@ -18,7 +18,7 @@ export module Reactive {
     interface IProperty {
         name: string;
         value: any;
-        update(): boolean;
+        update(parentValue);
         get(name: string | number);
     }
 
@@ -30,28 +30,38 @@ export module Reactive {
         constructor(public dispatcher: IDispatcher) {
         }
 
+
         get(propertyName: string): IProperty {
-            for (var i = 0; this.properties && i < this.properties.length; i++) {
-                if (this.properties[i].name === propertyName) {
-                    return this.properties[i];
+            var properties = this.properties;
+
+            if (this.properties) {
+                var length = properties.length;
+                for (var i = 0; i < length; i++) {
+                    if (properties[i].name === propertyName) {
+                        return properties[i];
+                    }
                 }
             }
 
-            var initialValue = this.value[propertyName];
+            var propertyValue = this.value,
+                initialValue = propertyValue[propertyName];
 
             if (initialValue === void 0)
                 return void 0;
 
             if (typeof initialValue === "function") {
-                return initialValue.bind(this.value);
+                return initialValue.bind(propertyValue);
             }
 
             var property = new Property(this.dispatcher, this, propertyName);
-            property.update();
+            property.value = initialValue;
 
-            if (!this.properties)
-                this.properties = [];
-            this.properties.push(property);
+            if (!properties)
+                this.properties = [property];
+            else
+                properties.push(property);
+
+            this[propertyName] = property;
 
             return property;
         }
@@ -63,8 +73,8 @@ export module Reactive {
             var disposed = [];
             for (let i = 0; i < this.properties.length; i++) {
                 var property = this.properties[i];
-                property.update();
-                if (typeof property.valueOf() === "undefined") {
+                property.update(this.value);
+                if (property.valueOf() === void 0) {
                     disposed.push(i);
                 }
             }
@@ -94,12 +104,12 @@ export module Reactive {
     }
 
     interface IDependency<T> {
-        unbind(action: T);
+        unbind(action: T): number | boolean;
     }
 
-    class Property extends Value implements IDependency<IAction> {
+    class Property extends Value {
         // list of observers to be dispatched on value change
-        public actions: IAction[];
+        public actions: { length };
 
         constructor(dispatcher: IDispatcher, private parent: { value; get(name: string) }, public name) {
             super(dispatcher);
@@ -107,79 +117,74 @@ export module Reactive {
 
         get(name: string) {
             var result = super.get(name);
-            if (typeof result !== "undefined")
+            if (result !== void 0) {
+                this[name] = result;
                 return result;
+            }
 
             return this.parent.get(name);
         }
 
-        change(action: IAction): IDependency<IAction> | boolean {
-            if (!this.actions) {
-                this.actions = [action];
-                return this;
-            } else if (this.actions.indexOf(action) < 0) {
-                this.actions.push(action);
-                return this;
+        change(action: IAction): number | boolean {
+            var actions = this.actions;
+            if (!actions) {
+                this.actions = { length: 1 };
+                this.actions[0] = action;
+                return 0;
+            } else {
+                var idx = actions.length;
+                actions[idx] = action;
+                actions.length++;
+                return idx;
             }
-            return false;
         }
 
-        unbind(action: IAction) {
-            if (!this.actions)
-                return false;
-
-            const idx = this.actions.indexOf(action);
-            if (idx < 0)
-                return false;
-
-            this.actions.splice(idx, 1);
-            return true;
+        unbind(idx: number) {
+            var actions = this.actions;
+            if (actions) {
+                delete actions[idx];
+            }
         }
 
         set(value: any) {
             if (this.value !== value) {
                 this.parent.value[this.name] = value;
-                this.update();
+                this.update(this.parent.value);
+                this.refresh();
             }
         }
 
-        update() {
-            var newValue = this.parent.value[this.name];
-            if (newValue === this.value)
-                return false;
+        update(parentValue) {
+            var newValue = parentValue[this.name];
+            if (newValue !== this.value) {
+                if (this.awaited) {
+                    this.awaited.dispose();
+                    delete this.awaited;
+                }
 
-            if (this.awaited) {
-                this.awaited.dispose();
-                delete this.awaited;
-            }
+                this.value = newValue;
 
-            this.value = newValue;
+                //if (this.value === void 0) {
+                //    this.extensions = [];
+                //    this.properties = [];
+                //}
 
-            if (this.value === void 0) {
-                this.extensions = [];
-                this.properties = [];
-            } else {
-                this.refresh();
-            }
-
-            if (this.actions) {
-                // notify next
-                const actions = this.actions;
-                delete this.actions;
-                for (let i = 0; i < actions.length; i++) {
-                    this.dispatcher.dispatch(actions[i]);
+                if (this.actions) {
+                    // notify next
+                    const actions = this.actions;
+                    var length = actions.length;
+                    actions.length = 0;
+                    for (let i = 0; i < length; i++) {
+                        var action = actions[i];
+                        if (action !== void 0)
+                            this.dispatcher.dispatch(action);
+                    }
                 }
             }
-
-            return true;
         }
 
         valueOf() {
             return this.value;
-        }
-
-        toString() {
-            return this.value === null || this.value === void 0 ? "null" : this.value.toString();
         }
 
         private awaited: Awaited;
@@ -248,14 +253,13 @@ export module Reactive {
 
     export class Extension {
 
-        private values = {};
         protected extensions: { name: any, value: Extension }[];
 
         constructor(private dispatcher: IDispatcher, private parent?: { get(name: string); }) {
         }
 
         add(name: string, value: Value): this {
-            this.values[name] = value;
+            this[name] = value;
             return this;
         }
 
@@ -279,26 +283,22 @@ export module Reactive {
         }
 
         get(name: string) {
-            var value = this.values[name];
+            var value = this[name];
 
             if (value === null)
                 return null;
 
-            if (typeof value === "undefined") {
+            if (value === void 0) {
                 if (this.parent)
                     return this.parent.get(name);
 
                 return value;
             }
 
-            if (typeof value.valueOf() === "undefined")
-                return undefined;
+            if (value.valueOf() === void 0)
+                return void 0;
 
             return value;
-        }
-
-        toString() {
-            return this.values;
         }
     }
 
@@ -317,7 +317,7 @@ export module Reactive {
         get(name: string) {
             var value = super.get(name);
 
-            if (typeof value !== "undefined") {
+            if (value !== void 0) {
                 return value;
             }
 
@@ -325,13 +325,13 @@ export module Reactive {
             if (typeof statiq === "function")
                 return statiq.bind(this.value.constructor);
 
-            if (typeof statiq !== "undefined") {
+            if (statiq !== void 0) {
                 return statiq;
             }
 
             for (var i = 0; i < this.globals.length; i++) {
                 var g = this.globals[i][name];
-                if (typeof g !== "undefined")
+                if (g !== void 0)
                     return g;
             }
 
@@ -339,15 +339,20 @@ export module Reactive {
         }
 
         update() {
-            var stack: { properties }[] = [this];
+            var stack: { properties, value }[] = [this];
 
             while (stack.length > 0) {
                 var p = stack.pop();
 
-                for (var i = 0; p.properties && i < p.properties.length; i++) {
-                    var child = p.properties[i];
-                    child.update();
-                    stack.push(child);
+                if (p.properties) {
+                    var properties = p.properties;
+                    var length = properties.length;
+                    var value = p.value;
+                    for (var i = 0; i < length; i++) {
+                        var child = properties[i];
+                        child.update(value);
+                        stack.push(child);
+                    }
                 }
             }
         }
@@ -359,15 +364,18 @@ export module Reactive {
 
     export abstract class Binding {
 
-        public dependencies: IDependency<IAction>[];
+        public dependencies: { value, id }[];
         protected context;
 
         constructor(private dispatcher: IDispatcher = DefaultDispatcher) { }
 
         execute() {
-            if (this.dependencies) {
-                for (var i = 0; i < this.dependencies.length; i++) {
-                    this.dependencies[i].unbind(this);
+            var dependencies = this.dependencies;
+            if (dependencies) {
+                var length = dependencies.length;
+                for (var i = 0; i < length; i++) {
+                    var { value, id } = dependencies[i];
+                    value.unbind(id);
                 }
                 delete this.dependencies;
             }
@@ -382,10 +390,11 @@ export module Reactive {
             return this;
         }
 
-        public static observe(value, observer) {
+        public static observe(value, observer: Binding) {
             if (value && value.change) {
-                var dependency = value.change(observer);
-                if (!!dependency) {
+                var id = value.change(observer);
+                if (id !== false) {
+                    var dependency = { value, id };
                     if (!observer.dependencies)
                         observer.dependencies = [dependency];
                     else
@@ -412,14 +421,14 @@ export module Reactive {
             Binding.observe(source, this);
 
             if (source.get) {
-                var length = source.get("length");
-                Binding.observe(length, this);
-                var result = [];
-                for (var i = 0; i < length; i++) {
-                    var ext = this.context.extend(param, source.get(i));
-                    result.push(ext);
-                }
-                return result;
+            var length = source.get("length");
+            Binding.observe(length, this);
+            var result = [];
+            for (var i = 0; i < length; i++) {
+                var ext = this.context.extend(param, source.get(i));
+                result.push(ext);
+            }
+            return result;
             } else {
                 return source.map(item => {
                     return this.context.extend(param, item);
@@ -428,7 +437,9 @@ export module Reactive {
         }
 
         member(target: { get(name: string) }, name) {
-            var value = target.get ? target.get(name) : target[name];
+            var value = target[name];
+            if (value === undefined && target.get)
+                value = target.get(name);
             Binding.observe(value, this);
             return value;
         }
@@ -439,8 +450,8 @@ export module Reactive {
                 var arg = args[i];
                 if (arg && arg.valueOf) {
                     var x = arg.valueOf();
-                    if (typeof x === "undefined")
-                        return undefined;
+                    if (x === void 0)
+                        return void 0;
                     xs.push(x);
                 } else {
                     xs.push(arg);
@@ -471,6 +482,9 @@ export module Reactive {
         }
 
         evaluate(parts): any {
+            if (this.dependencies && this.dependencies.length > 0) {
+                return Math.random();
+            }
             if (typeof parts === "object" && typeof parts.length === "number") {
                 if (parts.length === 0)
                     return "";
@@ -481,11 +495,11 @@ export module Reactive {
                 var concatenated = "";
                 for (var i = 0; i < parts.length; i++) {
                     var p = this.evaluatePart(parts[i]);
-                    if (typeof p === "undefined")
-                        return undefined;
+                    if (p === void 0)
+                        return void 0;
                     var inner = p.valueOf();
-                    if (inner === undefined)
-                        return undefined;
+                    if (inner === void 0)
+                        return void 0;
                     if (inner !== null)
                         concatenated += inner;
                 }

@@ -160,9 +160,6 @@ var ENV = ENV || (function () {
                     row.lastSample = null;
                 }
                 generateRow(row, keepIdentity, counter);
-                if (keepIdentity) {
-                    // Object.freeze(row);
-                }
             } else {
                 data[i] = oldData[i];
             }
@@ -175,7 +172,7 @@ var ENV = ENV || (function () {
         };
     }
 
-    var mutationsValue = 0.5;
+    var mutationsValue = 1;
 
     function mutations(value) {
         if (value) {

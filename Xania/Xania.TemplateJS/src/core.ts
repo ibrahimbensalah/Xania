@@ -68,8 +68,8 @@
         static count(fn, list) {
             if (!list)
                 return 0;
-            var result = 0;
-            for (var i = 0; i < list.length; i++)
+            var result = 0, length = list.length;
+            for (var i = 0; i < length; i++)
                 if (fn(list[i]))
                     result++;
 
@@ -85,9 +85,9 @@
         }
 
         static filter(fn, list) {
-            var retval = [];
+            var retval = [], length = list.length;
 
-            for (var i = 0; i < list.length; i++) {
+            for (var i = 0; i < length; i++) {
                 var item = list[i];
                 if (!!fn(item)) {
                     retval.push(item);
@@ -124,20 +124,20 @@
         return resolve.call(resolve, data);
     }
 
-    export function forEach(data, resolve) {
-        if (data === void 0)
-            throw new Error("undefined");
-        if (data === null)
-            return resolve(null);
+    //export function forEach2(data, resolve) {
+    //    if (data === void 0)
+    //        throw new Error("undefined");
+    //    if (data === null)
+    //        return resolve(null);
 
-        if (!!data.forEach)
-            return data.forEach(resolve);
+    //    if (!!data.forEach)
+    //        return data.forEach(resolve);
 
-        if (!!data.then)
-            return data.then(d => forEach(d, resolve));
+    //    if (!!data.then)
+    //        return data.then(d => forEach2(d, resolve));
 
-        return resolve(data);
-    }
+    //    return resolve(data);
+    //}
 
     export function compose(...fns: any[]): Function {
         return function (result) {
@@ -158,8 +158,8 @@
                     throw new Error("undefined result");
 
                 this.value = value;
-
-                for (var i = 0; i < this.resolvers.length; i++) {
+                var length = this.resolvers.length;
+                for (var i = 0; i < length; i++) {
                     this.resolvers[i].call(null, value);
                 }
             },

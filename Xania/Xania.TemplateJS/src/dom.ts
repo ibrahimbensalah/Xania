@@ -39,11 +39,12 @@ export module Dom {
         }
 
         insert(binding: IDomBinding, dom, idx: number) {
-            var offset = 0;
-            for (var i = 0; i < this.childBindings.length; i++) {
-                if (this.childBindings[i] === binding)
+            var offset = 0, length = this.childBindings.length;
+            for (var i = 0; i < length; i++) {
+                var child = this.childBindings[i];
+                if (child === binding)
                     break;
-                offset += this.childBindings[i].length;
+                offset += child.length;
             }
             DomBinding.insertDom(this.target, dom, offset + idx);
         }
@@ -59,9 +60,8 @@ export module Dom {
             return content;
         }
         tag(name, ns, attrs, children): TagBinding {
-            var tag = new TagBinding(name, ns, children);
-
-            for (var i = 0; i < attrs.length; i++) {
+            var tag = new TagBinding(name, ns, children), length = attrs.length;
+            for (var i = 0; i < length; i++) {
                 tag.attr(attrs[i].name, attrs[i].tpl);
             }
 
@@ -97,8 +97,8 @@ export module Dom {
                 parts.push(x);
         };
 
-        var offset = 0;
-        while (offset < text.length) {
+        var offset = 0, length = text.length;
+        while (offset < length) {
             var begin = text.indexOf("{{", offset);
             if (begin >= 0) {
                 if (begin > offset)
@@ -185,8 +185,8 @@ export module Dom {
         public parent: IBindingTarget;
 
         get length() {
-            var total = 0;
-            for (var i = 0; i < this.fragments.length; i++) {
+            var total = 0, length = this.fragments.length;
+            for (var i = 0; i < length; i++) {
                 total += this.fragments[i].length;
             }
             return total;
@@ -226,18 +226,18 @@ export module Dom {
             var stream;
             if (!!this.ast && !!this.ast.execute) {
                 stream = this.ast.execute(this, context);
-                if (typeof stream.length === "undefined")
+                if (stream.length === void 0)
                     stream = [stream];
             } else {
                 stream = [context];
             }
 
-            var fr: Fragment;
-            for (var i = 0; i < stream.length; i++) {
+            var fr: Fragment, streamlength = stream.length;
+            for (var i = 0; i < streamlength; i++) {
                 var item = stream[i];
 
-                var fragment: Fragment = null;
-                for (let e = i; e < this.fragments.length; e++) {
+                var fragment: Fragment = null, fraglength = this.fragments.length;
+                for (let e = i; e < fraglength; e++) {
                     fr = this.fragments[e];
                     if (fr.context === item) {
                         fragment = fr;
@@ -249,7 +249,7 @@ export module Dom {
                 if (fragment === null /* not found */) {
                     fragment = new Fragment(this);
                     this.fragments.push(fragment);
-                    FragmentBinding.swap(this.fragments, this.fragments.length - 1, i);
+                    FragmentBinding.swap(this.fragments, fraglength, i);
                 }
 
                 fragment.update(item);
@@ -303,15 +303,16 @@ export module Dom {
 
         update(context) {
             this.context = context;
-            for (var e = 0; e < this.owner.children.length; e++) {
+            var length = this.owner.children.length;
+            for (var e = 0; e < length; e++) {
                 this.bindings[e].update(context);
             }
             return this;
         }
 
         insert(binding: IDomBinding, dom, index) {
-            var offset = 0;
-            for (var i = 0; i < this.bindings.length; i++) {
+            var offset = 0, length = this.bindings.length;
+            for (var i = 0; i < length; i++) {
                 if (this.bindings[i] === binding)
                     break;
                 offset += this.bindings[i].length;
@@ -328,9 +329,8 @@ export module Dom {
         }
 
         public tag(tagName: string, ns: string, attrs, children, childIndex: number): TagBinding {
-            var tag = new TagBinding(tagName, ns, children);
-
-            for (var i = 0; i < attrs.length; i++) {
+            var tag = new TagBinding(tagName, ns, children), length = attrs.length;
+            for (var i = 0; i < length; i++) {
                 tag.attr(attrs[i].name, attrs[i].tpl);
             }
 
@@ -364,8 +364,8 @@ export module Dom {
 
         render() {
             const result = this.evaluate(this.expr);
-            if (typeof result !== "undefined")
-                this.textNode.textContent = result && result.valueOf();
+            // if (result !== void 0)
+                this.textNode.nodeValue = result && result.valueOf();
         }
     }
 
@@ -427,8 +427,8 @@ export module Dom {
         }
 
         insert(binding, dom, idx) {
-            var offset = 0;
-            for (var i = 0; i < this.childBindings.length; i++) {
+            var offset = 0, length = this.childBindings.length;
+            for (var i = 0; i < length; i++) {
                 if (this.childBindings[i] === binding)
                     break;
                 offset += this.childBindings[i].length;
@@ -446,11 +446,13 @@ export module Dom {
             super.update(context);
 
             this.classBinding.update(context);
-            for (var e = 0; e < this.attributeBindings.length; e++) {
+            var attrLength = this.attributeBindings.length;
+            for (var e = 0; e < attrLength; e++) {
                 this.attributeBindings[e].update(context);
             }
 
-            for (var i = 0; i < this.childBindings.length; i++) {
+            var childLength = this.childBindings.length;
+            for (var i = 0; i < childLength; i++) {
                 this.childBindings[i].update(context);
             }
 
@@ -491,31 +493,33 @@ export module Dom {
 
         render(context) {
             this.context = context;
-            const classes = [];
-            if (!!this.baseClassTpl) {
-                var value = this.evaluate(this.baseClassTpl).valueOf();
-                classes.push(value);
+            var tag = this.parent.tagNode;
+
+            if (this.baseClassTpl) {
+                this.setAttribute("class", this.evaluate(this.baseClassTpl).valueOf());
             }
 
-            for (var i = 0; i < this.conditions.length; i++) {
+            var conditionLength = this.conditions.length;
+            for (var i = 0; i < conditionLength; i++) {
                 var { className, condition } = this.conditions[i];
-                if (!!condition.execute(this, context).valueOf()) {
-                    classes.push(className);
+                var b = condition.execute(this, context).valueOf();
+                if (b) {
+                    tag.classList.add(className);
+                } else {
+                    tag.classList.remove(className);
                 }
             }
-
-            this.setAttribute("class", classes.length > 0 ? join(" ", classes) : null);
         }
 
         public setAttribute(attrName: string, newValue) {
             var oldValue = this.oldValue;
 
             var tag = this.parent.tagNode;
-            if (typeof newValue === "undefined" || newValue === null) {
+            if (newValue === void 0 || newValue === null) {
                 tag[attrName] = void 0;
                 tag.removeAttribute(attrName);
             } else {
-                if (typeof oldValue === "undefined") {
+                if (oldValue === void 0) {
                     var attr = document.createAttribute(attrName);
                     attr.value = newValue;
                     tag.setAttributeNode(attr);
@@ -533,14 +537,16 @@ export module Dom {
         private values = [];
 
         constructor(tagNode: any, private name, private expr) {
-            tagNode.addEventListener(this.name, () => {
-                this.expr.execute(this, this.context);
-                var values = this.values;
-                this.values = [];
-                for (let i = 0; i < values.length; i++) {
-                    values[i].refresh();
-                }
-            });
+            tagNode.addEventListener(this.name, this.fire.bind(this));
+        }
+
+        fire() {
+            this.expr.execute(this, this.context);
+            var values = this.values, length = values.length;
+            this.values = [];
+            for (let i = 0; i < length; i++) {
+                values[i].refresh();
+            }
         }
 
         update(context) {
@@ -570,7 +576,11 @@ export module Dom {
                 return value;
             }
 
-            return fun.apply(null, args.map(x => x.valueOf()));
+            return fun.apply(null, args.map(EventBinding.valueOf));
+        }
+
+        private static valueOf(x) {
+            return x.valueOf();
         }
 
         member(target: { get(name: string); refresh?(); }, name) {
@@ -596,7 +606,7 @@ export module Dom {
         render() {
             let value = this.evaluate(this.expr);
 
-            if (typeof value === "undefined") {
+            if (value === void 0) {
                 return;
             }
 
@@ -614,11 +624,11 @@ export module Dom {
 
             var attrName = this.name;
             var tag = this.parent.tagNode;
-            if (typeof newValue === "undefined" || newValue === null) {
+            if (newValue === void 0 || newValue === null) {
                 tag[attrName] = void 0;
                 tag.removeAttribute(attrName);
             } else {
-                if (typeof oldValue === "undefined") {
+                if (oldValue === void 0) {
                     var attr = document.createAttribute(attrName);
                     attr.value = newValue;
                     tag.setAttributeNode(attr);
@@ -630,26 +640,6 @@ export module Dom {
             this.oldValue = newValue;
         }
     }
-
-    //export function importView(view: string, ...args): any {
-    //    if (!("import" in document.createElement("link"))) {
-    //        throw new Error("HTML import is not supported in this browser");
-    //    }
-
-    //    var deferred = defer();
-    //    var link = document.createElement('link');
-    //    link.rel = 'import';
-    //    link.href = view;
-    //    link.setAttribute('async', ""); // make it async!
-    //    link.onload = e => {
-    //        var link = (<any>e.target);
-    //        deferred.notify(link.import.querySelector("template"));
-    //        link.onload = null;
-    //    }
-    //    document.head.appendChild(link);
-
-    //    return deferred;
-    //}
 }
 
 export function join(separator: string, value) {
@@ -659,6 +649,6 @@ export function join(separator: string, value) {
     return value;
 }
 
-    // ReSharper restore InconsistentNaming
+// ReSharper restore InconsistentNaming
 
 export default Dom;

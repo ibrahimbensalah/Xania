@@ -7,23 +7,67 @@ declare var ENV;
 declare var Monitoring;
 // ReSharper restore InconsistentNaming
 
+class BufferedDispatcher {
+    private buffer = new Set();
+    dispatch(action) {
+        this.buffer.add(action);
+    }
+
+    static executeAction(action) {
+        action.execute();
+    }
+
+    flush() {
+        this.buffer.forEach(BufferedDispatcher.executeAction);
+        this.buffer.clear();
+    }
+}
+
+
 export function bind(target: Node) {
 
+    var dispatcher = new BufferedDispatcher();
     var store = new Store({
-        time: new Observables.Time(),
-        message: "hello, dbmon",
-        databases: ENV.generateData(true).toArray()
-    });
+            time: new Observables.Time(),
+            message: "hello, dbmon",
+            databases: ENV.generateData(true).toArray()
+        },
+        {},
+        dispatcher);
+    view().bind(target, store);
 
     var load = () => {
         ENV.generateData(true);
+
         store.update();
+        dispatcher.flush();
+
+        //for (var i = 0; i < 100; i++) {
+        //    var $db = $databases.get(i);
+        //    var $lastSample = $db.get("lastSample");
+        //    var $countClassName = $lastSample.get("countClassName");
+        //    var $nbQueries = $lastSample.get("nbQueries");
+        //    var $topFiveQueries = $lastSample.get("topFiveQueries");
+
+        //    // $countClassName.update($db.value['countClassName']);
+        //    // $nbQueries.update($db.value['nbQueries']);
+
+        //    for (var j = 0; j < 5; j++) {
+        //        var $q = $topFiveQueries.get(j);
+
+        //        var q = $q.value;
+
+        //        $q.get('elapsedClassName').update2(q);
+        //        $q.get('formatElapsed').update2(q);
+        //        $q.get("query").update2(q);
+        //    }
+
+        //}
+
         Monitoring.renderRate.ping();
         window.setTimeout(load, ENV.timeout);
     };
-
     load();
-    view().bind(target, store);
 
 }
 
@@ -33,22 +77,22 @@ function view() {
             <tbody>
                 <ForEach expr={fs("for db in databases")}>
                     <tr>
-                        <td clazz="dbname">
+                        <td className="dbname">
                             {fs("db.dbname")}
                         </td>
-                        <td clazz="query-count">
-                            <span clazz={fs("db.lastSample.countClassName")}>
+                        <td className="query-count">
+                            <span className={fs("db.lastSample.countClassName")}>
                                 {fs("db.lastSample.nbQueries")}
                             </span>
                         </td>
                         <ForEach expr={fs("for q in db.lastSample.topFiveQueries")}>
-                            <td clazz={fs("q.elapsedClassName")}>
+                            <td className={fs("q.elapsedClassName")}>
                                 {fs("q.formatElapsed")}
-                                <div clazz="popover left">
-                                    <div clazz="popover-content">
+                                <div className="popover left">
+                                    <div className="popover-content">
                                         {fs("q.query")}
                                     </div>
-                                    <div clazz="arrow"></div>
+                                    <div className="arrow"></div>
                                 </div>
                             </td>
                         </ForEach>
