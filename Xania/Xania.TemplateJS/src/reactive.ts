@@ -28,7 +28,7 @@ export module Reactive {
         protected extensions: { name: any, value: Extension }[];
         public value;
 
-        constructor(public dispatcher: IDispatcher) {
+        constructor() {
         }
 
 
@@ -54,7 +54,7 @@ export module Reactive {
                 return initialValue.bind(propertyValue);
             }
 
-            var property = new Property(this.dispatcher, this, propertyName);
+            var property = new Property(this, propertyName);
             property[propertyName] = initialValue;
             property.value = initialValue;
 
@@ -94,7 +94,7 @@ export module Reactive {
                 }
             }
 
-            var scope = new Extension(this.dispatcher, this).add(name, value);
+            var scope = new Extension(this).add(name, value);
 
             if (!this.extensions)
                 this.extensions = [];
@@ -113,8 +113,8 @@ export module Reactive {
         // list of observers to be dispatched on value change
         private actions: IAction[];
 
-        constructor(dispatcher: IDispatcher, private parent: { value; get(name: string) }, public name) {
-            super(dispatcher);
+        constructor(private parent: { value; get(name: string) }, public name) {
+            super();
         }
 
         get(name: string) {
@@ -139,14 +139,15 @@ export module Reactive {
         }
 
         unbind(action: IAction) {
-            if (!this.actions)
+            var actions = this.actions;
+            if (!actions)
                 return false;
 
-            var idx = this.actions.indexOf(action);
+            var idx = actions.indexOf(action);
             if (idx < 0)
                 return false;
 
-            this.actions.splice(idx, 1);
+            actions.splice(idx, 1);
             return true;
         }
 
@@ -159,9 +160,11 @@ export module Reactive {
         }
 
         update(parentValue) {
-            var newValue = parentValue[this.name];
+            var name = this.name,
+                newValue = parentValue[name];
+
             if (newValue !== this.value) {
-                this[this.name] = newValue;
+                this[name] = newValue;
                 this.value = newValue;
 
                 if (this.awaited) {
@@ -178,7 +181,7 @@ export module Reactive {
                 if (actions) {
                     // notify next
                     // delete this.actions;
-                    var i = actions.length-1, dispatcher = this.dispatcher;
+                    var i = actions.length-1;
                     do {
                         actions[i].notify(this);
                     } while (i--);
@@ -216,7 +219,7 @@ export module Reactive {
                     // notify next
                     var actions = this.actions.slice(0);
                     for (var i = 0; i < actions.length; i++) {
-                        this.property.dispatcher.dispatch(actions[i]);
+                        actions[i].notify(this);
                     }
                 }
             }
@@ -258,7 +261,7 @@ export module Reactive {
 
         protected extensions: { name: any, value: Extension }[];
 
-        constructor(private dispatcher: IDispatcher, private parent?: { get(name: string); }) {
+        constructor(private parent?: { get(name: string); }) {
         }
 
         add(name: string, value: Value): this {
@@ -278,7 +281,7 @@ export module Reactive {
                 this.extensions = [];
             }
 
-            var scope = new Extension(this.dispatcher, this).add(name, value);
+            var scope = new Extension(this).add(name, value);
 
             this.extensions.push({ name: value, value: scope });
 
@@ -312,8 +315,8 @@ export module Reactive {
     }
 
     export class Store extends Value {
-        constructor(value: any, private globals: any = {}, dispatcher: IDispatcher = DefaultDispatcher) {
-            super(dispatcher);
+        constructor(value: any, private globals: any = {}) {
+            super();
             this.value = value;
         }
 
@@ -387,7 +390,7 @@ export module Reactive {
             return this;
         }
 
-        public observe(value) {
+        observe(value) {
             if (value && value.change) {
                 value.change(this);
             }
@@ -435,8 +438,8 @@ export module Reactive {
         }
 
         app(fun, args: any[]) {
-            var xs = [];
-            for (var i = 0; i < args.length; i++) {
+            var xs = [], length = args.length;
+            for (var i = 0; i < length; i++) {
                 var arg = args[i];
                 if (arg && arg.valueOf) {
                     var x = arg.valueOf();
@@ -471,47 +474,13 @@ export module Reactive {
             return awaitable;
         }
 
-        static empty = "";
         evaluate(parts): any {
-            if (typeof parts === "object" && typeof parts.length === "number") {
-                return this.evaluateParts(parts);
-            } else {
-                return this.evaluatePart(parts);
-            }
-        }
-
-        evaluateParts(parts): any {
-            var length = parts.length;
-            if (length === 0)
-                return Binding.empty;
-
-            if (length === 1)
-                return this.evaluatePart(parts[0]);
-
-            var concatenated = Binding.empty;
-            for (var i = 0; i < length; i++) {
-                var p = this.evaluatePart(parts[i]);
-                if (p === void 0)
-                    return void 0;
-                var inner = p.valueOf();
-                if (inner === void 0)
-                    return void 0;
-                if (inner !== null)
-                    concatenated += inner;
-            }
-            return concatenated;
-        }
-
-        evaluatePart(part: any) {
-            if (typeof part === "string")
-                return part;
-            else {
-                var value = part.execute(this, this.context);
-                return value && value.valueOf();
-            }
+            if (parts.execute)
+                return parts.execute(this, this.context);
+            else
+                return parts;
         }
     }
-
 }
 
 export default Reactive;

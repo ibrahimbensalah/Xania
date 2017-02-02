@@ -12,6 +12,17 @@
 	function minus(x, y) {
 		return y - x;
 	}
+
+	var WHERE = 1;
+	var QUERY = 2;
+	var IDENT = 3;
+	var MEMBER = 4;
+	var APP = 5;
+	var SELECT = 6;
+	var CONST = 7;
+	var RANGE = 8;
+	var BINARY = 9;
+	var AWAIT = 10;
 }
 
 Program
@@ -29,21 +40,21 @@ LambdaExpression
 		return { type: "lambda", param, body };
 	}
 	/ "." ident:Identifier {
-		return { type: "lambda", param:"x", body: { type: "member", target: { type: "ident", name: "x" }, member: ident } };
+		return { type: "lambda", param:"x", body: { type: MEMBER, target: { type: IDENT, name: "x" }, member: ident } };
 	}
 
 QueryExpression
 	= "for" _ param:IdentifierName _ "in" _ source:(Identifier / Range) where:(_ WhereExpression)* selector:(_ SelectExpression)? {
-		var query = { type: "query", param, source }
+		var query = { type: QUERY, param, source }
 
 		function reducer(source, predicate) {
-			return { type: "where", predicate, source };
+			return { type: WHERE, predicate, source };
 		}
 
 		var filtered = where.map(x => x[1]).reduce(reducer, query);
 
 		if (selector)
-			return { type: "select", selector: selector[1], source: filtered }
+			return { type: SELECT, selector: selector[1], source: filtered }
 
 		return filtered;
 	}
@@ -74,7 +85,7 @@ AdditiveExpression
 		var reducer = (prev, binder) => { 
 			var op = binder[1].op;
 			var operand = binder[1].operand;
-			return { type: "app", fun: op, args: [ operand, prev ] };
+			return { type: APP, fun: op, args: [ operand, prev ] };
 		};
 		return adds.reduce(reducer, head);
   }
@@ -94,7 +105,7 @@ MultiplicativeExpression
 		var reducer = (prev, binder) => { 
 			var op = binder[1].op;
 			var operand = binder[1].operand;
-			return { type: "app", fun: op, args: [ operand, prev ] };
+			return { type: APP, fun: op, args: [ operand, prev ] };
 		};
 		return mults.reduce(reducer, head);
   }
@@ -114,21 +125,21 @@ Term
   }
   / "await" _ expr:Expression {
 		return {
-			type: "await",
+			type: AWAIT,
 			expr: expr
 		};
 	}
 
 Range
   = "[" _ from:(Term / Identifier) _ ".." _ to:(Term / Identifier) _ "]" {
-	return { type: "range", from, to }
+	return { type: RANGE, from, to }
   }
 
 ApplicativeExpression
   = fun:Application args:(_ (Term / Identifier))* comps:( _ CompositionBinder )* {
 		var head = args.length == 0
 			? fun
-  			: { type: "app", fun, args: args.filter(x => x[1].type != 'unit').map(x => x[1]) };
+  			: { type: APP, fun, args: args.filter(x => x[1].type != 'unit').map(x => x[1]) };
 
 		var reducer = (prev, binder) => { 
 			var op = binder[1].op;
@@ -156,11 +167,11 @@ Identifier
   = !"select" name:IdentifierName members:( "." IdentifierName)* assign:( _ "<-" _ AdditiveExpression )? {
 		var reducer = (prev, next) => { 
 			var member = next[1];
-			return { type: "member", target: prev, member };
+			return { type: MEMBER, target: prev, member };
 		};
-		var ident = members.reduce(reducer, { type: "ident", name });
+		var ident = members.reduce(reducer, { type: IDENT, name });
 		if (!!assign)
-			return { type: "binary", op: "assign", left: ident, right: assign[3] };
+			return { type: BINARY, op: "assign", left: ident, right: assign[3] };
 		return ident;
   }
   
@@ -205,7 +216,7 @@ UnicodeLetter
   / Nl
 
 String
-  = str:StringLiteral { return { type: "const", value: str } }
+  = str:StringLiteral { return { type: CONST, value: str } }
  
 SourceCharacter
   = .
@@ -285,12 +296,12 @@ Number "number"
   
 Rational "rational"
   = Integer "." Integer {
-  		return { type: "const", value: parseFloat(text()) }
+  		return { type: CONST, value: parseFloat(text()) }
   }
 
 Integer "integer"
   = [-+]?[0-9]+ { 
-  	return { type: "const", value: parseInt(text(), 10) }; 
+  	return { type: CONST, value: parseInt(text(), 10) }; 
   }
 
 WS "whitespace"

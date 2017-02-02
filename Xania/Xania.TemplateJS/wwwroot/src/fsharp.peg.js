@@ -154,23 +154,23 @@ function peg$parse(input, options) {
       peg$c6 = ".",
       peg$c7 = peg$literalExpectation(".", false),
       peg$c8 = function(ident) {
-      		return { type: "lambda", param:"x", body: { type: "member", target: { type: "ident", name: "x" }, member: ident } };
+      		return { type: "lambda", param:"x", body: { type: MEMBER, target: { type: IDENT, name: "x" }, member: ident } };
       	},
       peg$c9 = "for",
       peg$c10 = peg$literalExpectation("for", false),
       peg$c11 = "in",
       peg$c12 = peg$literalExpectation("in", false),
       peg$c13 = function(param, source, where, selector) {
-      		var query = { type: "query", param, source }
+      		var query = { type: QUERY, param, source }
 
       		function reducer(source, predicate) {
-      			return { type: "where", predicate, source };
+      			return { type: WHERE, predicate, source };
       		}
 
       		var filtered = where.map(x => x[1]).reduce(reducer, query);
 
       		if (selector)
-      			return { type: "select", selector: selector[1], source: filtered }
+      			return { type: SELECT, selector: selector[1], source: filtered }
 
       		return filtered;
       	},
@@ -197,7 +197,7 @@ function peg$parse(input, options) {
       		var reducer = (prev, binder) => { 
       			var op = binder[1].op;
       			var operand = binder[1].operand;
-      			return { type: "app", fun: op, args: [ operand, prev ] };
+      			return { type: APP, fun: op, args: [ operand, prev ] };
       		};
       		return adds.reduce(reducer, head);
         },
@@ -215,7 +215,7 @@ function peg$parse(input, options) {
       		var reducer = (prev, binder) => { 
       			var op = binder[1].op;
       			var operand = binder[1].operand;
-      			return { type: "app", fun: op, args: [ operand, prev ] };
+      			return { type: APP, fun: op, args: [ operand, prev ] };
       		};
       		return mults.reduce(reducer, head);
         },
@@ -235,7 +235,7 @@ function peg$parse(input, options) {
       peg$c38 = peg$literalExpectation("await", false),
       peg$c39 = function(expr) {
       		return {
-      			type: "await",
+      			type: AWAIT,
       			expr: expr
       		};
       	},
@@ -246,12 +246,12 @@ function peg$parse(input, options) {
       peg$c44 = "]",
       peg$c45 = peg$literalExpectation("]", false),
       peg$c46 = function(from, to) {
-      	return { type: "range", from, to }
+      	return { type: RANGE, from, to }
         },
       peg$c47 = function(fun, args, comps) {
       		var head = args.length == 0
       			? fun
-        			: { type: "app", fun, args: args.filter(x => x[1].type != 'unit').map(x => x[1]) };
+        			: { type: APP, fun, args: args.filter(x => x[1].type != 'unit').map(x => x[1]) };
 
       		var reducer = (prev, binder) => { 
       			var op = binder[1].op;
@@ -274,11 +274,11 @@ function peg$parse(input, options) {
       peg$c54 = function(name, members, assign) {
       		var reducer = (prev, next) => { 
       			var member = next[1];
-      			return { type: "member", target: prev, member };
+      			return { type: MEMBER, target: prev, member };
       		};
-      		var ident = members.reduce(reducer, { type: "ident", name });
+      		var ident = members.reduce(reducer, { type: IDENT, name });
       		if (!!assign)
-      			return { type: "binary", op: "assign", left: ident, right: assign[3] };
+      			return { type: BINARY, op: "assign", left: ident, right: assign[3] };
       		return ident;
         },
       peg$c55 = /^[=+\-|>]/,
@@ -299,7 +299,7 @@ function peg$parse(input, options) {
       peg$c68 = peg$literalExpectation("\u200C", false),
       peg$c69 = "\u200D",
       peg$c70 = peg$literalExpectation("\u200D", false),
-      peg$c71 = function(str) { return { type: "const", value: str } },
+      peg$c71 = function(str) { return { type: CONST, value: str } },
       peg$c72 = peg$anyExpectation(),
       peg$c73 = peg$otherExpectation("whitespace"),
       peg$c74 = "\t",
@@ -355,7 +355,7 @@ function peg$parse(input, options) {
       peg$c120 = peg$otherExpectation("number"),
       peg$c121 = peg$otherExpectation("rational"),
       peg$c122 = function() {
-        		return { type: "const", value: parseFloat(text()) }
+        		return { type: CONST, value: parseFloat(text()) }
         },
       peg$c123 = peg$otherExpectation("integer"),
       peg$c124 = /^[\-+]/,
@@ -363,7 +363,7 @@ function peg$parse(input, options) {
       peg$c126 = /^[0-9]/,
       peg$c127 = peg$classExpectation([["0", "9"]], false, false),
       peg$c128 = function() { 
-        	return { type: "const", value: parseInt(text(), 10) }; 
+        	return { type: CONST, value: parseInt(text(), 10) }; 
         },
       peg$c129 = /^[ \t\n\r]/,
       peg$c130 = peg$classExpectation([" ", "\t", "\n", "\r"], false, false),
@@ -2728,6 +2728,17 @@ function peg$parse(input, options) {
   	function minus(x, y) {
   		return y - x;
   	}
+
+  	var WHERE = 1;
+  	var QUERY = 2;
+  	var IDENT = 3;
+  	var MEMBER = 4;
+  	var APP = 5;
+  	var SELECT = 6;
+  	var CONST = 7;
+  	var RANGE = 8;
+  	var BINARY = 9;
+  	var AWAIT = 10;
 
 
   peg$result = peg$startRuleFunction();

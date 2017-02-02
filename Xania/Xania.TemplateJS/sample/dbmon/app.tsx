@@ -26,21 +26,20 @@ class BufferedDispatcher {
 
 export function bind(target: Node) {
 
-    var dispatcher = new BufferedDispatcher();
+    // var dispatcher = new BufferedDispatcher();
     var store = new Store({
             time: new Observables.Time(),
             message: "hello, dbmon",
             databases: ENV.generateData(true).toArray()
         },
-        {},
-        dispatcher);
+        {});
     view().bind(target, store);
 
     var load = () => {
         ENV.generateData(true);
 
         store.update();
-        dispatcher.flush();
+        // dispatcher.flush();
 
         //for (var i = 0; i < 100; i++) {
         //    var $db = $databases.get(i);

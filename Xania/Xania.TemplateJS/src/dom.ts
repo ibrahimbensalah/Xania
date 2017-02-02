@@ -1,7 +1,7 @@
 ﻿import { Core } from './core'
 import { Reactive as Re } from './reactive'
 import { Template } from './template'
-import { fs } from "./fsharp"
+import { parseTpl } from "./fsharp"
 
 export module Dom {
 
@@ -88,50 +88,14 @@ export module Dom {
         } as IView;
     }
 
-    function parseText(text): any  {
-        var parts: any[] = [];
-
-        var appendText = (x) => {
-            var s = x.trim();
-            if (s.length > 0)
-                parts.push(x);
-        };
-
-        var offset = 0, length = text.length;
-        while (offset < length) {
-            var begin = text.indexOf("{{", offset);
-            if (begin >= 0) {
-                if (begin > offset)
-                    appendText(text.substring(offset, begin));
-
-                offset = begin + 2;
-                const end = text.indexOf("}}", offset);
-                if (end >= 0) {
-                    parts.push(fs(text.substring(offset, end)));
-                    offset = end + 2;
-                } else {
-                    throw new SyntaxError("Expected '}}' but not found starting from index: " + offset);
-                }
-            } else {
-                appendText(text.substring(offset));
-                break;
-            }
-        }
-
-        if (parts.length === 1)
-            return parts[0];
-
-        return parts;
-    }
-
     function parseAttr(tagElement: Template.TagTemplate, attr: Attr) {
         const name = attr.name;
-        const tpl = parseText(attr.value);
+        const tpl = parseTpl(attr.value);
         tagElement.attr(name, tpl || attr.value);
 
         // conventions
         if (!!tagElement.name.match(/^input$/i) && !!attr.name.match(/^name$/i) && tagElement.getAttribute("value") != undefined) {
-            const valueAccessor = parseText(attr.value);
+            const valueAccessor = parseTpl(attr.value);
             tagElement.attr("value", valueAccessor);
         }
     }
@@ -156,7 +120,7 @@ export module Dom {
             for (i = 0; !!elt.attributes && i < elt.attributes.length; i++) {
                 var attribute = elt.attributes[i];
                 if (attribute.name === "data-repeat") {
-                    fragmentTemplate = new Template.FragmentTemplate(parseText(attribute.value)).child(template);
+                    fragmentTemplate = new Template.FragmentTemplate(parseTpl(attribute.value)).child(template);
                 } else {
                     parseAttr(template, attribute);
                 }
@@ -172,7 +136,7 @@ export module Dom {
         } else if (node.nodeType === 3) {
             var textContent = node.textContent;
             if (textContent.trim().length > 0) {
-                const tpl = parseText(textContent);
+                const tpl = parseTpl(textContent);
                 return new Template.TextTemplate(tpl || node.textContent);
             }
         }
@@ -411,7 +375,9 @@ export module Dom {
         static eventNames = ["click", "mouseover", "mouseout", "blur", "change"];
 
         attr(name, ast): this {
-            if (name === "class") {
+            if (typeof ast === "string") {
+                this.tagNode.setAttribute(name, ast);
+            } else if (name === "class") {
                 this.classBinding.setBaseClass(ast);
             } else if (name.startsWith("class.")) {
                 this.classBinding.addClass(name.substr(6), ast);
@@ -475,7 +441,7 @@ export module Dom {
 
     export class ClassBinding extends Re.Binding {
         public dom;
-        private conditions = [];
+        private conditions;
         private oldValue;
         private baseClassTpl;
 
@@ -488,6 +454,9 @@ export module Dom {
         }
 
         addClass(className, condition) {
+            if (!this.conditions)
+                this.conditions = [];
+
             this.conditions.push({ className, condition });
         }
 
@@ -496,17 +465,34 @@ export module Dom {
             var tag = this.parent.tagNode;
 
             if (this.baseClassTpl) {
-                this.setAttribute("class", this.evaluate(this.baseClassTpl).valueOf());
+                var oldValue = this.oldValue,
+                    newValue = this.evaluate(this.baseClassTpl).valueOf();
+
+                if (newValue === void 0 || newValue === null) {
+                    tag.className = Core.empty;
+                } else {
+                    tag.className = newValue;
+                    //if (oldValue === void 0) {
+                    //    var attr = document.createAttribute("class");
+                    //    attr.value = newValue;
+                    //    tag.setAttributeNode(attr);
+                    //} else {
+                    //    tag.className = newValue;
+                    //}
+                }
+                this.oldValue = newValue;
             }
 
-            var conditionLength = this.conditions.length;
-            for (var i = 0; i < conditionLength; i++) {
-                var { className, condition } = this.conditions[i];
-                var b = condition.execute(this, context).valueOf();
-                if (b) {
-                    tag.classList.add(className);
-                } else {
-                    tag.classList.remove(className);
+            if (this.conditions) {
+                var conditionLength = this.conditions.length;
+                for (var i = 0; i < conditionLength; i++) {
+                    var { className, condition } = this.conditions[i];
+                    var b = condition.execute(this, context).valueOf();
+                    if (b) {
+                        tag.classList.add(className);
+                    } else {
+                        tag.classList.remove(className);
+                    }
                 }
             }
         }

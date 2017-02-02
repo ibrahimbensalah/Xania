@@ -172,4 +172,6 @@
             }
         };
     }
+
+    export var empty = "";
 }
