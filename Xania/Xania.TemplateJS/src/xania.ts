@@ -52,12 +52,20 @@ export function ForEach(attr, children) {
     return tpl;
 }
 
-export class Partial extends Re.Binding {
+export function Partial(attr, children) {
+    return {
+        accept() {
+            return new PartialBinding(attr, children);
+        }
+    }
+}
+
+export class PartialBinding extends Re.Binding {
     private parent;
     private binding;
 
     constructor(private attr, private children) {
-        super(null);
+        super();
     }
 
     get template() {
@@ -85,7 +93,7 @@ export class Partial extends Re.Binding {
         if (this.binding)
             this.binding.dispose();
 
-        this.binding = new Dom.FragmentBinding(this.attr.model, [view.template])
+        this.binding = new Dom.FragmentBinding(this.attr.model, [view])
             .map(this);
         this.binding.update(context);
     }

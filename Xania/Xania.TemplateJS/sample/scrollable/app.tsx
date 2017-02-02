@@ -21,26 +21,22 @@ export function bind(target: Node) {
         }
     });
 
-    template().bind(target, store);
+    Xania.view(template()).bind(target, store);
 }
 
-function template() {
-    var view =
+var template: any = () =>
+    <div>
+        <h1>{fs("user.firstName")} {fs("user.lastName")}</h1>
         <div>
-            <h1>{fs("user.firstName")} {fs("user.lastName")}</h1>
-            <div>
-                view:
-                <button click={fs("route 'view1'")}>view 1</button>
-                <button click={fs("route 'view2'")}>view 2</button>
-                &nbsp;&nbsp;&nbsp;&nbsp;
-                model:
-                <button click={fs("user.firstName <- 'Ramy'")}>Ramy</button>
-                <button click={fs("user.firstName <- 'Ibrahim'")}>Ibrahim</button>
-            </div>
-            <div style="border: solid 1px red; padding: 10px;">
-                <Partial view={fs("resolve (await view) user")} model={fs("user")} />
-            </div>
-        </div>;
-
-    return view as any;
-}
+            view:
+            <button click={fs("route 'view1'")}>view 1</button>
+            <button click={fs("route 'view2'")}>view 2</button>
+            &nbsp;&nbsp;&nbsp;&nbsp;
+            model:
+            <button click={fs("user.firstName <- 'Ramy'")}>Ramy</button>
+            <button click={fs("user.firstName <- 'Ibrahim'")}>Ibrahim</button>
+        </div>
+        <div style="border: solid 1px red; padding: 10px;">
+            <Partial view={fs("resolve (await view) user")} model={fs("user")} />
+        </div>
+    </div>;

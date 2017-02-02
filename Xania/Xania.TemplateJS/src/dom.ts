@@ -75,7 +75,7 @@ export module Dom {
         }
     }
 
-    export function parse(node, dispatcher: IDispatcher): IView {
+    export function parse(node, dispatcher?: IDispatcher): IView {
         return {
             template: parseNode(node),
             bind(target, store) {
