@@ -7,13 +7,9 @@ export module Reactive {
         parse(expr: string): { execute(scope: { get(name: string) }) };
     }
 
-    interface IAction {
+    export interface IAction {
         execute();
         notify(value: IDependency);
-    }
-
-    interface IDispatcher {
-        dispatch(action: IAction);
     }
 
     interface IProperty {
@@ -27,10 +23,6 @@ export module Reactive {
         public properties: IProperty[];
         protected extensions: { name: any, value: Extension }[];
         public value;
-
-        constructor() {
-        }
-
 
         get(propertyName: string): IProperty {
             var properties = this.properties;
@@ -178,10 +170,10 @@ export module Reactive {
                 //}
 
                 const actions = this.actions;
-                if (actions) {
+                if (actions && actions.length) {
                     // notify next
                     // delete this.actions;
-                    var i = actions.length-1;
+                    var i = actions.length - 1;
                     do {
                         actions[i].notify(this);
                     } while (i--);
@@ -308,12 +300,6 @@ export module Reactive {
         }
     }
 
-    class DefaultDispatcher {
-        static dispatch(action: IAction) {
-            action.execute();
-        }
-    }
-
     export class Store extends Value {
         constructor(value: any, private globals: any = {}) {
             super();
@@ -368,10 +354,16 @@ export module Reactive {
         }
     }
 
+    class DefaultDispatcher {
+        static dispatch(action: IAction) {
+            action.execute();
+        }
+    }
+
     export abstract class Binding {
         protected context;
 
-        constructor(private dispatcher: IDispatcher = DefaultDispatcher) { }
+        constructor(public dispatcher: { dispatch(action: IAction) } = DefaultDispatcher) { }
 
         execute() {
             this.render(this.context);

@@ -21,10 +21,15 @@ export module Dom {
         bind(target: Node, store);
     }
 
+
+    interface IDispatcher {
+        dispatch(action: Re.IAction);
+    }
+
     export class DomBinding {
         private childBindings: IDomBinding[] = [];
 
-        constructor(private target) {
+        constructor(private target, private dispatcher: IDispatcher) {
         }
 
         static insertDom(target, dom, idx) {
@@ -50,17 +55,17 @@ export module Dom {
         }
 
         text(expr): TextBinding {
-            var text = new TextBinding(expr);
+            var text = new TextBinding(expr, this.dispatcher);
             this.childBindings.push(text.map(this));
             return text;
         }
         content(ast, children: Template.INode[]): FragmentBinding {
-            var content = new FragmentBinding(ast, children);
+            var content = new FragmentBinding(ast, children, this.dispatcher);
             this.childBindings.push(content.map(this));
             return content;
         }
         tag(name, ns, attrs, children): TagBinding {
-            var tag = new TagBinding(name, ns, children), length = attrs.length;
+            var tag = new TagBinding(name, ns, children, this.dispatcher), length = attrs.length;
             for (var i = 0; i < length; i++) {
                 tag.attr(attrs[i].name, attrs[i].tpl);
             }
@@ -70,20 +75,20 @@ export module Dom {
         }
     }
 
-    export function parse(node): IView {
+    export function parse(node, dispatcher: IDispatcher): IView {
         return {
             template: parseNode(node),
             bind(target, store) {
-                return this.template.accept(new DomBinding(target)).update(store);
+                return this.template.accept(new DomBinding(target, dispatcher)).update(store);
             }
         } as IView;
     }
 
-    export function view(template) {
+    export function view(template, dispatcher?: IDispatcher) {
         return {
             template,
             bind(target, store) {
-                return this.template.accept(new DomBinding(target)).update(store);
+                return this.template.accept(new DomBinding(target, dispatcher)).update(store);
             }
         } as IView;
     }
@@ -156,8 +161,8 @@ export module Dom {
             return total;
         }
 
-        constructor(private ast, public children: Template.INode[]) {
-            super();
+        constructor(private ast, public children: Template.INode[], dispatcher?: IDispatcher) {
+            super(dispatcher);
         }
 
         dispose() {
@@ -285,15 +290,15 @@ export module Dom {
         }
 
         public text(ast, childIndex: number): TextBinding {
-            return new TextBinding(ast);
+            return new TextBinding(ast, this.owner.dispatcher);
         }
 
         public content(ast, children, childIndex: number): FragmentBinding {
-            return new FragmentBinding(ast, children);
+            return new FragmentBinding(ast, children, this.owner.dispatcher);
         }
 
         public tag(tagName: string, ns: string, attrs, children, childIndex: number): TagBinding {
-            var tag = new TagBinding(tagName, ns, children), length = attrs.length;
+            var tag = new TagBinding(tagName, ns, children, this.owner.dispatcher), length = attrs.length;
             for (var i = 0; i < length; i++) {
                 tag.attr(attrs[i].name, attrs[i].tpl);
             }
@@ -311,8 +316,8 @@ export module Dom {
         protected target: IBindingTarget;
         public length = 1;
 
-        constructor(private expr) {
-            super();
+        constructor(private expr, dispatcher?: IDispatcher) {
+            super(dispatcher);
             this.textNode = (<any>document).createTextNode("");
         }
 
@@ -329,7 +334,7 @@ export module Dom {
         render() {
             const result = this.evaluate(this.expr);
             // if (result !== void 0)
-                this.textNode.nodeValue = result && result.valueOf();
+            this.textNode.nodeValue = result && result.valueOf();
         }
     }
 
@@ -337,20 +342,22 @@ export module Dom {
         public tagNode;
         private attributeBindings = [];
         private events = {};
-        private classBinding = new ClassBinding(this);
+        private classBinding = new ClassBinding(this, this.dispatcher);
         protected target: IBindingTarget;
         public length = 1;
 
-        constructor(tagName: string, private ns: string = null, private childBindings: IDomBinding[] = []) {
-            super();
+        constructor(tagName: string, private ns: string = null, private childBindings?: IDomBinding[], dispatcher?: IDispatcher) {
+            super(dispatcher);
             if (ns === null)
                 this.tagNode = document.createElement(tagName);
             else {
                 this.tagNode = (<any>document).createElementNS(ns, tagName.toLowerCase());
             }
 
-            for (var i = 0; i < childBindings.length; i++) {
-                childBindings[i].map(this);
+            if (childBindings) {
+                for (var i = 0; i < childBindings.length; i++) {
+                    childBindings[i].map(this);
+                }
             }
         }
 
@@ -367,8 +374,10 @@ export module Dom {
         }
 
         child(child: IDomBinding): this {
-            this.childBindings.push(child.map(this));
+            if (!this.childBindings)
+                this.childBindings = [];
 
+            this.childBindings.push(child.map(this));
             return this;
         }
 
@@ -385,7 +394,7 @@ export module Dom {
                 var eventBinding = new EventBinding(this.tagNode, name, ast);
                 this.attributeBindings.push(eventBinding);
             } else {
-                var attrBinding = new AttributeBinding(this, name, ast);
+                var attrBinding = new AttributeBinding(this, name, ast, this.dispatcher);
                 this.attributeBindings.push(attrBinding);
             }
 
@@ -445,8 +454,8 @@ export module Dom {
         private oldValue;
         private baseClassTpl;
 
-        constructor(private parent: TagBinding) {
-            super();
+        constructor(private parent: TagBinding, dispatcher: IDispatcher) {
+            super(dispatcher);
         }
 
         setBaseClass(tpl) {
@@ -585,8 +594,8 @@ export module Dom {
         public dom;
         private oldValue;
 
-        constructor(private parent: TagBinding, private name, private expr) {
-            super();
+        constructor(private parent: TagBinding, private name, private expr, dispatcher: IDispatcher) {
+            super(dispatcher);
         }
 
         render() {

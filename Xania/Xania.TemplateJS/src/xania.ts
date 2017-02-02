@@ -8,14 +8,16 @@ export class Xania {
         var result = [];
         for (var i = 0; i < elements.length; i++) {
             var child = elements[i];
-            if (child.template)
-                result.push(child.template);
-            else
+
+            if (child.accept)
+                result.push(child);
+            else {
                 result.push(new Template.TextTemplate(child));
+            }
         }
         return result;
     }
-    static tag(element, attr, ...children): Dom.IView {
+    static tag(element, attr, ...children): Template.INode {
         var childTemplates = this.templates(children);
 
         if (typeof element === "string") {
@@ -27,28 +29,27 @@ export class Xania {
                     tag.attr(prop, attr[prop]);
             }
 
-            return Dom.view(tag);
+            return tag;
         } else if (typeof element === "function") {
-            var component = new element(attr, childTemplates);
+            var component = element(attr, childTemplates);
 
             return component;
         }
     }
+    static view(tpl: Template.INode, dispatcher?) {
+        return Dom.view(tpl, dispatcher);
+    }
 }
 
 
-export class ForEach {
-    constructor(private attr, private children) { }
+export function ForEach(attr, children) {
+    var tpl = new Template.FragmentTemplate(attr.expr || null);
 
-    get template() {
-        var tpl = new Template.FragmentTemplate(this.attr.expr || null);
-
-        for (var i = 0; i < this.children.length; i++) {
-            tpl.child(this.children[i]);
-        }
-
-        return tpl;
+    for (var i = 0; i < children.length; i++) {
+        tpl.child(children[i]);
     }
+
+    return tpl;
 }
 
 export class Partial extends Re.Binding {
