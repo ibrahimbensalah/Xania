@@ -188,20 +188,20 @@ export module Reactive {
         private awaited: Awaited;
         await() {
             if (!this.awaited) {
-                this.awaited = new Awaited(this);
+                this.awaited = new Awaited(this.value);
             }
             return this.awaited;
         }
     }
 
-    class Awaited {
+    export class Awaited {
         private subscription;
         private actions: IAction[];
         private current;
 
-        constructor(private property: Property) {
-            this.subscription = property.value.subscribe(this);
-            this.current = property.value.current;
+        constructor(observable: any) {
+            this.subscription = observable.subscribe(this);
+            this.current = observable.current;
         }
 
         onNext(newValue) {

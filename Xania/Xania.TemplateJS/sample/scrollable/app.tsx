@@ -1,10 +1,10 @@
 ﻿import { Observables } from "../../src/observables"
 
-import { Xania, ForEach, fs, Store, Partial } from "../../src/xania"
+import { Xania, ForEach, fs, View, Reactive as Re } from "../../src/xania"
 
 export function bind(target: Node) {
     var view = new Observables.Observable("view1");
-    var store = new Store({
+    var store = new Re.Store({
         view,
         time: new Observables.Time(),
         user: { firstName: "Ibrahim", lastName: "ben Salah" },
@@ -21,10 +21,20 @@ export function bind(target: Node) {
         }
     });
 
-    Xania.view(template()).bind(target, store);
+    var mainView = view.map(viewName => {
+        switch (viewName) {
+        case 'view1':
+            return <div>view 1: {fs("firstName")}</div>;
+        case 'view2':
+            return <ForEach expr={fs("for v in [1..3]")}>
+                       <h1>{fs("firstName")}</h1>View 2: {fs("v")}</ForEach>;
+        }
+    });
+
+    Xania.view(layout(new Re.Awaited(mainView))).bind(target, store);
 }
 
-var template: any = () =>
+var layout: any = (view) =>
     <div>
         <h1>{fs("user.firstName")} {fs("user.lastName")}</h1>
         <div>
@@ -37,6 +47,6 @@ var template: any = () =>
             <button click={fs("user.firstName <- 'Ibrahim'")}>Ibrahim</button>
         </div>
         <div style="border: solid 1px red; padding: 10px;">
-            <Partial view={fs("resolve (await view) user")} model={fs("user")} />
+            {View.partial(view, fs("user"))}
         </div>
     </div>;

@@ -1,7 +1,7 @@
 ﻿import { Template } from "./template"
 import { Dom } from "./dom"
 import { fs } from "./fsharp"
-import { Reactive as Re } from "./reactive"
+import { Reactive } from "./reactive"
 
 export class Xania {
     static templates(elements) {
@@ -31,9 +31,7 @@ export class Xania {
 
             return tag;
         } else if (typeof element === "function") {
-            var component = element(attr, childTemplates);
-
-            return component;
+            return element(attr, childTemplates);
         }
     }
     static view(tpl: Template.INode, dispatcher?) {
@@ -52,19 +50,21 @@ export function ForEach(attr, children) {
     return tpl;
 }
 
-export function Partial(attr, children) {
-    return {
-        accept() {
-            return new PartialBinding(attr, children);
+export module View {
+    export function partial(view, model) {
+        return {
+            accept() {
+                return new PartialBinding(view, model);
+            }
         }
     }
 }
 
-export class PartialBinding extends Re.Binding {
+export class PartialBinding extends Reactive.Binding {
     private parent;
     private binding;
 
-    constructor(private attr, private children) {
+    constructor(private view, private model) {
         super();
     }
 
@@ -88,17 +88,15 @@ export class PartialBinding extends Re.Binding {
     }
 
     render(context) {
-        var view = this.evaluate(this.attr.view);
+        var view = this.evaluate(this.view).valueOf();
 
         if (this.binding)
             this.binding.dispose();
 
-        this.binding = new Dom.FragmentBinding(this.attr.model, [view])
+        this.binding = new Dom.FragmentBinding(this.model, [view])
             .map(this);
         this.binding.update(context);
     }
 }
 
-export var Store = Re.Store;
-
-export { fs }
+export { fs, Reactive }

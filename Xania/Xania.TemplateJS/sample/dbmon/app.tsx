@@ -1,6 +1,6 @@
 ﻿import { Observables } from "../../src/observables"
 
-import { Xania, ForEach, fs, Store } from "../../src/xania"
+import { Xania, ForEach, fs, Reactive as Re } from "../../src/xania"
 
 // ReSharper disable InconsistentNaming
 declare var ENV;
@@ -28,7 +28,7 @@ class BufferedDispatcher {
 export function bind(target: Node) {
 
     var dispatcher = new BufferedDispatcher();
-    var store = new Store({
+    var store = new Re.Store({
             time: new Observables.Time(),
             message: "hello, dbmon",
             databases: ENV.generateData(true).toArray()
