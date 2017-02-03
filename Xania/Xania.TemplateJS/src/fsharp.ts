@@ -64,14 +64,24 @@ export function accept(ast: any, visitor: IAstVisitor, context) {
             if (first === void 0 || last === void 0)
                 return first;
             // TODO lazy impl
-            var arr = [];
-            for (var i = first; i <= last; i++)
-                arr.push(i);
-            return arr;
+            return new Range(first.valueOf(), last.valueOf());
         case AWAIT:
             return visitor.await(accept(ast.expr, visitor, context));
         default:
             return ast;
+    }
+}
+
+class Range {
+    constructor(private first, private last) {
+    }
+
+    map(fn) {
+        var result = [], last = this.last;
+        for (var i = this.first; i <= last; i++) {
+            result.push(fn(i));
+        }
+        return result;
     }
 }
 

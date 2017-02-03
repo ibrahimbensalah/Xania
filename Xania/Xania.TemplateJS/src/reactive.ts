@@ -21,7 +21,6 @@ export module Reactive {
 
     abstract class Value {
         public properties: IProperty[];
-        protected extensions: { name: any, value: Extension }[];
         public value;
 
         get(propertyName: string): IProperty {
@@ -76,24 +75,6 @@ export module Reactive {
             for (let i = disposed.length - 1; i >= 0; i--) {
                 this.properties.splice(disposed[i], 1);
             }
-        }
-
-        extend(name: string, value: any) {
-            for (var i = 0; this.extensions && i < this.extensions.length; i++) {
-                var x = this.extensions[i];
-                if (x.name === value) {
-                    return x.value;
-                }
-            }
-
-            var scope = new Extension(this).add(name, value);
-
-            if (!this.extensions)
-                this.extensions = [];
-
-            this.extensions.push({ name: value, value: scope });
-
-            return scope;
         }
     }
 
@@ -251,33 +232,12 @@ export module Reactive {
 
     export class Extension {
 
-        protected extensions: { name: any, value: Extension }[];
-
         constructor(private parent?: { get(name: string); }) {
         }
 
         add(name: string, value: Value): this {
             this[name] = value;
             return this;
-        }
-
-        extend(name: string, value: any) {
-            if (this.extensions) {
-                for (var i = 0; i < this.extensions.length; i++) {
-                    var x = this.extensions[i];
-                    if (x.name === value) {
-                        return x.value;
-                    }
-                }
-            } else {
-                this.extensions = [];
-            }
-
-            var scope = new Extension(this).add(name, value);
-
-            this.extensions.push({ name: value, value: scope });
-
-            return scope;
         }
 
         get(name: string) {
@@ -362,6 +322,7 @@ export module Reactive {
 
     export abstract class Binding {
         protected context;
+        protected extensions: { name: any, value: Extension }[];
 
         constructor(public dispatcher: { dispatch(action: IAction) } = DefaultDispatcher) { }
 
@@ -382,6 +343,25 @@ export module Reactive {
             return this;
         }
 
+        dispose() {
+            if (this.context) {
+                var stack = [this.context];
+                while (stack.length > 0) {
+                    var value = stack.pop();
+                    if (value.unbind) {
+                        value.unbind(this);
+                    }
+                    var properties = value.properties;
+                    if (properties) {
+                        var i = properties.length - 1;
+                        do {
+                            stack.push(properties[i]);
+                        } while (i--);
+                    }
+                }
+            }
+        }
+
         observe(value) {
             if (value && value.change) {
                 value.change(this);
@@ -390,8 +370,22 @@ export module Reactive {
 
         public abstract render(context?): any;
 
-        extend(): any {
-            throw new Error("Not implemented");
+        extend(name: string, value: any) {
+            for (var i = 0; this.extensions && i < this.extensions.length; i++) {
+                var x = this.extensions[i];
+                if (x.name === value) {
+                    return x.value;
+                }
+            }
+
+            var scope = new Extension(this.context).add(name, value);
+
+            if (!this.extensions)
+                this.extensions = [];
+
+            this.extensions.push({ name: value, value: scope });
+
+            return scope;
         }
 
         where(source, predicate) {
@@ -409,14 +403,15 @@ export module Reactive {
                 var length = source.get("length");
                 this.observe(length);
                 var result = [];
-                for (var i = 0; i < length; i++) {
-                    var ext = this.context.extend(param, source.get(i));
+                var len = length.valueOf();
+                for (var i = 0; i < len; i++) {
+                    var ext = this.extend(param, source.get(i));
                     result.push(ext);
                 }
                 return result;
             } else {
                 return source.map(item => {
-                    return this.context.extend(param, item);
+                    return this.extend(param, item);
                 });
             }
         }

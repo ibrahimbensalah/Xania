@@ -166,6 +166,7 @@ export module Dom {
         }
 
         dispose() {
+            super.dispose();
             for (var i = 0; i < this.fragments.length; i++) {
                 this.fragments[i].dispose();
             }
@@ -257,6 +258,7 @@ export module Dom {
         }
 
         dispose() {
+            Re.Binding.prototype.dispose.call(this);
             for (var i = 0; i < this.bindings.length; i++) {
                 this.bindings[i].dispose();
             }
@@ -322,6 +324,7 @@ export module Dom {
         }
 
         dispose() {
+            super.dispose();
             this.textNode.remove();
         }
 

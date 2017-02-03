@@ -1,6 +1,6 @@
 ﻿import { Template } from "./template"
 import { Dom } from "./dom"
-import { fs } from "./fsharp"
+import { fs, parseTpl } from "./fsharp"
 import { Reactive } from "./reactive"
 
 export class Xania {
@@ -17,11 +17,14 @@ export class Xania {
         }
         return result;
     }
+    static svgElements = ["svg", "circle", "line", "g"];
+
     static tag(element, attr, ...children): Template.INode {
         var childTemplates = this.templates(children);
 
         if (typeof element === "string") {
-            var tag = new Template.TagTemplate(element, null, childTemplates);
+            var ns = Xania.svgElements.indexOf(element) >= 0 ? "http://www.w3.org/2000/svg" : null;
+            var tag = new Template.TagTemplate(element, ns, childTemplates);
             for (var prop in attr) {
                 if (prop === "className" || prop === "classname" || prop === "clazz")
                     tag.attr("class", attr[prop]);
@@ -54,7 +57,10 @@ export module View {
     export function partial(view, model) {
         return {
             accept() {
-                return new PartialBinding(view, model);
+                var binding = new PartialBinding(view, model);
+                if (view.subscribe) view.subscribe(binding);
+                if (model.subscribe) model.subscribe(binding);
+                return binding;
             }
         }
     }
@@ -63,17 +69,9 @@ export module View {
 export class PartialBinding extends Reactive.Binding {
     private parent;
     private binding;
-
+    private cache = [];
     constructor(private view, private model) {
         super();
-    }
-
-    get template() {
-        return this;
-    }
-
-    accept(visitor, options: any) {
-        return this;
     }
 
     map(parent) {
@@ -83,20 +81,21 @@ export class PartialBinding extends Reactive.Binding {
         return this;
     }
 
-    insert(_, dom, idx) {
-        this.parent.insert(this, dom, idx);
-    }
-
     render(context) {
         var view = this.evaluate(this.view).valueOf();
 
-        if (this.binding)
+        if (this.binding) {
             this.binding.dispose();
+        }
 
         this.binding = new Dom.FragmentBinding(this.model, [view])
-            .map(this);
+            .map(this.parent);
         this.binding.update(context);
+    }
+
+    onNext(_) {
+        this.execute();
     }
 }
 
-export { fs, Reactive }
+export { fs, parseTpl, Reactive }

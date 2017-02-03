@@ -149,7 +149,7 @@
         }
 
         toggle() {
-            if (!!this.handle)
+            if (this.handle)
                 this.pause();
             else
                 this.resume();
@@ -161,28 +161,34 @@
         }
 
         resume(): this {
-            this.handle = setTimeout(
-                () => {
-                    try {
-                        super.onNext(Time.getTime());
-                    } finally {
-                        this.resume();
-                    }
-                },
-                10);
+            if (this.handle) {
+                return this;
+            }
 
+            var f = () => {
+                this.handle = null;
+                try {
+                    this.onNext(Time.getTime());
+                } finally {
+                    this.resume();
+                }
+            };
+
+            this.handle = setTimeout(f, 10);
             return this;
         }
 
         pause(): this {
             if (!!this.handle) {
                 clearInterval(this.handle);
-            } else {
-                console.warn("timer is not running");
             }
             this.handle = null;
 
             return this;
+        }
+
+        toString() {
+            return this.current;
         }
     }
 }
