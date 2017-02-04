@@ -146,7 +146,7 @@ describe("templating",
             () => {
                 var stream = new Observables.Observable<number>();
 
-                var binding = new Dom.TextBinding(fs("await value")).update(new Re.Store({ value: stream }));
+                var binding = new Dom.TextBinding(fs("await stream")).update(new Re.Store({ stream }));
                 expect(binding.textNode.textContent).toBe("");
 
                 stream.onNext(123);

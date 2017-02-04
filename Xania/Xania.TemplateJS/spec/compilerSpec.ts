@@ -1,7 +1,7 @@
 ﻿/// <reference path="../node_modules/@types/jasmine/index.d.ts" />
 
 import { Reactive as Re } from "../src/reactive";
-import { fsharp as fs, accept } from "../src/fsharp";
+import { fsharp as fs, accept, TYPES } from "../src/fsharp";
 import { Observables } from "../src/observables";
 
 interface IPerson { firstName: string; lastName: string; adult: boolean, age: number }
@@ -12,18 +12,6 @@ var ibrahim: IPerson = {
     lastName: "ben Salah",
     adult: true
 };
-//var ramy: IPerson = {
-//    age: 5,
-//    firstName: "Ramy",
-//    lastName: "ben Salah",
-//    adult: false
-//};
-//var rania: IPerson = {
-//    age: 3,
-//    firstName: "Rania",
-//    lastName: "ben Salah",
-//    adult: false
-//};
 
 describe("fsharp parser", () => {
 
@@ -56,7 +44,7 @@ describe("fsharp parser", () => {
             expect(ast).toBeDefined();
 
             var expr = ast;
-            expect(expr.type).toBe('app');
+            expect(expr.type).toBe(TYPES.APP);
         });
 
     it(':: fn a',
@@ -65,9 +53,9 @@ describe("fsharp parser", () => {
             expect(ast).toBeDefined();
 
             var expr = ast;
-            expect(expr.type).toBe('app');
-            expect(expr.fun).toEqual({ type: 'ident', name: 'fun' });
-            expect(expr.args).toEqual([{ type: "ident", name: "a" }]);
+            expect(expr.type).toBe(TYPES.APP);
+            expect(expr.fun).toEqual({ type: TYPES.IDENT, name: 'fun' });
+            expect(expr.args).toEqual([{ type: TYPES.IDENT, name: "a" }]);
         });
 
     it(':: fn ()',
@@ -76,8 +64,8 @@ describe("fsharp parser", () => {
             expect(ast).toBeDefined();
 
             var expr = ast;
-            expect(expr.type).toBe('app');
-            expect(expr.fun).toEqual({ type: 'ident', name: 'fun' });
+            expect(expr.type).toBe(TYPES.APP);
+            expect(expr.fun).toEqual({ type: TYPES.IDENT, name: 'fun' });
             expect(expr.args.length).toBe(0);
         });
 
@@ -87,7 +75,7 @@ describe("fsharp parser", () => {
             expect(ast).toBeDefined();
 
             var expr = ast;
-            expect(expr).toEqual({ "type": "app", "fun": "+", "args": [{ "type": "ident", "name": "a" }, { "type": "ident", "name": "b" }] });
+            expect(expr).toEqual({ "type": TYPES.APP, "fun": "+", "args": [{ "type": TYPES.IDENT, "name": "a" }, { "type": TYPES.IDENT, "name": "b" }] });
         });
 
     it(':: a |> b |> c',
@@ -96,15 +84,15 @@ describe("fsharp parser", () => {
             expect(ast).toBeDefined();
 
             var pipe1 = ast;
-            expect(pipe1.type).toBe("pipe");
+            expect(pipe1.type).toBe(TYPES.PIPE);
             expect(pipe1.fun).toBe("|>");
-            expect(pipe1.args[0]).toEqual({ "type": "ident", "name": "c" });
+            expect(pipe1.args[0]).toEqual({ "type": TYPES.IDENT, "name": "c" });
 
             var pipe2 = pipe1.args[1];
-            expect(pipe2.type).toBe("pipe");
+            expect(pipe2.type).toBe(TYPES.PIPE);
             expect(pipe2.fun).toBe("|>");
-            expect(pipe2.args[0]).toEqual({ "type": "ident", "name": "b" });
-            expect(pipe2.args[1]).toEqual({ "type": "ident", "name": "a" });
+            expect(pipe2.args[0]).toEqual({ "type": TYPES.IDENT, "name": "b" });
+            expect(pipe2.args[1]).toEqual({ "type": TYPES.IDENT, "name": "a" });
         });
 
     it(':: a + b |> c',
@@ -113,15 +101,15 @@ describe("fsharp parser", () => {
             expect(ast).toBeDefined();
 
             var pipe = ast;
-            expect(pipe.type).toBe("pipe");
+            expect(pipe.type).toBe(TYPES.PIPE);
             expect(pipe.fun).toBe("|>");
-            expect(pipe.args[0]).toEqual({ type: "ident", name: "c" });
+            expect(pipe.args[0]).toEqual({ type: TYPES.IDENT, name: "c" });
 
             var add = pipe.args[1];
             expect(add.args[0].name).toBe("b");
             expect(add.args[1].name).toBe("a");
 
-            // [{"type":"pipe","fun":"|>","args":[{"type":"ident","name":"c"},{"type":"pipe","fun":"|>","args":[{"type":"ident","name":"b"},{"type":"ident","name":"a"}]}]}]
+            // [{"type":"pipe","fun":"|>","args":[{"type":TYPES.IDENT,"name":"c"},{"type":"pipe","fun":"|>","args":[{"type":TYPES.IDENT,"name":"b"},{"type":TYPES.IDENT,"name":"a"}]}]}]
         });
 
     it(':: a >> b ',
@@ -130,7 +118,7 @@ describe("fsharp parser", () => {
             expect(ast).toBeDefined();
 
             var compose = ast;
-            expect(compose.type).toBe("compose", JSON.stringify(ast, null, 2));
+            expect(compose.type).toBe(TYPES.COMPOSE, JSON.stringify(ast, null, 2));
             expect(compose.fun).toBe(">>", JSON.stringify(ast, null, 2));
             expect(compose.args[0].name).toBe("b", JSON.stringify(compose.args[0], null, 2));
             expect(compose.args[1].name).toBe("a", JSON.stringify(compose.args[1], null, 2));
@@ -142,7 +130,7 @@ describe("fsharp parser", () => {
             expect(ast).toBeDefined();
 
             var compose = ast;
-            expect(compose.type).toBe("member", JSON.stringify(ast, null, 2));
+            expect(compose.type).toBe(TYPES.MEMBER, JSON.stringify(ast, null, 2));
             expect(compose.target.name).toBe("a", JSON.stringify(ast, null, 2));
             expect(compose.member).toBe("b", JSON.stringify(ast, null, 2));
         });
@@ -153,7 +141,7 @@ describe("fsharp parser", () => {
             expect(ast).toBeDefined();
 
             var range = ast;
-            expect(range.type).toBe("range", JSON.stringify(ast, null, 2));
+            expect(range.type).toBe(TYPES.RANGE, JSON.stringify(ast, null, 2));
             expect(range.from.value).toBe(1, JSON.stringify(ast, null, 2));
             expect(range.to.name).toBe("n", JSON.stringify(ast, null, 2));
         });
@@ -165,9 +153,9 @@ describe("fsharp parser", () => {
 
             var where = ast;
 
-            expect(where.type).toBe("where");
-            expect(where.predicate.type).toBe("member");
-            expect(where.source.type).toBe("query");
+            expect(where.type).toBe(TYPES.WHERE);
+            expect(where.predicate.type).toBe(TYPES.MEMBER);
+            expect(where.source.type).toBe(TYPES.QUERY);
         });
     it(':: regression test',
         () => {
@@ -183,44 +171,44 @@ describe("fsharp parser", () => {
             if (elapsed > 2000) fail("too slow");
 
             expect(ast).toEqual({
-                "type": "pipe",
+                "type": TYPES.PIPE,
                 "fun": "|>",
                 "args":
                 [
                     {
-                        "type": "ident",
+                        "type": TYPES.IDENT,
                         "name": "d"
                     },
                     {
-                        "type": "pipe",
+                        "type": TYPES.PIPE,
                         "fun": "|>",
                         "args":
                         [
                             {
-                                "type": "compose",
+                                "type": TYPES.COMPOSE,
                                 "fun": ">>",
                                 "args": [
                                     {
-                                        "type": "app",
+                                        "type": TYPES.APP,
                                         "fun": "+",
                                         "args":
                                         [
                                             {
-                                                "type": "const",
+                                                "type": TYPES.CONST,
                                                 "value": 1
                                             }
                                         ]
                                     }, {
-                                        "type": "member",
+                                        "type": TYPES.MEMBER,
                                         "target": {
-                                            "type": "ident",
+                                            "type": TYPES.IDENT,
                                             "name": "b"
                                         },
                                         "member": "c"
                                     }
                                 ]
                             }, {
-                                "type": "ident",
+                                "type": TYPES.IDENT,
                                 "name": "a"
                             }
                         ]

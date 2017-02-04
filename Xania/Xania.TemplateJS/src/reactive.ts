@@ -335,7 +335,7 @@ export module Reactive {
             this.dispatcher.dispatch(this);
         }
 
-        update(context) {
+        update(context) : this {
             if (this.context !== context) {
                 this.context = context;
                 this.execute();
@@ -456,14 +456,24 @@ export module Reactive {
         }
 
         await(observable) {
-            var awaitable = observable.await();
-            this.observe(awaitable);
-            return awaitable;
+            if (!observable.awaited) {
+                observable.awaited = new Awaited(observable.valueOf());
+            }
+
+            this.observe(observable.awaited);
+            return observable.awaited;
         }
 
         evaluate(parts): any {
             if (parts.execute)
                 return parts.execute(this, this.context);
+            else if (Array.isArray(parts)) {
+                var result = Core.empty;
+                for (var i = 0; i < parts.length; i++) {
+                    result += this.evaluate(parts[i]);
+                }
+                return result;
+            }
             else
                 return parts;
         }

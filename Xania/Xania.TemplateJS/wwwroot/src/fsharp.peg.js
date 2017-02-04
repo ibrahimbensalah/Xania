@@ -184,7 +184,7 @@ function peg$parse(input, options) {
       	var reducer = (prev, binder) => { 
       		var op = binder[1].op;
       		var operand = binder[1].operand;
-      		return { type: "pipe", fun: op, args: [ operand, prev ] };
+      		return { type: PIPE, fun: op, args: [ operand, prev ] };
       	};
       	return pipes.reduce(reducer, head);
         },
@@ -256,7 +256,7 @@ function peg$parse(input, options) {
       		var reducer = (prev, binder) => { 
       			var op = binder[1].op;
       			var operand = binder[1].operand;
-      			return { type: "compose", fun: op, args: [ operand, prev ] };
+      			return { type: COMPOSE, fun: op, args: [ operand, prev ] };
       		};
 
       		return comps.reduce(reducer, head);
@@ -2739,6 +2739,8 @@ function peg$parse(input, options) {
   	var RANGE = 8;
   	var BINARY = 9;
   	var AWAIT = 10;
+  	var PIPE = 11;
+  	var COMPOSE = 12;
 
 
   peg$result = peg$startRuleFunction();

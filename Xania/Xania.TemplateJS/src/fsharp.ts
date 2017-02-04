@@ -1,4 +1,4 @@
-﻿interface IAstVisitor {
+﻿export interface IAstVisitor {
     where(source, predicate);
     select(source, selector);
     query(param, source);
@@ -25,6 +25,8 @@ var CONST = 7;
 var RANGE = 8;
 var BINARY = 9;
 var AWAIT = 10;
+var PIPE = 11;
+var COMPOSE = 12;
 // ReSharper restore InconsistentNaming
 
 export function accept(ast: any, visitor: IAstVisitor, context) {
@@ -99,68 +101,4 @@ class Expression {
     }
 }
 
-var empty = "";
-export function parseTpl(text): { execute(visitor: IAstVisitor, context); } | string {
-    var parts: any[] = [];
-
-    var appendText = (x) => {
-        var s = x.trim();
-        if (s.length > 0) {
-            parts.push(x);
-        }
-    };
-
-    var offset = 0, textlength = text.length;
-    while (offset < textlength) {
-        var begin = text.indexOf("{{", offset);
-        if (begin >= 0) {
-            if (begin > offset)
-                appendText(text.substring(offset, begin));
-
-            offset = begin + 2;
-            const end = text.indexOf("}}", offset);
-            if (end >= 0) {
-                parts.push(peg.parse(text.substring(offset, end)));
-                offset = end + 2;
-            } else {
-                throw new SyntaxError("Expected '}}' but not found starting from index: " + offset);
-            }
-        } else {
-            appendText(text.substring(offset));
-            break;
-        }
-    }
-
-    if (parts.length === 0)
-        return null;
-
-    if (parts.length === 1) {
-        const part = parts[0];
-        if (typeof part === "string")
-            return part;
-        return new Expression(part);
-    }
-
-    return {
-        parts,
-        execute(visitor, context) {
-            var result = empty,
-                parts = this.parts,
-                length = parts.length,
-                acc = accept;
-
-            for (var i = 0; i < length; i++) {
-                var p = acc(parts[i], visitor, context);
-                if (p === void 0 || p === null)
-                    return p;
-                var inner = p.valueOf();
-                if (inner === void 0)
-                    return inner;
-                if (inner !== null)
-                    result += inner;
-            }
-            return result;
-        }
-    } as any;
-}
-
+export var TYPES = { WHERE, QUERY, IDENT, MEMBER, APP, SELECT, CONST, RANGE, BINARY, AWAIT, PIPE, COMPOSE }

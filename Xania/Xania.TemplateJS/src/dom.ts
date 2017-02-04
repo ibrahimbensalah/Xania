@@ -1,7 +1,8 @@
 ﻿import { Core } from './core'
 import { Reactive as Re } from './reactive'
 import { Template } from './template'
-import { parseTpl } from "./fsharp"
+import { fs } from "./fsharp"
+import Fsharp = require("./fsharp");
 
 export module Dom {
 
@@ -429,9 +430,11 @@ export module Dom {
                 this.attributeBindings[e].update(context);
             }
 
-            var childLength = this.childBindings.length;
-            for (var i = 0; i < childLength; i++) {
-                this.childBindings[i].update(context);
+            if (this.childBindings) {
+                var childLength = this.childBindings.length;
+                for (var i = 0; i < childLength; i++) {
+                    this.childBindings[i].update(context);
+                }
             }
 
             return this;
@@ -637,6 +640,47 @@ export module Dom {
             }
             this.oldValue = newValue;
         }
+    }
+
+    export function parseTpl(text) {
+        var parts: any[] = [];
+
+        var appendText = (x) => {
+            var s = x.trim();
+            if (s.length > 0) {
+                parts.push(x);
+            }
+        };
+
+        var offset = 0, textlength = text.length;
+        while (offset < textlength) {
+            var begin = text.indexOf("{{", offset);
+            if (begin >= 0) {
+                if (begin > offset)
+                    appendText(text.substring(offset, begin));
+
+                offset = begin + 2;
+                const end = text.indexOf("}}", offset);
+                if (end >= 0) {
+                    parts.push(fs(text.substring(offset, end)));
+                    offset = end + 2;
+                } else {
+                    throw new SyntaxError("Expected '}}' but not found starting from index: " + offset);
+                }
+            } else {
+                appendText(text.substring(offset));
+                break;
+            }
+        }
+
+        if (parts.length === 0)
+            return null;
+
+        if (parts.length === 1) {
+            return parts[0];
+        }
+
+        return parts;
     }
 }
 
