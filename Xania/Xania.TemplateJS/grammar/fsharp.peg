@@ -13,6 +13,24 @@
 		return y - x;
 	}
 
+	function equal(x, y) {
+		return y === x;
+	}
+
+	function and(x, y) {
+		return x && y;
+	}
+
+	function or(x, y) {
+		return y || x;
+	}
+
+	var binaryReducer = function (prev, binder) { 
+		var op = binder[1].op;
+		var operand = binder[1].operand;
+		return { type: BINARY, op: op, left: prev, right: operand };
+	}
+
 	var WHERE = 1;
 	var QUERY = 2;
 	var IDENT = 3;
@@ -25,6 +43,7 @@
 	var AWAIT = 10;
 	var PIPE = 11;
 	var COMPOSE = 12;
+	var LAMBDA = 13;
 }
 
 Program
@@ -39,42 +58,37 @@ Expression
 
 LambdaExpression
 	= "fun" _ param:IdentifierName _ "->" _ body:PipeExpression {
-		return { type: "lambda", param, body };
+		return { type: LAMBDA, param, body };
 	}
 	/ "." ident:Identifier {
-		return { type: "lambda", param:"x", body: { type: MEMBER, target: { type: IDENT, name: "x" }, member: ident } };
+		return { type: LAMBDA, param:"x", body: { type: MEMBER, target: { type: IDENT, name: "x" }, member: ident } };
 	}
 
 QueryExpression
-	= "for" _ param:IdentifierName _ "in" _ source:(Identifier / Range) where:(_ WhereExpression)* selector:(_ SelectExpression)? {
+	= "for" _ param:IdentifierName _ "in" _ source:ListExpression selector:(_ SelectExpression)? {
 		var query = { type: QUERY, param, source }
 
 		function reducer(source, predicate) {
 			return { type: WHERE, predicate, source };
 		}
 
-		var filtered = where.map(x => x[1]).reduce(reducer, query);
-
 		if (selector)
-			return { type: SELECT, selector: selector[1], source: filtered }
+			return { type: SELECT, selector: selector[1], source: query }
 
-		return filtered;
+		return query;
 	}
-
-WhereExpression
-  = "where" _ predicate:ApplicativeExpression { return predicate }
 
 SelectExpression
   = "select" _ selector:AdditiveExpression { return selector }
 
 PipeExpression
-  = head:AdditiveExpression pipes:( _ PipeBinder )* {
-	var reducer = (prev, binder) => { 
-		var op = binder[1].op;
-		var operand = binder[1].operand;
-		return { type: PIPE, fun: op, args: [ operand, prev ] };
-	};
-	return pipes.reduce(reducer, head);
+  = head:EquilityExpression pipes:( _ PipeBinder )* rules:( _ RuleBinder )* {
+	return rules.reduce(binaryReducer, pipes.reduce(binaryReducer, head));
+  }
+
+RuleBinder
+  = op:"->" _ operand:PipeExpression {
+     return { op, operand }
   }
 
 PipeBinder
@@ -82,12 +96,28 @@ PipeBinder
      return { op, operand }
   }
 
+EquilityExpression
+  = head:AdditiveExpression binders:( _ EquilityBinder )* {
+	return binders.reduce(binaryReducer, head);
+  }
+
+EquilityBinder
+  = op:"=" _ expr:MultiplicativeExpression {
+	return { op: equal, operand: expr };
+  }
+  / op:"or" _ expr:MultiplicativeExpression {
+	return { op: or, operand: expr };
+  }
+  / op:"and" _ expr:MultiplicativeExpression {
+	return { op: and, operand: expr };
+  }
+
 AdditiveExpression
   = head:MultiplicativeExpression adds:( _ AdditiveBinder )* {
 		var reducer = (prev, binder) => { 
 			var op = binder[1].op;
 			var operand = binder[1].operand;
-			return { type: APP, fun: op, args: [ operand, prev ] };
+			return { type: BINARY, op, left: prev, right: operand };
 		};
 		return adds.reduce(reducer, head);
   }
@@ -107,7 +137,7 @@ MultiplicativeExpression
 		var reducer = (prev, binder) => { 
 			var op = binder[1].op;
 			var operand = binder[1].operand;
-			return { type: APP, fun: op, args: [ operand, prev ] };
+			return { type: BINARY, op, left: prev, right: operand };
 		};
 		return mults.reduce(reducer, head);
   }
@@ -125,7 +155,7 @@ Term
   / "(" _ expr:Expression? _ ")" {
 	return expr === null ? { type: 'unit' } : expr 
   }
-  / "await" _ expr:Expression {
+  / "await" _ expr:ApplicativeExpression {
 		return {
 			type: AWAIT,
 			expr: expr
@@ -138,18 +168,21 @@ Range
   }
 
 ApplicativeExpression
-  = fun:Application args:(_ (Term / Identifier))* comps:( _ CompositionBinder )* {
+	= fun:Application args:(_ ListExpression)* {
 		var head = args.length == 0
 			? fun
   			: { type: APP, fun, args: args.filter(x => x[1].type != 'unit').map(x => x[1]) };
+		return head;
+  }
 
-		var reducer = (prev, binder) => { 
-			var op = binder[1].op;
-			var operand = binder[1].operand;
-			return { type: COMPOSE, fun: op, args: [ operand, prev ] };
-		};
+ListExpression
+  = head:(Term / Identifier) filters:( _ FilterBinder )* {
+	 return filters.reduce(binaryReducer, head)
+  }
 
-		return comps.reduce(reducer, head);
+FilterBinder
+  = "where" _ filter:EquilityExpression {
+	 return { op: WHERE, operand: filter }
   }
 
 CompositionBinder
@@ -165,8 +198,11 @@ Application
 		return op
 	}
   
+Keyword
+  = "select" / "where" / "await" / "or" / "and"
+
 Identifier
-  = !"select" name:IdentifierName members:( "." IdentifierName)* assign:( _ "<-" _ AdditiveExpression )? {
+  = !Keyword name:IdentifierName members:( "." IdentifierName)* assign:( _ "<-" _ AdditiveExpression )? {
 		var reducer = (prev, next) => { 
 			var member = next[1];
 			return { type: MEMBER, target: prev, member };

@@ -392,8 +392,9 @@ export module Dom {
                 this.tagNode.setAttribute(name, ast);
             } else if (name === "class") {
                 this.classBinding.setBaseClass(ast);
-            } else if (name.startsWith("class.")) {
-                this.classBinding.addClass(name.substr(6), ast);
+            } else if (name === "checked") {
+                var checkedBinding = new CheckedBinding(this.tagNode, ast, this.dispatcher);
+                this.attributeBindings.push(checkedBinding);
             } else if (TagBinding.eventNames.indexOf(name) >= 0) {
                 var eventBinding = new EventBinding(this.tagNode, name, ast);
                 this.attributeBindings.push(eventBinding);
@@ -480,13 +481,12 @@ export module Dom {
             var tag = this.parent.tagNode;
 
             if (this.baseClassTpl) {
-                var oldValue = this.oldValue,
-                    newValue = this.evaluate(this.baseClassTpl).valueOf();
+                var newValue = this.evaluate(this.baseClassTpl);
 
                 if (newValue === void 0 || newValue === null) {
                     tag.className = Core.empty;
                 } else {
-                    tag.className = newValue;
+                    tag.className = newValue.valueOf();
                     //if (oldValue === void 0) {
                     //    var attr = document.createAttribute("class");
                     //    attr.value = newValue;
@@ -495,7 +495,7 @@ export module Dom {
                     //    tag.className = newValue;
                     //}
                 }
-                this.oldValue = newValue;
+                // this.oldValue = newValue;
             }
 
             if (this.conditions) {
@@ -596,8 +596,47 @@ export module Dom {
         }
     }
 
+    class CheckedBinding extends Re.Binding {
+        private oldValue;
+
+        constructor(private tagNode: any, private expr, dispatcher: IDispatcher) {
+            super(dispatcher);
+
+            tagNode.addEventListener("change", this.fire.bind(this));
+        }
+
+        fire() {
+            let value = this.evaluate(this.expr);
+            if (value && value.set) {
+                value.set(this.tagNode.checked);
+            }
+        }
+
+        render() {
+            let value = this.evaluate(this.expr);
+
+            var newValue = value && value.valueOf();
+            var oldValue = this.oldValue;
+
+            var tag = this.tagNode;
+            if (newValue) {
+                if (oldValue === void 0) {
+                    var attr = document.createAttribute("checked");
+                    attr.value = "checked";
+                    tag.setAttributeNode(attr);
+                } else {
+                    tag["checked"] = "checked";
+                    tag.setAttribute("checked", "checked");
+                }
+            } else {
+                tag["checked"] = void 0;
+                tag.removeAttribute("checked");
+            }
+            this.oldValue = newValue;
+        }
+    }
+
     export class AttributeBinding extends Re.Binding {
-        public dom;
         private oldValue;
 
         constructor(private parent: TagBinding, private name, private expr, dispatcher: IDispatcher) {

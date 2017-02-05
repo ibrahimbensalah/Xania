@@ -1,7 +1,7 @@
 ﻿/// <reference path="../node_modules/@types/jasmine/index.d.ts" />
 
 import { Reactive as Re } from "../src/reactive";
-import { fsharp as fs, accept, TYPES } from "../src/fsharp";
+import { fsharp as fs, accept, TOKENS } from "../src/fsharp";
 import { Observables } from "../src/observables";
 
 interface IPerson { firstName: string; lastName: string; adult: boolean, age: number }
@@ -44,7 +44,7 @@ describe("fsharp parser", () => {
             expect(ast).toBeDefined();
 
             var expr = ast;
-            expect(expr.type).toBe(TYPES.APP);
+            expect(expr.type).toBe(TOKENS.BINARY);
         });
 
     it(':: fn a',
@@ -53,9 +53,9 @@ describe("fsharp parser", () => {
             expect(ast).toBeDefined();
 
             var expr = ast;
-            expect(expr.type).toBe(TYPES.APP);
-            expect(expr.fun).toEqual({ type: TYPES.IDENT, name: 'fun' });
-            expect(expr.args).toEqual([{ type: TYPES.IDENT, name: "a" }]);
+            expect(expr.type).toBe(TOKENS.APP);
+            expect(expr.fun).toEqual({ type: TOKENS.IDENT, name: 'fun' });
+            expect(expr.args).toEqual([{ type: TOKENS.IDENT, name: "a" }]);
         });
 
     it(':: fn ()',
@@ -64,8 +64,8 @@ describe("fsharp parser", () => {
             expect(ast).toBeDefined();
 
             var expr = ast;
-            expect(expr.type).toBe(TYPES.APP);
-            expect(expr.fun).toEqual({ type: TYPES.IDENT, name: 'fun' });
+            expect(expr.type).toBe(TOKENS.APP);
+            expect(expr.fun).toEqual({ type: TOKENS.IDENT, name: 'fun' });
             expect(expr.args.length).toBe(0);
         });
 
@@ -75,7 +75,7 @@ describe("fsharp parser", () => {
             expect(ast).toBeDefined();
 
             var expr = ast;
-            expect(expr).toEqual({ "type": TYPES.APP, "fun": "+", "args": [{ "type": TYPES.IDENT, "name": "a" }, { "type": TYPES.IDENT, "name": "b" }] });
+            expect(expr).toEqual({ "type": TOKENS.APP, "fun": "+", "args": [{ "type": TOKENS.IDENT, "name": "a" }, { "type": TOKENS.IDENT, "name": "b" }] });
         });
 
     it(':: a |> b |> c',
@@ -84,15 +84,15 @@ describe("fsharp parser", () => {
             expect(ast).toBeDefined();
 
             var pipe1 = ast;
-            expect(pipe1.type).toBe(TYPES.PIPE);
-            expect(pipe1.fun).toBe("|>");
-            expect(pipe1.args[0]).toEqual({ "type": TYPES.IDENT, "name": "c" });
+            expect(pipe1.type).toBe(TOKENS.BINARY);
+            expect(pipe1.op).toBe("|>");
+            expect(pipe1.right).toEqual({ "type": TOKENS.IDENT, "name": "c" });
 
-            var pipe2 = pipe1.args[1];
-            expect(pipe2.type).toBe(TYPES.PIPE);
-            expect(pipe2.fun).toBe("|>");
-            expect(pipe2.args[0]).toEqual({ "type": TYPES.IDENT, "name": "b" });
-            expect(pipe2.args[1]).toEqual({ "type": TYPES.IDENT, "name": "a" });
+            var pipe2 = pipe1.left;
+            expect(pipe2.type).toBe(TOKENS.BINARY);
+            expect(pipe2.op).toBe("|>");
+            expect(pipe2.right).toEqual({ "type": TOKENS.IDENT, "name": "b" });
+            expect(pipe2.left).toEqual({ "type": TOKENS.IDENT, "name": "a" });
         });
 
     it(':: a + b |> c',
@@ -101,15 +101,15 @@ describe("fsharp parser", () => {
             expect(ast).toBeDefined();
 
             var pipe = ast;
-            expect(pipe.type).toBe(TYPES.PIPE);
-            expect(pipe.fun).toBe("|>");
-            expect(pipe.args[0]).toEqual({ type: TYPES.IDENT, name: "c" });
+            expect(pipe.type).toBe(TOKENS.BINARY);
+            expect(pipe.op).toBe("|>");
+            expect(pipe.right).toEqual({ type: TOKENS.IDENT, name: "c" });
 
-            var add = pipe.args[1];
-            expect(add.args[0].name).toBe("b");
-            expect(add.args[1].name).toBe("a");
+            var add = pipe.left;
+            expect(add.right.name).toBe("b");
+            expect(add.left.name).toBe("a");
 
-            // [{"type":"pipe","fun":"|>","args":[{"type":TYPES.IDENT,"name":"c"},{"type":"pipe","fun":"|>","args":[{"type":TYPES.IDENT,"name":"b"},{"type":TYPES.IDENT,"name":"a"}]}]}]
+            // [{"type":"pipe","fun":"|>","args":[{"type":TOKENS.IDENT,"name":"c"},{"type":"pipe","fun":"|>","args":[{"type":TOKENS.IDENT,"name":"b"},{"type":TOKENS.IDENT,"name":"a"}]}]}]
         });
 
     it(':: a >> b ',
@@ -118,7 +118,7 @@ describe("fsharp parser", () => {
             expect(ast).toBeDefined();
 
             var compose = ast;
-            expect(compose.type).toBe(TYPES.COMPOSE, JSON.stringify(ast, null, 2));
+            expect(compose.type).toBe(TOKENS.COMPOSE, JSON.stringify(ast, null, 2));
             expect(compose.fun).toBe(">>", JSON.stringify(ast, null, 2));
             expect(compose.args[0].name).toBe("b", JSON.stringify(compose.args[0], null, 2));
             expect(compose.args[1].name).toBe("a", JSON.stringify(compose.args[1], null, 2));
@@ -130,7 +130,7 @@ describe("fsharp parser", () => {
             expect(ast).toBeDefined();
 
             var compose = ast;
-            expect(compose.type).toBe(TYPES.MEMBER, JSON.stringify(ast, null, 2));
+            expect(compose.type).toBe(TOKENS.MEMBER, JSON.stringify(ast, null, 2));
             expect(compose.target.name).toBe("a", JSON.stringify(ast, null, 2));
             expect(compose.member).toBe("b", JSON.stringify(ast, null, 2));
         });
@@ -141,7 +141,7 @@ describe("fsharp parser", () => {
             expect(ast).toBeDefined();
 
             var range = ast;
-            expect(range.type).toBe(TYPES.RANGE, JSON.stringify(ast, null, 2));
+            expect(range.type).toBe(TOKENS.RANGE, JSON.stringify(ast, null, 2));
             expect(range.from.value).toBe(1, JSON.stringify(ast, null, 2));
             expect(range.to.name).toBe("n", JSON.stringify(ast, null, 2));
         });
@@ -153,10 +153,22 @@ describe("fsharp parser", () => {
 
             var where = ast;
 
-            expect(where.type).toBe(TYPES.WHERE);
-            expect(where.predicate.type).toBe(TYPES.MEMBER);
-            expect(where.source.type).toBe(TYPES.QUERY);
+            expect(where.type).toBe(TOKENS.WHERE);
+            expect(where.predicate.type).toBe(TOKENS.MEMBER);
+            expect(where.source.type).toBe(TOKENS.QUERY);
         });
+
+    it(":: empty list -> 'list is empty' ",
+        () => {
+            var rule = fs("empty list -> 'list is empty'");
+            expect(rule).toBeDefined();
+
+            expect(rule.type).toBe(TOKENS.BINARY);
+            expect(rule.op).toBe("->");
+            expect(rule.right.value).toBe('list is empty');
+        });
+
+
     it(':: regression test',
         () => {
 
@@ -170,51 +182,48 @@ describe("fsharp parser", () => {
 
             if (elapsed > 2000) fail("too slow");
 
-            expect(ast).toEqual({
-                "type": TYPES.PIPE,
-                "fun": "|>",
-                "args":
-                [
-                    {
-                        "type": TYPES.IDENT,
+            expect(ast).toEqual(
+                {
+                    "type": TOKENS.BINARY,
+                    "op": "|>",
+                    "right": {
+                        "type": TOKENS.IDENT,
                         "name": "d"
                     },
-                    {
-                        "type": TYPES.PIPE,
-                        "fun": "|>",
-                        "args":
-                        [
-                            {
-                                "type": TYPES.COMPOSE,
-                                "fun": ">>",
-                                "args": [
-                                    {
-                                        "type": TYPES.APP,
-                                        "fun": "+",
-                                        "args":
-                                        [
-                                            {
-                                                "type": TYPES.CONST,
-                                                "value": 1
-                                            }
-                                        ]
-                                    }, {
-                                        "type": TYPES.MEMBER,
-                                        "target": {
-                                            "type": TYPES.IDENT,
-                                            "name": "b"
-                                        },
-                                        "member": "c"
-                                    }
-                                ]
-                            }, {
-                                "type": TYPES.IDENT,
-                                "name": "a"
-                            }
-                        ]
+                    "left": {
+                        "type": TOKENS.BINARY,
+                        "op": "|>",
+                        "right": {
+                            "type": TOKENS.COMPOSE,
+                            "fun": ">>",
+                            "args": [
+                                {
+                                    "type": TOKENS.APP,
+                                    "fun": "+",
+                                    "args":
+                                    [
+                                        {
+                                            "type": TOKENS.CONST,
+                                            "value": 1
+                                        }
+                                    ]
+                                },
+                                {
+                                    "type": TOKENS.MEMBER,
+                                    "target": {
+                                        "type": TOKENS.IDENT,
+                                        "name": "b"
+                                    },
+                                    "member": "c"
+                                }
+                            ]
+                        },
+                        "left": {
+                            "type": TOKENS.IDENT,
+                            "name": "a"
+                        }
                     }
-                ]
-            });
+                });
         });
 });
 
@@ -277,7 +286,7 @@ describe("runtime", () => {
     });
 
     it("consistent query identity", () => {
-        var store = new Re.Store({ xania: { employees: [ ibrahim ] } });
+        var store = new Re.Store({ xania: { employees: [ibrahim] } });
         var binding = new TestBinding(fs("for e in xania.employees"));
         expect(binding.render(store)[0]).toBe(binding.render(store)[0], "not identical");
     });

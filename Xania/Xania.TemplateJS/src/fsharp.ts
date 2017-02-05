@@ -4,6 +4,7 @@
     query(param, source);
     member(target, name);
     app(fun, args: any[]);
+    extend(name: string, value: any);
     await(observable);
     const(value);
 }
@@ -12,7 +13,17 @@ declare function require(module: string);
 
 var peg = require("./fsharp.peg");
 
-// var fsharp = peg.parse;
+function empty(list) {
+    return list.length === 0;
+}
+
+function not(value) {
+    return !value;
+}
+
+function count(list) {
+    return list.length;
+}
 
 // ReSharper disable InconsistentNaming
 var WHERE = 1;
@@ -27,24 +38,58 @@ var BINARY = 9;
 var AWAIT = 10;
 var PIPE = 11;
 var COMPOSE = 12;
+var LAMBDA = 13;
 // ReSharper restore InconsistentNaming
 
 export function accept(ast: any, visitor: IAstVisitor, context) {
     switch (ast.type) {
         case IDENT:
-            return visitor.member(context, ast.name);
+            switch (ast.name) {
+                case "empty":
+                    return empty;
+                case "count":
+                    return count;
+                case "not":
+                    return not;
+                default:
+                    return visitor.member(context, ast.name);
+            }
         case MEMBER:
             return visitor.member(accept(ast.target, visitor, context), accept(ast.member, visitor, context));
         case CONST:
             return visitor.const(ast.value);
         case BINARY:
-            var left = accept(ast.left, visitor, context);
-            var right = accept(ast.right, visitor, context);
+            var source;
+            switch (ast.op) {
+                case "->":
+                    source = accept(ast.left, visitor, context);
 
-            if (left === void 0 || right === void 0)
-                return undefined;
+                    if (source === void 0)
+                        return void 0;
 
-            return visitor.app(ast.op, [right, left]);
+                    return source.valueOf() ? accept(ast.right, visitor, source) : void 0;
+                case WHERE:
+                    source = accept(ast.left, visitor, context);
+                    var length = visitor.member(source, "length").value;
+                    var result = [];
+                    for (var i = 0; i < length; i++) {
+                        var item = visitor.member(source, i);
+                        var scope = new Scope(visitor, [item, context]);
+                        var b = accept(ast.right, visitor, scope).valueOf();
+                        if (b)
+                            result.push(item);
+                    }
+                    return result;
+                default:
+                    var left = accept(ast.left, visitor, context);
+                    var right = accept(ast.right, visitor, context);
+
+                    if (left === void 0 || right === void 0)
+                        return void 0;
+
+                    return visitor.app(ast.op, [right, left]);
+            }
+
         case APP:
             const args = [];
             for (let i = 0; i < ast.args.length; i++) {
@@ -69,6 +114,12 @@ export function accept(ast: any, visitor: IAstVisitor, context) {
             return new Range(first.valueOf(), last.valueOf());
         case AWAIT:
             return visitor.await(accept(ast.expr, visitor, context));
+        case LAMBDA:
+            debugger;
+            return model => {
+                var context = visitor.extend(ast.param, model);
+                return accept(ast.body, visitor, context);
+            }
         default:
             return ast;
     }
@@ -101,4 +152,21 @@ class Expression {
     }
 }
 
-export var TYPES = { WHERE, QUERY, IDENT, MEMBER, APP, SELECT, CONST, RANGE, BINARY, AWAIT, PIPE, COMPOSE }
+class Scope {
+    constructor(private visitor: IAstVisitor, private contexts: any[]) {
+    }
+
+    get(name: string) {
+        var visitor = this.visitor;
+        var contexts = this.contexts;
+        for (var i = 0; i < this.contexts.length; i++) {
+            var value = visitor.member(contexts[i], name);
+            if (value !== void 0)
+                return value;
+        }
+
+        return void 0;
+    }
+}
+
+export var TOKENS = { WHERE, QUERY, IDENT, MEMBER, APP, SELECT, CONST, RANGE, BINARY, AWAIT, PIPE, COMPOSE }

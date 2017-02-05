@@ -1,7 +1,7 @@
 ﻿export module Core {
     export function State(initialValue) {
         var fn = x => {
-            if (x !== undefined)
+            if (x !== void 0)
                 fn['id'] = x;
 
             return fn['id'];

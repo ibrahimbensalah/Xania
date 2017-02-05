@@ -374,7 +374,7 @@ export module Reactive {
             for (var i = 0; this.extensions && i < this.extensions.length; i++) {
                 var x = this.extensions[i];
                 if (x.name === value) {
-                    return x.value;
+                    return x.value.add(name, value);
                 }
             }
 
@@ -470,7 +470,9 @@ export module Reactive {
             else if (Array.isArray(parts)) {
                 var result = Core.empty;
                 for (var i = 0; i < parts.length; i++) {
-                    result += this.evaluate(parts[i]);
+                    var part = this.evaluate(parts[i]);
+                    if (part !== void 0)
+                        result += part;
                 }
                 return result;
             }
