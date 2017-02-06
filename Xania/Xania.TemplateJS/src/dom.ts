@@ -1,7 +1,7 @@
 ﻿import { Core } from './core'
 import { Reactive as Re } from './reactive'
 import { Template } from './template'
-import { fs } from "./fsharp"
+import { fs, Scope } from "./fsharp"
 import Fsharp = require("./fsharp");
 
 export module Dom {
@@ -293,15 +293,15 @@ export module Dom {
         }
 
         public text(ast, childIndex: number): TextBinding {
-            return new TextBinding(ast, this.owner.dispatcher);
+            return new TextBinding(ast, this.owner.dispatcher).map(this);
         }
 
         public content(ast, children, childIndex: number): FragmentBinding {
-            return new FragmentBinding(ast, children, this.owner.dispatcher);
+            return new FragmentBinding(ast, children, this.owner.dispatcher).map(this);
         }
 
         public tag(tagName: string, ns: string, attrs, children, childIndex: number): TagBinding {
-            var tag = new TagBinding(tagName, ns, children, this.owner.dispatcher), length = attrs.length;
+            var tag = new TagBinding(tagName, ns, children, this.owner.dispatcher).map(this), length = attrs.length;
             for (var i = 0; i < length; i++) {
                 tag.attr(attrs[i].name, attrs[i].tpl);
             }
@@ -371,9 +371,6 @@ export module Dom {
 
         map(target: IBindingTarget): this {
             this.target = target;
-
-            this.target.insert(this, this.tagNode, 0);
-
             return this;
         }
 
@@ -396,11 +393,15 @@ export module Dom {
                 var checkedBinding = new CheckedBinding(this.tagNode, ast, this.dispatcher);
                 this.attributeBindings.push(checkedBinding);
             } else if (TagBinding.eventNames.indexOf(name) >= 0) {
-                var eventBinding = new EventBinding(this.tagNode, name, ast);
-                this.attributeBindings.push(eventBinding);
+                this.attributeBindings.push(new EventBinding(this.tagNode, name, ast));
             } else {
-                var attrBinding = new AttributeBinding(this, name, ast, this.dispatcher);
-                this.attributeBindings.push(attrBinding);
+                var match = /^on(.+)/.exec(name);
+                if (match) {
+                    this.attributeBindings.push(new EventBinding(this.tagNode, match[1], ast));
+                } else {
+                    var attrBinding = new AttributeBinding(this, name, ast, this.dispatcher);
+                    this.attributeBindings.push(attrBinding);
+                }
             }
 
             return this;
@@ -442,6 +443,7 @@ export module Dom {
         }
 
         render(context) {
+            this.target.insert(this, this.tagNode, 0);
         }
 
         trigger(name) {
@@ -535,25 +537,30 @@ export module Dom {
 
     export class EventBinding {
         private context;
-        private values = [];
 
         constructor(tagNode: any, private name, private expr) {
             tagNode.addEventListener(this.name, this.fire.bind(this));
         }
 
-        fire() {
-            this.expr.execute(this, this.context);
-            var values = this.values, length = values.length;
-            this.values = [];
-            for (let i = 0; i < length; i++) {
-                values[i].refresh();
-            }
+        fire(event) {
+            this.expr.execute(this,
+                [
+                    event,
+                    event.target,
+                    // { event, elt: event.target, element: event.target, target: event.target, value: event.target.value },
+                    this.context
+                ]);
+            debugger;
+            Re.Store.prototype.update.call(this.context);
         }
 
         update(context) {
             this.context = context;
         }
 
+        extend() {
+            throw Error("Not implemented yet.");
+        }
         where(source, predicate) {
             throw Error("Not implemented yet.");
         }
@@ -585,14 +592,7 @@ export module Dom {
         }
 
         member(target: { get(name: string); refresh?(); }, name) {
-            var value = target.get ? target.get(name) : target[name];
-
-            if (value && typeof value.refresh === "function")
-                this.values.push(value);
-            else if (typeof value === "function" && typeof target.refresh === "function")
-                this.values.push(target);
-
-            return value;
+            return target.get ? target.get(name) : target[name];
         }
     }
 

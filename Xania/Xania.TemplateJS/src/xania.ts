@@ -19,7 +19,7 @@ export class Xania {
     }
     static svgElements = ["svg", "circle", "line", "g"];
 
-    static tag(element, attr, ...children): Template.INode {
+    static tag(element, attrs, ...children): Template.INode {
         var childTemplates = this.templates(children);
 
         if (element instanceof Template.TagTemplate) {
@@ -27,21 +27,33 @@ export class Xania {
         } else if (typeof element === "string") {
             var ns = Xania.svgElements.indexOf(element) >= 0 ? "http://www.w3.org/2000/svg" : null;
             var tag = new Template.TagTemplate(element, ns, childTemplates);
-            for (var prop in attr) {
-                if (prop === "className" || prop === "classname" || prop === "clazz")
-                    tag.attr("class", attr[prop]);
-                else
-                    tag.attr(prop, attr[prop]);
+            if (attrs) {
+                for (var prop in attrs) {
+                    if (attrs.hasOwnProperty(prop)) {
+                        if (prop === "className" || prop === "classname" || prop === "clazz")
+                            tag.attr("class", attrs[prop]);
+                        else
+                            tag.attr(prop, attrs[prop]);
+                    }
+                }
+                if (typeof attrs.name === "string") {
+                    if (!attrs.value) {
+                        tag.attr("value", fs(attrs.name));
+                    }
+                    if (!attrs.change) {
+                        tag.attr("change", fs(attrs.name + " <- value"));
+                    }
+                }
             }
 
             return tag;
         } else if (typeof element === "function") {
             if (element.accept) {
-                return element(attr, childTemplates);
+                return element(attrs, childTemplates);
             } else if (element.prototype.render) {
-                return new ComponentBinding(Reflect.construct(element, []), attr);
+                return new ComponentBinding(Reflect.construct(element, []), attrs);
             } else {
-                return element(attr, childTemplates);
+                return element(attrs, childTemplates);
             }
         } else if (typeof element.render === "function") {
             var tpl = element.render();

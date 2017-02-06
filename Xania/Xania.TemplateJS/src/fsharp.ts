@@ -45,6 +45,7 @@ export function accept(ast: any, visitor: IAstVisitor, context) {
     switch (ast.type) {
         case IDENT:
             switch (ast.name) {
+                case "no":
                 case "empty":
                     return empty;
                 case "count":
@@ -67,7 +68,7 @@ export function accept(ast: any, visitor: IAstVisitor, context) {
                     if (source === void 0)
                         return void 0;
 
-                    return source.valueOf() ? accept(ast.right, visitor, source) : void 0;
+                    return source.valueOf() ? accept(ast.right, visitor, context) : void 0;
                 case WHERE:
                     source = accept(ast.left, visitor, context);
                     var length = visitor.member(source, "length").value;
@@ -148,11 +149,14 @@ class Expression {
     constructor(private ast) {
     }
     execute(binding: IAstVisitor, context: any) {
-        return accept(this.ast, binding, context);
+        if (Array.isArray(context))
+            return accept(this.ast, binding, new Scope(binding, context));
+        else
+            return accept(this.ast, binding, context);
     }
 }
 
-class Scope {
+export class Scope {
     constructor(private visitor: IAstVisitor, private contexts: any[]) {
     }
 
