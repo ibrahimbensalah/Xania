@@ -22,6 +22,9 @@ export module Dom {
         bind(target: Node, store);
     }
 
+    interface IAction {
+        execute();
+    }
 
     interface IDispatcher {
         dispatch(action: Re.IAction);
@@ -550,8 +553,7 @@ export module Dom {
                     // { event, elt: event.target, element: event.target, target: event.target, value: event.target.value },
                     this.context
                 ]);
-            debugger;
-            Re.Store.prototype.update.call(this.context);
+            this.context.refresh();
         }
 
         update(context) {
@@ -673,7 +675,7 @@ export module Dom {
                     attr.value = newValue;
                     tag.setAttributeNode(attr);
                 } else {
-                    // tag[attrName] = newValue;
+                    tag[attrName] = newValue;
                     tag.setAttribute(attrName, newValue);
                 }
             }

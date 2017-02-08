@@ -116,7 +116,6 @@ export function accept(ast: any, visitor: IAstVisitor, context) {
         case AWAIT:
             return visitor.await(accept(ast.expr, visitor, context));
         case LAMBDA:
-            debugger;
             return model => {
                 var context = visitor.extend(ast.param, model);
                 return accept(ast.body, visitor, context);

@@ -38,7 +38,7 @@ export function bind(target: Node) {
     var load = () => {
         ENV.generateData(true);
 
-        store.update();
+        store.refresh();
         dispatcher.flush();
 
         Monitoring.renderRate.ping();

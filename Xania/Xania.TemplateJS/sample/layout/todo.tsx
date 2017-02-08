@@ -7,29 +7,36 @@ export class TodoApp {
     show = new Observables.Observable('all');
     newTodoText = "";
 
+    addTodo(title) {
+        if (title) {
+            this.store.todos.push(new Todo(title));
+            this.newTodoText = "";
+        }
+    }
+
     render() {
         return (
             <section className="todoapp">
                 <header className="header">
                     <h1>todos</h1>
-                    <input className="new-todo" placeholder="What needs to be done?" autofocus="" name="newTodoText" onKeyUp={fs("keyCode = 13 -> store.addTodo(newTodoText)")} />
+                    <input className="new-todo" placeholder="What needs to be done?" autofocus="" name="newTodoText" onKeyUp={fs("keyCode = 13 -> addTodo (value)")} />
                 </header>
                 <section className={["main", fs("no store.todos -> ' hidden'")]}>
-                    <input className="toggle-all" type="checkbox" checked={fs("empty store.todos where not completed")} click={fs("store.toggleAll")} />
+                    <input className="toggle-all" type="checkbox" checked={fs("empty store.todos where not completed")} onClick={fs("store.toggleAll ()")} />
                     <ul className="todo-list">
                         <ForEach expr={fs("for todo in store.todos where (completed = (await show = 'completed')) or (await show = 'all')")}>
                             <li className={fs("todo.completed -> 'completed'")} >
                                 <div className="view">
                                     <input className="toggle" type="checkbox" checked={fs("todo.completed")} />
                                     <label dblclick="editTodo(todo)">{fs("todo.title")}</label>
-                                    <button className="destroy" click={fs("store.remove todo")}></button>
+                                    <button className="destroy" onClick={fs("store.remove todo")}></button>
                                 </div>
                             </li>
                         </ForEach>
                     </ul>
                 </section>
                 <footer className={["footer", fs("no store.todos -> ' hidden'")]}>
-                    <span className="todo-count"><strong>{fs("count store.todos where completed")}</strong> item(s) left</span>
+                    <span className="todo-count"><strong>{fs("count store.todos where not completed")}</strong> item(s) left</span>
                     <ul className="filters">
                         <li><a href="#" className={fs("(await show) = 'all' -> 'selected'")} onClick={fs("show.onNext 'all'")}>All</a></li>
                         <li><a href="#" className={fs("(await show) = 'active' -> 'selected'")} onClick={fs("show.onNext 'active'")}>Active</a></li>
@@ -78,10 +85,6 @@ class TodoStore {
 
     orderByTitleDesc() {
         this.todos = this.todos.sort((x, y) => y.title.localeCompare(x.title));
-    }
-
-    addTodo(title) {
-        this.todos.push(new Todo(title));
     }
 }
 
