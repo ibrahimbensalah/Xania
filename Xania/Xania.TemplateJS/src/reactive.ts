@@ -177,7 +177,7 @@ export module Reactive {
                     // notify next
                     var actions = this.actions.slice(0);
                     for (var i = 0; i < actions.length; i++) {
-                        actions[i].notify(this);
+                        actions[i].execute();
                     }
                 }
             }
@@ -288,16 +288,17 @@ export module Reactive {
             var dirty = [];
 
             while (stack.length > 0) {
-                const p = stack.pop();
-                const parentValue = p.value;
-                if (p.properties) {
-                    var properties = p.properties;
+                const parent = stack.pop();
+                const parentValue = parent.value;
+                if (parent.properties) {
+                    var properties = parent.properties;
                     let i: number = properties.length;
                     while(i--) {
                         var child = properties[i];
                         var changed = child.refresh(parentValue);
                         if (child.value === void 0) {
                             properties.splice(i, 1);
+                            delete parent[child.name];
                         } else {
                             stack.push(child);
 

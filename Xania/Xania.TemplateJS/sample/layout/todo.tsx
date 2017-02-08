@@ -21,7 +21,7 @@ export class TodoApp {
                     <h1>todos</h1>
                     <input className="new-todo" placeholder="What needs to be done?" autofocus="" name="newTodoText" onKeyUp={fs("keyCode = 13 -> addTodo (value)")} />
                 </header>
-                <section className={["main", fs("no store.todos -> ' hidden'")]}>
+                <section className={["main", fs("store.todos.length = 0 -> ' hidden'")]}>
                     <input className="toggle-all" type="checkbox" checked={fs("empty store.todos where not completed")} onClick={fs("store.toggleAll ()")} />
                     <ul className="todo-list">
                         <ForEach expr={fs("for todo in store.todos where (completed = (await show = 'completed')) or (await show = 'all')")}>
@@ -35,7 +35,7 @@ export class TodoApp {
                         </ForEach>
                     </ul>
                 </section>
-                <footer className={["footer", fs("no store.todos -> ' hidden'")]}>
+                <footer className={["footer", fs("store.todos.length = 0 -> ' hidden'")]}>
                     <span className="todo-count"><strong>{fs("count store.todos where not completed")}</strong> item(s) left</span>
                     <ul className="filters">
                         <li><a href="#" className={fs("(await show) = 'all' -> 'selected'")} onClick={fs("show.onNext 'all'")}>All</a></li>

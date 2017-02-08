@@ -195,8 +195,6 @@ export module Dom {
         }
 
         render(context) {
-            super.update(context);
-
             var stream;
             if (!!this.ast && !!this.ast.execute) {
                 stream = this.ast.execute(this, context);
@@ -639,8 +637,6 @@ export module Dom {
     }
 
     export class AttributeBinding extends Re.Binding {
-        private oldValue;
-
         constructor(private parent: TagBinding, private name, private expr, dispatcher: IDispatcher) {
             super(dispatcher);
         }
@@ -662,24 +658,18 @@ export module Dom {
                 newValue = value;
             }
 
-            var oldValue = this.oldValue;
-
             var attrName = this.name;
             var tag = this.parent.tagNode;
             if (newValue === void 0 || newValue === null) {
                 tag[attrName] = void 0;
                 tag.removeAttribute(attrName);
             } else {
-                if (oldValue === void 0) {
-                    var attr = document.createAttribute(attrName);
-                    attr.value = newValue;
-                    tag.setAttributeNode(attr);
-                } else {
+                var attr = document.createAttribute(attrName);
+                attr.value = newValue;
+                tag.setAttributeNode(attr);
+                if (attrName === "value")
                     tag[attrName] = newValue;
-                    tag.setAttribute(attrName, newValue);
-                }
             }
-            this.oldValue = newValue;
         }
     }
 
