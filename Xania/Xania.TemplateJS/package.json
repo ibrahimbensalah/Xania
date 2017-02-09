@@ -8,7 +8,9 @@
     "pegjs": "0.10.0",
     "@types/core-js": "" 
   },
-  "dependencies": {},
+  "dependencies": {
+    "css-loader":  "0.26.1" 
+  },
   "scripts": {
     "fsharp": "pegjs -o ./wwwroot/src/fsharp.peg.js --optimize speed ./grammar/fsharp.peg"
   },

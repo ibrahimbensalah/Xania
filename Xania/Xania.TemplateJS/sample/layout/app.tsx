@@ -3,9 +3,10 @@
 import { Xania as xania, ForEach, fs, View, Reactive as Re } from "../../src/xania"
 import { ClockApp } from "./clock"
 import { TodoApp } from "./todo"
+import { MotionApp } from "./../motion/index"
 
 export function bind(target: Node) {
-    var view = new Observables.Observable("todos");
+    var view = new Observables.Observable("motion");
     var store = new Re.Store({
         view,
         time: new Observables.Time(),
@@ -39,6 +40,8 @@ export function bind(target: Node) {
                 return <ClockApp time={fs("time")} />;
             case 'todos':
                 return <TodoApp />;
+            case 'motion':
+                return <MotionApp />;
         }
     });
 
@@ -54,6 +57,7 @@ var layout: any = view =>
             <button onClick={fs("route 'view2'")}>view 2</button>
             <button onClick={fs("route 'clock'")}>clock</button>
             <button onClick={fs("route 'todos'")}>todos</button>
+            <button onClick={fs("route 'motion'")}>motion</button>
             &nbsp;&nbsp;&nbsp;&nbsp;
             model:
             <button onClick={fs("user.firstName <- 'Ramy'")}>Ramy</button>
