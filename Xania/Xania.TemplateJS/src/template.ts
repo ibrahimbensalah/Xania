@@ -13,7 +13,7 @@ export module Template {
     }
 
     export class TextTemplate implements INode {
-        constructor(private tpl : { execute(binding, context); } | string) {
+        constructor(private tpl: { execute(binding, context); } | string) {
         }
 
         accept<T>(visitor: IVisitor<T>, options: any): T {
@@ -52,7 +52,7 @@ export module Template {
         public attr(name: string, expr: any) {
             return this.addAttribute(name, expr);
         }
-        
+
         public addAttribute(name: string, expr: any) {
             var attr = this.getAttribute(name);
             if (!attr)
@@ -85,8 +85,12 @@ export module Template {
         }
 
         accept<T>(visitor: IVisitor<T>, options: any) {
-            var children = this._children.map(x => x.accept(visitor));
-            return visitor.tag(this.name, this.ns, this.attributes, children, options);
+            const
+                children = this._children.map(x => x.accept(visitor)),
+                attrs = this.attributes,
+                tagBinding = visitor.tag(this.name, this.ns, attrs, children, options);
+
+            return tagBinding;
         }
     }
 }

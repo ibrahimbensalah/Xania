@@ -45,6 +45,12 @@ export function accept(ast: any, visitor: IAstVisitor, context) {
     switch (ast.type) {
         case IDENT:
             switch (ast.name) {
+                case "null":
+                    return null;
+                case "true":
+                    return true;
+                case "false":
+                    return false;
                 case "no":
                 case "empty":
                     return empty;
@@ -73,7 +79,8 @@ export function accept(ast: any, visitor: IAstVisitor, context) {
                     source = accept(ast.left, visitor, context);
                     var length = visitor.member(source, "length").value;
                     var result = [];
-                    for (var i = 0; i < length; i++) {
+                    let i = length;
+                    while (i--) {
                         var item = visitor.member(source, i);
                         var scope = new Scope(visitor, [item, context]);
                         var b = accept(ast.right, visitor, scope).valueOf();
@@ -92,14 +99,21 @@ export function accept(ast: any, visitor: IAstVisitor, context) {
             }
 
         case APP:
-            const args = [];
-            for (let i = 0; i < ast.args.length; i++) {
+            let args;
+            let i = ast.args.length;
+            while (i--) {
                 var arg = accept(ast.args[i], visitor, context);
                 if (arg === void 0)
                     return arg;
-                args.push(arg);
+                if (!args) args = [arg];
+                else args.push(arg);
             }
-            return visitor.app(accept(ast.fun, visitor, context), args);
+            var fun = accept(ast.fun, visitor, context);
+            if (fun === void 0) {
+                console.error("could not resolve expression, " + JSON.stringify(ast.fun));
+                return void 0;
+            } else
+                return visitor.app(fun, args);
         case QUERY:
             return visitor.query(ast.param, accept(ast.source, visitor, context));
         case SELECT:

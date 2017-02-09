@@ -4,33 +4,35 @@ import { Observables } from "../../src/observables"
 export class TodoApp {
 
     store = new TodoStore();
-    show = new Observables.Observable('all');
-    newTodoText = "";
+    show = new Observables.Observable("all");
+    editingTodo = null;
 
     addTodo(title) {
         if (title) {
             this.store.todos.push(new Todo(title));
-            this.newTodoText = "";
+            return "";
         }
+        return void 0;
     }
 
     render() {
         return (
             <section className="todoapp">
-                <header className="header">
+                <header>
                     <h1>todos</h1>
-                    <input className="new-todo" placeholder="What needs to be done?" autofocus="" name="newTodoText" onKeyUp={fs("keyCode = 13 -> addTodo (value)")} />
+                    <input className="new-todo" placeholder="What needs to be done?" autofocus="" onKeyUp={fs("keyCode = 13 -> addTodo (value)")} />
                 </header>
                 <section className={["main", fs("store.todos.length = 0 -> ' hidden'")]}>
                     <input className="toggle-all" type="checkbox" checked={fs("empty store.todos where not completed")} onClick={fs("store.toggleAll ()")} />
                     <ul className="todo-list">
                         <ForEach expr={fs("for todo in store.todos where (completed = (await show = 'completed')) or (await show = 'all')")}>
-                            <li className={fs("todo.completed -> 'completed'")} >
+                            <li className={[fs("todo.completed -> 'completed'"), fs("todo = editingTodo -> ' editing'")]} >
                                 <div className="view">
                                     <input className="toggle" type="checkbox" checked={fs("todo.completed")} />
-                                    <label dblclick="editTodo(todo)">{fs("todo.title")}</label>
+                                    <label onDblClick={fs("editingTodo <- todo")}>{fs("todo.title")}</label>
                                     <button className="destroy" onClick={fs("store.remove todo")}></button>
                                 </div>
+                                <input className="edit" value={fs("todo.title")} autofocus="" onBlur={fs("editingTodo <- null")} onKeyUp={fs("keyCode = 13 -> editingTodo <- null")} />
                             </li>
                         </ForEach>
                     </ul>
@@ -43,7 +45,7 @@ export class TodoApp {
                         <li><a href="#" className={fs("(await show) = 'completed' -> 'selected'")} onClick={fs("show.onNext 'completed'")}>Completed</a></li>
                     </ul >
                     <button className={["clear-completed", fs("all active todos -> ' hidden'")]}
-                        click={fs("store.removeCompleted ()")}>Clear completed</button>
+                        onClick={fs("store.removeCompleted ()")}>Clear completed</button>
                 </footer>
             </section>
         );

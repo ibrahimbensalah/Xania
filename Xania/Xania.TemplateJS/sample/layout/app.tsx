@@ -50,17 +50,17 @@ var layout: any = view =>
         <h1>{fs("user.firstName")} {fs("user.lastName")}</h1>
         <div>
             view:
-            <button click={fs("route 'view1'")}>view 1</button>
-            <button click={fs("route 'view2'")}>view 2</button>
-            <button click={fs("route 'clock'")}>clock</button>
-            <button click={fs("route 'todos'")}>todos</button>
+            <button onClick={fs("route 'view1'")}>view 1</button>
+            <button onClick={fs("route 'view2'")}>view 2</button>
+            <button onClick={fs("route 'clock'")}>clock</button>
+            <button onClick={fs("route 'todos'")}>todos</button>
             &nbsp;&nbsp;&nbsp;&nbsp;
             model:
-            <button click={fs("user.firstName <- 'Ramy'")}>Ramy</button>
-            <button click={fs("user.firstName <- 'Ibrahim'")}>Ibrahim</button>
+            <button onClick={fs("user.firstName <- 'Ramy'")}>Ramy</button>
+            <button onClick={fs("user.firstName <- 'Ibrahim'")}>Ibrahim</button>
             &nbsp;&nbsp;&nbsp;&nbsp;
             time:
-            <button click={fs("time.toggle ()")}>toggle</button>
+            <button onClick={fs("time.toggle ()")}>toggle</button>
         </div>
         <div style="padding: 10px;">
             {View.partial(view, { user: fs("user"), time: new Observables.Time() })}

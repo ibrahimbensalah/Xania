@@ -37,11 +37,10 @@ export class Xania {
                     }
                 }
                 if (typeof attrs.name === "string") {
-                    if (!attrs.value) {
-                        tag.attr("value", fs(attrs.name));
-                    }
-                    if (!attrs.change) {
-                        tag.attr("change", fs(attrs.name + " <- value"));
+                    if (attrs.type === "text") {
+                        if (!attrs.value) {
+                            tag.attr("value", fs(attrs.name));
+                        }
                     }
                 }
             }

@@ -351,7 +351,7 @@ export module Dom {
         protected target: IBindingTarget;
         public length = 1;
 
-        constructor(tagName: string, private ns: string = null, private childBindings?: IDomBinding[], dispatcher?: IDispatcher) {
+        constructor(private tagName: string, private ns: string = null, private childBindings?: IDomBinding[], dispatcher?: IDispatcher) {
             super(dispatcher);
             if (ns === null)
                 this.tagNode = document.createElement(tagName);
@@ -383,18 +383,17 @@ export module Dom {
             return this;
         }
 
-        static eventNames = ["click", "mouseover", "mouseout", "blur", "change"];
-
         attr(name, ast): this {
             if (typeof ast === "string") {
                 this.tagNode.setAttribute(name, ast);
             } else if (name === "class") {
                 this.classBinding.setBaseClass(ast);
-            } else if (name === "checked") {
-                var checkedBinding = new CheckedBinding(this.tagNode, ast, this.dispatcher);
+            } else if (name === "value" && this.tagName === "input") {
+                const valueBinding = new ValueBinding(this.tagNode, ast, this.dispatcher);
+                this.attributeBindings.push(valueBinding);
+            } else if (name === "checked" && this.tagName === "input") {
+                const checkedBinding = new CheckedBinding(this.tagNode, ast, this.dispatcher);
                 this.attributeBindings.push(checkedBinding);
-            } else if (TagBinding.eventNames.indexOf(name) >= 0) {
-                this.attributeBindings.push(new EventBinding(this.tagNode, name, ast));
             } else {
                 var match = /^on(.+)/.exec(name);
                 if (match) {
@@ -544,13 +543,21 @@ export module Dom {
         }
 
         fire(event) {
-            this.expr.execute(this,
+            var newValue = this.expr.execute(this,
                 [
                     event,
                     event.target,
-                    // { event, elt: event.target, element: event.target, target: event.target, value: event.target.value },
                     this.context
                 ]);
+            if (newValue !== void 0) {
+                var tag = event.target;
+                if (newValue === null) {
+                    tag.removeAttribute("value");
+                } else {
+                    tag.value = newValue;
+                }
+            }
+
             this.context.refresh();
         }
 
@@ -579,12 +586,20 @@ export module Dom {
 
         app(fun, args: any[]) {
             if (fun === "assign") {
-                var value = args[0].valueOf();
-                args[1].set(value);
-                return value;
+                var arg = args[0];
+                if (arg === null)
+                    args[1].set(arg);
+                else {
+                    arg = arg.valueOf();
+                    args[1].set(arg.valueOf());
+                }
+                return arg;
             }
 
-            return fun.apply(null, args.map(EventBinding.valueOf));
+            if (args)
+                return fun.apply(null, args.map(EventBinding.valueOf));
+            else
+                return fun();
         }
 
         private static valueOf(x) {
@@ -609,6 +624,8 @@ export module Dom {
             let value = this.evaluate(this.expr);
             if (value && value.set) {
                 value.set(this.tagNode.checked);
+
+                this.context.refresh();
             }
         }
 
@@ -619,7 +636,7 @@ export module Dom {
             var oldValue = this.oldValue;
 
             var tag = this.tagNode;
-            if (newValue) {
+            if (newValue !== void 0 && newValue !== false) {
                 if (oldValue === void 0) {
                     var attr = document.createAttribute("checked");
                     attr.value = "checked";
@@ -633,6 +650,37 @@ export module Dom {
                 tag.removeAttribute("checked");
             }
             this.oldValue = newValue;
+        }
+    }
+
+    class ValueBinding extends Re.Binding {
+        private oldValue;
+
+        constructor(private tagNode: any, private expr, dispatcher: IDispatcher) {
+            super(dispatcher);
+
+            tagNode.addEventListener("change", this.fire.bind(this));
+        }
+
+        fire() {
+            let value = this.evaluate(this.expr);
+            if (value && value.set) {
+                value.set(this.tagNode.value);
+            }
+        }
+
+        render() {
+            let value = this.evaluate(this.expr);
+            var newValue = value && value.valueOf();
+
+            var tag = this.tagNode;
+            if (newValue === void 0) {
+                tag.removeAttribute("value");
+            } else {
+                var attr = document.createAttribute("value");
+                attr.value = newValue;
+                tag.setAttributeNode(attr);
+            }
         }
     }
 
