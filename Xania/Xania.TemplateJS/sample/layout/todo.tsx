@@ -7,7 +7,7 @@ export class TodoApp {
     show = "all";
     editingTodo = null;
 
-    onAddTodo(event) {
+    onAddTodo = (event) => {
         if (event.keyCode === 13) {
             const title = event.target.value;
             this.store.todos.push(new Todo(title));
@@ -16,29 +16,33 @@ export class TodoApp {
         return void 0;
     }
 
-    onToggleAll() {
+    onToggleAll = () => {
         this.store.toggleAll();
     }
 
-    onShow(value) {
+    onShow = (value) => {
         this.show = value;
     }
 
-    onResetEditing() {
-
+    onResetEditing = (event) => {
+        if (event.keyCode === 13)
+            this.editingTodo = null;
+        else if (event.keyCode === 27) {
+            this.editingTodo = null;
+        }
     }
 
-    render(xania) {
+    view(xania) {
         return (
             <section className="todoapp">
                 <header>
                     <h1>todos</h1>
                     <input className="new-todo" placeholder="What needs to be done?" autofocus=""
-                        onKeyUp={this.onAddTodo.bind(this)} />
+                        onKeyUp={this.onAddTodo} />
                 </header>
                 <section className={["main", fs("store.todos.length = 0 -> ' hidden'")]}>
                     <input className="toggle-all" type="checkbox" checked={fs("empty store.todos where not completed")}
-                        onClick={this.onToggleAll.bind(this)} />
+                        onClick={this.onToggleAll} />
                     <ul className="todo-list">
                         <ForEach expr={fs("for todo in store.todos where (completed = (show = 'completed')) or (show = 'all')")}>
                             <li className={[fs("todo.completed -> 'completed'"), fs("todo = editingTodo -> ' editing'")]} >
@@ -47,7 +51,9 @@ export class TodoApp {
                                     <label onDblClick={fs("editingTodo <- todo")}>{fs("todo.title")}</label>
                                     <button className="destroy" onClick={fs("store.remove todo")}></button>
                                 </div>
-                                <input className="edit" value={fs("todo.title")} autofocus="" onBlur={() => this.onResetEditing()} onKeyUp={() => this.onResetEditing()} />
+                                <input className="edit" value={fs("todo.title")} autofocus=""
+                                    onBlur={this.onResetEditing}
+                                    onKeyUp={this.onResetEditing} />
                             </li>
                         </ForEach>
                     </ul>
@@ -55,9 +61,12 @@ export class TodoApp {
                 <footer className={["footer", fs("store.todos.length = 0 -> ' hidden'")]}>
                     <span className="todo-count"><strong>{fs("count store.todos where not completed")}</strong> item(s) left</span>
                     <ul className="filters">
-                        <li><a href="#" className={fs("show = 'all' -> 'selected'")} onClick={this.onShow.bind(this, 'all')}>All</a></li>
-                        <li><a href="#" className={fs("show = 'active' -> 'selected'")} onClick={this.onShow.bind(this, 'active')}>Active</a></li>
-                        <li><a href="#" className={fs("show = 'completed' -> 'selected'")} onClick={this.onShow.bind(this, 'completed')}>Completed</a></li>
+                        <li><a href="#" className={fs("show = 'all' -> 'selected'")}
+                            onClick={this.onShow.bind(this, 'all')}>All</a></li>
+                        <li><a href="#" className={fs("show = 'active' -> 'selected'")}
+                            onClick={this.onShow.bind(this, 'active')}>Active</a></li>
+                        <li><a href="#" className={fs("show = 'completed' -> 'selected'")}
+                            onClick={this.onShow.bind(this, 'completed')}>Completed</a></li>
                     </ul >
                     <button className={["clear-completed", fs("all active todos -> ' hidden'")]}
                         onClick={() => this.store.removeCompleted()}>Clear completed</button>

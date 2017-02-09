@@ -50,7 +50,7 @@ export class Xania {
         } else if (typeof element === "function") {
             if (element.accept) {
                 return element(attrs, childTemplates);
-            } else if (element.prototype.render) {
+            } else if (element.prototype.view) {
                 return new ComponentBinding(Reflect.construct(element, []), attrs);
             } else {
                 return element(attrs, childTemplates);
@@ -96,7 +96,7 @@ class ComponentBinding extends Reactive.Binding {
 
     constructor(private component, private props) {
         super();
-        this.binding = new Dom.FragmentBinding(null, [component.render(Xania)]);
+        this.binding = new Dom.FragmentBinding(null, [component.view(Xania)]);
     }
 
     accept(): this {

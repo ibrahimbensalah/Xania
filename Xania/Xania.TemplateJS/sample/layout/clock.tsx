@@ -19,7 +19,7 @@ export class ClockApp {
         return 360 * (time % f) / f;
     }
 
-    render(xania) {
+    view(xania) {
         return (
             <div style="height: 200px;">
                 <svg viewBox="0 0 200 200">
