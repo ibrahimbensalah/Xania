@@ -14,7 +14,7 @@
     "types": [ "jasmine" ],
     "outDir": "wwwroot",
     "jsx": "react",
-    "jsxFactory": "Xania.tag"
+    "jsxFactory": "xania.tag"
   },
   "exclude": [
     "src/fsharp.peg.ts"

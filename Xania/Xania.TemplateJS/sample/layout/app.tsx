@@ -1,6 +1,6 @@
 ﻿import { Observables } from "../../src/observables"
 
-import { Xania, ForEach, fs, View, Reactive as Re } from "../../src/xania"
+import { Xania as xania, ForEach, fs, View, Reactive as Re } from "../../src/xania"
 import { ClockApp } from "./clock"
 import { TodoApp } from "./todo"
 
@@ -42,7 +42,7 @@ export function bind(target: Node) {
         }
     });
 
-    Xania.view(layout(mainView)).bind(target, store);
+    xania.view(layout(mainView)).bind(target, store);
 }
 
 var layout: any = view =>

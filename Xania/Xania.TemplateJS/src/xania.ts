@@ -30,10 +30,11 @@ export class Xania {
             if (attrs) {
                 for (var prop in attrs) {
                     if (attrs.hasOwnProperty(prop)) {
+                        var attrValue = attrs[prop];
                         if (prop === "className" || prop === "classname" || prop === "clazz")
-                            tag.attr("class", attrs[prop]);
+                            tag.attr("class", attrValue);
                         else
-                            tag.attr(prop, attrs[prop]);
+                            tag.attr(prop, attrValue);
                     }
                 }
                 if (typeof attrs.name === "string") {
@@ -95,7 +96,7 @@ class ComponentBinding extends Reactive.Binding {
 
     constructor(private component, private props) {
         super();
-        this.binding = new Dom.FragmentBinding(null, [component.render()]);
+        this.binding = new Dom.FragmentBinding(null, [component.render(Xania)]);
     }
 
     accept(): this {

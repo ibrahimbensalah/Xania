@@ -42,6 +42,7 @@ var LAMBDA = 13;
 // ReSharper restore InconsistentNaming
 
 export function accept(ast: any, visitor: IAstVisitor, context) {
+    var length;
     switch (ast.type) {
         case IDENT:
             switch (ast.name) {
@@ -77,10 +78,9 @@ export function accept(ast: any, visitor: IAstVisitor, context) {
                     return source.valueOf() ? accept(ast.right, visitor, context) : void 0;
                 case WHERE:
                     source = accept(ast.left, visitor, context);
-                    var length = visitor.member(source, "length").value;
+                    length = visitor.member(source, "length").value;
                     var result = [];
-                    let i = length;
-                    while (i--) {
+                    for (var i = 0; i < length; i++) {
                         var item = visitor.member(source, i);
                         var scope = new Scope(visitor, [item, context]);
                         var b = accept(ast.right, visitor, scope).valueOf();
@@ -100,8 +100,8 @@ export function accept(ast: any, visitor: IAstVisitor, context) {
 
         case APP:
             let args;
-            let i = ast.args.length;
-            while (i--) {
+            length = ast.args.length;
+            for (let i = 0; i < length; i++) {
                 var arg = accept(ast.args[i], visitor, context);
                 if (arg === void 0)
                     return arg;
@@ -125,7 +125,6 @@ export function accept(ast: any, visitor: IAstVisitor, context) {
             var last = accept(ast.to, visitor, context);
             if (first === void 0 || last === void 0)
                 return first;
-            // TODO lazy impl
             return new Range(first.valueOf(), last.valueOf());
         case AWAIT:
             return visitor.await(accept(ast.expr, visitor, context));

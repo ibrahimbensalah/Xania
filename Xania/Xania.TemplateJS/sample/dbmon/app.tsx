@@ -32,8 +32,8 @@ export function bind(target: Node) {
             time: new Observables.Time(),
             message: "hello, dbmon",
             databases: ENV.generateData(true).toArray()
-        });
-    Xania.view(dbmon(), dispatcher).bind(target, store);
+    });
+    Xania.view(dbmon(Xania), dispatcher).bind(target, store);
 
     var load = () => {
         ENV.generateData(true);
@@ -48,7 +48,7 @@ export function bind(target: Node) {
 
 }
 
-var dbmon: any = () =>
+var dbmon: any = (xania) =>
     <table clazz="table table-striped latest-data">
         <tbody>
         <ForEach expr={fs("for db in databases")}>

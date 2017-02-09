@@ -542,13 +542,20 @@ export module Dom {
             tagNode.addEventListener(this.name, this.fire.bind(this));
         }
 
-        fire(event) {
-            var newValue = this.expr.execute(this,
+        evaluate() {
+            if (typeof this.expr === "function")
+                return this.expr(event, this.context);
+            return this.expr.execute(this,
                 [
                     event,
                     event.target,
                     this.context
                 ]);
+        }
+
+        fire(event) {
+
+            var newValue = this.evaluate();
             if (newValue !== void 0) {
                 var tag = event.target;
                 if (newValue === null) {

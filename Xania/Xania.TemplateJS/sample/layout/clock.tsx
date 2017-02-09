@@ -1,5 +1,5 @@
 ﻿import { Observables } from "../../src/observables"
-import { Xania, ForEach, fs } from "../../src/xania"
+import { ForEach, fs } from "../../src/xania"
 
 export class ClockApp {
     time = new Observables.Time();
@@ -19,7 +19,7 @@ export class ClockApp {
         return 360 * (time % f) / f;
     }
 
-    render() {
+    render(xania) {
         return (
             <div style="height: 200px;">
                 <svg viewBox="0 0 200 200">

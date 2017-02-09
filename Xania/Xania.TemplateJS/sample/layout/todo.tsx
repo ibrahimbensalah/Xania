@@ -1,38 +1,53 @@
-﻿import { Xania, ForEach, fs } from "../../src/xania"
+﻿import { ForEach, fs } from "../../src/xania"
 import { Observables } from "../../src/observables"
 
 export class TodoApp {
 
     store = new TodoStore();
-    show = new Observables.Observable("all");
+    show = "all";
     editingTodo = null;
 
-    addTodo(title) {
-        if (title) {
+    onAddTodo(event) {
+        if (event.keyCode === 13) {
+            const title = event.target.value;
             this.store.todos.push(new Todo(title));
             return "";
         }
         return void 0;
     }
 
-    render() {
+    onToggleAll() {
+        this.store.toggleAll();
+    }
+
+    onShow(value) {
+        this.show = value;
+    }
+
+    onResetEditing() {
+
+    }
+
+    render(xania) {
         return (
             <section className="todoapp">
                 <header>
                     <h1>todos</h1>
-                    <input className="new-todo" placeholder="What needs to be done?" autofocus="" onKeyUp={fs("keyCode = 13 -> addTodo (value)")} />
+                    <input className="new-todo" placeholder="What needs to be done?" autofocus=""
+                        onKeyUp={this.onAddTodo.bind(this)} />
                 </header>
                 <section className={["main", fs("store.todos.length = 0 -> ' hidden'")]}>
-                    <input className="toggle-all" type="checkbox" checked={fs("empty store.todos where not completed")} onClick={fs("store.toggleAll ()")} />
+                    <input className="toggle-all" type="checkbox" checked={fs("empty store.todos where not completed")}
+                        onClick={this.onToggleAll.bind(this)} />
                     <ul className="todo-list">
-                        <ForEach expr={fs("for todo in store.todos where (completed = (await show = 'completed')) or (await show = 'all')")}>
+                        <ForEach expr={fs("for todo in store.todos where (completed = (show = 'completed')) or (show = 'all')")}>
                             <li className={[fs("todo.completed -> 'completed'"), fs("todo = editingTodo -> ' editing'")]} >
                                 <div className="view">
                                     <input className="toggle" type="checkbox" checked={fs("todo.completed")} />
                                     <label onDblClick={fs("editingTodo <- todo")}>{fs("todo.title")}</label>
                                     <button className="destroy" onClick={fs("store.remove todo")}></button>
                                 </div>
-                                <input className="edit" value={fs("todo.title")} autofocus="" onBlur={fs("editingTodo <- null")} onKeyUp={fs("keyCode = 13 -> editingTodo <- null")} />
+                                <input className="edit" value={fs("todo.title")} autofocus="" onBlur={() => this.onResetEditing()} onKeyUp={() => this.onResetEditing()} />
                             </li>
                         </ForEach>
                     </ul>
@@ -40,12 +55,12 @@ export class TodoApp {
                 <footer className={["footer", fs("store.todos.length = 0 -> ' hidden'")]}>
                     <span className="todo-count"><strong>{fs("count store.todos where not completed")}</strong> item(s) left</span>
                     <ul className="filters">
-                        <li><a href="#" className={fs("(await show) = 'all' -> 'selected'")} onClick={fs("show.onNext 'all'")}>All</a></li>
-                        <li><a href="#" className={fs("(await show) = 'active' -> 'selected'")} onClick={fs("show.onNext 'active'")}>Active</a></li>
-                        <li><a href="#" className={fs("(await show) = 'completed' -> 'selected'")} onClick={fs("show.onNext 'completed'")}>Completed</a></li>
+                        <li><a href="#" className={fs("show = 'all' -> 'selected'")} onClick={this.onShow.bind(this, 'all')}>All</a></li>
+                        <li><a href="#" className={fs("show = 'active' -> 'selected'")} onClick={this.onShow.bind(this, 'active')}>Active</a></li>
+                        <li><a href="#" className={fs("show = 'completed' -> 'selected'")} onClick={this.onShow.bind(this, 'completed')}>Completed</a></li>
                     </ul >
                     <button className={["clear-completed", fs("all active todos -> ' hidden'")]}
-                        onClick={fs("store.removeCompleted ()")}>Clear completed</button>
+                        onClick={() => this.store.removeCompleted()}>Clear completed</button>
                 </footer>
             </section>
         );
