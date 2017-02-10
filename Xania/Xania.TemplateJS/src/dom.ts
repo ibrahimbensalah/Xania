@@ -30,7 +30,7 @@ export module Dom {
     }
 
     export class DomBinding {
-        private childBindings: IDomBinding[] = [];
+        private childBindings: Re.Binding[] = [];
 
         constructor(private target, private dispatcher: IDispatcher) {
         }
@@ -46,7 +46,7 @@ export module Dom {
             }
         }
 
-        insert(binding: IDomBinding, dom, idx: number) {
+        insert(binding: Re.Binding, dom, idx: number) {
             var offset = 0, length = this.childBindings.length;
             for (var i = 0; i < length; i++) {
                 var child = this.childBindings[i];
@@ -87,12 +87,11 @@ export module Dom {
         } as IView;
     }
 
-    export function view(template, dispatcher?: IDispatcher) {
+    export function view(template: Template.INode, dispatcher?: IDispatcher) {
         return {
-            template,
             bind(target, store) {
                 var parent = new DomBinding(target, dispatcher);
-                return this.template.accept(parent).update(store, parent);
+                return template.bind<Re.Binding>(parent).update(store, parent);
             }
         } as IView;
     }
@@ -188,7 +187,7 @@ export module Dom {
             }
         }
 
-        render(context, sinks: IDOMSinks) {
+        render(context, driver: IDOMDriver) {
             var stream;
             if (!!this.ast && !!this.ast.execute) {
                 stream = this.ast.execute(this, context);
@@ -230,14 +229,14 @@ export module Dom {
         }
 
         insert(fragment: Fragment, dom, idx) {
-            if (this.sinks) {
+            if (this.driver) {
                 var offset = 0;
                 for (var i = 0; i < this.fragments.length; i++) {
                     if (this.fragments[i] === fragment)
                         break;
                     offset += this.fragments[i].length;
                 }
-                this.sinks.insert(this, dom, offset + idx);
+                this.driver.insert(this, dom, offset + idx);
             }
         }
     }
@@ -249,7 +248,7 @@ export module Dom {
         constructor(private owner: FragmentBinding) {
             for (var e = 0; e < this.owner.children.length; e++) {
                 this.bindings[e] =
-                    owner.children[e].accept(this as IDomVisitor, e);
+                    owner.children[e].bind(this as IDomVisitor);
             }
         }
 
@@ -305,7 +304,7 @@ export module Dom {
         }
     }
 
-    interface IDOMSinks {
+    interface IDOMDriver {
         insert(sender: IDomBinding, dom, idx);
     }
 
@@ -323,11 +322,11 @@ export module Dom {
             this.textNode.remove();
         }
 
-        render(context, sinks: IDOMSinks) {
+        render(context, driver: IDOMDriver) {
             const result = this.evaluate(this.expr);
             // if (result !== void 0)
             this.textNode.nodeValue = result && result.valueOf();
-            this.sinks.insert(this, this.textNode, 0);
+            this.driver.insert(this, this.textNode, 0);
         }
     }
 
@@ -420,8 +419,8 @@ export module Dom {
             return this;
         }
 
-        render(context, sinks) {
-            sinks.insert(this, this.tagNode, 0);
+        render(context, driver) {
+            driver.insert(this, this.tagNode, 0);
         }
 
         trigger(name) {
@@ -456,7 +455,7 @@ export module Dom {
             this.conditions.push({ className, condition });
         }
 
-        render(context, sinks: IDOMSinks) {
+        render(context, driver: IDOMDriver) {
             this.context = context;
             var tag = this.tagNode;
 
@@ -565,7 +564,7 @@ export module Dom {
             if (fun === "assign") {
                 var arg = args[0];
                 if (arg === null)
-                    args[1].set(arg);
+                    args[1].set(null);
                 else {
                     arg = arg.valueOf();
                     args[1].set(arg.valueOf());

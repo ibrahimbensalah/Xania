@@ -1,33 +1,9 @@
 ﻿import { Observables } from "../../src/observables"
 
-import { Xania as xania, ForEach, fs, View, Reactive as Re, Template } from "../../src/xania"
+import { Xania as xania, ForEach, Animate, fs, View, Reactive as Re, Template } from "../../src/xania"
 import { ClockApp } from "./clock"
 import { TodoApp } from "./todo"
 import { MotionApp } from "./../motion/index"
-
-class Animate extends Re.Binding {
-
-    bindings: any[];
-
-    constructor(attrs, private children: Template.INode[]) {
-        super();
-    }
-    update(context, sinks) {
-        for (var i = 0; i < this.bindings.length; i++) {
-            this.bindings[i].update(context, sinks);
-        }
-        return super.update(context, sinks);
-    }
-    render(context, sinks) {
-    }
-    accept(visitor) {
-        this.bindings = this.children.map(x => x.accept(visitor, null));
-        return this;
-    }
-    view(xania) {
-        return this;
-    }
-}
 
 export function bind(target: Node) {
     var view = new Observables.Observable("motion");

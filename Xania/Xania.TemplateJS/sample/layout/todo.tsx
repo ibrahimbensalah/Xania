@@ -1,4 +1,4 @@
-﻿import { ForEach, fs } from "../../src/xania"
+﻿import { ForEach, Animate, fs } from "../../src/xania"
 import { Observables } from "../../src/observables"
 
 export class TodoApp {
@@ -45,16 +45,18 @@ export class TodoApp {
                         onClick={this.onToggleAll} />
                     <ul className="todo-list">
                         <ForEach expr={fs("for todo in store.todos where (completed = (show = 'completed')) or (show = 'all')")}>
-                            <li className={[fs("todo.completed -> 'completed'"), fs("todo = editingTodo -> ' editing'")]} >
-                                <div className="view">
-                                    <input className="toggle" type="checkbox" checked={fs("todo.completed")} />
-                                    <label onDblClick={fs("editingTodo <- todo")}>{fs("todo.title")}</label>
-                                    <button className="destroy" onClick={fs("store.remove todo")}></button>
-                                </div>
-                                <input className="edit" value={fs("todo.title")} autofocus=""
-                                    onBlur={this.onResetEditing}
-                                    onKeyUp={this.onResetEditing} />
-                            </li>
+                            <Animate>
+                                <li className={[fs("todo.completed -> 'completed'"), fs("todo = editingTodo -> ' editing'")]} >
+                                    <div className="view">
+                                        <input className="toggle" type="checkbox" checked={fs("todo.completed")} />
+                                        <label onDblClick={fs("editingTodo <- todo")}>{fs("todo.title")}</label>
+                                        <button className="destroy" onClick={fs("store.remove todo")}></button>
+                                    </div>
+                                    <input className="edit" value={fs("todo.title")} autofocus=""
+                                        onBlur={this.onResetEditing}
+                                        onKeyUp={this.onResetEditing} />
+                                </li>
+                            </Animate>
                         </ForEach>
                     </ul>
                 </section>

@@ -316,22 +316,28 @@ export module Reactive {
         }
     }
 
+
+    interface IDriver {
+        insert(sender: Binding, dom, idx);
+    }
+
     export abstract class Binding {
         protected context;
-        protected sinks;
+        protected driver;
+        public length;
         protected extensions: { name: any, value: Extension }[];
 
         constructor(public dispatcher: { dispatch(action: IAction) } = DefaultDispatcher) { }
 
         execute() {
-            this.render(this.context, this.sinks);
+            this.render(this.context, this.driver);
         }
 
-        update(context, sinks): this {
-            if (this.context !== context || this.sinks !== sinks) {
+        update(context, driver: IDriver): this {
+            if (this.context !== context || this.driver !== driver) {
                 this.context = context;
-                this.sinks = sinks;
-                this.render(context, sinks);
+                this.driver = driver;
+                this.render(context, driver);
             }
             return this;
         }
@@ -361,7 +367,7 @@ export module Reactive {
             }
         }
 
-        public abstract render(context, parent): any;
+        public abstract render?(context, parent): any;
 
         extend(name: string, value: any) {
             for (var i = 0; this.extensions && i < this.extensions.length; i++) {

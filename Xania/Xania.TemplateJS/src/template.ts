@@ -3,21 +3,21 @@
 export module Template {
 
     export interface IVisitor<T> {
-        text(expr, options: any): T;
-        content(expr, children: INode[], options?: any): T;
-        tag(name, ns, attrs, children, options?: any): T;
+        text(expr): T;
+        content(expr, children: INode[]): T;
+        tag(name, ns, attrs, children): T;
     }
 
     export interface INode {
-        accept<T>(visitor: IVisitor<T>, options?: any): T;
+        bind<T>(visitor: IVisitor<T>): T;
     }
 
     export class TextTemplate implements INode {
         constructor(private tpl: { execute(binding, context); } | string) {
         }
 
-        accept<T>(visitor: IVisitor<T>, options: any): T {
-            return visitor.text(this.tpl, options);
+        bind<T>(visitor: IVisitor<T>): T {
+            return visitor.text(this.tpl);
         }
     }
 
@@ -31,8 +31,8 @@ export module Template {
             return this;
         }
 
-        accept<T>(visitor: IVisitor<T>, options: any): T {
-            return visitor.content(this.expr, this.children, options);
+        bind<T>(visitor: IVisitor<T>): T {
+            return visitor.content(this.expr, this.children);
         }
     }
 
@@ -84,11 +84,10 @@ export module Template {
             return this;
         }
 
-        accept<T>(visitor: IVisitor<T>, options: any) {
+        bind<T>(visitor: IVisitor<T>) {
             const
-                children = this._children.map(x => x.accept(visitor)),
-                attrs = this.attributes,
-                tagBinding = visitor.tag(this.name, this.ns, attrs, children, options);
+                bindings = this._children.map(x => x.bind(visitor)),
+                tagBinding = visitor.tag(this.name, this.ns, this.attributes, bindings);
 
             return tagBinding;
         }
