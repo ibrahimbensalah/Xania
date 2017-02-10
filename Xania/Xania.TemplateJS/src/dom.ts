@@ -287,15 +287,15 @@ export module Dom {
             this.owner.insert(this, dom, offset + index);
         }
 
-        public text(ast, childIndex: number): TextBinding {
+        public text(ast): TextBinding {
             return new TextBinding(ast, this.owner.dispatcher);
         }
 
-        public content(ast, children, childIndex: number): FragmentBinding {
+        public content(ast, children): FragmentBinding {
             return new FragmentBinding(ast, children, this.owner.dispatcher);
         }
 
-        public tag(tagName: string, ns: string, attrs, children, childIndex: number): TagBinding {
+        public tag(tagName: string, ns: string, attrs, children): TagBinding {
             var tag = new TagBinding(tagName, ns, children, this.owner.dispatcher), length = attrs.length;
             for (var i = 0; i < length; i++) {
                 tag.attr(attrs[i].name, attrs[i].tpl);

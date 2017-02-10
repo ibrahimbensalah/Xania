@@ -48,12 +48,13 @@ export class Xania {
 
             return tag;
         } else if (typeof element === "function") {
-            if (element.accept) {
-                return element(attrs, childTemplates);
-            } else if (element.prototype.view) {
-                return new ComponentBinding(Reflect.construct(element, []), attrs);
+            if (element.prototype.view) {
+                return new ComponentBinding(Reflect.construct(element, [attrs, childTemplates]), attrs);
             } else {
-                return element(attrs, childTemplates);
+                var view = element(attrs, childTemplates);
+                if (!view)
+                    throw new Error("Failed to load view");
+                return view;
             }
         } else if (typeof element.render === "function") {
             var tpl = element.render();
@@ -103,7 +104,7 @@ class ComponentBinding extends Reactive.Binding {
         return this;
     }
 
-    update(context, parent): this {
+    update(context, sinks): this {
         let props = this.props;
         for (let prop in props) {
             if (props.hasOwnProperty(prop)) {
@@ -112,8 +113,8 @@ class ComponentBinding extends Reactive.Binding {
                 this.component[prop] = value;
             }
         }
-        this.binding.update(this.store, parent);
-        super.update(context, parent);
+        this.binding.update(this.store, sinks);
+        super.update(context, sinks);
         return this;
     }
 
@@ -137,6 +138,9 @@ class PartialBinding extends Reactive.Binding {
     render(context, parent) {
         var view = this.evaluate(this.view).valueOf();
 
+        if (!view)
+            throw new Error("view is empty");
+
         if (this.binding) {
             this.binding.dispose();
         }
@@ -152,4 +156,4 @@ class PartialBinding extends Reactive.Binding {
     }
 }
 
-export { fs, Reactive }
+export { fs, Reactive, Template }

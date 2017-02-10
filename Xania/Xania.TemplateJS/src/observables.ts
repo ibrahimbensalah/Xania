@@ -79,7 +79,11 @@
         }
 
         onNext(value: T): void {
-            super.onNext(this.mapper(value));
+            var mappedValue = this.mapper(value);
+            if (mappedValue === undefined)
+                throw new Error("Failed to map observed value");
+            else
+                super.onNext(mappedValue);
         }
     }
 
