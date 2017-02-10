@@ -257,7 +257,7 @@ describe("runtime", () => {
         () => {
             var store = new Re.Store({ p: ibrahim });
             var binding = new TestBinding(fs("p.firstName"));
-            binding.update(store);
+            binding.update(store, null);
 
             expect(binding.value).toBe("Ibrahim");
             // expect(binding.dependencies.length).toBe(2);

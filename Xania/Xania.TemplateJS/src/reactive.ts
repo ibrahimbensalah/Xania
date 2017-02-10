@@ -58,24 +58,6 @@ export module Reactive {
 
             return property;
         }
-
-        //protected refresh() {
-        //    if (!this.properties)
-        //        return;
-
-        //    var disposed = [];
-        //    for (let i = 0; i < this.properties.length; i++) {
-        //        var property = this.properties[i];
-        //        property.update(this.value);
-        //        if (property.valueOf() === void 0) {
-        //            disposed.push(i);
-        //        }
-        //    }
-
-        //    for (let i = disposed.length - 1; i >= 0; i--) {
-        //        this.properties.splice(disposed[i], 1);
-        //    }
-        //}
     }
 
     interface IDependency {
@@ -100,7 +82,7 @@ export module Reactive {
             return this.parent.get(name);
         }
 
-        change(action: IAction): IDependency | boolean {
+        change(action: IAction): this | boolean {
             if (!this.actions) {
                 this.actions = [action];
                 return this;
@@ -336,18 +318,20 @@ export module Reactive {
 
     export abstract class Binding {
         protected context;
+        protected sinks;
         protected extensions: { name: any, value: Extension }[];
 
         constructor(public dispatcher: { dispatch(action: IAction) } = DefaultDispatcher) { }
 
         execute() {
-            this.render(this.context);
+            this.render(this.context, this.sinks);
         }
 
-        update(context): this {
-            if (this.context !== context) {
+        update(context, sinks): this {
+            if (this.context !== context || this.sinks !== sinks) {
                 this.context = context;
-                this.execute();
+                this.sinks = sinks;
+                this.render(context, sinks);
             }
             return this;
         }
@@ -377,7 +361,7 @@ export module Reactive {
             }
         }
 
-        public abstract render(context?): any;
+        public abstract render(context, parent): any;
 
         extend(name: string, value: any) {
             for (var i = 0; this.extensions && i < this.extensions.length; i++) {

@@ -51,7 +51,7 @@ describe("templating",
         it("text binding",
             () => {
                 var store = new Re.Store({ p: ibrahim });
-                var binding = new Dom.TextBinding(fs("p.firstName")).update(store);
+                var binding = new Dom.TextBinding(fs("p.firstName")).update(store, null);
 
                 store.get("p").get("firstName").set("bla");
 
@@ -69,8 +69,7 @@ describe("templating",
                         new Template.FragmentTemplate(fs("for r in p.roles"))
                             .child(new Template.TextTemplate(fs("':: ' + r")))
                     ])
-                    .map(fragment)
-                    .update(store);
+                    .update(store, fragment);
 
                 expect(fragment.childNodes.length).toBe(3);
 
@@ -87,10 +86,10 @@ describe("templating",
                     .attr("class", fs("p.firstName"))
                     .attr("class.adult-person", fs("p.adult"));
 
-                binding.update(new Re.Store({ p: ibrahim }));
+                binding.update(new Re.Store({ p: ibrahim }), null);
                 expect(binding.tagNode.className).toBe("Ibrahim adult-person");
 
-                binding.update(new Re.Store({ p: ramy }));
+                binding.update(new Re.Store({ p: ramy }), null);
                 expect(binding.tagNode.className).toBe("Ramy");
             });
 
@@ -99,10 +98,10 @@ describe("templating",
                 var binding = new Dom.TagBinding("div")
                     .attr("id", fs('p.age'));
 
-                binding.update(new Re.Store({ p: ibrahim }));
+                binding.update(new Re.Store({ p: ibrahim }), null);
                 expect(binding.tagNode.id).toBe('36');
 
-                binding.update(new Re.Store({ p: ramy }));
+                binding.update(new Re.Store({ p: ramy }), null);
                 expect(binding.tagNode.id).toBe('5');
             });
 
@@ -112,7 +111,7 @@ describe("templating",
                 var div = new Dom.TagBinding("div")
                     .child(new Dom.TextBinding(fs("p.firstName")))
                     .attr("data-age", fs("p.age"));
-                div.update(store);
+                div.update(store, null);
 
                 expect(div.tagNode.childNodes.length).toBe(1);
                 expect(div.tagNode.textContent).toBe('Ibrahim');
@@ -135,7 +134,7 @@ describe("templating",
                 });
                 var button = new Dom.TagBinding("button")
                     .on("click", fs("p.sayHello"))
-                    .update(store);
+                    .update(store, null);
 
                 button.trigger('click');
 
@@ -146,7 +145,8 @@ describe("templating",
             () => {
                 var stream = new Observables.Observable<number>();
 
-                var binding = new Dom.TextBinding(fs("await stream")).update(new Re.Store({ stream }));
+                var binding = new Dom.TextBinding(fs("await stream"))
+                    .update(new Re.Store({ stream }), null);
                 expect(binding.textNode.textContent).toBe("");
 
                 stream.onNext(123);

@@ -103,12 +103,7 @@ class ComponentBinding extends Reactive.Binding {
         return this;
     }
 
-    map(parent): this {
-        this.binding.map(parent);
-        return this;
-    }
-
-    update(context): this {
+    update(context, parent): this {
         let props = this.props;
         for (let prop in props) {
             if (props.hasOwnProperty(prop)) {
@@ -117,8 +112,8 @@ class ComponentBinding extends Reactive.Binding {
                 this.component[prop] = value;
             }
         }
-        this.binding.update(this.store);
-        super.update(context);
+        this.binding.update(this.store, parent);
+        super.update(context, parent);
         return this;
     }
 
@@ -133,32 +128,23 @@ class ComponentBinding extends Reactive.Binding {
 }
 
 class PartialBinding extends Reactive.Binding {
-    private parent;
     private binding;
     private cache = [];
     constructor(private view, private model) {
         super();
     }
 
-    map(parent) {
-        this.parent = parent;
-        if (this.binding)
-            this.binding.map(this);
-        return this;
-    }
-
-    render(context) {
+    render(context, parent) {
         var view = this.evaluate(this.view).valueOf();
 
         if (this.binding) {
             this.binding.dispose();
         }
 
-        var newBinding = new Dom.FragmentBinding(this.model, [view])
-            .map(this.parent);
+        var newBinding = new Dom.FragmentBinding(this.model, [view]);
 
         this.binding = newBinding;
-        this.binding.update(context);
+        this.binding.update(context, parent);
     }
 
     onNext(_) {

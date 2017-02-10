@@ -10,8 +10,7 @@ export module Dom {
 
     interface IDomBinding {
         length;
-        map(parent): this;
-        update(context);
+        update(context, parent);
         dispose();
     }
 
@@ -60,12 +59,12 @@ export module Dom {
 
         text(expr): TextBinding {
             var text = new TextBinding(expr, this.dispatcher);
-            this.childBindings.push(text.map(this));
+            this.childBindings.push(text);
             return text;
         }
         content(ast, children: Template.INode[]): FragmentBinding {
             var content = new FragmentBinding(ast, children, this.dispatcher);
-            this.childBindings.push(content.map(this));
+            this.childBindings.push(content);
             return content;
         }
         tag(name, ns, attrs, children): TagBinding {
@@ -74,7 +73,7 @@ export module Dom {
                 tag.attr(attrs[i].name, attrs[i].tpl);
             }
 
-            this.childBindings.push(tag.map(this));
+            this.childBindings.push(tag);
             return tag;
         }
     }
@@ -92,7 +91,8 @@ export module Dom {
         return {
             template,
             bind(target, store) {
-                return this.template.accept(new DomBinding(target, dispatcher)).update(store);
+                var parent = new DomBinding(target, dispatcher);
+                return this.template.accept(parent).update(store, parent);
             }
         } as IView;
     }
@@ -155,7 +155,6 @@ export module Dom {
 
     export class FragmentBinding extends Re.Binding implements IDomBinding {
         public fragments: Fragment[] = [];
-        public parent: IBindingTarget;
 
         get length() {
             var total = 0, length = this.fragments.length;
@@ -176,11 +175,6 @@ export module Dom {
             }
         }
 
-        map(parent: IBindingTarget): this {
-            this.parent = parent;
-            return this;
-        }
-
         private static swap(arr: Fragment[], srcIndex, tarIndex) {
             if (srcIndex > tarIndex) {
                 var i = srcIndex;
@@ -194,7 +188,7 @@ export module Dom {
             }
         }
 
-        render(context) {
+        render(context, sinks: IDOMSinks) {
             var stream;
             if (!!this.ast && !!this.ast.execute) {
                 stream = this.ast.execute(this, context);
@@ -236,14 +230,14 @@ export module Dom {
         }
 
         insert(fragment: Fragment, dom, idx) {
-            if (this.parent) {
+            if (this.sinks) {
                 var offset = 0;
                 for (var i = 0; i < this.fragments.length; i++) {
                     if (this.fragments[i] === fragment)
                         break;
                     offset += this.fragments[i].length;
                 }
-                this.parent.insert(this, dom, offset + idx);
+                this.sinks.insert(this, dom, offset + idx);
             }
         }
     }
@@ -255,7 +249,7 @@ export module Dom {
         constructor(private owner: FragmentBinding) {
             for (var e = 0; e < this.owner.children.length; e++) {
                 this.bindings[e] =
-                    owner.children[e].accept(this as IDomVisitor, e).map(this);
+                    owner.children[e].accept(this as IDomVisitor, e);
             }
         }
 
@@ -278,7 +272,7 @@ export module Dom {
             this.context = context;
             var length = this.owner.children.length;
             for (var e = 0; e < length; e++) {
-                this.bindings[e].update(context);
+                this.bindings[e].update(context, this);
             }
             return this;
         }
@@ -294,15 +288,15 @@ export module Dom {
         }
 
         public text(ast, childIndex: number): TextBinding {
-            return new TextBinding(ast, this.owner.dispatcher).map(this);
+            return new TextBinding(ast, this.owner.dispatcher);
         }
 
         public content(ast, children, childIndex: number): FragmentBinding {
-            return new FragmentBinding(ast, children, this.owner.dispatcher).map(this);
+            return new FragmentBinding(ast, children, this.owner.dispatcher);
         }
 
         public tag(tagName: string, ns: string, attrs, children, childIndex: number): TagBinding {
-            var tag = new TagBinding(tagName, ns, children, this.owner.dispatcher).map(this), length = attrs.length;
+            var tag = new TagBinding(tagName, ns, children, this.owner.dispatcher), length = attrs.length;
             for (var i = 0; i < length; i++) {
                 tag.attr(attrs[i].name, attrs[i].tpl);
             }
@@ -311,13 +305,12 @@ export module Dom {
         }
     }
 
-    interface IBindingTarget {
+    interface IDOMSinks {
         insert(sender: IDomBinding, dom, idx);
     }
 
     export class TextBinding extends Re.Binding implements IDomBinding {
         public textNode;
-        protected target: IBindingTarget;
         public length = 1;
 
         constructor(private expr, dispatcher?: IDispatcher) {
@@ -330,16 +323,11 @@ export module Dom {
             this.textNode.remove();
         }
 
-        map(target: IBindingTarget): this {
-            this.target = target;
-            this.target.insert(this, this.textNode, 0);
-            return this;
-        }
-
-        render() {
+        render(context, sinks: IDOMSinks) {
             const result = this.evaluate(this.expr);
             // if (result !== void 0)
             this.textNode.nodeValue = result && result.valueOf();
+            this.sinks.insert(this, this.textNode, 0);
         }
     }
 
@@ -347,8 +335,7 @@ export module Dom {
         public tagNode;
         private attributeBindings = [];
         private events = {};
-        private classBinding = new ClassBinding(this, this.dispatcher);
-        protected target: IBindingTarget;
+        private classBinding: ClassBinding;
         public length = 1;
 
         constructor(private tagName: string, private ns: string = null, private childBindings?: IDomBinding[], dispatcher?: IDispatcher) {
@@ -359,27 +346,18 @@ export module Dom {
                 this.tagNode = (<any>document).createElementNS(ns, tagName.toLowerCase());
             }
 
-            if (childBindings) {
-                for (var i = 0; i < childBindings.length; i++) {
-                    childBindings[i].map(this);
-                }
-            }
+            this.classBinding = new ClassBinding(this.tagNode, this.dispatcher);
         }
 
         dispose() {
             this.tagNode.remove();
         }
 
-        map(target: IBindingTarget): this {
-            this.target = target;
-            return this;
-        }
-
         child(child: IDomBinding): this {
             if (!this.childBindings)
                 this.childBindings = [];
 
-            this.childBindings.push(child.map(this));
+            this.childBindings.push(child);
             return this;
         }
 
@@ -399,7 +377,7 @@ export module Dom {
                 if (match) {
                     this.attributeBindings.push(new EventBinding(this.tagNode, match[1], ast));
                 } else {
-                    var attrBinding = new AttributeBinding(this, name, ast, this.dispatcher);
+                    var attrBinding = new AttributeBinding(this.tagNode, name, ast, this.dispatcher);
                     this.attributeBindings.push(attrBinding);
                 }
             }
@@ -423,10 +401,10 @@ export module Dom {
             return this;
         }
 
-        update(context): this {
-            super.update(context);
+        update(context, parent): this {
+            super.update(context, parent);
 
-            this.classBinding.update(context);
+            this.classBinding.update(context, this);
             var attrLength = this.attributeBindings.length;
             for (var e = 0; e < attrLength; e++) {
                 this.attributeBindings[e].update(context);
@@ -435,15 +413,15 @@ export module Dom {
             if (this.childBindings) {
                 var childLength = this.childBindings.length;
                 for (var i = 0; i < childLength; i++) {
-                    this.childBindings[i].update(context);
+                    this.childBindings[i].update(context, this);
                 }
             }
 
             return this;
         }
 
-        render(context) {
-            this.target.insert(this, this.tagNode, 0);
+        render(context, sinks) {
+            sinks.insert(this, this.tagNode, 0);
         }
 
         trigger(name) {
@@ -463,7 +441,7 @@ export module Dom {
         private oldValue;
         private baseClassTpl;
 
-        constructor(private parent: TagBinding, dispatcher: IDispatcher) {
+        constructor(private tagNode: HTMLElement, dispatcher: IDispatcher) {
             super(dispatcher);
         }
 
@@ -478,9 +456,9 @@ export module Dom {
             this.conditions.push({ className, condition });
         }
 
-        render(context) {
+        render(context, sinks: IDOMSinks) {
             this.context = context;
-            var tag = this.parent.tagNode;
+            var tag = this.tagNode;
 
             if (this.baseClassTpl) {
                 var newValue = this.evaluate(this.baseClassTpl);
@@ -489,15 +467,7 @@ export module Dom {
                     tag.className = Core.empty;
                 } else {
                     tag.className = newValue.valueOf();
-                    //if (oldValue === void 0) {
-                    //    var attr = document.createAttribute("class");
-                    //    attr.value = newValue;
-                    //    tag.setAttributeNode(attr);
-                    //} else {
-                    //    tag.className = newValue;
-                    //}
                 }
-                // this.oldValue = newValue;
             }
 
             if (this.conditions) {
@@ -517,7 +487,7 @@ export module Dom {
         public setAttribute(attrName: string, newValue) {
             var oldValue = this.oldValue;
 
-            var tag = this.parent.tagNode;
+            var tag: any = this.tagNode;
             if (newValue === void 0 || newValue === null) {
                 tag[attrName] = void 0;
                 tag.removeAttribute(attrName);
@@ -692,11 +662,11 @@ export module Dom {
     }
 
     export class AttributeBinding extends Re.Binding {
-        constructor(private parent: TagBinding, private name, private expr, dispatcher: IDispatcher) {
+        constructor(private tagNode: any, private name, private expr, dispatcher: IDispatcher) {
             super(dispatcher);
         }
 
-        render() {
+        render(context, parent) {
             let value = this.evaluate(this.expr);
 
             if (value === void 0) {
@@ -714,7 +684,7 @@ export module Dom {
             }
 
             var attrName = this.name;
-            var tag = this.parent.tagNode;
+            var tag = this.tagNode;
             if (newValue === void 0 || newValue === null) {
                 tag[attrName] = void 0;
                 tag.removeAttribute(attrName);
