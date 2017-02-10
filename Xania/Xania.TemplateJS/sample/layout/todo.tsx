@@ -34,7 +34,7 @@ export class TodoApp {
 
     view(xania) {
         return (
-            <section className="todoapp">
+            <section className="todoapp" >
                 <header>
                     <h1>todos</h1>
                     <input className="new-todo" placeholder="What needs to be done?" autofocus=""

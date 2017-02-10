@@ -9,7 +9,7 @@ export module Reactive {
 
     export interface IAction {
         execute();
-        notify(value: IDependency);
+        notify();
     }
 
     interface IProperty {
@@ -159,6 +159,7 @@ export module Reactive {
                     // notify next
                     var actions = this.actions.slice(0);
                     for (var i = 0; i < actions.length; i++) {
+                        actions[i].notify();
                         actions[i].execute();
                     }
                 }
@@ -267,7 +268,7 @@ export module Reactive {
 
         refresh() {
             var stack: { properties, value }[] = [this];
-            var dirty = [];
+            var dirty: Binding[] = [];
 
             while (stack.length > 0) {
                 const parent = stack.pop();
@@ -275,7 +276,7 @@ export module Reactive {
                 if (parent.properties) {
                     var properties = parent.properties;
                     let i: number = properties.length;
-                    while(i--) {
+                    while (i--) {
                         var child = properties[i];
                         var changed = child.refresh(parentValue);
                         if (child.value === void 0) {
@@ -289,7 +290,7 @@ export module Reactive {
                                 if (actions) {
                                     // notify next
                                     var e = actions.length;
-                                    while(e--){
+                                    while (e--) {
                                         dirty.push(actions[e]);
                                     }
                                 }
@@ -300,7 +301,11 @@ export module Reactive {
             }
 
             var j = dirty.length;
-            while(j--) {
+            while (j--) {
+                dirty[j].notify();
+            }
+            var j = dirty.length;
+            while (j--) {
                 dirty[j].execute();
             }
         }
@@ -325,40 +330,34 @@ export module Reactive {
         protected context;
         protected driver;
         public length;
-        protected extensions: { name: any, value: Extension }[];
+        protected extensions: { key: any, extension: Extension }[];
+        public childBindings: Binding[];
 
         constructor(public dispatcher: { dispatch(action: IAction) } = DefaultDispatcher) { }
 
-        execute() {
-            this.render(this.context, this.driver);
+        notify() {
         }
 
-        update(context, driver: IDriver): this {
-            if (this.context !== context || this.driver !== driver) {
-                this.context = context;
-                this.driver = driver;
-                this.render(context, driver);
+        execute(): this {
+            var dizi = this['_disposed'];
+            if (dizi !== true) {
+                this.render(this.context, this.driver);
             }
             return this;
         }
 
-        dispose() {
-            if (this.context) {
-                var stack = [this.context];
-                while (stack.length > 0) {
-                    var value = stack.pop();
-                    if (value.unbind) {
-                        value.unbind(this);
-                    }
-                    var properties = value.properties;
-                    if (properties) {
-                        var i = properties.length - 1;
-                        do {
-                            stack.push(properties[i]);
-                        } while (i--);
-                    }
+        update(context, driver: IDriver): this {
+            var dizi = this['_disposed'];
+            if (dizi !== true) {
+                if (this.context !== context || this.driver !== driver) {
+                    this.context = context;
+                    this.driver = driver;
+
+                    this.notify();
+                    this.render(context, driver);
                 }
             }
+            return this;
         }
 
         observe(value) {
@@ -367,13 +366,14 @@ export module Reactive {
             }
         }
 
-        public abstract render?(context, parent): any;
+        public abstract render?(context, driver): any;
 
         extend(name: string, value: any) {
+            var key = value.valueOf();
             for (var i = 0; this.extensions && i < this.extensions.length; i++) {
                 var x = this.extensions[i];
-                if (x.name === value) {
-                    return x.value.add(name, value);
+                if (x.key === key) {
+                    return x.extension.add(name, value);
                 }
             }
 
@@ -382,7 +382,7 @@ export module Reactive {
             if (!this.extensions)
                 this.extensions = [];
 
-            this.extensions.push({ name: value, value: scope });
+            this.extensions.push({ key, extension: scope });
 
             return scope;
         }

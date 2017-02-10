@@ -133,7 +133,7 @@ describe("templating",
                     }
                 });
                 var button = new Dom.TagBinding("button")
-                    .on("click", fs("p.sayHello"))
+                    .attr("onclick", fs("p.sayHello"))
                     .update(store, null);
 
                 button.trigger('click');

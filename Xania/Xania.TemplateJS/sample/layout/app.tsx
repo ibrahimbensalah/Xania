@@ -6,7 +6,7 @@ import { TodoApp } from "./todo"
 import { MotionApp } from "./../motion/index"
 
 export function bind(target: Node) {
-    var view = new Observables.Observable("motion");
+    var view = new Observables.Observable("todos");
     var store = new Re.Store({
         view,
         time: new Observables.Time(),

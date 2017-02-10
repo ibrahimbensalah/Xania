@@ -85,9 +85,8 @@ export module Template {
         }
 
         bind<T>(visitor: IVisitor<T>) {
-            const
-                bindings = this._children.map(x => x.bind(visitor)),
-                tagBinding = visitor.tag(this.name, this.ns, this.attributes, bindings);
+            const bindings = this._children.map(x => x.bind(visitor));
+            var tagBinding = visitor.tag(this.name, this.ns, this.attributes, bindings);
 
             return tagBinding;
         }

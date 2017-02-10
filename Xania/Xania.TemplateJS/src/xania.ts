@@ -124,7 +124,6 @@ class ComponentBinding extends Reactive.Binding {
     }
 
     dispose() {
-        super.dispose();
         this.binding.dispose();
     }
 
@@ -163,7 +162,7 @@ export class Animate {
     }
 
     bind(visitor) {
-        var bindings = this.children.map(x => x.bind(visitor));
+        const bindings = this.children.map(x => x.bind(visitor));
         return new AnimateBinding(bindings);
     }
 
@@ -197,9 +196,9 @@ export class Animate {
             { height: '30px', transform: 'translate3d(0,-30px,0)', offset: 0.43 },
             { height: '40px', transform: 'translate3d(0,0,0)', offset: 0.53 },
             { height: '50px', transform: 'translate3d(0,-15px,0)', offset: 0.7 },
-            { height: '60px', transform: 'translate3d(0,0,0)', offset: 0.8 },
-            { height: '90px', transform: 'translate3d(0,-15px,0)', offset: 0.9 },
-            { height: '100px', transform: 'translate3d(0,0,0)', offset: 1 }];
+            { height: '52px', transform: 'translate3d(0,0,0)', offset: 0.8 },
+            { height: '54px', transform: 'translate3d(0,-15px,0)', offset: 0.9 },
+            { height: '58px', transform: 'translate3d(0,0,0)', offset: 1 }];
         var timing = { duration: 900, iterations: iterations, easing: 'cubic-bezier(0.215, 0.610, 0.355, 1.000)' };
         return elem.animate(keyframes, timing);
     }
@@ -220,22 +219,23 @@ class AnimateBinding extends Reactive.Binding {
 
     domElements = [];
 
-    constructor(private bindings: any[]) {
+    constructor(childBindings: any[]) {
         super();
+        this.childBindings = childBindings;
     }
 
     get length() {
         var length = 0;
-        for (var i = 0; i < this.bindings.length; i++) {
-            length += this.bindings[i].length;
+        for (var i = 0; i < this.childBindings.length; i++) {
+            length += this.childBindings[i].length;
         }
         return length;
     }
 
     update(context, driver) {
         super.update(context, driver);
-        for (var i = 0; i < this.bindings.length; i++) {
-            this.bindings[i].update(context, this);
+        for (var i = 0; i < this.childBindings.length; i++) {
+            this.childBindings[i].update(context, this);
         }
         return this;
     }
@@ -250,17 +250,20 @@ class AnimateBinding extends Reactive.Binding {
     }
 
     dispose() {
-        var bindings = this.bindings;
-        this.bindings = [];
+        var bindings = this.childBindings;
+        this.childBindings = [];
         var counter = this.domElements.length;
         for (let i = 0; i < this.domElements.length; i++) {
             var dom = this.domElements[i];
-            var animation = Animate.flipOutY(dom, 1);
+
+            var timing = { duration: 200, iterations: 1 };
+            var animation = dom.animate([{ height: "58px", opacity: 1, offset: 0 }, { height: 0, opacity: 0, offset: 1 }], timing);
             animation.onfinish = () => {
                 counter--;
                 if (counter === 0) {
                     for (let e = 0; e < bindings.length; e++) {
-                        bindings[e].dispose();
+                        var b: any = bindings[e];
+                        b.dispose();
                     }
                 }
             }
@@ -269,3 +272,4 @@ class AnimateBinding extends Reactive.Binding {
 }
 
 export { fs, Reactive, Template }
+

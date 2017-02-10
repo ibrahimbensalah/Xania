@@ -154,6 +154,7 @@ export module Dom {
 
     export class FragmentBinding extends Re.Binding implements IDomBinding {
         public fragments: Fragment[] = [];
+        private stream;
 
         get length() {
             var total = 0, length = this.fragments.length;
@@ -167,8 +168,37 @@ export module Dom {
             super(dispatcher);
         }
 
+        notify() {
+            var dizi = this['_disposed'];
+            if (dizi !== true) {
+
+                var stream, context = this.context;
+                if (!!this.ast && !!this.ast.execute) {
+                    stream = this.ast.execute(this, context);
+                    if (stream.length === void 0)
+                        stream = [stream];
+                } else {
+                    stream = [context];
+                }
+                this.stream = stream;
+
+                var i = 0;
+                while (i < this.fragments.length) {
+                    var frag = this.fragments[i];
+                    if (stream.indexOf(frag.context) < 0) {
+                        frag.dispose();
+                        this.fragments.splice(i, 1);
+                    } else {
+                        i++;
+                    }
+                }
+
+                return true;
+            }
+            return false;
+        }
+
         dispose() {
-            super.dispose();
             for (var i = 0; i < this.fragments.length; i++) {
                 this.fragments[i].dispose();
             }
@@ -188,14 +218,7 @@ export module Dom {
         }
 
         render(context, driver: IDOMDriver) {
-            var stream;
-            if (!!this.ast && !!this.ast.execute) {
-                stream = this.ast.execute(this, context);
-                if (stream.length === void 0)
-                    stream = [stream];
-            } else {
-                stream = [context];
-            }
+            var stream = this.stream;
 
             var fr: Fragment, streamlength = stream.length;
             for (var i = 0; i < streamlength; i++) {
@@ -224,8 +247,6 @@ export module Dom {
                 var frag = this.fragments.pop();
                 frag.dispose();
             }
-
-            return stream;
         }
 
         insert(fragment: Fragment, dom, idx) {
@@ -239,30 +260,65 @@ export module Dom {
                 this.driver.insert(this, dom, offset + idx);
             }
         }
+
+
+        static unbindAll(root: Re.Binding) {
+            var bindingStack: any[] = [root];
+
+            while (bindingStack.length) {
+                var b = bindingStack.pop();
+                b['_disposed'] = true;
+
+                var bs = b.childBindings;
+                if (bs) {
+                    for (var n = 0; n < bs.length; n++) {
+                        bindingStack.push(bs[n]);
+                    }
+                }
+
+                if (b.context) {
+                    var stack = [b.context];
+                    while (stack.length > 0) {
+                        var value = stack.pop();
+                        if (value.unbind) {
+                            value.unbind(b);
+                        }
+                        var properties = value.properties;
+                        if (properties) {
+                            var i = properties.length - 1;
+                            do {
+                                stack.push(properties[i]);
+                            } while (i--);
+                        }
+                    }
+                }
+            }
+        }
     }
 
     class Fragment {
-        public bindings: IDomBinding[] = [];
+        public childBindings: any[] = [];
         public context;
 
         constructor(private owner: FragmentBinding) {
             for (var e = 0; e < this.owner.children.length; e++) {
-                this.bindings[e] =
+                this.childBindings[e] =
                     owner.children[e].bind(this as IDomVisitor);
             }
         }
 
         dispose() {
-            Re.Binding.prototype.dispose.call(this);
-            for (var i = 0; i < this.bindings.length; i++) {
-                this.bindings[i].dispose();
+            for (var j = 0; j < this.childBindings.length; j++) {
+                var b = this.childBindings[j];
+                FragmentBinding.unbindAll(b);
+                b.dispose();
             }
         }
 
         get length() {
             var total = 0;
-            for (var j = 0; j < this.bindings.length; j++) {
-                total += this.bindings[j].length;
+            for (var j = 0; j < this.childBindings.length; j++) {
+                total += this.childBindings[j].length;
             }
             return total;
         }
@@ -271,17 +327,17 @@ export module Dom {
             this.context = context;
             var length = this.owner.children.length;
             for (var e = 0; e < length; e++) {
-                this.bindings[e].update(context, this);
+                this.childBindings[e].update(context, this);
             }
             return this;
         }
 
         insert(binding: IDomBinding, dom, index) {
-            var offset = 0, length = this.bindings.length;
+            var offset = 0, length = this.childBindings.length;
             for (var i = 0; i < length; i++) {
-                if (this.bindings[i] === binding)
+                if (this.childBindings[i] === binding)
                     break;
-                offset += this.bindings[i].length;
+                offset += this.childBindings[i].length;
             }
             this.owner.insert(this, dom, offset + index);
         }
@@ -318,7 +374,6 @@ export module Dom {
         }
 
         dispose() {
-            super.dispose();
             this.textNode.remove();
         }
 
@@ -332,27 +387,24 @@ export module Dom {
 
     export class TagBinding extends Re.Binding implements IDomBinding {
         public tagNode;
-        private attributeBindings = [];
-        private events = {};
-        private classBinding: ClassBinding;
         public length = 1;
+        private eventBindings: EventBinding[] = [];
 
-        constructor(private tagName: string, private ns: string = null, private childBindings?: IDomBinding[], dispatcher?: IDispatcher) {
+        constructor(private tagName: string, private ns: string = null, childBindings?: Re.Binding[], dispatcher?: IDispatcher) {
             super(dispatcher);
+            this.childBindings = childBindings;
             if (ns === null)
                 this.tagNode = document.createElement(tagName);
             else {
                 this.tagNode = (<any>document).createElementNS(ns, tagName.toLowerCase());
             }
-
-            this.classBinding = new ClassBinding(this.tagNode, this.dispatcher);
         }
 
         dispose() {
             this.tagNode.remove();
         }
 
-        child(child: IDomBinding): this {
+        child(child: Re.Binding): this {
             if (!this.childBindings)
                 this.childBindings = [];
 
@@ -364,20 +416,21 @@ export module Dom {
             if (typeof ast === "string") {
                 this.tagNode.setAttribute(name, ast);
             } else if (name === "class") {
-                this.classBinding.setBaseClass(ast);
+                var classBinding = new ClassBinding(this.tagNode, ast, this.dispatcher);
+                this.childBindings.push(classBinding);
             } else if (name === "value" && this.tagName === "input") {
                 const valueBinding = new ValueBinding(this.tagNode, ast, this.dispatcher);
-                this.attributeBindings.push(valueBinding);
+                this.childBindings.push(valueBinding);
             } else if (name === "checked" && this.tagName === "input") {
                 const checkedBinding = new CheckedBinding(this.tagNode, ast, this.dispatcher);
-                this.attributeBindings.push(checkedBinding);
+                this.childBindings.push(checkedBinding);
             } else {
                 var match = /^on(.+)/.exec(name);
                 if (match) {
-                    this.attributeBindings.push(new EventBinding(this.tagNode, match[1], ast));
+                    this.eventBindings.push(new EventBinding(this.tagNode, match[1], ast));
                 } else {
                     var attrBinding = new AttributeBinding(this.tagNode, name, ast, this.dispatcher);
-                    this.attributeBindings.push(attrBinding);
+                    this.childBindings.push(attrBinding);
                 }
             }
 
@@ -394,19 +447,12 @@ export module Dom {
             DomBinding.insertDom(this.tagNode, dom, offset + idx);
         }
 
-        on(name, ast): this {
-            this.events[name] = ast;
-
-            return this;
-        }
-
         update(context, parent): this {
             super.update(context, parent);
 
-            this.classBinding.update(context, this);
-            var attrLength = this.attributeBindings.length;
-            for (var e = 0; e < attrLength; e++) {
-                this.attributeBindings[e].update(context);
+            for (let n = 0; n < this.eventBindings.length; n++) {
+                const event = this.eventBindings[n];
+                event.update(context);
             }
 
             if (this.childBindings) {
@@ -424,43 +470,30 @@ export module Dom {
         }
 
         trigger(name) {
-            var handler = this.events[name];
-            if (!!handler) {
-                var result = handler.execute(this, this.context);
+            //var handler = this.events[name];
+            //if (!!handler) {
+            //    var result = handler.execute(this, this.context);
 
-                if (typeof result === "function")
-                    result();
-            }
+            //    if (typeof result === "function")
+            //        result();
+            //}
         }
     }
 
     export class ClassBinding extends Re.Binding {
         public dom;
-        private conditions;
         private oldValue;
-        private baseClassTpl;
 
-        constructor(private tagNode: HTMLElement, dispatcher: IDispatcher) {
+        constructor(private tagNode: HTMLElement, private ast, dispatcher: IDispatcher) {
             super(dispatcher);
-        }
-
-        setBaseClass(tpl) {
-            this.baseClassTpl = tpl;
-        }
-
-        addClass(className, condition) {
-            if (!this.conditions)
-                this.conditions = [];
-
-            this.conditions.push({ className, condition });
         }
 
         render(context, driver: IDOMDriver) {
             this.context = context;
             var tag = this.tagNode;
 
-            if (this.baseClassTpl) {
-                var newValue = this.evaluate(this.baseClassTpl);
+            if (this.ast) {
+                var newValue = this.evaluate(this.ast);
 
                 if (newValue === void 0 || newValue === null) {
                     tag.className = Core.empty;
@@ -469,18 +502,18 @@ export module Dom {
                 }
             }
 
-            if (this.conditions) {
-                var conditionLength = this.conditions.length;
-                for (var i = 0; i < conditionLength; i++) {
-                    var { className, condition } = this.conditions[i];
-                    var b = condition.execute(this, context).valueOf();
-                    if (b) {
-                        tag.classList.add(className);
-                    } else {
-                        tag.classList.remove(className);
-                    }
-                }
-            }
+            //if (this.conditions) {
+            //    var conditionLength = this.conditions.length;
+            //    for (var i = 0; i < conditionLength; i++) {
+            //        var { className, condition } = this.conditions[i];
+            //        var b = condition.execute(this, context).valueOf();
+            //        if (b) {
+            //            tag.classList.add(className);
+            //        } else {
+            //            tag.classList.remove(className);
+            //        }
+            //    }
+            //}
         }
 
         public setAttribute(attrName: string, newValue) {
