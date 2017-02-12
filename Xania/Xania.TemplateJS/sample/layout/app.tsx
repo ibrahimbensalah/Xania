@@ -1,12 +1,13 @@
 ﻿import { Observables } from "../../src/observables"
 
-import { Xania as xania, ForEach, Animate, fs, View, Reactive as Re, Template } from "../../src/xania"
+import { Xania as xania, ForEach, fs, View, Reactive as Re, Template } from "../../src/xania"
 import { ClockApp } from "./clock"
 import { TodoApp } from "./todo"
 import { MotionApp } from "./../motion/index"
+import { BallsApp } from "./../balls/app"
 
 export function bind(target: Node) {
-    var view = new Observables.Observable("todos");
+    var view = new Observables.Observable("balls");
     var store = new Re.Store({
         view,
         time: new Observables.Time(),
@@ -22,7 +23,7 @@ export function bind(target: Node) {
     var mainView = view.map(viewName => {
         switch (viewName) {
             case 'view1':
-                return <Animate><div>view 1: {fs("user.firstName")} {fs("await time")}</div></Animate>;
+                return <div>view 1: {fs("user.firstName")} {fs("await time")}</div>;
             case 'view2':
                 return (
                     <div>
@@ -40,8 +41,8 @@ export function bind(target: Node) {
                 return <ClockApp time={fs("time")} />;
             case 'todos':
                 return <TodoApp />;
-            case 'motion':
-                return <MotionApp />;
+            case 'balls':
+                return <BallsApp />;
         }
     });
 
@@ -57,7 +58,7 @@ var layout: any = view =>
             <button onClick={fs("route 'view2'")}>view 2</button>
             <button onClick={fs("route 'clock'")}>clock</button>
             <button onClick={fs("route 'todos'")}>todos</button>
-            <button onClick={fs("route 'motion'")}>motion</button>
+            <button onClick={fs("route 'balls'")}>balls</button>
             &nbsp;&nbsp;&nbsp;&nbsp;
             model:
             <button onClick={fs("user.firstName <- 'Ramy'")}>Ramy</button>

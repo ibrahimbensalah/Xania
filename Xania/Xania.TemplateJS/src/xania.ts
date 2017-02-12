@@ -137,7 +137,7 @@ class PartialBinding extends Reactive.Binding {
     }
 
     render(context, parent) {
-        var view = this.evaluate(this.view).valueOf();
+        var view = this.evaluateText(this.view).valueOf();
 
         if (!view)
             throw new Error("view is empty");
@@ -157,119 +157,6 @@ class PartialBinding extends Reactive.Binding {
     }
 }
 
-export class Animate {
-    constructor(_, private children: Template.INode[]) {
-    }
-
-    bind(visitor) {
-        const bindings = this.children.map(x => x.bind(visitor));
-        return new AnimateBinding(bindings);
-    }
-
-
-    static flipInY(elem, iterations) {
-        var animationTimingFunction = elem.style['animation-timing-function'];
-        var keyframes = [
-            { transform: 'perspective(400px) rotate3d(0, 1, 0, 90deg)', opacity: '0', offset: 0 },
-            { transform: 'perspective(400px) rotate3d(0, 1, 0, -20deg)', offset: 0.4 },
-            { transform: 'perspective(400px) rotate3d(0, 1, 0, 10deg)', opacity: '1', offset: 0.6 },
-            { transform: 'perspective(400px) rotate3d(0, 1, 0, -5deg)', opacity: '1', offset: 0.8 },
-            { transform: 'perspective(400px)', opacity: '1', offset: 1 }];
-        var timing = { duration: 900, iterations: iterations, easing: 'ease-in' };
-        return elem.animate(keyframes, timing);
-    }
-
-    static flipOutY(elem, iterations) {
-        var keyframes = [
-            { height: '20px', transform: 'perspective(400px)', opacity: '1', offset: 0 },
-            { height: '10px', transform: 'perspective(400px) rotate3d(0, 1, 0, -20deg)', opacity: '1', offset: 0.3 },
-            { height: '0', transform: 'perspective(400px) rotate3d(0, 1, 0, 90deg)', opacity: '0', offset: 1 }];
-        var timing = { duration: 900, iterations: iterations };
-        return elem.animate(keyframes, timing);
-    }
-
-    static bounce(elem, iterations) {
-        var keyframes = [
-            { height: '0', transform: 'translate3d(0,0,0)', offset: 0 },
-            { height: '10px', transform: 'translate3d(0,0,0)', offset: 0.2 },
-            { height: '20px', transform: 'translate3d(0,-30px,0)', offset: 0.4 },
-            { height: '30px', transform: 'translate3d(0,-30px,0)', offset: 0.43 },
-            { height: '40px', transform: 'translate3d(0,0,0)', offset: 0.53 },
-            { height: '50px', transform: 'translate3d(0,-15px,0)', offset: 0.7 },
-            { height: '52px', transform: 'translate3d(0,0,0)', offset: 0.8 },
-            { height: '54px', transform: 'translate3d(0,-15px,0)', offset: 0.9 },
-            { height: '58px', transform: 'translate3d(0,0,0)', offset: 1 }];
-        var timing = { duration: 900, iterations: iterations, easing: 'cubic-bezier(0.215, 0.610, 0.355, 1.000)' };
-        return elem.animate(keyframes, timing);
-    }
-
-    static bounceIn(elem, iterations) {
-        var keyframes = [
-            { transform: 'scale3d(.3, .3, .3)', opacity: '0', offset: 0 },
-            { transform: 'scale3d(1.1, 1.1, 1.1)', offset: 0.2 },
-            { transform: 'scale3d(.9, .9, .9)', offset: 0.4 },
-            { transform: 'scale3d(1.03, 1.03, 1.03)', opacity: '1', offset: 0.6 },
-            { transform: 'scale3d(.97, .97, .97)', offset: 0.8 },
-            { transform: 'scale3d(1, 1, 1)', opacity: '1', offset: 1 }];
-        var timing = { duration: 900, iterations: iterations, easing: 'cubic-bezier(0.215, 0.610, 0.355, 1.000)' };
-        return elem.animate(keyframes, timing);
-    }
-}
-class AnimateBinding extends Reactive.Binding {
-
-    domElements = [];
-
-    constructor(childBindings: any[]) {
-        super();
-        this.childBindings = childBindings;
-    }
-
-    get length() {
-        var length = 0;
-        for (var i = 0; i < this.childBindings.length; i++) {
-            length += this.childBindings[i].length;
-        }
-        return length;
-    }
-
-    update(context, driver) {
-        super.update(context, driver);
-        for (var i = 0; i < this.childBindings.length; i++) {
-            this.childBindings[i].update(context, this);
-        }
-        return this;
-    }
-
-    insert(binding, dom, idx) {
-        this.driver.insert(this, dom, idx);
-        Animate.bounce(dom, 1);
-        this.domElements.push(dom);
-    }
-
-    render() {
-    }
-
-    dispose() {
-        var bindings = this.childBindings;
-        this.childBindings = [];
-        var counter = this.domElements.length;
-        for (let i = 0; i < this.domElements.length; i++) {
-            var dom = this.domElements[i];
-
-            var timing = { duration: 200, iterations: 1 };
-            var animation = dom.animate([{ height: "58px", opacity: 1, offset: 0 }, { height: 0, opacity: 0, offset: 1 }], timing);
-            animation.onfinish = () => {
-                counter--;
-                if (counter === 0) {
-                    for (let e = 0; e < bindings.length; e++) {
-                        var b: any = bindings[e];
-                        b.dispose();
-                    }
-                }
-            }
-        }
-    }
-}
 
 export { fs, Reactive, Template }
 

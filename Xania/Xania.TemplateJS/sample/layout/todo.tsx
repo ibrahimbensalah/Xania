@@ -1,4 +1,5 @@
-﻿import { ForEach, Animate, fs } from "../../src/xania"
+﻿import { ForEach, fs } from "../../src/xania"
+import { Animate } from "../../src/anim"
 import { Observables } from "../../src/observables"
 
 export class TodoApp {
@@ -45,7 +46,7 @@ export class TodoApp {
                         onClick={this.onToggleAll} />
                     <ul className="todo-list">
                         <ForEach expr={fs("for todo in store.todos where (completed = (show = 'completed')) or (show = 'all')")}>
-                            <Animate>
+                            <Animate height="58px" transform="scale(1)" dispose={[{ height: "58px", opacity: 1 }, { height: 0, opacity: 0 }]}>
                                 <li className={[fs("todo.completed -> 'completed'"), fs("todo = editingTodo -> ' editing'")]} >
                                     <div className="view">
                                         <input className="toggle" type="checkbox" checked={fs("todo.completed")} />

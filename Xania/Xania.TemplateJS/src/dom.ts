@@ -378,7 +378,7 @@ export module Dom {
         }
 
         render(context, driver: IDOMDriver) {
-            const result = this.evaluate(this.expr);
+            const result = this.evaluateText(this.expr);
             // if (result !== void 0)
             this.textNode.nodeValue = result && result.valueOf();
             this.driver.insert(this, this.textNode, 0);
@@ -448,8 +448,6 @@ export module Dom {
         }
 
         update(context, parent): this {
-            super.update(context, parent);
-
             for (let n = 0; n < this.eventBindings.length; n++) {
                 const event = this.eventBindings[n];
                 event.update(context);
@@ -461,6 +459,8 @@ export module Dom {
                     this.childBindings[i].update(context, this);
                 }
             }
+
+            super.update(context, parent);
 
             return this;
         }
@@ -493,7 +493,7 @@ export module Dom {
             var tag = this.tagNode;
 
             if (this.ast) {
-                var newValue = this.evaluate(this.ast);
+                var newValue = this.evaluateText(this.ast);
 
                 if (newValue === void 0 || newValue === null) {
                     tag.className = Core.empty;
@@ -539,6 +539,7 @@ export module Dom {
 
     export class EventBinding {
         private context;
+        private state;
 
         constructor(tagNode: any, private name, private expr) {
             tagNode.addEventListener(this.name, this.fire.bind(this));
@@ -549,15 +550,17 @@ export module Dom {
                 return this.expr(event, this.context);
             return this.expr.execute(this,
                 [
-                    event,
-                    event.target,
+                    { value: event },
+                    { event: event },
+                    { node: event.target },
+                    { state: this.state || null },
                     this.context
                 ]);
         }
 
         fire(event) {
-
             var newValue = this.evaluate();
+            this.state = newValue;
             if (newValue !== void 0) {
                 var tag = event.target;
                 if (newValue === null) {
@@ -612,7 +615,7 @@ export module Dom {
         }
 
         private static valueOf(x) {
-            return x.valueOf();
+            return x && x.valueOf();
         }
 
         member(target: { get(name: string); refresh?(); }, name) {
@@ -630,7 +633,7 @@ export module Dom {
         }
 
         fire() {
-            let value = this.evaluate(this.expr);
+            let value = this.evaluateText(this.expr);
             if (value && value.set) {
                 value.set(this.tagNode.checked);
 
@@ -639,7 +642,7 @@ export module Dom {
         }
 
         render() {
-            let value = this.evaluate(this.expr);
+            let value = this.evaluateText(this.expr);
 
             var newValue = value && value.valueOf();
             var oldValue = this.oldValue;
@@ -672,14 +675,14 @@ export module Dom {
         }
 
         fire() {
-            let value = this.evaluate(this.expr);
+            let value = this.evaluateText(this.expr);
             if (value && value.set) {
                 value.set(this.tagNode.value);
             }
         }
 
         render() {
-            let value = this.evaluate(this.expr);
+            let value = this.evaluateText(this.expr);
             var newValue = value && value.valueOf();
 
             var tag = this.tagNode;
@@ -699,7 +702,7 @@ export module Dom {
         }
 
         render(context, parent) {
-            let value = this.evaluate(this.expr);
+            let value = this.evaluateText(this.expr);
 
             if (value === void 0) {
                 return;

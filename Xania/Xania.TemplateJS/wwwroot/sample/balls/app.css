@@ -1,0 +1,36 @@
+﻿
+.balls-outer,
+.balls-outer * {
+    padding: 0;
+    margin: 0;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    user-select: none;
+  }
+
+.balls-outer {
+    padding: 20px;
+    position: absolute;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    display: -webkit-flex;
+    -webkit-justify-content: center;
+    -webkit-align-items: center;
+  }
+
+.balls-outer .demo2 {
+    width: 190px;
+    height: 320px;
+  }
+
+.balls-outer .demo2-ball {
+    position: absolute;
+    border: 1px solid black;
+    border-radius: 99px;
+    width: 50px;
+    height: 50px;
+    text-align: center;
+    line-height: 50px;
+    color: white;
+  }

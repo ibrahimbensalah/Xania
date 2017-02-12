@@ -463,20 +463,45 @@ export module Reactive {
             return observable.awaited;
         }
 
-        evaluate(parts): any {
+        evaluateText(parts): any {
             if (parts.execute)
                 return parts.execute(this, this.context);
             else if (Array.isArray(parts)) {
+                var stack = parts.slice(0).reverse();
                 var result = Core.empty;
-                for (var i = 0; i < parts.length; i++) {
-                    var part = this.evaluate(parts[i]);
-                    if (part !== void 0)
-                        result += part;
+
+                while (stack.length) {
+                    const cur = stack.pop();
+                    if (cur === void 0 || cur === null) {
+                        // skip 
+                    } else if (cur.execute) {
+                        stack.push(cur.execute(this, this.context));
+                    } else if (Array.isArray(cur)) {
+                        var i = cur.length;
+                        while (i--) {
+                            stack.push(cur[i]);
+                        }
+                    } else {
+                        result += cur;
+                    }
                 }
+
                 return result;
             }
             else
                 return parts;
+        }
+
+        evaluateObject(expr): any {
+            if (!expr)
+                return expr;
+            else if (expr.execute)
+                return expr.execute(this, this.context);
+            else if (Array.isArray(expr)) {
+                return expr.map(x => this.evaluateObject(x));
+            }
+            else
+                return expr;
         }
     }
 }
