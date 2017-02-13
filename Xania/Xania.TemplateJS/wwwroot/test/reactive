@@ -1,0 +1,25 @@
+
+
+
+var dom = ...
+
+fromEvent(dom, "click")
+    .filter(x => ...)
+    .subscribe(e => {
+        console.log('dom clicked!');
+    });
+
+var person = { 
+    firstName: "Me"
+}
+
+var p = fromMember(person, "firstName");
+p.subscribe(fn => {
+        console.log('firstName has changed to:', fn)
+    })
+
+// scenario 1: change event
+person.firstName = fn;
+p.notify();
+
+//

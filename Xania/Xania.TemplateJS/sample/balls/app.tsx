@@ -7,7 +7,10 @@ export class BallsApp {
 
     constructor() {
         for (var i = 0; i < 16; i++) {
-            this.balls.push(new Ball(i));
+            var rgb = [100, 100, 100]
+                .map(x => x + Math.random() * 150)
+                .map(Math.floor);
+            this.balls.push(new Ball(i, `rgb(${rgb.join(", ")})`));
         }
     }
 
@@ -36,28 +39,34 @@ export class BallsApp {
     }
 
     drag(event, ball, state) {
-        var { movementX, movementY } = event;
+        var { offsetX, offsetY } = event;
         var node = event.target;
-
-        var startX, startY, ballIdx;
+        
+        var marginLeft, marginTop, dLeft, dTop, ballIdx;
         if (state && node.style.marginTop !== 0 && node.style.marginLeft !== 0) {
-            movementX += state.movementX;
-            movementY += state.movementY;
-            startX = state.startX;
-            startY = state.startY;
+            marginLeft = state.marginLeft;
+            marginTop = state.marginTop;
+            dLeft = state.dLeft;
+            dTop = state.dTop;
             ballIdx = state.ballIdx;
         } else {
-            startX = (ball.idx % 4) * 70;
-            startY = Math.floor(ball.idx / 4) * 70;
+            dLeft = offsetX - 25;
+            dTop = offsetY - 25;
+            marginLeft = 0;
+            marginTop = 0;
             ballIdx = ball.idx;
         }
 
-        node.style.marginTop = movementY + "px";
-        node.style.marginLeft = movementX + "px";
+        marginLeft += offsetX - 25 - dLeft;
+        marginTop += offsetY - 25 - dTop;
+
+        node.style.marginLeft = marginLeft + "px";
+        node.style.marginTop = marginTop + "px";
         node.style.zIndex = 100;
 
-        var x = movementX + startX;
-        var y = movementY + startY;
+
+        var x = marginLeft + (ball.idx % 4) * 70;
+        var y = marginTop + Math.floor(ball.idx / 4) * 70;
 
         var col = Math.max(0, Math.min(3, Math.round(x / 70)));
         var row = Math.max(0, Math.min(3, Math.round(y / 70)));
@@ -72,7 +81,7 @@ export class BallsApp {
             ballIdx = newBallIdx;
         }
 
-        return { movementX, movementY, startX, startY, ballIdx };
+        return { marginTop, marginLeft, dLeft, dTop, ballIdx };
     }
 
     release(event, ball: Ball) {
@@ -130,11 +139,7 @@ export class BallsApp {
 }
 
 class Ball {
-    constructor(public idx: number) {
-        var r = Math.floor(Math.random() * 155) + 100;
-        var g = Math.floor(Math.random() * 155) + 100;
-        var b = Math.floor(Math.random() * 155) + 100;
-        this.backColor = `rgb(${r}, ${g}, ${b})`;
+    constructor(public idx: number, public backColor) {
     }
 
     pressed = false;
@@ -142,6 +147,4 @@ class Ball {
     press() {
         this.pressed = true;
     }
-
-    backColor: string;
 }

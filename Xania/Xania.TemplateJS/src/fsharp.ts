@@ -78,7 +78,7 @@ export function accept(ast: any, visitor: IAstVisitor, context) {
                     return source.valueOf() ? accept(ast.right, visitor, context) : void 0;
                 case WHERE:
                     source = accept(ast.left, visitor, context);
-                    length = visitor.member(source, "length").value;
+                    length = source.length;
                     var result = [];
                     for (var i = 0; i < length; i++) {
                         var item = visitor.member(source, i);

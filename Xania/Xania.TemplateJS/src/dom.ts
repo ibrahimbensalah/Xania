@@ -169,33 +169,26 @@ export module Dom {
         }
 
         notify() {
-            var dizi = this['_disposed'];
-            if (dizi !== true) {
-
-                var stream, context = this.context;
-                if (!!this.ast && !!this.ast.execute) {
-                    stream = this.ast.execute(this, context);
-                    if (stream.length === void 0)
-                        stream = [stream];
-                } else {
-                    stream = [context];
-                }
-                this.stream = stream;
-
-                var i = 0;
-                while (i < this.fragments.length) {
-                    var frag = this.fragments[i];
-                    if (stream.indexOf(frag.context) < 0) {
-                        frag.dispose();
-                        this.fragments.splice(i, 1);
-                    } else {
-                        i++;
-                    }
-                }
-
-                return true;
+            var stream, context = this.context;
+            if (!!this.ast && !!this.ast.execute) {
+                stream = this.ast.execute(this, context);
+                if (stream.length === void 0)
+                    stream = [stream];
+            } else {
+                stream = [context];
             }
-            return false;
+            this.stream = stream;
+
+            var i = 0;
+            while (i < this.fragments.length) {
+                var frag = this.fragments[i];
+                if (stream.indexOf(frag.context) < 0) {
+                    frag.dispose();
+                    this.fragments.splice(i, 1);
+                } else {
+                    i++;
+                }
+            }
         }
 
         dispose() {
@@ -260,40 +253,6 @@ export module Dom {
                 this.driver.insert(this, dom, offset + idx);
             }
         }
-
-
-        static unbindAll(root: Re.Binding) {
-            var bindingStack: any[] = [root];
-
-            while (bindingStack.length) {
-                var b = bindingStack.pop();
-                b['_disposed'] = true;
-
-                var bs = b.childBindings;
-                if (bs) {
-                    for (var n = 0; n < bs.length; n++) {
-                        bindingStack.push(bs[n]);
-                    }
-                }
-
-                if (b.context) {
-                    var stack = [b.context];
-                    while (stack.length > 0) {
-                        var value = stack.pop();
-                        if (value.unbind) {
-                            value.unbind(b);
-                        }
-                        var properties = value.properties;
-                        if (properties) {
-                            var i = properties.length - 1;
-                            do {
-                                stack.push(properties[i]);
-                            } while (i--);
-                        }
-                    }
-                }
-            }
-        }
     }
 
     class Fragment {
@@ -308,9 +267,9 @@ export module Dom {
         }
 
         dispose() {
+            // FragmentBinding.unbindAll(this);
             for (var j = 0; j < this.childBindings.length; j++) {
                 var b = this.childBindings[j];
-                FragmentBinding.unbindAll(b);
                 b.dispose();
             }
         }
@@ -367,6 +326,7 @@ export module Dom {
     export class TextBinding extends Re.Binding implements IDomBinding {
         public textNode;
         public length = 1;
+        public oldValue;
 
         constructor(private expr, dispatcher?: IDispatcher) {
             super(dispatcher);
@@ -378,10 +338,12 @@ export module Dom {
         }
 
         render(context, driver: IDOMDriver) {
-            const result = this.evaluateText(this.expr);
-            // if (result !== void 0)
-            this.textNode.nodeValue = result && result.valueOf();
-            this.driver.insert(this, this.textNode, 0);
+            const newValue = this.evaluateText(this.expr);
+            if (newValue !== this.oldValue) {
+                this.oldValue = newValue;
+                this.textNode.nodeValue = newValue;
+                this.driver.insert(this, this.textNode, 0);
+            }
         }
     }
 
@@ -489,52 +451,22 @@ export module Dom {
         }
 
         render(context, driver: IDOMDriver) {
-            this.context = context;
-            var tag = this.tagNode;
-
             if (this.ast) {
-                var newValue = this.evaluateText(this.ast);
+                this.context = context;
+                var tag = this.tagNode;
+                var result = this.evaluateText(this.ast);
+                var newValue = result && result.valueOf();
 
-                if (newValue === void 0 || newValue === null) {
-                    tag.className = Core.empty;
-                } else {
-                    tag.className = newValue.valueOf();
+                if (newValue !== this.oldValue) {
+                    if (newValue === void 0 || newValue === null) {
+                        tag.className = Core.empty;
+                    } else {
+                        tag.className = newValue;
+                    }
+                    this.oldValue = newValue;
                 }
             }
-
-            //if (this.conditions) {
-            //    var conditionLength = this.conditions.length;
-            //    for (var i = 0; i < conditionLength; i++) {
-            //        var { className, condition } = this.conditions[i];
-            //        var b = condition.execute(this, context).valueOf();
-            //        if (b) {
-            //            tag.classList.add(className);
-            //        } else {
-            //            tag.classList.remove(className);
-            //        }
-            //    }
-            //}
         }
-
-        public setAttribute(attrName: string, newValue) {
-            var oldValue = this.oldValue;
-
-            var tag: any = this.tagNode;
-            if (newValue === void 0 || newValue === null) {
-                tag[attrName] = void 0;
-                tag.removeAttribute(attrName);
-            } else {
-                if (oldValue === void 0) {
-                    var attr = document.createAttribute(attrName);
-                    attr.value = newValue;
-                    tag.setAttributeNode(attr);
-                } else {
-                    tag.className = newValue;
-                }
-            }
-            this.oldValue = newValue;
-        }
-
     }
 
     export class EventBinding {
@@ -633,7 +565,7 @@ export module Dom {
         }
 
         fire() {
-            let value = this.evaluateText(this.expr);
+            let value = this.evaluateObject(this.expr);
             if (value && value.set) {
                 value.set(this.tagNode.checked);
 
