@@ -1,8 +1,7 @@
 ﻿import { Core } from './core'
 import { Reactive as Re } from './reactive'
 import { Template } from './template'
-import { fs, Scope } from "./fsharp"
-import Fsharp = require("./fsharp");
+import { fs } from "./fsharp"
 
 export module Dom {
 
@@ -30,68 +29,62 @@ export module Dom {
     }
 
     export class DomBinding {
-        private childBindings: Re.Binding[] = [];
-
-        constructor(private target, private dispatcher: IDispatcher) {
+        private domElements = [];
+        
+        constructor(private target) {
         }
 
-        static insertDom(target, dom, idx) {
-            if (idx < target.childNodes.length) {
-                var current = target.childNodes[idx];
-                if (current !== dom) {
-                    target.insertBefore(dom, current);
+        insert(_, dom, idx: number) {
+            var domElements = this.domElements;
+            var target = this.target;
+
+            var curIdx = domElements.indexOf(dom);
+            if (idx !== curIdx) {
+                if (idx < target.childNodes.length) {
+                    var current = target.childNodes[idx];
+                    if (current !== dom) {
+                        target.insertBefore(dom, current);
+                    }
+                } else {
+                    target.appendChild(dom);
                 }
-            } else {
-                target.appendChild(dom);
+                domElements.length = 0;
+                for (let i = 0; i < target.childNodes.length; i++) {
+                    domElements[i] = target.childNodes[i];
+                }
             }
         }
 
-        insert(binding: Re.Binding, dom, idx: number) {
-            var offset = 0, length = this.childBindings.length;
-            for (var i = 0; i < length; i++) {
-                var child = this.childBindings[i];
-                if (child === binding)
-                    break;
-                offset += child.length;
-            }
-            DomBinding.insertDom(this.target, dom, offset + idx);
+        static text(expr): TextBinding {
+            return new TextBinding(expr);
         }
-
-        text(expr): TextBinding {
-            var text = new TextBinding(expr, this.dispatcher);
-            this.childBindings.push(text);
-            return text;
+        static content(expr, children: Template.INode[]): FragmentBinding {
+            return new FragmentBinding(expr, children);
         }
-        content(ast, children: Template.INode[]): FragmentBinding {
-            var content = new FragmentBinding(ast, children, this.dispatcher);
-            this.childBindings.push(content);
-            return content;
-        }
-        tag(name, ns, attrs, children): TagBinding {
-            var tag = new TagBinding(name, ns, children, this.dispatcher), length = attrs.length;
+        static tag(tagName: string, ns: string, attrs, children): TagBinding {
+            var tag = new TagBinding(tagName, ns, children), length = attrs.length;
             for (var i = 0; i < length; i++) {
                 tag.attr(attrs[i].name, attrs[i].tpl);
             }
 
-            this.childBindings.push(tag);
             return tag;
         }
     }
 
-    export function parse(node, dispatcher?: IDispatcher): IView {
+    export function parse(node): IView {
         return {
             template: parseNode(node),
             bind(target, store) {
-                return this.template.accept(new DomBinding(target, dispatcher)).update(store);
+                return this.template.accept(new DomBinding(target)).update(store);
             }
         } as IView;
     }
 
-    export function view(template: Template.INode, dispatcher?: IDispatcher) {
+    export function view(template: Template.INode) {
         return {
             bind(target, store) {
-                var parent = new DomBinding(target, dispatcher);
-                return template.bind<Re.Binding>(parent).update(store, parent);
+                var parent = new DomBinding(target);
+                return template.bind<Re.Binding>(DomBinding).update(store, parent);
             }
         } as IView;
     }
@@ -164,8 +157,8 @@ export module Dom {
             return total;
         }
 
-        constructor(private ast, public children: Template.INode[], dispatcher?: IDispatcher) {
-            super(dispatcher);
+        constructor(private ast, public children: Template.INode[]) {
+            super();
         }
 
         notify() {
@@ -262,12 +255,11 @@ export module Dom {
         constructor(private owner: FragmentBinding) {
             for (var e = 0; e < this.owner.children.length; e++) {
                 this.childBindings[e] =
-                    owner.children[e].bind(this as IDomVisitor);
+                    owner.children[e].bind<Re.Binding>(DomBinding);
             }
         }
 
         dispose() {
-            // FragmentBinding.unbindAll(this);
             for (var j = 0; j < this.childBindings.length; j++) {
                 var b = this.childBindings[j];
                 b.dispose();
@@ -300,23 +292,6 @@ export module Dom {
             }
             this.owner.insert(this, dom, offset + index);
         }
-
-        public text(ast): TextBinding {
-            return new TextBinding(ast, this.owner.dispatcher);
-        }
-
-        public content(ast, children): FragmentBinding {
-            return new FragmentBinding(ast, children, this.owner.dispatcher);
-        }
-
-        public tag(tagName: string, ns: string, attrs, children): TagBinding {
-            var tag = new TagBinding(tagName, ns, children, this.owner.dispatcher), length = attrs.length;
-            for (var i = 0; i < length; i++) {
-                tag.attr(attrs[i].name, attrs[i].tpl);
-            }
-
-            return tag;
-        }
     }
 
     interface IDOMDriver {
@@ -328,8 +303,8 @@ export module Dom {
         public length = 1;
         public oldValue;
 
-        constructor(private expr, dispatcher?: IDispatcher) {
-            super(dispatcher);
+        constructor(private expr) {
+            super();
             this.textNode = (<any>document).createTextNode("");
         }
 
@@ -341,8 +316,9 @@ export module Dom {
             const newValue = this.evaluateText(this.expr);
             if (newValue !== this.oldValue) {
                 this.oldValue = newValue;
-                this.textNode.nodeValue = newValue;
-                this.driver.insert(this, this.textNode, 0);
+                var textNode = this.textNode;
+                textNode.nodeValue = newValue;
+                this.driver.insert(this, textNode, 0);
             }
         }
     }
@@ -351,15 +327,17 @@ export module Dom {
         public tagNode;
         public length = 1;
         private eventBindings: EventBinding[] = [];
+        private domBinding: DomBinding;
 
-        constructor(private tagName: string, private ns: string = null, childBindings?: Re.Binding[], dispatcher?: IDispatcher) {
-            super(dispatcher);
+        constructor(private tagName: string, private ns: string = null, childBindings?: Re.Binding[]) {
+            super();
             this.childBindings = childBindings;
             if (ns === null)
                 this.tagNode = document.createElement(tagName);
             else {
                 this.tagNode = (<any>document).createElementNS(ns, tagName.toLowerCase());
             }
+            this.domBinding = new DomBinding(this.tagNode);
         }
 
         dispose() {
@@ -378,20 +356,20 @@ export module Dom {
             if (typeof ast === "string") {
                 this.tagNode.setAttribute(name, ast);
             } else if (name === "class") {
-                var classBinding = new ClassBinding(this.tagNode, ast, this.dispatcher);
+                var classBinding = new ClassBinding(this.tagNode, ast);
                 this.childBindings.push(classBinding);
             } else if (name === "value" && this.tagName === "input") {
-                const valueBinding = new ValueBinding(this.tagNode, ast, this.dispatcher);
+                const valueBinding = new ValueBinding(this.tagNode, ast);
                 this.childBindings.push(valueBinding);
             } else if (name === "checked" && this.tagName === "input") {
-                const checkedBinding = new CheckedBinding(this.tagNode, ast, this.dispatcher);
+                const checkedBinding = new CheckedBinding(this.tagNode, ast);
                 this.childBindings.push(checkedBinding);
             } else {
                 var match = /^on(.+)/.exec(name);
                 if (match) {
                     this.eventBindings.push(new EventBinding(this.tagNode, match[1], ast));
                 } else {
-                    var attrBinding = new AttributeBinding(this.tagNode, name, ast, this.dispatcher);
+                    var attrBinding = new AttributeBinding(this.tagNode, name, ast);
                     this.childBindings.push(attrBinding);
                 }
             }
@@ -406,7 +384,7 @@ export module Dom {
                     break;
                 offset += this.childBindings[i].length;
             }
-            DomBinding.insertDom(this.tagNode, dom, offset + idx);
+            this.domBinding.insert(null, dom, offset + idx);
         }
 
         update(context, parent): this {
@@ -446,16 +424,16 @@ export module Dom {
         public dom;
         private oldValue;
 
-        constructor(private tagNode: HTMLElement, private ast, dispatcher: IDispatcher) {
-            super(dispatcher);
+        constructor(private tagNode: HTMLElement, private ast) {
+            super();
         }
 
-        render(context, driver: IDOMDriver) {
-            if (this.ast) {
-                this.context = context;
-                var tag = this.tagNode;
-                var result = this.evaluateText(this.ast);
-                var newValue = result && result.valueOf();
+        render() {
+            var ast = this.ast;
+            if (ast) {
+                var tag = this.tagNode,
+                    result = this.evaluateText(ast),
+                    newValue = result && result.valueOf();
 
                 if (newValue !== this.oldValue) {
                     if (newValue === void 0 || newValue === null) {
@@ -558,8 +536,8 @@ export module Dom {
     class CheckedBinding extends Re.Binding {
         private oldValue;
 
-        constructor(private tagNode: any, private expr, dispatcher: IDispatcher) {
-            super(dispatcher);
+        constructor(private tagNode: any, private expr) {
+            super();
 
             tagNode.addEventListener("change", this.fire.bind(this));
         }
@@ -600,8 +578,8 @@ export module Dom {
     class ValueBinding extends Re.Binding {
         private oldValue;
 
-        constructor(private tagNode: any, private expr, dispatcher: IDispatcher) {
-            super(dispatcher);
+        constructor(private tagNode: any, private expr) {
+            super();
 
             tagNode.addEventListener("change", this.fire.bind(this));
         }
@@ -629,8 +607,8 @@ export module Dom {
     }
 
     export class AttributeBinding extends Re.Binding {
-        constructor(private tagNode: any, private name, private expr, dispatcher: IDispatcher) {
-            super(dispatcher);
+        constructor(private tagNode: any, private name, private expr) {
+            super();
         }
 
         render(context, parent) {

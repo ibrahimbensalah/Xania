@@ -65,8 +65,8 @@ export class Xania {
             throw Error("tag unresolved");
         }
     }
-    static view(tpl: Template.INode, dispatcher?) {
-        return Dom.view(tpl, dispatcher);
+    static view(tpl: Template.INode) {
+        return Dom.view(tpl);
     }
 }
 

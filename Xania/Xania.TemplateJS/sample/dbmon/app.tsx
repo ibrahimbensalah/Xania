@@ -8,38 +8,19 @@ declare var Monitoring;
 // ReSharper restore InconsistentNaming
 
 
-class BufferedDispatcher {
-    private buffer = new Set();
-
-    dispatch(action) {
-        this.buffer.add(action);
-    }
-
-    flush() {
-        this.buffer.forEach(BufferedDispatcher.executeAction);
-        this.buffer.clear();
-    }
-
-    static executeAction(action) {
-        action.execute();
-    }
-}
-
 export function bind(target: Node) {
 
-    var dispatcher = new BufferedDispatcher();
     var store = new Re.Store({
             time: new Observables.Time(),
             message: "hello, dbmon",
             databases: ENV.generateData(true).toArray()
     });
-    Xania.view(dbmon(Xania), dispatcher).bind(target, store);
+    Xania.view(dbmon(Xania)).bind(target, store);
 
     var load = () => {
         ENV.generateData(true);
 
         store.refresh();
-        dispatcher.flush();
 
         Monitoring.renderRate.ping();
         window.setTimeout(load, ENV.timeout);

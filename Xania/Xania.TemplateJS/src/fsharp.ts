@@ -124,7 +124,7 @@ export function accept(ast: any, visitor: IAstVisitor, context) {
             var first = accept(ast.from, visitor, context);
             var last = accept(ast.to, visitor, context);
             if (first === void 0 || last === void 0)
-                return first;
+                return void 0;
             return new Range(first.valueOf(), last.valueOf());
         case AWAIT:
             return visitor.await(accept(ast.expr, visitor, context));

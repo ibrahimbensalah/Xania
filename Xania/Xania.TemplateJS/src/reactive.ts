@@ -52,7 +52,7 @@ export module Reactive {
             else
                 properties.push(property);
 
-            this[propertyName] = property;
+            // this[propertyName] = property;
 
             return property;
         }
@@ -60,13 +60,13 @@ export module Reactive {
         static createProperty(parent, name, initialValue): IProperty {
             if (Array.isArray(initialValue)) {
                 const property = new ArrayProperty(parent, name);
-                property[name] = initialValue;
+                // property[name] = initialValue;
                 property.value = initialValue;
                 property.length = initialValue.length;
                 return property;
             } else {
                 const property = new ObjectProperty(parent, name);
-                property[name] = initialValue;
+                // property[name] = initialValue;
                 property.value = initialValue;
                 return property;
             }
@@ -88,7 +88,6 @@ export module Reactive {
         get(name: string) {
             var result = super.get(name);
             if (result !== void 0) {
-                this[name] = result;
                 return result;
             }
 
@@ -96,14 +95,19 @@ export module Reactive {
         }
 
         change(action: IAction): this | boolean {
-            if (!this.actions) {
+            var actions = this.actions;
+            if (actions) {
+                var length = actions.length,
+                    i = length;
+                while (i--) {
+                    if (action === actions[i])
+                        return false;
+                }
+                actions[length] = action;
+            } else {
                 this.actions = [action];
-                return this;
-            } else if (this.actions.indexOf(action) < 0) {
-                this.actions.push(action);
-                return this;
             }
-            return false;
+            return this;
         }
 
         unbind(action: IAction) {
@@ -137,40 +141,31 @@ export module Reactive {
             var name = this.name,
                 array = parentValue[name],
                 properties = this.properties,
-                prevLength = this.length;
+                prevLength = this.length,
+                valueLength = array.length;
 
             if (array && properties) {
-                var i = properties.length,
-                    valueLength = array.length;
+                var i = properties.length;
                 while (i--) {
-                    let property = properties[i],
-                        propertyName = property.name;
-
-                    if (propertyName >= valueLength)
-                        delete this[propertyName];
+                    let property = properties[i];
 
                     var idx = array.indexOf(property.value);
                     if (idx < 0) {
                         properties.splice(i, 1);
                     } else {
                         property.name = idx;
-                        this[idx] = property;
                     }
                 }
             }
 
-            this.length = array.length;
+            this.length = valueLength;
             if (array !== this.value) {
-                this[name] = array;
                 this.value = array;
 
                 return true;
             }
 
-            if (this.length !== prevLength)
-                return true;
-            else
-                return false;
+            return valueLength !== prevLength;
         }
     }
 
@@ -181,7 +176,6 @@ export module Reactive {
                 newValue = parentValue[name];
 
             if (newValue !== this.value) {
-                this[name] = newValue;
                 this.value = newValue;
 
                 if (this.awaited) {
@@ -329,33 +323,30 @@ export module Reactive {
 
         refresh() {
             var stack: { properties, value }[] = [this];
+            var stackLength = 1;
             var dirty: Binding[] = [];
+            var dirtyLength: number = 0;
 
-            while (stack.length > 0) {
-                const parent = stack.pop();
-                if (parent.properties) {
+            while (stackLength--) {
+                const parent = stack[stackLength];
+                var properties = parent.properties;
+                if (properties) {
                     const parentValue = parent.value;
-                    var properties = parent.properties;
                     let i: number = properties.length;
                     while (i--) {
                         var child = properties[i];
                         var changed = child.refresh(parentValue);
-                        if (child.value === void 0) {
-                            properties.splice(i, 1);
-                            delete parent[child.name];
-                        } else {
-                            stack.push(child);
+                        stack[stackLength++] = child;
 
-                            if (changed === true) {
-                                const actions = child.actions;
-                                if (actions) {
-                                    // notify next
-                                    var e = actions.length;
-                                    while (e--) {
-                                        var action = actions[e];
-                                        action.notify();
-                                        dirty.push(action);
-                                    }
+                        if (changed === true) {
+                            const actions = child.actions;
+                            if (actions) {
+                                // notify next
+                                var e = actions.length;
+                                while (e--) {
+                                    var action = actions[e];
+                                    action.notify();
+                                    dirty[dirtyLength++] = action;
                                 }
                             }
                         }
@@ -363,7 +354,7 @@ export module Reactive {
                 }
             }
 
-            var j = dirty.length;
+            var j = dirtyLength;
             while (j--) {
                 dirty[j].execute();
             }
@@ -391,8 +382,6 @@ export module Reactive {
         public length;
         protected extensions: { key: any, extension: Extension }[];
         public childBindings: Binding[];
-
-        constructor(public dispatcher: { dispatch(action: IAction) } = DefaultDispatcher) { }
 
         notify() {
         }
@@ -471,11 +460,14 @@ export module Reactive {
         }
 
         member(target: { get(name: string) }, name) {
-            var value = target[name];
-            if (value === undefined && target.get)
-                value = target.get(name);
-            this.observe(value);
-            return value;
+            if (target.get) {
+                var value = target.get(name);
+                if (value && value.change)
+                    value.change(this);
+
+                return value;
+            }
+            return target[name];
         }
 
         app(fun, args: any[]) {
