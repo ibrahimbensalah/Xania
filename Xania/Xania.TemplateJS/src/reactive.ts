@@ -9,7 +9,6 @@ export module Reactive {
 
     export interface IAction {
         execute();
-        notify();
     }
 
     interface IProperty {
@@ -214,7 +213,6 @@ export module Reactive {
                     // notify next
                     var actions = this.actions.slice(0);
                     for (var i = 0; i < actions.length; i++) {
-                        actions[i].notify();
                         actions[i].execute();
                     }
                 }
@@ -324,7 +322,7 @@ export module Reactive {
         refresh() {
             var stack: { properties, value }[] = [this];
             var stackLength = 1;
-            var dirty: Binding[] = [];
+            var dirty: any[] = [];
             var dirtyLength: number = 0;
 
             while (stackLength--) {
@@ -341,13 +339,7 @@ export module Reactive {
                         if (changed === true) {
                             const actions = child.actions;
                             if (actions) {
-                                // notify next
-                                var e = actions.length;
-                                while (e--) {
-                                    var action = actions[e];
-                                    action.notify();
-                                    dirty[dirtyLength++] = action;
-                                }
+                                dirty[dirtyLength++] = actions;
                             }
                         }
                     };
@@ -356,7 +348,13 @@ export module Reactive {
 
             var j = dirtyLength;
             while (j--) {
-                dirty[j].execute();
+                var actions = dirty[j];
+                // notify next
+                var e = actions.length;
+                while (e--) {
+                    var action = actions[e];
+                    action.execute();
+                }
             }
         }
 
@@ -383,9 +381,6 @@ export module Reactive {
         protected extensions: { key: any, extension: Extension }[];
         public childBindings: Binding[];
 
-        notify() {
-        }
-
         execute(): this {
             this.render(this.context, this.driver);
             return this;
@@ -396,7 +391,6 @@ export module Reactive {
                 this.context = context;
                 this.driver = driver;
 
-                this.notify();
                 this.render(context, driver);
             }
             return this;

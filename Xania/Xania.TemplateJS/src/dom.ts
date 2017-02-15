@@ -204,6 +204,7 @@ export module Dom {
         }
 
         render(context, driver: IDOMDriver) {
+            this.notify();
             var stream = this.stream;
 
             var fr: Fragment, streamlength = stream.length;
