@@ -1,5 +1,6 @@
 ﻿import { ForEach, fs, Template, Reactive } from "../../src/xania";
 import { Animate } from "../../src/anim"
+import './app.css'
 
 export class BallsApp {
 

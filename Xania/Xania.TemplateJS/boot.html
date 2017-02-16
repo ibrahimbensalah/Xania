@@ -1,0 +1,33 @@
+﻿<!DOCTYPE html>
+<html data-ng-app="app.main">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <base href="/" />
+  <title>Xania Application</title>
+  <script src="lib/system.js/dist/system.js"></script>
+  <script>
+    var pathname = window.location.pathname;
+    System.config({
+      packages: { '/': {} },
+      paths: {
+        "github:*": "jspm_packages/github/*",
+        "npm:*": "jspm_packages/npm/*"
+      },
+      map: {
+        "css": "github:systemjs/plugin-css@0.1.32",
+      },
+      meta: {
+        '*.css': { loader: 'css' }
+      }
+    });
+    System.import(pathname).then(app => {
+      var target = document.body.querySelector("#content");
+      app.view().bind(target, app.store());
+    });
+  </script>
+</head>
+<body>
+  <div id="content"></div>
+</body>
+</html>

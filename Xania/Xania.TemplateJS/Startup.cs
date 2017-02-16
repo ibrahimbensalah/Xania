@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -31,6 +32,19 @@ namespace WebApplication1
 
             app.UseDefaultFiles();
             app.UseStaticFiles();
+
+            app.Use(async (context, next) =>
+            {
+                if (!context.Request.Path.Value.EndsWith(".js"))
+                {
+                    context.Response.ContentType = "text/html";
+                    await context.Response.SendFileAsync("boot.html");
+                }
+                else
+                {
+                    await next.Invoke();
+                }
+            });
 
             //app.Run(async (context) =>
             //{

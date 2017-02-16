@@ -12,7 +12,7 @@
     "inlineSources": true,
     "target": "es5",
     "types": [ "jasmine" ],
-    "outDir": "wwwroot",
+//    "outDir": "wwwroot",
     "jsx": "react",
     "jsxFactory": "xania.tag"
   },
@@ -21,9 +21,9 @@
   ],
   "include": [
     "grammar/fsharp.d.ts",
-    "src/*.ts",
-    "spec/*Spec.ts",
-    "sample/**/*.ts",
-    "sample/**/*.tsx"
+    "wwwroot/src/*.ts",
+    "wwwroot/spec/*Spec.ts",
+    "wwwroot/sample/**/*.ts",
+    "wwwroot/sample/**/*.tsx"
   ]
 }

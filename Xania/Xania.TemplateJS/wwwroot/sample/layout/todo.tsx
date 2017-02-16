@@ -1,6 +1,7 @@
 ﻿import { ForEach, fs } from "../../src/xania"
 import { Animate } from "../../src/anim"
 import { Observables } from "../../src/observables"
+import 'sample/layout/todos/index.css'
 
 export class TodoApp {
 
@@ -64,11 +65,11 @@ export class TodoApp {
                 <footer className={["footer", fs("store.todos.length = 0 -> ' hidden'")]}>
                     <span className="todo-count"><strong>{fs("count store.todos where not completed")}</strong> item(s) left</span>
                     <ul className="filters">
-                        <li><a href="#" className={fs("show = 'all' -> 'selected'")}
+                        <li><a className={fs("show = 'all' -> 'selected'")}
                             onClick={this.onShow.bind(this, 'all')}>All</a></li>
-                        <li><a href="#" className={fs("show = 'active' -> 'selected'")}
+                        <li><a className={fs("show = 'active' -> 'selected'")}
                             onClick={this.onShow.bind(this, 'active')}>Active</a></li>
-                        <li><a href="#" className={fs("show = 'completed' -> 'selected'")}
+                        <li><a className={fs("show = 'completed' -> 'selected'")}
                             onClick={this.onShow.bind(this, 'completed')}>Completed</a></li>
                     </ul >
                     <button className={["clear-completed", fs("all active todos -> ' hidden'")]}

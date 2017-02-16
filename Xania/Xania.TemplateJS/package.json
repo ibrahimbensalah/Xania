@@ -3,13 +3,14 @@
   "name": "xania.js",
   "private": true,
   "devDependencies": {
+    "@types/core-js": "",
     "@types/jasmine": "^2.5.38",
-    "phantomjs": "2.1.7",
+    "jspm": "^0.16.52",
     "pegjs": "0.10.0",
-    "@types/core-js": "" 
+    "phantomjs": "2.1.7"
   },
   "dependencies": {
-    "css-loader":  "0.26.1" 
+    "css-loader": "0.26.1"
   },
   "scripts": {
     "fsharp": "pegjs -o ./wwwroot/src/fsharp.peg.js --optimize speed ./grammar/fsharp.peg"
@@ -18,7 +19,13 @@
     "directories": {
       "baseURL": "wwwroot"
     },
-    "dependencies": {},
-    "devDependencies": {}
+    "dependencies": {
+      "css": "github:systemjs/plugin-css@^0.1.32"
+    },
+    "devDependencies": {
+      "babel": "npm:babel-core@^5.8.24",
+      "babel-runtime": "npm:babel-runtime@^5.8.24",
+      "core-js": "npm:core-js@^1.1.4"
+    }
   }
 }
