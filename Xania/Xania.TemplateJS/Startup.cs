@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
@@ -37,13 +38,22 @@ namespace WebApplication1
             {
                 if (!context.Request.Path.Value.EndsWith(".js"))
                 {
-                    context.Response.ContentType = "text/html";
-                    await context.Response.SendFileAsync("boot.html");
+                    var result = ParseRoute(context.Request.Path.Value, "wwwroot");
+                    if (result != null)
+                    {
+                        var fileContent = File.ReadAllText("boot.html")
+                            .Replace("[FILE]", result.File)
+                            .Replace("[ARGS]", result.Args);
+
+
+                        context.Response.ContentType = "text/html";
+                        await context.Response.WriteAsync(fileContent);
+
+                        return;
+                    }
                 }
-                else
-                {
-                    await next.Invoke();
-                }
+
+                await next.Invoke();
             });
 
             //app.Run(async (context) =>
@@ -51,5 +61,41 @@ namespace WebApplication1
             //    await context.Response.WriteAsync("Hello World!");
             //});
         }
+
+        private RouteResult ParseRoute(string pathValue, string baseDirectory)
+        {
+            var file = baseDirectory;
+            var parts = pathValue.Split('/');
+            for (var i = 0; i < parts.Length; i++)
+            {
+                file = Path.Combine(file, parts[i]);
+                var jsExists = File.Exists(file + ".js");
+                var dirExists = Directory.Exists(file);
+
+                if (jsExists && dirExists)
+                    throw new InvalidOperationException("jsExists && dirExists");
+
+                if (jsExists)
+                {
+                    return new RouteResult
+                    {
+                        File = "'" + file + "'",
+                        Args = "[" + string.Join("', '", parts.Skip(i + 1).Select(x => "'" + x + "'")) + "]"
+                    };
+                }
+                if (!dirExists)
+                {
+                    return null;
+                }
+            }
+            return null;
+        }
+    }
+
+    internal class RouteResult
+    {
+        public string File { get; set; }
+        public string Args { get; set; }
+
     }
 }
