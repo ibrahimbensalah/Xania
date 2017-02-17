@@ -38,11 +38,11 @@ namespace WebApplication1
             {
                 if (!context.Request.Path.Value.EndsWith(".js"))
                 {
-                    var result = ParseRoute(context.Request.Path.Value, "wwwroot");
+                    var result = GetClientApp(context.Request.Path.Value, "wwwroot");
                     if (result != null)
                     {
                         var fileContent = File.ReadAllText("boot.html")
-                            .Replace("[FILE]", result.File)
+                            .Replace("[APP]", result.App)
                             .Replace("[ARGS]", result.Args);
 
 
@@ -56,33 +56,35 @@ namespace WebApplication1
                 await next.Invoke();
             });
 
-            //app.Run(async (context) =>
-            //{
-            //    await context.Response.WriteAsync("Hello World!");
-            //});
+            app.Run(async (context) =>
+            {
+                await context.Response.WriteAsync("NOT FOUND");
+            });
         }
 
-        private RouteResult ParseRoute(string pathValue, string baseDirectory)
+        private AppResult GetClientApp(string pathValue, string baseDirectory)
         {
-            var file = baseDirectory;
-            var parts = pathValue.Split('/');
+            var parts = pathValue.Split(new [] {'/'}, StringSplitOptions.RemoveEmptyEntries);
+            string app = null;
             for (var i = 0; i < parts.Length; i++)
             {
-                file = Path.Combine(file, parts[i]);
-                var jsExists = File.Exists(file + ".js");
-                var dirExists = Directory.Exists(file);
+                app = app == null ? parts[i] : app + "/" + parts[i];
+
+                var jsExists = File.Exists(Path.Combine(baseDirectory, app + ".js"));
+                var dirExists = Directory.Exists(Path.Combine(baseDirectory, app));
 
                 if (jsExists && dirExists)
                     throw new InvalidOperationException("jsExists && dirExists");
 
                 if (jsExists)
                 {
-                    return new RouteResult
+                    return new AppResult
                     {
-                        File = "'" + file + "'",
-                        Args = "[" + string.Join("', '", parts.Skip(i + 1).Select(x => "'" + x + "'")) + "]"
+                        App = app,
+                        Args = string.Join("/", parts.Skip(i + 1))
                     };
                 }
+
                 if (!dirExists)
                 {
                     return null;
@@ -92,9 +94,9 @@ namespace WebApplication1
         }
     }
 
-    internal class RouteResult
+    internal class AppResult
     {
-        public string File { get; set; }
+        public string App { get; set; }
         public string Args { get; set; }
 
     }

@@ -74,3 +74,7 @@ var layout: any = view =>
         </div>
     </div>;
 
+
+export function run(target, routeArgs) {
+    view().bind(target, store());
+}

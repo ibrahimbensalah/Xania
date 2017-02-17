@@ -6,12 +6,17 @@
   <base href="/" />
   <title>Xania Application</title>
   <script>
-    var file = [FILE];
-    var args = [ARGS];
+    var appPath = '[APP]';
+    var routeArgs = '[ARGS]';
+    window.addEventListener("beforeunload", function (e) {
+
+      (e || window.event).returnValue = null;
+      return null;
+    });
+
   </script>
   <script src="lib/system.js/dist/system.js"></script>
   <script>
-    var pathname = window.location.pathname;
     System.config({
       packages: { '/': {} },
       paths: {
@@ -19,15 +24,14 @@
         "npm:*": "jspm_packages/npm/*"
       },
       map: {
-        "css": "github:systemjs/plugin-css@0.1.32",
+        "css": "github:systemjs/plugin-css@0.1.32"
       },
       meta: {
         '*.css': { loader: 'css' }
       }
     });
-    System.import(pathname).then(app => {
-      var target = document.body.querySelector("#content");
-      app.view().bind(target, app.store());
+    System.import(appPath).then(app => {
+      app.run(document.body, routeArgs);
     });
   </script>
 </head>
