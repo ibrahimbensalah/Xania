@@ -3,25 +3,20 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <base href="/" />
+  <base href="[BASE]" />
   <title>Xania Application</title>
   <script>
-    var appPath = '[APP]';
-    var routeArgs = '[ARGS]';
-    window.addEventListener("beforeunload", function (e) {
-
-      (e || window.event).returnValue = null;
-      return null;
-    });
+    var appName = '[APP]';
+    var pathArgs = '[ARGS]';
 
   </script>
-  <script src="lib/system.js/dist/system.js"></script>
+  <script src="/lib/system.js/dist/system.js"></script>
   <script>
     System.config({
       packages: { '/': {} },
       paths: {
-        "github:*": "jspm_packages/github/*",
-        "npm:*": "jspm_packages/npm/*"
+        "github:*": "/jspm_packages/github/*",
+        "npm:*": "/jspm_packages/npm/*"
       },
       map: {
         "css": "github:systemjs/plugin-css@0.1.32"
@@ -30,12 +25,17 @@
         '*.css': { loader: 'css' }
       }
     });
-    System.import(appPath).then(app => {
-      app.run(document.body, routeArgs);
-    });
+    Promise.all([System.import(appName), System.import('/src/mvc')])
+      .then(function (modules) {
+        var app = modules[0];
+        var mvc = modules[1];
+
+        var section = document.querySelector('section');
+        app.run(section, { url: new mvc.UrlHelper(appName, pathArgs) });
+      });
   </script>
 </head>
 <body>
-  <div id="content"></div>
+  <section></section>
 </body>
 </html>

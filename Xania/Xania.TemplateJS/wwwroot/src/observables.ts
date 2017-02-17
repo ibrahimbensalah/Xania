@@ -73,7 +73,7 @@
         }
     }
 
-    class MappedObservable<T> extends Observable<T> {
+    export class MappedObservable<T> extends Observable<T> {
         constructor(private mapper: Function, init) {
             super(mapper(init));
         }

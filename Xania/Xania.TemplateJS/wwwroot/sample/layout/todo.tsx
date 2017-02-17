@@ -1,7 +1,7 @@
 ﻿import { ForEach, fs } from "../../src/xania"
 import { Animate } from "../../src/anim"
 import { Observables } from "../../src/observables"
-import 'sample/layout/todos/index.css'
+import './todos/index.css'
 
 export class TodoApp {
 

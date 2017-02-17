@@ -42,7 +42,8 @@ namespace WebApplication1
                     if (result != null)
                     {
                         var fileContent = File.ReadAllText("boot.html")
-                            .Replace("[APP]", result.App)
+                            .Replace("[APP]", result.Name)
+                            .Replace("[BASE]", result.Base)
                             .Replace("[ARGS]", result.Args);
 
 
@@ -65,13 +66,14 @@ namespace WebApplication1
         private AppResult GetClientApp(string pathValue, string baseDirectory)
         {
             var parts = pathValue.Split(new [] {'/'}, StringSplitOptions.RemoveEmptyEntries);
-            string app = null;
+            string basePath = "/";
             for (var i = 0; i < parts.Length; i++)
             {
-                app = app == null ? parts[i] : app + "/" + parts[i];
+                var part = parts[i];
+                var app = basePath + part;
 
-                var jsExists = File.Exists(Path.Combine(baseDirectory, app + ".js"));
-                var dirExists = Directory.Exists(Path.Combine(baseDirectory, app));
+                var jsExists = File.Exists(baseDirectory + "/" + app + ".js");
+                var dirExists = Directory.Exists(baseDirectory + "/" + app);
 
                 if (jsExists && dirExists)
                     throw new InvalidOperationException("jsExists && dirExists");
@@ -80,7 +82,8 @@ namespace WebApplication1
                 {
                     return new AppResult
                     {
-                        App = app,
+                        Base = basePath ?? "",
+                        Name = part,
                         Args = string.Join("/", parts.Skip(i + 1))
                     };
                 }
@@ -89,6 +92,8 @@ namespace WebApplication1
                 {
                     return null;
                 }
+
+                basePath = app + "/";
             }
             return null;
         }
@@ -96,8 +101,8 @@ namespace WebApplication1
 
     internal class AppResult
     {
-        public string App { get; set; }
+        public string Name { get; set; }
         public string Args { get; set; }
-
+        public string Base { get; set; }
     }
 }

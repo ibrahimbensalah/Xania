@@ -1,6 +1,6 @@
 ﻿import { Observables } from "../../src/observables"
 import { ForEach, fs } from "../../src/xania"
-import 'sample/clock/app.css'
+import '../clock/app.css'
 
 export class ClockApp {
     time = new Observables.Time();

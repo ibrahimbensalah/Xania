@@ -4,11 +4,47 @@ import { Xania as xania, ForEach, fs, View, Reactive as Re, Template } from "../
 import { ClockApp } from "./clock"
 import { TodoApp } from "./todo"
 import { BallsApp } from "./../balls/app"
+import { UrlHelper } from "../../src/mvc"
 
-var menu = new Observables.Observable("balls");
+export function store(appContext) {
+    return new Re.Store({
+        time: new Observables.Time(),
+        user: { firstName: "Ibrahim", lastName: "ben Salah" },
+        size(ts) {
+            return Math.floor((ts % 1000) / 50);
+        }
+    }, [Math, appContext]);
+}
 
-export function view() {
-    var mainView = menu.map(viewName => {
+var layout: any = (view, url: UrlHelper) =>
+    <div>
+        <h1>{fs("user.firstName")} {fs("user.lastName")}</h1>
+        <div style="clear: both;">
+            <a onClick={url.action('todos')}>todos</a>
+        </div>
+        <div>
+            view:
+            <button onClick={url.action('view1')}>view 1</button>
+            <button onClick={url.action('view2')}>view 2</button>
+            <button onClick={url.action('clock')}>clock</button>
+            <button onClick={url.action('todos')}>todos</button>
+            <button onClick={url.action('balls')}>balls</button>
+            &nbsp;&nbsp;&nbsp;&nbsp;
+            model:
+            <button onClick={fs("user.firstName <- 'Ramy'")}>Ramy</button>
+            <button onClick={fs("user.firstName <- 'Ibrahim'")}>Ibrahim</button>
+            &nbsp;&nbsp;&nbsp;&nbsp;
+            time:
+            <button onClick={fs("time.toggle ()")}>toggle</button>
+        </div>
+        <div style="padding: 10px;">
+            {View.partial(view, { user: fs("user"), time: new Observables.Time() })}
+        </div>
+    </div>;
+
+
+export function run(target, appContext) {
+    var mainView = appContext.url.map(viewName => {
         switch (viewName) {
             case 'view1':
                 return <div>view 1: {fs("user.firstName")} {fs("await time")}</div>;
@@ -34,47 +70,6 @@ export function view() {
         }
     });
 
-    return xania.view(layout(mainView));
-}
-
-export function store() {
-    return new Re.Store({
-        menu,
-        time: new Observables.Time(),
-        user: { firstName: "Ibrahim", lastName: "ben Salah" },
-        route(viewName) {
-            this.menu.onNext(viewName);
-        },
-        size(ts) {
-            return Math.floor((ts % 1000) / 50);
-        }
-    }, [Math]);
-}
-
-var layout: any = view =>
-    <div>
-        <h1>{fs("user.firstName")} {fs("user.lastName")} ({fs("await menu")})</h1>
-        <div>
-            view:
-            <button onClick={fs("route 'view1'")}>view 1</button>
-            <button onClick={fs("route 'view2'")}>view 2</button>
-            <button onClick={fs("route 'clock'")}>clock</button>
-            <button onClick={fs("route 'todos'")}>todos</button>
-            <button onClick={fs("route 'balls'")}>balls</button>
-            &nbsp;&nbsp;&nbsp;&nbsp;
-            model:
-            <button onClick={fs("user.firstName <- 'Ramy'")}>Ramy</button>
-            <button onClick={fs("user.firstName <- 'Ibrahim'")}>Ibrahim</button>
-            &nbsp;&nbsp;&nbsp;&nbsp;
-            time:
-            <button onClick={fs("time.toggle ()")}>toggle</button>
-        </div>
-        <div style="padding: 10px;">
-            {View.partial(view, { user: fs("user"), time: new Observables.Time() })}
-        </div>
-    </div>;
-
-
-export function run(target, routeArgs) {
-    view().bind(target, store());
+    xania.view(layout(mainView, appContext.url))
+        .bind(target, store(appContext));
 }
