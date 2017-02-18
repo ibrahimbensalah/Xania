@@ -1,29 +1,30 @@
 ﻿import { Observables } from "../../src/observables"
 
 import { Xania as xania, ForEach, fs, View, Reactive as Re, Template } from "../../src/xania"
-import { ClockApp } from "./clock"
+import { ClockApp } from "./../clock/app"
 import { TodoApp } from "./todo"
 import { BallsApp } from "./../balls/app"
 import { UrlHelper } from "../../src/mvc"
 
-export function store(appContext) {
+export function store() {
     return new Re.Store({
         time: new Observables.Time(),
         user: { firstName: "Ibrahim", lastName: "ben Salah" },
         size(ts) {
             return Math.floor((ts % 1000) / 50);
         }
-    }, [Math, appContext]);
+    }, [Math]);
 }
 
 var layout: any = (view, url: UrlHelper) =>
     <div>
         <h1>{fs("user.firstName")} {fs("user.lastName")}</h1>
         <div style="clear: both;">
-            <a onClick={url.action('todos')}>todos</a>
+            <a href="#" onClick={url.action('todos')}>todos</a>
         </div>
         <div>
             view:
+            <button onClick={url.action('index')}>home</button>
             <button onClick={url.action('view1')}>view 1</button>
             <button onClick={url.action('view2')}>view 2</button>
             <button onClick={url.action('clock')}>clock</button>
@@ -43,8 +44,8 @@ var layout: any = (view, url: UrlHelper) =>
     </div>;
 
 
-export function run(target, appContext) {
-    var mainView = appContext.url.map(viewName => {
+export function run(target, { html, url }) {
+    var mainView = url.map(viewName => {
         switch (viewName) {
             case 'view1':
                 return <div>view 1: {fs("user.firstName")} {fs("await time")}</div>;
@@ -67,9 +68,13 @@ export function run(target, appContext) {
                 return <TodoApp />;
             case 'balls':
                 return <BallsApp />;
+            case "":
+                return html.partial("index", {});
+            default:
+                return html.partial(viewName, {});
         }
     });
 
-    xania.view(layout(mainView, appContext.url))
-        .bind(target, store(appContext));
+    xania.view(layout(mainView, url))
+        .bind(target, store());
 }

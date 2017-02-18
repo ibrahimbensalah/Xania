@@ -137,7 +137,7 @@ class PartialBinding extends Reactive.Binding {
     }
 
     render(context, parent) {
-        var view = this.evaluateText(this.view).valueOf();
+        var view = this.evaluateObject(this.view).valueOf();
 
         if (!view)
             throw new Error("view is empty");

@@ -28,6 +28,23 @@ export module Dom {
         dispatch(action: Re.IAction);
     }
 
+    export class DomVisitor {
+        static text(expr): TextBinding {
+            return new TextBinding(expr);
+        }
+        static content(expr, children: Template.INode[]): FragmentBinding {
+            return new FragmentBinding(expr, children);
+        }
+        static tag(tagName: string, ns: string, attrs, children): TagBinding {
+            var tag = new TagBinding(tagName, ns, children), length = attrs.length;
+            for (var i = 0; i < length; i++) {
+                tag.attr(attrs[i].name, attrs[i].tpl);
+            }
+
+            return tag;
+        }
+    }
+
     export class DomBinding {
         private domElements = [];
         
@@ -54,21 +71,6 @@ export module Dom {
                 }
             }
         }
-
-        static text(expr): TextBinding {
-            return new TextBinding(expr);
-        }
-        static content(expr, children: Template.INode[]): FragmentBinding {
-            return new FragmentBinding(expr, children);
-        }
-        static tag(tagName: string, ns: string, attrs, children): TagBinding {
-            var tag = new TagBinding(tagName, ns, children), length = attrs.length;
-            for (var i = 0; i < length; i++) {
-                tag.attr(attrs[i].name, attrs[i].tpl);
-            }
-
-            return tag;
-        }
     }
 
     export function parse(node): IView {
@@ -84,7 +86,7 @@ export module Dom {
         return {
             bind(target, store) {
                 var parent = new DomBinding(target);
-                return template.bind<Re.Binding>(DomBinding).update(store, parent);
+                return template.bind<Re.Binding>(DomVisitor).update(store, parent);
             }
         } as IView;
     }
@@ -159,6 +161,10 @@ export module Dom {
 
         constructor(private ast, public children: Template.INode[]) {
             super();
+            for (var child of children) {
+                if (!child.bind)
+                    throw Error("child is not a node");
+            }
         }
 
         notify() {
@@ -256,7 +262,7 @@ export module Dom {
         constructor(private owner: FragmentBinding) {
             for (var e = 0; e < this.owner.children.length; e++) {
                 this.childBindings[e] =
-                    owner.children[e].bind<Re.Binding>(DomBinding);
+                    owner.children[e].bind<Re.Binding>(DomVisitor);
             }
         }
 

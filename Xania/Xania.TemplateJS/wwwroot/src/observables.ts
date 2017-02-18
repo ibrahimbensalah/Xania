@@ -28,13 +28,13 @@
             return new Subscription(this, observer);
         }
 
-        map(mapper: Function) {
-            var observable = new MappedObservable<T>(mapper, this.current);
+        map<TM>(mapper: (T) => TM): MappedObservable<T, TM> {
+            var observable = new MappedObservable<T, TM>(mapper, this.current);
             this.subscribe(observable);
             return observable;
         }
 
-        onNext(value: T) {
+        notify(value: T) {
             this.current = value;
             for (var i = 0; i < this.subscriptions.length; i++) {
                 this.subscriptions[i].notify(this.current);
@@ -73,8 +73,8 @@
         }
     }
 
-    export class MappedObservable<T> extends Observable<T> {
-        constructor(private mapper: Function, init) {
+    export class MappedObservable<T, TM> extends Observable<TM> {
+        constructor(private mapper: (T) => TM, init: T) {
             super(mapper(init));
         }
 
@@ -83,7 +83,7 @@
             if (mappedValue === undefined)
                 throw new Error("Failed to map observed value");
             else
-                super.onNext(mappedValue);
+                this.notify(mappedValue);
         }
     }
 
@@ -93,7 +93,7 @@
 
         constructor() {
             super();
-            super.onNext(this.currentTime);
+            this.notify(this.currentTime);
             this.resume();
         }
 
@@ -117,7 +117,7 @@
                         try {
                             inProgress = true;
                             var currentTime = new Date().getTime();
-                            super.onNext(this.currentTime = (currentTime - startTime));
+                            this.notify(this.currentTime = (currentTime - startTime));
                         } finally {
                             inProgress = false;
                         }
@@ -172,7 +172,7 @@
             var f = () => {
                 this.handle = null;
                 try {
-                    this.onNext(Time.getTime());
+                    this.notify(Time.getTime());
                 } finally {
                     this.resume();
                 }

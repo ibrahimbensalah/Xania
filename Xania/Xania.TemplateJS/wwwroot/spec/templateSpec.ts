@@ -149,10 +149,10 @@ describe("templating",
                     .update(new Re.Store({ stream }), null);
                 expect(binding.textNode.textContent).toBe("");
 
-                stream.onNext(123);
+                stream.notify(123);
                 expect(binding.textNode.textContent).toBe("123");
 
-                stream.onNext(456);
+                stream.notify(456);
                 expect(binding.textNode.textContent).toBe("456");
             });
     });

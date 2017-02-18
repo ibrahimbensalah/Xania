@@ -31,7 +31,11 @@
         var mvc = modules[1];
 
         var section = document.querySelector('section');
-        app.run(section, { url: new mvc.UrlHelper(appName, pathArgs) });
+        app.run(section,
+        {
+          url: new mvc.UrlHelper(appName, pathArgs),
+          html: new mvc.HtmlHelper(System)
+      });
       });
   </script>
 </head>

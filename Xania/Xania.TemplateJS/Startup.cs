@@ -59,6 +59,7 @@ namespace WebApplication1
 
             app.Run(async (context) =>
             {
+                context.Response.StatusCode = 404;
                 await context.Response.WriteAsync("NOT FOUND");
             });
         }

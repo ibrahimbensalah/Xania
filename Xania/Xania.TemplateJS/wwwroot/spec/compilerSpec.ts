@@ -308,7 +308,7 @@ describe("runtime", () => {
             binding.render(store);
             expect(binding.value).toBe(123);
 
-            observable.onNext(456);
+            observable.notify(456);
             expect(binding.value).toBe(456);
         });
 
