@@ -1,10 +1,10 @@
 ﻿import { Observables } from "../../src/observables"
 
-import { Xania as xania, ForEach, fs, View, Reactive as Re, Template } from "../../src/xania"
+import { Xania as xania, ForEach, fs, View, Dom, Reactive as Re, Template } from "../../src/xania"
 import { ClockApp } from "./../clock/app"
 import { TodoApp } from "./todo"
 import { BallsApp } from "./../balls/app"
-import { UrlHelper } from "../../src/mvc"
+import { UrlHelper, HtmlHelper } from "../../src/mvc"
 
 export function store() {
     return new Re.Store({
@@ -28,6 +28,7 @@ var layout: any = (view, url: UrlHelper) =>
             <button onClick={url.action('view1')}>view 1</button>
             <button onClick={url.action('view2')}>view 2</button>
             <button onClick={url.action('clock')}>clock</button>
+            <button onClick={url.action('clock2')}>clock 2</button>
             <button onClick={url.action('todos')}>todos</button>
             <button onClick={url.action('balls')}>balls</button>
             &nbsp;&nbsp;&nbsp;&nbsp;
@@ -44,9 +45,9 @@ var layout: any = (view, url: UrlHelper) =>
     </div>;
 
 
-export function run(target, { html, url }) {
-    var mainView = url.map(viewName => {
-        switch (viewName) {
+export function execute({ driver, html, url }) {
+    var mainView = url.route(path => {
+        switch (path) {
             case 'view1':
                 return <div>view 1: {fs("user.firstName")} {fs("await time")}</div>;
             case 'view2':
@@ -64,17 +65,17 @@ export function run(target, { html, url }) {
                 );
             case 'clock':
                 return <ClockApp time={fs("time")} />;
+            case 'clock2':
+                return <ClockApp time={fs("time")} />;
             case 'todos':
                 return <TodoApp />;
             case 'balls':
                 return <BallsApp />;
-            case "":
-                return html.partial("index", {});
             default:
-                return html.partial(viewName, {});
+                return html.partial(path, {});
         }
     });
 
     xania.view(layout(mainView, url))
-        .bind(target, store());
+        .bind(store(), driver);
 }

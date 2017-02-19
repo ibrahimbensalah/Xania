@@ -9,10 +9,19 @@ export class Xania {
         for (var i = 0; i < elements.length; i++) {
             var child = elements[i];
 
-            if (child.bind)
+            if (child === null || child === void 0)
+                continue;
+            else if (child.bind)
                 result.push(child);
-            else {
+            else if (typeof child === "number" || typeof child === "string" || typeof child.execute === "function") {
                 result.push(new Template.TextTemplate(child));
+            } else if (Array.isArray(child)) {
+                var childTemplates = this.templates(child);
+                for (var j = 0; j < childTemplates.length; j++) {
+                    result.push(childTemplates[j]);
+                }
+            } else {
+                throw Error("");
             }
         }
         return result;
@@ -49,11 +58,11 @@ export class Xania {
             return tag;
         } else if (typeof element === "function") {
             if (element.prototype.bind) {
-                return Reflect.construct(element, [attrs, childTemplates]);
+                return Reflect.construct(element, [attrs || {}, childTemplates]);
             } else if (element.prototype.view) {
-                return new ComponentBinding(Reflect.construct(element, [attrs, childTemplates]), attrs);
+                return new ComponentBinding(Reflect.construct(element, [attrs || {}, childTemplates]), attrs);
             } else {
-                var view = element(attrs, childTemplates);
+                var view = element(attrs || {}, childTemplates);
                 if (!view)
                     throw new Error("Failed to load view");
                 return view;
@@ -65,8 +74,28 @@ export class Xania {
             throw Error("tag unresolved");
         }
     }
+    /**
+     * TODO obsolete
+     * @param tpl
+     */
     static view(tpl: Template.INode) {
         return Dom.view(tpl);
+    }
+
+    static render(element, driver) {
+        return Xania.tag(element, {})
+            .bind<Reactive.Binding>(Dom.DomVisitor)
+            .update(new Reactive.Store({}), driver);
+    }
+    static partial(view, model) {
+        return {
+            bind() {
+                var binding = new PartialBinding(view, model);
+                if (view.subscribe) view.subscribe(binding);
+                if (model.subscribe) model.subscribe(binding);
+                return binding;
+            }
+        }
     }
 }
 
@@ -158,5 +187,5 @@ class PartialBinding extends Reactive.Binding {
 }
 
 
-export { fs, Reactive, Template }
+export { fs, Reactive, Template, Dom }
 

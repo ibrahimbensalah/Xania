@@ -3,6 +3,9 @@
   "private": true,
   "dependencies": {
     "moment": "2.13.0",
+    "materialize": "",
+    "bootstrap": "v4.0.0-alpha.6",
+    "material-design-lite": "",
     "jasmine-core": "2.4.1",
     "webcomponentsjs": "0.7.22",
     "polymer": "1.4.0",

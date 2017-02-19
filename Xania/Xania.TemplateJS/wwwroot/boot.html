@@ -4,14 +4,12 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <base href="[BASE]" />
+  <link href="/lib/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet" />
   <title>Xania Application</title>
-  <script>
-    var appName = '[APP]';
-    var pathArgs = '[ARGS]';
-
-  </script>
   <script src="/lib/system.js/dist/system.js"></script>
   <script>
+    var appName = '[APP]';
+    var actionPath = '[ARGS]' || "index";
     System.config({
       packages: { '/': {} },
       paths: {
@@ -25,21 +23,26 @@
         '*.css': { loader: 'css' }
       }
     });
-    Promise.all([System.import(appName), System.import('/src/mvc')])
+
+    function importModule(path) {
+      return System.import(path);
+    }
+
+    Promise.all([appName, '/src/mvc', '/src/dom'].map(importModule))
       .then(function (modules) {
         var app = modules[0];
         var mvc = modules[1];
+        var dom = modules[2];
 
-        var section = document.querySelector('section');
-        app.run(section,
-        {
-          url: new mvc.UrlHelper(appName, pathArgs),
-          html: new mvc.HtmlHelper(System)
-      });
+        var body = new dom.Dom.DomDriver(document.body);
+        app.execute({
+          url: new mvc.UrlHelper(appName, actionPath),
+          html: new mvc.HtmlHelper(System),
+          driver: body
+        });
       });
   </script>
 </head>
 <body>
-  <section></section>
 </body>
 </html>

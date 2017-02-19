@@ -17,7 +17,7 @@ export module Dom {
     }
 
     export interface IView {
-        bind(target: Node, store);
+        bind(store, driver);
     }
 
     interface IAction {
@@ -45,10 +45,15 @@ export module Dom {
         }
     }
 
-    export class DomBinding {
+    export class DomDriver {
+        private target;
         private domElements = [];
         
-        constructor(private target) {
+        constructor(target) {
+            if (typeof target === "string")
+                this.target = document.querySelector(target);
+            else
+                this.target = target;
         }
 
         insert(_, dom, idx: number) {
@@ -77,16 +82,23 @@ export module Dom {
         return {
             template: parseNode(node),
             bind(target, store) {
-                return this.template.accept(new DomBinding(target)).update(store);
+                return this.template.accept(new DomDriver(target)).update(store);
             }
         } as IView;
     }
 
+
+    /**
+     * TODO obsolete
+     * @param template
+     */
     export function view(template: Template.INode) {
         return {
-            bind(target, store) {
-                var parent = new DomBinding(target);
-                return template.bind<Re.Binding>(DomVisitor).update(store, parent);
+            bind(store, driver: Re.IDriver) {
+                if (!driver.insert)
+                    throw Error("not a driver");
+                // var parent = new DomBinding(target);
+                return template.bind<Re.Binding>(DomVisitor).update(store, driver);
             }
         } as IView;
     }
@@ -334,7 +346,7 @@ export module Dom {
         public tagNode;
         public length = 1;
         private eventBindings: EventBinding[] = [];
-        private domBinding: DomBinding;
+        private domDriver: DomDriver;
 
         constructor(private tagName: string, private ns: string = null, childBindings?: Re.Binding[]) {
             super();
@@ -344,7 +356,7 @@ export module Dom {
             else {
                 this.tagNode = (<any>document).createElementNS(ns, tagName.toLowerCase());
             }
-            this.domBinding = new DomBinding(this.tagNode);
+            this.domDriver = new DomDriver(this.tagNode);
         }
 
         dispose() {
@@ -391,7 +403,7 @@ export module Dom {
                     break;
                 offset += this.childBindings[i].length;
             }
-            this.domBinding.insert(null, dom, offset + idx);
+            this.domDriver.insert(null, dom, offset + idx);
         }
 
         update(context, parent): this {

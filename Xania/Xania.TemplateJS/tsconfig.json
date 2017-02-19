@@ -24,6 +24,8 @@
     "wwwroot/src/*.ts",
     "wwwroot/spec/*Spec.ts",
     "wwwroot/sample/**/*.ts",
-    "wwwroot/sample/**/*.tsx"
+    "wwwroot/sample/**/*.tsx",
+    "wwwroot/admin/*.ts",
+    "wwwroot/admin/*.tsx"
   ]
 }

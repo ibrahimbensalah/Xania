@@ -1,6 +1,6 @@
 ﻿import { Observables } from "../../src/observables"
 
-import { Xania, ForEach, fs, Reactive as Re } from "../../src/xania"
+import { Xania, ForEach, fs, Reactive as Re, Dom } from "../../src/xania"
 
 // ReSharper disable InconsistentNaming
 declare var ENV;
@@ -15,7 +15,7 @@ export function bind(target: Node) {
             message: "hello, dbmon",
             databases: ENV.generateData(true).toArray()
     });
-    Xania.view(dbmon(Xania)).bind(target, store);
+    Xania.view(dbmon(Xania)).bind(store, new Dom.DomDriver(target));
 
     var load = () => {
         ENV.generateData(true);

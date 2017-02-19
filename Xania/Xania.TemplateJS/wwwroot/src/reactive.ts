@@ -370,7 +370,7 @@ export module Reactive {
     }
 
 
-    interface IDriver {
+    export interface IDriver {
         insert(sender: Binding, dom, idx);
     }
 

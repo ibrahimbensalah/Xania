@@ -1,5 +1,5 @@
 ﻿import { Observables } from "../../src/observables"
-import { ForEach, fs } from "../../src/xania"
+import { Xania, ForEach, Template, Dom, Reactive as Re, fs } from "../../src/xania"
 import './app.css'
 
 export class ClockApp {
@@ -45,3 +45,6 @@ export class ClockApp {
     }
 }
 
+export function execute({ driver }) {
+    return Xania.render(ClockApp, driver);
+}

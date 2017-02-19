@@ -3,24 +3,39 @@
 export class UrlHelper {
     public observers = [];
     private actionPath: Observables.Observable<string>;
+    private initialPath: string;
 
-    constructor(private appName, actionPath) {
+    constructor(private appName, actionPath, private appInstance) {
         this.actionPath = new Observables.Observable<string>(actionPath);
+        this.initialPath = actionPath;
+
+        window.onpopstate = (popStateEvent) => {
+            var { state } = popStateEvent;
+            var actionPath = state ? state.actionPath : this.initialPath;
+            if (actionPath !== this.actionPath.current)
+                this.actionPath.notify(actionPath);
+        }
     }
 
-    map<T>(mapper: (string) => T): Observables.Observable<T> {
-        return this.actionPath.map(mapper);
+    route<T>(mapper: (string) => T): Observables.Observable<T> {
+        return this.actionPath.map(path => {
+            if (this.appInstance && path in this.appInstance) 
+                return this.appInstance[path](this);
+            else
+                return mapper(path);
+        });
     }
 
-    action(path: string) {
+    action(path: string, view?) {
         return (event) => {
-            if (this.actionPath.current !== path) {
-                var options = {};
-                window.history.pushState(options, "", this.appName + "/" + path);
-                this.actionPath.notify(path);
+            var actionPath = path;
+            var actionView = view;
+            if (this.actionPath.current !== actionPath) {
+                var action = { actionPath, actionView };
+                window.history.pushState(action, "", this.appName + "/" + actionPath);
+                this.actionPath.notify(actionPath);
             }
             event.preventDefault();
-            event.stopPropagation();
         };
     }
 }
@@ -28,14 +43,14 @@ export class UrlHelper {
 export class HtmlHelper {
 
     constructor(private loader: { import(path: string); }) {
-        
+
     }
 
     partial(viewPath: string) {
         var view = this.loader.import(viewPath);
         return {
-            bind(parent) {
-                return new ViewBinding(view, {});
+            bind(visitor) {
+                return new ViewBinding(visitor, view, {});
             }
         }
     }
@@ -46,7 +61,7 @@ class ViewBinding {
     private binding;
     private cancellationToken: number;
 
-    constructor(private view, private model) {
+    constructor(private visitor, private view, private model) {
     }
 
     update(context, parent) {

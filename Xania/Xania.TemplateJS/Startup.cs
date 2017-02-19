@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -41,7 +42,7 @@ namespace WebApplication1
                     var result = GetClientApp(context.Request.Path.Value, "wwwroot");
                     if (result != null)
                     {
-                        var fileContent = File.ReadAllText("boot.html")
+                        var fileContent = result.Content
                             .Replace("[APP]", result.Name)
                             .Replace("[BASE]", result.Base)
                             .Replace("[ARGS]", result.Args);
@@ -68,6 +69,7 @@ namespace WebApplication1
         {
             var parts = pathValue.Split(new [] {'/'}, StringSplitOptions.RemoveEmptyEntries);
             string basePath = "/";
+            string bootFile = baseDirectory + "/boot.html";
             for (var i = 0; i < parts.Length; i++)
             {
                 var part = parts[i];
@@ -76,6 +78,9 @@ namespace WebApplication1
                 var jsExists = File.Exists(baseDirectory + "/" + app + ".js");
                 var dirExists = Directory.Exists(baseDirectory + "/" + app);
 
+                if (File.Exists(baseDirectory + basePath + "boot.html"))
+                    bootFile = baseDirectory + basePath + "boot.html";
+
                 if (jsExists && dirExists)
                     throw new InvalidOperationException("jsExists && dirExists");
 
@@ -83,6 +88,7 @@ namespace WebApplication1
                 {
                     return new AppResult
                     {
+                        Content = File.ReadAllText(bootFile),
                         Base = basePath ?? "",
                         Name = part,
                         Args = string.Join("/", parts.Skip(i + 1))
@@ -102,6 +108,7 @@ namespace WebApplication1
 
     internal class AppResult
     {
+        public string Content { get; set; }
         public string Name { get; set; }
         public string Args { get; set; }
         public string Base { get; set; }

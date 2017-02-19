@@ -9,7 +9,7 @@ export module Template {
     }
 
     export interface INode {
-        bind<T>(visitor: IVisitor<T>): T;
+        bind?<T>(visitor: IVisitor<T>): T;
     }
 
     export class TextTemplate implements INode {
