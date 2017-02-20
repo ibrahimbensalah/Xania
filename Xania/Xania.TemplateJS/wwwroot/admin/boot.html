@@ -3,19 +3,16 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <base href="[BASE]" />
   <link href="/lib/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet" />
-  <link href="admin.css" rel="stylesheet" />
   <title>Xania Admin</title>
   <script src="/lib/system.js/dist/system.js"></script>
   <script>
-    var appName = '[APP]';
-    var actionPath = '[ARGS]' || "index";
+    var appPath = '[BASE][APP]';
+    var actionPath = '[ARGS]' || 'index';
     System.config({
       packages: { '/': {} },
       paths: {
-        "github:*": "/jspm_packages/github/*",
-        "npm:*": "/jspm_packages/npm/*"
+        "github:*": "/jspm_packages/github/*"
       },
       map: {
         "css": "github:systemjs/plugin-css@0.1.32"
@@ -29,20 +26,30 @@
       return System.import(path);
     }
 
-    Promise.all([appName, '/src/mvc', '/src/dom'].map(importModule))
+    Promise.all([appPath, '/src/mvc', '/src/dom'].map(importModule))
       .then(function (modules) {
         var app = modules[0];
         var mvc = modules[1];
         var dom = modules[2];
 
-        var url = new mvc.UrlHelper(appName, actionPath, app);
+        var url = new mvc.UrlHelper(appPath, actionPath, app);
+
+        var mainDriver = new dom.Dom.DomDriver('.main-content');
+        url.actionPath.subscribe(function (path) {
+          if (typeof app[path] === "function") {
+            var result = app[path]();
+            mainDriver.dispose();
+            result.execute(mainDriver, dom.Dom.DomVisitor);
+            console.log(result);
+          }
+        });
+
         var html = new mvc.HtmlHelper(System);
 
-        app.execute({
-          url: url,
-          html: html,
-          driver: new dom.Dom.DomDriver('.main-content')
-        });
+        //app.index({
+        //  url: url,
+        //  html: html
+        //}).execute(new dom.Dom.DomDriver('.main-content'));
 
         app.menu({
           url: url,
@@ -57,7 +64,7 @@
     <button class="navbar-toggler navbar-toggler-right" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
       <span class="navbar-toggler-icon"></span>
     </button>
-    <a class="navbar-brand" href="app">Xania Software</a>
+    <a class="navbar-brand" href="[BASE][APP]">Xania Software</a>
 
     <div class="collapse navbar-collapse" id="navbarSupportedContent">
       <ul class="navbar-nav mr-auto">
@@ -74,8 +81,7 @@
     </div>
   </nav>
   <div class="flex-container">
-    <menu class="main-menu">
-    </menu>
+    <menu class="main-menu"></menu>
     <main class="main-content">
     </main>
   </div>

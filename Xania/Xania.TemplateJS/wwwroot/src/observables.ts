@@ -25,7 +25,7 @@
         }
 
         subscribe(observer: IObserver<T> | Function): ISubscription {
-            return new Subscription(this, observer);
+            return new Subscription(this, observer).notify(this.current);
         }
 
         map<TM>(mapper: (T) => TM): MappedObservable<T, TM> {
@@ -36,12 +36,13 @@
 
         notify(value: T) {
             this.current = value;
+            var next = this.valueOf();
             for (var i = 0; i < this.subscriptions.length; i++) {
-                this.subscriptions[i].notify(this.current);
+                this.subscriptions[i].notify(next);
             }
         }
 
-        valueOf() {
+        valueOf(): any {
             return this.current;
         }
     }
@@ -73,17 +74,17 @@
         }
     }
 
-    export class MappedObservable<T, TM> extends Observable<TM> {
+    export class MappedObservable<T, TM> extends Observable<T> {
         constructor(private mapper: (T) => TM, init: T) {
-            super(mapper(init));
+            super(init);
         }
 
-        onNext(value: T): void {
-            var mappedValue = this.mapper(value);
-            if (mappedValue === undefined)
-                throw new Error("Failed to map observed value");
-            else
-                this.notify(mappedValue);
+        onNext(value: T) {
+            super.notify(value);
+        }
+
+        valueOf(): TM {
+            return this.mapper(super.valueOf());
         }
     }
 

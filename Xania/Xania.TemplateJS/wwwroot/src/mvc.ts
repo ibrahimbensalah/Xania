@@ -2,10 +2,10 @@
 
 export class UrlHelper {
     public observers = [];
-    private actionPath: Observables.Observable<string>;
+    public actionPath: Observables.Observable<string>;
     private initialPath: string;
 
-    constructor(private appName, actionPath, private appInstance) {
+    constructor(private appPath, actionPath, private appInstance) {
         this.actionPath = new Observables.Observable<string>(actionPath);
         this.initialPath = actionPath;
 
@@ -17,22 +17,13 @@ export class UrlHelper {
         }
     }
 
-    route<T>(mapper: (string) => T): Observables.Observable<T> {
-        return this.actionPath.map(path => {
-            if (this.appInstance && path in this.appInstance) 
-                return this.appInstance[path](this);
-            else
-                return mapper(path);
-        });
-    }
-
     action(path: string, view?) {
         return (event) => {
             var actionPath = path;
             var actionView = view;
             if (this.actionPath.current !== actionPath) {
                 var action = { actionPath, actionView };
-                window.history.pushState(action, "", this.appName + "/" + actionPath);
+                window.history.pushState(action, "", this.appPath + "/" + actionPath);
                 this.actionPath.notify(actionPath);
             }
             event.preventDefault();
@@ -55,7 +46,6 @@ export class HtmlHelper {
         }
     }
 }
-
 
 class ViewBinding {
     private binding;
@@ -83,6 +73,19 @@ class ViewBinding {
         if (this.binding) {
             this.binding.dispose();
         }
+    }
+}
+
+export interface IDriver {
+    
+}
+
+export class ViewResult {
+    constructor(private view, private model?) { }
+
+    execute(driver: IDriver, visitor) {
+        var binding = this.view.bind(visitor);
+        return binding.update(this.model, driver);
     }
 }
 

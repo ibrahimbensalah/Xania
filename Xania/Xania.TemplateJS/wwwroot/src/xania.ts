@@ -140,7 +140,7 @@ class ComponentBinding extends Reactive.Binding {
         for (let prop in props) {
             if (props.hasOwnProperty(prop)) {
                 var expr = props[prop];
-                var value = expr.execute(this, context).valueOf();
+                var value = expr.execute ? expr.execute(this, context).valueOf() : expr;
                 this.component[prop] = value;
             }
         }

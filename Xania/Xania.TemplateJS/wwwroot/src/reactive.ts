@@ -59,13 +59,15 @@ export module Reactive {
         static createProperty(parent, name, initialValue): IProperty {
             if (Array.isArray(initialValue)) {
                 const property = new ArrayProperty(parent, name);
-                // property[name] = initialValue;
                 property.value = initialValue;
                 property.length = initialValue.length;
                 return property;
+            } else if (initialValue && initialValue.subscribe) {
+                 const property = new AwaitableProperty(parent, name);
+                 property.value = initialValue;
+                 return property;
             } else {
                 const property = new ObjectProperty(parent, name);
-                // property[name] = initialValue;
                 property.value = initialValue;
                 return property;
             }
@@ -169,7 +171,6 @@ export module Reactive {
     }
 
     class ObjectProperty extends Property {
-
         refresh(parentValue) {
             var name = this.name,
                 newValue = parentValue[name];
@@ -177,11 +178,22 @@ export module Reactive {
             if (newValue !== this.value) {
                 this.value = newValue;
 
+                if (newValue === void 0 || newValue === null)
+                    this.properties.length = 0;
+
+                return true;
+            }
+            return false;
+        }
+    }
+
+    class AwaitableProperty extends ObjectProperty {
+        refresh(parentValue) {
+            if (super.refresh(parentValue)) {
                 if (this.awaited) {
                     this.awaited.dispose();
                     delete this.awaited;
                 }
-
                 return true;
             }
             return false;

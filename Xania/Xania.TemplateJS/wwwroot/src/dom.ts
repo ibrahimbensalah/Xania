@@ -48,7 +48,7 @@ export module Dom {
     export class DomDriver {
         private target;
         private domElements = [];
-        
+
         constructor(target) {
             if (typeof target === "string")
                 this.target = document.querySelector(target);
@@ -74,6 +74,14 @@ export module Dom {
                 for (let i = 0; i < target.childNodes.length; i++) {
                     domElements[i] = target.childNodes[i];
                 }
+            }
+        }
+
+        dispose() {
+            var domElements = this.domElements,
+                i = domElements.length;
+            while (i--) {
+                domElements[i].remove();
             }
         }
     }
@@ -447,21 +455,16 @@ export module Dom {
             super();
         }
 
-        render() {
-            var ast = this.ast;
-            if (ast) {
-                var tag = this.tagNode,
-                    result = this.evaluateText(ast),
-                    newValue = result && result.valueOf();
+        static AttributeName = "class";
 
-                if (newValue !== this.oldValue) {
-                    if (newValue === void 0 || newValue === null) {
-                        tag.className = Core.empty;
-                    } else {
-                        tag.className = newValue;
-                    }
-                    this.oldValue = newValue;
-                }
+        render() {
+            var newValue = this.evaluateText(this.ast);
+
+            if (newValue !== this.oldValue) {
+                this.oldValue = newValue;
+                this.tagNode.className = newValue === void 0 || newValue === null
+                    ? Core.empty
+                    : newValue;
             }
         }
     }
