@@ -1,17 +1,24 @@
-﻿.flex-container {
+﻿html, body {
+    height: 100%;
+}
+
+.flex-container {
     display: flex;
     padding: 24px;
+    height: 100%;
+    padding-top: 80px;
+    margin-top: -56px;
 }
 
 .main-menu {
-    margin: 0;
+    margin: 0 16px 0 0;
     padding: 0px;
     width: 200px;
 }
 
 .main-content {
     margin: 0;
-    padding: 0 16px;
+    padding: 0;
     flex: 1;
 }
 
@@ -27,7 +34,7 @@
     display: block;
     border-left: 4px solid;
     color: white;
-    background-color: rgba(51,51,51,0.4);
+    background-color: rgba(51,51,51,0.6);
     padding: 0px 10px 0px 20px;
     margin-bottom: 2px;
     border-left-color: rgba(251,251,251, 0.5);
@@ -49,7 +56,7 @@
 }
 
 .main-menuitem:hover {
-    background-color: rgba(51,51,51,0.3);
+    background-color: rgb(66, 123, 178);
     cursor: pointer;
     border-left-color: rgba(255,255,255,0.8);
     text-decoration: none;
@@ -60,3 +67,23 @@
     text-decoration: inherit;
     color: inherit;
 }
+
+section.section {
+    width: 100%;
+    background: rgb(230,230,230);
+    border-radius: 6px;
+    padding: 0 10px;
+}
+
+    section.section header {
+        line-height: 50px;
+        padding: 0px 8px 0px;
+        color: gray;
+        font-size: 1.4em;
+        white-space: nowrap;
+        overflow: hidden;
+        -ms-text-overflow: ellipsis;
+        -o-text-overflow: ellipsis;
+        text-overflow: ellipsis;
+        text-decoration: none;
+    }

@@ -192,7 +192,11 @@ export module Dom {
             if (!!this.ast && !!this.ast.execute) {
                 stream = this.ast.execute(this, context);
                 if (stream.length === void 0)
-                    stream = [stream];
+                    if (stream.value === null) {
+                        stream = [];
+                    } else {
+                        stream = [stream];
+                    }
             } else {
                 stream = [context];
             }
