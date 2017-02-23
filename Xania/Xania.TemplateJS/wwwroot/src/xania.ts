@@ -20,6 +20,13 @@ export class Xania {
                 for (var j = 0; j < childTemplates.length; j++) {
                     result.push(childTemplates[j]);
                 }
+            } else if (typeof child.view === "function") {
+                result.push({
+                    component: child,
+                    bind() {
+                        return new ComponentBinding(this.component, {});
+                    }
+                });
             } else {
                 throw Error("");
             }
@@ -124,7 +131,7 @@ export module View {
 
 class ComponentBinding extends Reactive.Binding {
     private binding: Dom.FragmentBinding;
-    private store = new Reactive.Store(this.component);
+    private componentStore = new Reactive.Store(this.component);
 
     constructor(private component, private props) {
         super();
@@ -140,11 +147,24 @@ class ComponentBinding extends Reactive.Binding {
         for (let prop in props) {
             if (props.hasOwnProperty(prop)) {
                 var expr = props[prop];
-                var value = expr.execute ? expr.execute(this, context).valueOf() : expr;
-                this.component[prop] = value;
+                var sourceValue = expr.execute ? expr.execute(this, context) : expr;
+                this.component[prop] = sourceValue;
+
+                if (sourceValue.set) {
+                    this.componentStore.get(prop).change({
+                        sourceValue: sourceValue,
+                        propertyName: prop,
+                        component: this.component,
+                        sourceContext: context,
+                        execute() {
+                            this.sourceValue.set(this.component[this.propertyName]);
+                            this.sourceContext.refresh();
+                        }
+                    });
+                }
             }
         }
-        this.binding.update(this.store, driver);
+        this.binding.update(this.componentStore, driver);
         super.update(context, driver);
         return this;
     }

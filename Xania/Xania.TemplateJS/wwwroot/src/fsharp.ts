@@ -63,7 +63,9 @@ export function accept(ast: any, visitor: IAstVisitor, context) {
                     return visitor.member(context, ast.name);
             }
         case MEMBER:
-            return visitor.member(accept(ast.target, visitor, context), accept(ast.member, visitor, context));
+            var target = accept(ast.target, visitor, context);
+            var name = accept(ast.member, visitor, context);
+            return visitor.member(target, name);
         case CONST:
             return visitor.const(ast.value);
         case BINARY:

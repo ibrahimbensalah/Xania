@@ -5,7 +5,7 @@ export default class DataGrid {
     private data = [];
     private columns = [];
     private activeRow = null;
-    private onRowChanged = null;
+    private activeRecord = null;
 
     constructor() {
         this.columns.push({ field: "Name" });
@@ -29,11 +29,8 @@ export default class DataGrid {
     onRowClick = (event, context) => {
         var activeRow = context.get('row').valueOf();
         this.activeRow = activeRow;
+        this.activeRecord = activeRow.data;
         event.preventDefault();
-
-        if (typeof this.onRowChanged === "function") {
-            this.onRowChanged(activeRow, this);
-        }
     };
 
     view(xania) {

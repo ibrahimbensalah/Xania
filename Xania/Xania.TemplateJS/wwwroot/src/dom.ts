@@ -611,10 +611,12 @@ export module Dom {
         }
 
         fire() {
-            let value = this.evaluateText(this.expr);
+            let value = this.evaluateObject(this.expr);
             if (value && value.set) {
                 value.set(this.tagNode.value);
             }
+
+            this.context.refresh();
         }
 
         render() {
@@ -624,10 +626,12 @@ export module Dom {
             var tag = this.tagNode;
             if (newValue === void 0) {
                 tag.removeAttribute("value");
+                tag["value"] = Core.empty;
             } else {
                 var attr = document.createAttribute("value");
                 attr.value = newValue;
                 tag.setAttributeNode(attr);
+                tag["value"] = newValue;
             }
         }
     }

@@ -82,7 +82,7 @@ export module Reactive {
         // list of observers to be dispatched on value change
         private actions: IAction[];
 
-        constructor(private parent: Value, public name) {
+        constructor(protected parent: Value, public name) {
             super();
         }
 
@@ -126,10 +126,6 @@ export module Reactive {
 
         valueOf() {
             return this.value;
-        }
-
-        set(value: any) {
-            this.parent.value[this.name] = value;
         }
     }
 
@@ -178,12 +174,16 @@ export module Reactive {
             if (newValue !== this.value) {
                 this.value = newValue;
 
-                if (newValue === void 0 || newValue === null)
+                if (this.properties && (newValue === void 0 || newValue === null))
                     this.properties.length = 0;
 
                 return true;
             }
             return false;
+        }
+
+        set(value: any) {
+            this.parent.value[this.name] = value;
         }
     }
 

@@ -13,11 +13,11 @@ export module Template {
     }
 
     export class TextTemplate implements INode {
-        constructor(private tpl: { execute(binding, context); } | string) {
+        constructor(private expr) {
         }
 
         bind<T>(visitor: IVisitor<T>): T {
-            return visitor.text(this.tpl);
+            return visitor.text(this.expr);
         }
     }
 
