@@ -22,7 +22,7 @@
     System.config({ packages: { '/': {} } });
     System.import("app").then(app => {
       var target = document.body.querySelector("#dbmon");
-      app.bind(target);
+      app.run(target);
     });
   </script>
 </body>

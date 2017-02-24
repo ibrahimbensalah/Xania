@@ -1,6 +1,4 @@
-﻿import { Observables } from "../../src/observables"
-
-import { Xania, ForEach, fs, Reactive as Re, Dom } from "../../src/xania"
+﻿import { Xania, ForEach, fs, Reactive as Re, Dom } from "../../src/xania"
 
 // ReSharper disable InconsistentNaming
 declare var ENV;
@@ -8,20 +6,17 @@ declare var Monitoring;
 // ReSharper restore InconsistentNaming
 
 
-export function bind(target: Node) {
+export function run(target: Node) {
 
-    var store = new Re.Store({
-            time: new Observables.Time(),
-            message: "hello, dbmon",
-            databases: ENV.generateData(true).toArray()
-    });
-    Xania.view(dbmon(Xania)).bind(store, new Dom.DomDriver(target));
+    var store = new Re.Store({ databases: ENV.generateData(true).toArray() });
+
+    dbmon(Xania)
+        .bind(Dom.DomVisitor)
+        .update(store, new Dom.DomDriver(target));
 
     var load = () => {
         ENV.generateData(true);
-
         store.refresh();
-
         Monitoring.renderRate.ping();
         window.setTimeout(load, ENV.timeout);
     };

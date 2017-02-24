@@ -92,11 +92,23 @@ export function users() {
 
 var MenuItem = ({name}) => <li><a href="http://www.google.nl">menu item {name}</a></li>;
 
+interface IAppAction {
+    path: string,
+    display?: string;
+}
+
+var actions: IAppAction[] = [
+    { path: "timesheet", display: "Timesheet" },
+    { path: "invoices", display: "Invoices" },
+    { path: "todos", display: "Todos" },
+    { path: "users", display: "Users" }
+];
+
 var mainMenu: (url: UrlHelper) => Template.INode = (url: UrlHelper) =>
     <ul className="main-menu-ul">
-        {["timesheet", "invoices", "todos", "users"].map(actionName => (
+        {actions.map(x => (
             <li className="main-menuitem">
-                <a className="main-menuitem-link" href="" onClick={url.action(actionName)}>{actionName}</a>
+                <a className="main-menuitem-link" href="" onClick={url.action(x.path)}>{x.display || x.path}</a>
             </li>))}
     </ul>;
 
