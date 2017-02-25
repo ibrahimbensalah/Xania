@@ -19,18 +19,16 @@ export module Reactive {
     }
 
     abstract class Value {
-        public properties: IProperty[];
+        public properties: IProperty[] = [];
         public value;
 
         get(propertyName: string): IProperty {
             var properties = this.properties;
 
-            if (this.properties) {
-                var length = properties.length;
-                for (var i = 0; i < length; i++) {
-                    if (properties[i].name === propertyName) {
-                        return properties[i];
-                    }
+            var length = properties.length;
+            for (var i = 0; i < length; i++) {
+                if (properties[i].name === propertyName) {
+                    return properties[i];
                 }
             }
 
@@ -45,13 +43,7 @@ export module Reactive {
             }
 
             var property = Value.createProperty(this, propertyName, initialValue);
-
-            if (!properties)
-                this.properties = [property];
-            else
-                properties.push(property);
-
-            // this[propertyName] = property;
+            properties.push(property);
 
             return property;
         }
@@ -63,9 +55,9 @@ export module Reactive {
                 property.length = initialValue.length;
                 return property;
             } else if (initialValue && initialValue.subscribe) {
-                 const property = new AwaitableProperty(parent, name);
-                 property.value = initialValue;
-                 return property;
+                const property = new AwaitableProperty(parent, name);
+                property.value = initialValue;
+                return property;
             } else {
                 const property = new ObjectProperty(parent, name);
                 property.value = initialValue;
@@ -174,7 +166,7 @@ export module Reactive {
             if (newValue !== this.value) {
                 this.value = newValue;
 
-                if (this.properties && (newValue === void 0 || newValue === null))
+                if (newValue === void 0 || newValue === null)
                     this.properties.length = 0;
 
                 return true;
@@ -333,29 +325,27 @@ export module Reactive {
 
         refresh() {
             var stack: { properties, value }[] = [this];
-            var stackLength = 1;
+            var stackLength: number = 1;
             var dirty: any[] = [];
             var dirtyLength: number = 0;
 
             while (stackLength--) {
                 const parent = stack[stackLength];
                 var properties = parent.properties;
-                if (properties) {
-                    const parentValue = parent.value;
-                    let i: number = properties.length;
-                    while (i--) {
-                        var child = properties[i];
-                        var changed = child.refresh(parentValue);
-                        stack[stackLength++] = child;
+                const parentValue = parent.value;
+                let i: number = properties.length;
+                while (i--) {
+                    var child = properties[i];
+                    var changed = child.refresh(parentValue);
+                    stack[stackLength++] = child;
 
-                        if (changed === true) {
-                            const actions = child.actions;
-                            if (actions) {
-                                dirty[dirtyLength++] = actions;
-                            }
+                    if (changed === true) {
+                        const actions = child.actions;
+                        if (actions) {
+                            dirty[dirtyLength++] = actions;
                         }
-                    };
-                }
+                    }
+                };
             }
 
             var j = dirtyLength;

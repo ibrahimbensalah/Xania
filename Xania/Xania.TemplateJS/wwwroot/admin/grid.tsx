@@ -1,4 +1,4 @@
-﻿import { ForEach, fs } from "../src/xania"
+﻿import { ForEach, query } from "../src/xania"
 import './grid.css'
 
 export default class DataGrid {
@@ -38,9 +38,9 @@ export default class DataGrid {
             <div id="users" data-modelid="Id" className="xn-grid" role="grid" data-itemheight="31">
                 <div className="xn-border-box xn-grid-header" style="z-index: 100">
                     <div role="rowheader" className="xn-grid-row-header xn-grid-header-cell">&nbsp;</div>
-                    <ForEach expr={fs("for column in columns")}>
+                    <ForEach expr={query("for column in columns")}>
                         <div data-idx="UserName" role="gridcell" className="xn-grid-header-cell">
-                            <div className="xn-grid-cell-content"><a data-bind="click: sort.bind($data, 'UserName')">{fs("column.field")}</a></div>
+                            <div className="xn-grid-cell-content"><a data-bind="click: sort.bind($data, 'UserName')">{query("column.field")}</a></div>
                         </div>
                     </ForEach>
                     <div className="xn-grid-header-cell" style="width: 100%; min-width: 100px">&nbsp;</div>
@@ -50,19 +50,19 @@ export default class DataGrid {
                     <div className="xn-content" style="padding-top: 0px; ">
                         <table style="width: 100%;">
                             <tbody data-bind="foreach: view">
-                                <ForEach expr={fs("for row in data")}>
+                                <ForEach expr={query("for row in data")}>
                                     <tr role="listitem"
                                         onClick={this.onRowClick}
-                                        className={["xn-list-item", fs("row = activeRow -> ' xn-grid-row-activated'"),
-                                                fs("row.alternate -> ' xn-grid-row-alternate'"), fs("row.updated -> ' xn-grid-row-updated'")]}>
+                                        className={["xn-list-item", query("row = activeRow -> ' xn-grid-row-activated'"),
+                                                query("row.alternate -> ' xn-grid-row-alternate'"), query("row.updated -> ' xn-grid-row-updated'")]}>
                                         <td>
                                             <div className="xn-grid-row-header">
-                                                <span className={["fa", fs("row = activeRow -> ' fa-edit'")]}></span>
+                                                <span className={["fa", query("row = activeRow -> ' fa-edit'")]}></span>
                                             </div>
                                         </td>
-                                        <ForEach expr={fs("for column in columns")}>
+                                        <ForEach expr={query("for column in columns")}>
                                             <td role="gridcell" tabindex="-1" className="xn-grid-cell">
-                                                <div className="xn-grid-cell-content"><a href="#">{fs("row.get column.field")}</a></div>
+                                                <div className="xn-grid-cell-content"><a href="#">{query("row.get column.field")}</a></div>
                                             </td>
                                         </ForEach>
                                         <td role="gridcell" tabindex="-1" className="xn-grid-cell" style="width: 100%;"></td>

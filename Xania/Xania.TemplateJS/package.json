@@ -13,7 +13,7 @@
     "css-loader": "0.26.1"
   },
   "scripts": {
-    "fsharp": "pegjs -o ./wwwroot/src/fsharp.peg.js --optimize speed ./grammar/fsharp.peg"
+    "query": "pegjs -o ./wwwroot/src/query.peg.js --optimize speed ./grammar/query.peg"
   },
   "jspm": {
     "directories": {

@@ -1,7 +1,7 @@
 ﻿/// <reference path="../../node_modules/@types/jasmine/index.d.ts" />
 
 import { Reactive as Re } from "../src/reactive";
-import { fsharp as fs, accept, TOKENS } from "../src/fsharp";
+import query, { TOKENS } from "../src/query";
 import { Observables } from "../src/observables";
 
 interface IPerson { firstName: string; lastName: string; adult: boolean, age: number }
@@ -13,11 +13,11 @@ var ibrahim: IPerson = {
     adult: true
 };
 
-describe("fsharp parser", () => {
+describe("query parser", () => {
 
     it(':: fun x -> x ',
         () => {
-            var ast = fs("fun x -> x");
+            var ast = query("fun x -> x").ast;
             expect(ast).toBeDefined();
 
             var compose = ast;
@@ -28,7 +28,7 @@ describe("fsharp parser", () => {
 
     it(':: .firstName ',
         () => {
-            var ast = fs(".firstName");
+            var ast = query(".firstName").ast;
             expect(ast).toBeDefined();
 
             var compose = ast;
@@ -40,7 +40,7 @@ describe("fsharp parser", () => {
 
     it(':: 1 + 2',
         () => {
-            var ast = fs("1 + 2");
+            var ast = query("1 + 2").ast;
             expect(ast).toBeDefined();
 
             var expr = ast;
@@ -49,7 +49,7 @@ describe("fsharp parser", () => {
 
     it(':: fn a',
         () => {
-            var ast = fs("fun a");
+            var ast = query("fun a").ast;
             expect(ast).toBeDefined();
 
             var expr = ast;
@@ -60,7 +60,7 @@ describe("fsharp parser", () => {
 
     it(':: fn ()',
         () => {
-            var ast = fs("fun ()");
+            var ast = query("fun ()").ast;
             expect(ast).toBeDefined();
 
             var expr = ast;
@@ -71,7 +71,7 @@ describe("fsharp parser", () => {
 
     it(':: (+) a b',
         () => {
-            var ast = fs("(+) a b");
+            var ast = query("(+) a b").ast;
             expect(ast).toBeDefined();
 
             var expr = ast;
@@ -80,7 +80,7 @@ describe("fsharp parser", () => {
 
     it(':: a |> b |> c',
         () => {
-            var ast = fs("a |> b |> c");
+            var ast = query("a |> b |> c").ast;
             expect(ast).toBeDefined();
 
             var pipe1 = ast;
@@ -97,7 +97,7 @@ describe("fsharp parser", () => {
 
     it(':: a + b |> c',
         () => {
-            var ast = fs("a + b |> c");
+            var ast = query("a + b |> c").ast;
             expect(ast).toBeDefined();
 
             var pipe = ast;
@@ -114,7 +114,7 @@ describe("fsharp parser", () => {
 
     it(':: a >> b ',
         () => {
-            var ast = fs("a >> b");
+            var ast = query("a >> b").ast;
             expect(ast).toBeDefined();
 
             var compose = ast;
@@ -126,7 +126,7 @@ describe("fsharp parser", () => {
 
     it(':: a.b ',
         () => {
-            var ast = fs("a.b");
+            var ast = query("a.b").ast;
             expect(ast).toBeDefined();
 
             var compose = ast;
@@ -137,7 +137,7 @@ describe("fsharp parser", () => {
 
     it(':: [1..n] ',
         () => {
-            var ast = fs("[1..n]");
+            var ast = query("[1..n]").ast;
             expect(ast).toBeDefined();
 
             var range = ast;
@@ -148,7 +148,7 @@ describe("fsharp parser", () => {
 
     it(':: for p in people where p.adult ',
         () => {
-            var ast = fs("for p in people where p.adult");
+            var ast = query("for p in people where p.adult").ast;
             expect(ast).toBeDefined();
 
             var where = ast;
@@ -160,7 +160,7 @@ describe("fsharp parser", () => {
 
     it(":: empty list -> 'list is empty' ",
         () => {
-            var rule = fs("empty list -> 'list is empty'");
+            var rule = query("empty list -> 'list is empty'").ast;
             expect(rule).toBeDefined();
 
             expect(rule.type).toBe(TOKENS.BINARY);
@@ -174,9 +174,9 @@ describe("fsharp parser", () => {
 
             var start = new Date().getTime();
 
-            var ast = fs("a |> b.c >> (+) 1 |> d");
+            var ast = query("a |> b.c >> (+) 1 |> d");
             for (var i = 0; i < 1000; i++) {
-                fs("a |> b >> (+) 1 |> d");
+                query("a |> b >> (+) 1 |> d");
             }
             var elapsed = new Date().getTime() - start;
 
@@ -237,7 +237,7 @@ class TestBinding extends Re.Binding {
 
     render(context) {
         this.context = context;
-        return this.value = accept(this.ast, this, context).valueOf();
+        // return this.value = accept(this.ast, this, context).valueOf();
     }
 
     app(fun, args: any[]) {
@@ -256,7 +256,7 @@ describe("runtime", () => {
     it("expression dependencies",
         () => {
             var store = new Re.Store({ p: ibrahim });
-            var binding = new TestBinding(fs("p.firstName"));
+            var binding = new TestBinding(query("p.firstName"));
             binding.render(store);
 
             expect(binding.value).toBe("Ibrahim");
@@ -274,27 +274,27 @@ describe("runtime", () => {
         () => {
             var store = new Re.Store({ p: ibrahim });
 
-            var binding = new TestBinding(fs("p"));
+            var binding = new TestBinding(query("p"));
 
             expect(binding.render(store)).toBe(binding.render(store));
         });
 
     it("consistent member identity", () => {
         var store = new Re.Store({ xania: { owner: ibrahim } });
-        var binding = new TestBinding(fs("xania.owner"));
+        var binding = new TestBinding(query("xania.owner"));
         expect(binding.render(store)).toBe(binding.render(store));
     });
 
     it("consistent query identity", () => {
         var store = new Re.Store({ xania: { employees: [ibrahim] } });
-        var binding = new TestBinding(fs("for e in xania.employees"));
+        var binding = new TestBinding(query("for e in xania.employees"));
         expect(binding.render(store)[0]).toBe(binding.render(store)[0], "not identical");
     });
 
     it("assign expression",
         () => {
             var store = new Re.Store({ x: 1, y: 2, sum: 0 });
-            var binding = new TestBinding(fs("sum <- x + y"));
+            var binding = new TestBinding(query("sum <- x + y"));
             binding.render(store);
             expect(store.get("sum").valueOf()).toBe(3);
         });
@@ -303,7 +303,7 @@ describe("runtime", () => {
         () => {
             var observable = new Observables.Observable(123);
             var store = new Re.Store({ observable });
-            var binding = new TestBinding(fs("await observable"));
+            var binding = new TestBinding(query("await observable"));
 
             binding.render(store);
             expect(binding.value).toBe(123);

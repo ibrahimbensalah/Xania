@@ -1,4 +1,4 @@
-﻿import { ForEach, fs } from "../../src/xania"
+﻿import { ForEach, query } from "../../src/xania"
 import { Animate } from "../../src/anim"
 import { Observables } from "../../src/observables"
 import './todos/index.css'
@@ -42,19 +42,19 @@ export class TodoApp {
                     <input className="new-todo" placeholder="What needs to be done?" autofocus=""
                         onKeyUp={this.onAddTodo} />
                 </header>
-                <section className={["main", fs("store.todos.length = 0 -> ' hidden'")]}>
-                    <input className="toggle-all" type="checkbox" checked={fs("empty store.todos where not completed")}
+                <section className={["main", query("store.todos.length = 0 -> ' hidden'")]}>
+                    <input className="toggle-all" type="checkbox" checked={query("empty store.todos where not completed")}
                         onClick={this.onToggleAll} />
                     <ul className="todo-list">
-                        <ForEach expr={fs("for todo in store.todos where (completed = (show = 'completed')) or (show = 'all')")}>
+                        <ForEach expr={query("for todo in store.todos where (completed = (show = 'completed')) or (show = 'all')")}>
                             <Animate height="58px" transform="scale(1)"dispose={[{ height: "58px", opacity: 1 }, { height: 0, opacity: 0 }]}>
-                                <li className={[fs("todo.completed -> 'completed'"), fs("todo = editingTodo -> ' editing'")]} >
+                                <li className={[query("todo.completed -> 'completed'"), query("todo = editingTodo -> ' editing'")]} >
                                     <div className="view">
-                                        <input className="toggle" type="checkbox" checked={fs("todo.completed")} />
-                                        <label onDblClick={fs("editingTodo <- todo")}>{fs("todo.title")}</label>
-                                        <button className="destroy" onClick={fs("store.remove todo")}></button>
+                                        <input className="toggle" type="checkbox" checked={query("todo.completed")} />
+                                        <label onDblClick={query("editingTodo <- todo")}>{query("todo.title")}</label>
+                                        <button className="destroy" onClick={query("store.remove todo")}></button>
                                     </div>
-                                    <input className="edit" value={fs("todo.title")} autofocus=""
+                                    <input className="edit" value={query("todo.title")} autofocus=""
                                         onBlur={this.onResetEditing}
                                         onKeyUp={this.onResetEditing} />
                                 </li>
@@ -62,17 +62,17 @@ export class TodoApp {
                         </ForEach>
                     </ul>
                 </section>
-                <footer className={["footer", fs("store.todos.length = 0 -> ' hidden'")]}>
-                    <span className="todo-count"><strong>{fs("count store.todos where not completed")}</strong> item(s) left</span>
+                <footer className={["footer", query("store.todos.length = 0 -> ' hidden'")]}>
+                    <span className="todo-count"><strong>{query("count store.todos where not completed")}</strong> item(s) left</span>
                     <ul className="filters">
-                        <li><a className={fs("show = 'all' -> 'selected'")}
+                        <li><a className={query("show = 'all' -> 'selected'")}
                             onClick={this.onShow.bind(this, 'all')}>All</a></li>
-                        <li><a className={fs("show = 'active' -> 'selected'")}
+                        <li><a className={query("show = 'active' -> 'selected'")}
                             onClick={this.onShow.bind(this, 'active')}>Active</a></li>
-                        <li><a className={fs("show = 'completed' -> 'selected'")}
+                        <li><a className={query("show = 'completed' -> 'selected'")}
                             onClick={this.onShow.bind(this, 'completed')}>Completed</a></li>
                     </ul >
-                    <button className={["clear-completed", fs("all active todos -> ' hidden'")]}
+                    <button className={["clear-completed", query("all active todos -> ' hidden'")]}
                         onClick={() => this.store.removeCompleted()}>Clear completed</button>
                 </footer>
             </section>

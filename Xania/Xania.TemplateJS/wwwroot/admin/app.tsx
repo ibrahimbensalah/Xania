@@ -1,4 +1,4 @@
-﻿import { Xania as xania, ForEach, fs, View, Dom, Reactive as Re, Template } from "../src/xania"
+﻿import { Xania as xania, ForEach, query, View, Dom, Reactive as Re, Template } from "../src/xania"
 import { UrlHelper, ViewResult } from "../src/mvc"
 import './admin.css'
 import { Observables } from "../src/observables";
@@ -6,15 +6,24 @@ import { ClockApp } from '../sample/clock/app'
 import { TodoApp } from "../sample/layout/todo";
 import DataGrid from "./grid"
 
-var time = new Observables.Time();
+class RemoteObject {
+    constructor(private url: string) {
+    }
+
+    subscribe(observer: Observables.IObserver<any>) {
+    }
+}
+
 var store = new Re.Store({
     user: "Ibrahim",
-    time,
+    users: new RemoteObject(''),
     currentUser: {},
     saveUser() {
         console.log("save user", this.currentUser);
     }
 });
+
+
 
 export function index() {
     return new ViewResult(<div>index</div>, store);
@@ -26,18 +35,18 @@ export function menu({ driver, html, url }) {
 }
 
 export function invoices() {
-    return new ViewResult(<div>invoices {fs("user")}</div>, store);
+    return new ViewResult(<div>invoices {query("user")}</div>, store);
 }
 
-var toggleTime = () => {
-    time.toggle();
-};
-
 export function timesheet() {
-    return new ViewResult(<div>timesheet {fs("await time")}
+    var time = new Observables.Time();
+    var toggleTime = () => {
+        time.toggle();
+    };
+    return new ViewResult(<div>timesheet {query("await time")}
         <button onClick={toggleTime}>toggle time</button>
         <ClockApp time={time} />
-    </div>, store);
+    </div>, new Re.Store({ time }));
 }
 
 export function todos() {
@@ -51,11 +60,11 @@ export function users() {
     }
     return new ViewResult(
         <div style="height: 95%;" className="row">
-            <div className={[fs("currentUser -> 'col-8'"), fs("not currentUser -> 'col-12'")]}>
+            <div className={[query("currentUser -> 'col-8'"), query("not currentUser -> 'col-12'")]}>
                 <section className="section" style="height: 100%">
                     <div style="padding: 0px 16px 100px 16px; height: 100%;">
                         <header style="height: 50px"><span className="fa fa-adjust"></span> <span>Users</span></header>
-                        <DataGrid activeRecord={fs("currentUser")} />
+                        <DataGrid activeRecord={query("currentUser")} />
                         <footer style="height: 50px; margin: 0 16px; padding: 0;"><button className="btn btn-primary" data-bind="click: users.create"><span className="glyphicon glyphicon-plus"></span> Add New</button></footer>
                     </div>
                 </section>
@@ -68,7 +77,7 @@ export function users() {
                     <div style="padding: 0px 16px 100px 16px; height: 100%;">
                         <header style="height: 50px">
                             <span className="fa fa-adjust"></span>
-                            <span>{fs("currentUser.Name")}</span>
+                            <span>{query("currentUser.Name")}</span>
                         </header>
                         <div className="col-lg-12 col-md-3"><label className="control-label" for="UserName">User name</label><div>
                             <input className="form-control" type="text" placeholder="User name" name="currentUser.Name" />
@@ -78,10 +87,10 @@ export function users() {
                             <div><input id="Email" className="form-control" type="text" placeholder="Email" name="currentUser.Email" /></div>
                         </div>
                         <div className="col-lg-12 col-md-3"><div>
-                            <input type="checkbox" checked={fs("currentUser.EmailConfirmed")} /> <label className="control-label" for="EmailConfirmed">Email confirmed</label>
+                            <input type="checkbox" checked={query("currentUser.EmailConfirmed")} /> <label className="control-label" for="EmailConfirmed">Email confirmed</label>
                         </div></div>
                         <div className="col-lg-12 col-md-3">
-                            <button className="btn btn-primary" onClick={fs("saveUser ()")}>
+                            <button className="btn btn-primary" onClick={query("saveUser ()")}>
                                 <span className="fa fa-save"></span> Save</button>
                         </div>
                     </div>

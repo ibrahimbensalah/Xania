@@ -1,4 +1,4 @@
-﻿import { Xania, ForEach, fs, Reactive as Re, Dom } from "../../src/xania"
+﻿import { Xania, ForEach, query, Reactive as Re, Dom } from "../../src/xania"
 
 // ReSharper disable InconsistentNaming
 declare var ENV;
@@ -17,6 +17,7 @@ export function run(target: Node) {
     var load = () => {
         ENV.generateData(true);
         store.refresh();
+
         Monitoring.renderRate.ping();
         window.setTimeout(load, ENV.timeout);
     };
@@ -27,22 +28,22 @@ export function run(target: Node) {
 var dbmon: any = (xania) =>
     <table clazz="table table-striped latest-data">
         <tbody>
-        <ForEach expr={fs("for db in databases")}>
+        <ForEach expr={query("for db in databases")}>
             <tr>
                 <td className="dbname">
-                    {fs("db.dbname")}
+                    {query("db.dbname")}
                 </td>
                 <td className="query-count">
-                    <span className={fs("db.lastSample.countClassName")}>
-                        {fs("db.lastSample.nbQueries")}
+                    <span className={query("db.lastSample.countClassName")}>
+                        {query("db.lastSample.nbQueries")}
                     </span>
                 </td>
-                <ForEach expr={fs("for q in db.lastSample.topFiveQueries")}>
-                    <td className={fs("q.elapsedClassName")}>
-                        {fs("q.formatElapsed")}
+                <ForEach expr={query("for q in db.lastSample.topFiveQueries")}>
+                    <td className={query("q.elapsedClassName")}>
+                        {query("q.formatElapsed")}
                         <div className="popover left">
                             <div className="popover-content">
-                                {fs("q.query")}
+                                {query("q.query")}
                             </div>
                             <div className="arrow"></div>
                         </div>

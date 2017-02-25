@@ -1,6 +1,6 @@
 ﻿import { Observables } from "../../src/observables"
 
-import { Xania as xania, ForEach, fs, View, Dom, Reactive as Re, Template } from "../../src/xania"
+import { Xania as xania, ForEach, query, View, Dom, Reactive as Re, Template } from "../../src/xania"
 import { ClockApp } from "./../clock/app"
 import { TodoApp } from "./todo"
 import { BallsApp } from "./../balls/app"
@@ -18,7 +18,7 @@ export function store() {
 
 var layout: any = (view, url: UrlHelper) =>
     <div>
-        <h1>{fs("user.firstName")} {fs("user.lastName")}</h1>
+        <h1>{query("user.firstName")} {query("user.lastName")}</h1>
         <div style="clear: both;">
             <a href="#" onClick={url.action('todos')}>todos</a>
         </div>
@@ -33,14 +33,14 @@ var layout: any = (view, url: UrlHelper) =>
             <button onClick={url.action('balls')}>balls</button>
             &nbsp;&nbsp;&nbsp;&nbsp;
             model:
-            <button onClick={fs("user.firstName <- 'Ramy'")}>Ramy</button>
-            <button onClick={fs("user.firstName <- 'Ibrahim'")}>Ibrahim</button>
+            <button onClick={query("user.firstName <- 'Ramy'")}>Ramy</button>
+            <button onClick={query("user.firstName <- 'Ibrahim'")}>Ibrahim</button>
             &nbsp;&nbsp;&nbsp;&nbsp;
             time:
-            <button onClick={fs("time.toggle ()")}>toggle</button>
+            <button onClick={query("time.toggle ()")}>toggle</button>
         </div>
         <div style="padding: 10px;">
-            {View.partial(view, { user: fs("user"), time: new Observables.Time() })}
+            {View.partial(view, { user: query("user"), time: new Observables.Time() })}
         </div>
     </div>;
 
@@ -49,24 +49,24 @@ export function execute({ driver, html, url }) {
     var mainView = url.route(path => {
         switch (path) {
             case 'view1':
-                return <div>view 1: {fs("user.firstName")} {fs("await time")}</div>;
+                return <div>view 1: {query("user.firstName")} {query("await time")}</div>;
             case 'view2':
                 return (
                     <div>
-                        {fs("user.firstName")}
-                        <ForEach expr={fs("for v in [1..(min (size (await time)) 10)]")}>
-                            <p style="margin: 0">{fs("user.firstName")}: {fs("v")}</p>
+                        {query("user.firstName")}
+                        <ForEach expr={query("for v in [1..(min (size (await time)) 10)]")}>
+                            <p style="margin: 0">{query("user.firstName")}: {query("v")}</p>
                         </ForEach>
                         <hr style="padding: 0; margin: 0;" />
-                        <ForEach expr={fs("for g in [(1 + min (size (await time)) 10)..10]")}>
-                            <p style="margin: 0">{fs("user.lastName")}: {fs("g")}</p>
+                        <ForEach expr={query("for g in [(1 + min (size (await time)) 10)..10]")}>
+                            <p style="margin: 0">{query("user.lastName")}: {query("g")}</p>
                         </ForEach>
                     </div>
                 );
             case 'clock':
-                return <ClockApp time={fs("time")} />;
+                return <ClockApp time={query("time")} />;
             case 'clock2':
-                return <ClockApp time={fs("time")} />;
+                return <ClockApp time={query("time")} />;
             case 'todos':
                 return <TodoApp />;
             case 'balls':

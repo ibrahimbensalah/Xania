@@ -1,7 +1,7 @@
 ﻿import { Core } from './core'
 import { Reactive as Re } from './reactive'
 import { Template } from './template'
-import { fs } from "./fsharp"
+import query from "./query"
 
 export module Dom {
 
@@ -693,7 +693,7 @@ export module Dom {
                 offset = begin + 2;
                 const end = text.indexOf("}}", offset);
                 if (end >= 0) {
-                    parts.push(fs(text.substring(offset, end)));
+                    parts.push(query(text.substring(offset, end)));
                     offset = end + 2;
                 } else {
                     throw new SyntaxError("Expected '}}' but not found starting from index: " + offset);

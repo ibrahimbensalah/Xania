@@ -1,4 +1,4 @@
-﻿import { ForEach, fs, Template, Reactive } from "../../src/xania";
+﻿import { ForEach, query, Template, Reactive } from "../../src/xania";
 import { Animate } from "../../src/anim"
 import './app.css'
 
@@ -117,17 +117,17 @@ export class BallsApp {
                     <button onClick={this.onShuffle}>shuffle</button>
                 </div>
                 <div className="demo2">
-                    <ForEach expr={fs("for ball in balls")}>
-                        <Animate transform={fs("translate3d ball.idx ball.pressed")}>
+                    <ForEach expr={query("for ball in balls")}>
+                        <Animate transform={query("translate3d ball.idx ball.pressed")}>
                             <div className="demo2-ball"
-                                onMouseDown={fs("ball.press()")}
-                                onMouseMove={fs("ball.pressed -> drag event ball state")}
-                                onMouseUp={fs("release event ball")}
-                                onMouseOut={fs("release event ball")}
+                                onMouseDown={query("ball.press()")}
+                                onMouseMove={query("ball.pressed -> drag event ball state")}
+                                onMouseUp={query("release event ball")}
+                                onMouseOut={query("release event ball")}
                                 style={[
-                                    "background-color: ", fs("ball.backColor") ,
+                                    "background-color: ", query("ball.backColor") ,
                                     "; transform: ",
-                                    fs("initial ball"),
+                                    query("initial ball"),
                                     "; z-index: 10; box-shadow: rgba(0, 0, 0, 0.498039) -0.666667px 5px 5px;"]} >
                             </div>
                         </Animate>

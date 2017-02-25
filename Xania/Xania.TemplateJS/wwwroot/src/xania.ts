@@ -1,6 +1,6 @@
 ﻿import { Template } from "./template"
 import { Dom } from "./dom"
-import { fs } from "./fsharp"
+import query from "./query"
 import { Reactive } from "./reactive"
 
 export class Xania {
@@ -56,7 +56,7 @@ export class Xania {
                 if (typeof attrs.name === "string") {
                     if (attrs.type === "text") {
                         if (!attrs.value) {
-                            tag.attr("value", fs(attrs.name));
+                            tag.attr("value", query(attrs.name));
                         }
                     }
                 }
@@ -207,5 +207,5 @@ class PartialBinding extends Reactive.Binding {
 }
 
 
-export { fs, Reactive, Template, Dom }
+export { query, Reactive, Template, Dom }
 
