@@ -17,7 +17,8 @@
     "system.js": "0.19.26",
     "marked": "0.3.5",
     "prism": "1.4.1",
-    "font-awesome": "4.6.1"
+    "font-awesome": "4.6.1",
+    "fetch": "0.11.0"
   },
   "resolutions": {
     "polymer": "^1.2.1"

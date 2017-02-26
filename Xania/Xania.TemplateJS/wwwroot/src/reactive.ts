@@ -180,6 +180,12 @@ export module Reactive {
     }
 
     class AwaitableProperty extends ObjectProperty {
+        get length() {
+            if (Array.isArray(this.value))
+                return this.value.length;
+            return 0;
+        }
+
         refresh(parentValue) {
             if (super.refresh(parentValue)) {
                 if (this.awaited) {
@@ -208,6 +214,16 @@ export module Reactive {
         constructor(observable: any) {
             this.subscription = observable.subscribe(this);
             this.current = observable.current;
+        }
+
+        get length() {
+            if (typeof this.current === "undefined")
+                return 0;
+            return this.current.length;
+        }
+
+        get(name: string) {
+            return this.current[name];
         }
 
         onNext(newValue) {
@@ -440,7 +456,6 @@ export module Reactive {
 
             if (source.get) {
                 var length = source.length;
-                this.observe(source);
                 var result = [];
                 var len = length.valueOf();
                 for (var i = 0; i < len; i++) {

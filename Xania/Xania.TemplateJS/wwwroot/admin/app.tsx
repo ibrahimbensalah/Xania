@@ -6,23 +6,40 @@ import { ClockApp } from '../sample/clock/app'
 import { TodoApp } from "../sample/layout/todo";
 import DataGrid from "./grid"
 
+declare function fetch<T>(url: string, config?): Promise<T>;
+
 class RemoteObject {
-    constructor(private url: string) {
+    promise: Promise<Object>;
+
+    constructor(private url: string, private expr) {
+        var config = {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(query(expr).ast)
+        };
+
+        this.promise = fetch(url, config).then((response: any) => {
+            return response.json();
+        });
     }
 
     subscribe(observer: Observables.IObserver<any>) {
+        this.promise.then((data: any) => {
+            observer.onNext(data);
+        });
     }
 }
 
 var store = new Re.Store({
     user: "Ibrahim",
-    users: new RemoteObject(''),
+    users: new RemoteObject('http://localhost:9880/api/query/', "users"),
     currentUser: {},
     saveUser() {
         console.log("save user", this.currentUser);
     }
 });
-
 
 
 export function index() {
@@ -35,7 +52,13 @@ export function menu({ driver, html, url }) {
 }
 
 export function invoices() {
-    return new ViewResult(<div>invoices {query("user")}</div>, store);
+    return new ViewResult(
+        <div>
+            invoices {query("user")}
+            <ForEach expr={query("for user in await users")}>
+                <div>{query("user.name")}</div>
+            </ForEach>
+        </div>, store);
 }
 
 export function timesheet() {
