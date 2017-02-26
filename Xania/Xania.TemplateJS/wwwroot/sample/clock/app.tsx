@@ -1,9 +1,8 @@
-﻿import { Observables } from "../../src/observables"
-import { Xania, ForEach, Template, Dom, Reactive as Re, query } from "../../src/xania"
+﻿import { Xania, ForEach, Template, Dom, Reactive as Re, query } from "../../src/xania"
 import './app.css'
 
 export class ClockApp {
-    time = new Observables.Time();
+    time = new Date().getTime();
 
     static secondsAngle(time) {
         var f = 4;
@@ -32,9 +31,9 @@ export class ClockApp {
                         <ForEach expr={query("for p in [ 0..11 ]")}>
                             <line className="major" y1="35" y2="45" transform={["rotate(", query("p * 30"), ")"]} />
                         </ForEach>
-                        <line className="hour" y1="2" y2="-20" transform={["rotate(", query("hoursAngle (await time)"), ")"]} />
-                        <line className="minute" y1="4" y2="-30" transform={["rotate(", query("minutesAngle (await time)"), ")"]} />
-                        <g transform={["rotate(", query("secondsAngle (await time)"), ")"]}>
+                        <line className="hour" y1="2" y2="-20" transform={["rotate(", query("hoursAngle (time)"), ")"]} />
+                        <line className="minute" y1="4" y2="-30" transform={["rotate(", query("minutesAngle (time)"), ")"]} />
+                        <g transform={["rotate(", query("secondsAngle (time)"), ")"]}>
                             <line className="second" y1="10" y2="-38"></line>
                             <line className="second-counterweight" y1="10" y2="2"></line>
                         </g>

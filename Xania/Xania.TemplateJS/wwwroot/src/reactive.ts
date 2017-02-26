@@ -131,7 +131,7 @@ export module Reactive {
                 array = parentValue[name],
                 properties = this.properties,
                 prevLength = this.length,
-                valueLength = array.length;
+                valueLength = array && array.length;
 
             if (array && properties) {
                 var i = properties.length;
@@ -457,6 +457,8 @@ export module Reactive {
             if (source.get) {
                 var length = source.length;
                 var result = [];
+                if (length === void 0)
+                    return result;
                 var len = length.valueOf();
                 for (var i = 0; i < len; i++) {
                     var ext = this.extend(param, source.get(i));
@@ -512,13 +514,17 @@ export module Reactive {
             return value;
         }
 
-        await(observable) {
-            if (!observable.awaited) {
-                observable.awaited = new Awaited(observable.valueOf());
+        await(value) {
+            if (!value.awaited) {
+                var observable = value.valueOf();
+                if (typeof observable.subscribe === "function")
+                    value.awaited = new Awaited(observable);
+                else
+                    return value;
             }
 
-            this.observe(observable.awaited);
-            return observable.awaited;
+            this.observe(value.awaited);
+            return value.awaited;
         }
 
         evaluateText(parts): any {

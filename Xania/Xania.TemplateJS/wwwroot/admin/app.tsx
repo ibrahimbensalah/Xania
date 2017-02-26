@@ -13,9 +13,9 @@ class RemoteObject {
 
     constructor(private url: string, private expr) {
         var config = {
-            method: 'POST',
+            method: "POST",
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': "application/json"
             },
             body: JSON.stringify(query(expr).ast)
         };
@@ -56,7 +56,7 @@ export function invoices() {
         <div>
             invoices {query("user")}
             <ForEach expr={query("for user in await users")}>
-                <div>{query("user.name")}</div>
+                <div>{query("user.name")} {query("user.email")} {query("user.roles")}</div>
             </ForEach>
         </div>, store);
 }
@@ -68,7 +68,7 @@ export function timesheet() {
     };
     return new ViewResult(<div>timesheet {query("await time")}
         <button onClick={toggleTime}>toggle time</button>
-        <ClockApp time={time} />
+        <ClockApp time={query("await time")} />
     </div>, new Re.Store({ time }));
 }
 
@@ -87,7 +87,7 @@ export function users() {
                 <section className="section" style="height: 100%">
                     <div style="padding: 0px 16px 100px 16px; height: 100%;">
                         <header style="height: 50px"><span className="fa fa-adjust"></span> <span>Users</span></header>
-                        <DataGrid activeRecord={query("currentUser")} />
+                        <DataGrid activeRecord={query("currentUser")} data={query("await users")} />
                         <footer style="height: 50px; margin: 0 16px; padding: 0;"><button className="btn btn-primary" data-bind="click: users.create"><span className="glyphicon glyphicon-plus"></span> Add New</button></footer>
                     </div>
                 </section>

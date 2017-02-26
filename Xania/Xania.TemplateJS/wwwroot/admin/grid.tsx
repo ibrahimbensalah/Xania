@@ -8,22 +8,11 @@ export default class DataGrid {
     private activeRecord = null;
 
     constructor() {
-        this.columns.push({ field: "Name" });
-        this.columns.push({ field: "Email" });
-        this.columns.push({ field: "Roles" });
+        this.columns.push({ field: "name" });
+        this.columns.push({ field: "email" });
+        this.columns.push({ field: "roles" });
 
         // EmailConfirmed
-
-        for (var e = 0; e < 100; e++) {
-            this.data.push({
-                idx: e,
-                data: { Id: e, Name: `User ${e}`, Email: `user${e}@xania.nl`, Roles: ["Role 1", "Role 12"], EmailConfirmed: e % 3 === 0 },
-                get(field) {
-                    return this.data[field];
-                },
-                alternate: e % 2 === 0
-            });
-        }
     }
 
     onRowClick = (event, context) => {
@@ -32,6 +21,10 @@ export default class DataGrid {
         this.activeRecord = activeRow.data;
         event.preventDefault();
     };
+
+    cellValue(row, column) {
+        return row[column.field];
+    }
 
     view(xania) {
         return (
@@ -62,7 +55,7 @@ export default class DataGrid {
                                         </td>
                                         <ForEach expr={query("for column in columns")}>
                                             <td role="gridcell" tabindex="-1" className="xn-grid-cell">
-                                                <div className="xn-grid-cell-content"><a href="#">{query("row.get column.field")}</a></div>
+                                                <div className="xn-grid-cell-content"><a href="#">{query("cellValue row column")}</a></div>
                                             </td>
                                         </ForEach>
                                         <td role="gridcell" tabindex="-1" className="xn-grid-cell" style="width: 100%;"></td>

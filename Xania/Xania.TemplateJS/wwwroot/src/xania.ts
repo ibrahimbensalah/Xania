@@ -143,33 +143,23 @@ class ComponentBinding extends Reactive.Binding {
     }
 
     update(context, driver): this {
-        let props = this.props;
-        for (let prop in props) {
-            if (props.hasOwnProperty(prop)) {
-                var expr = props[prop];
-                var sourceValue = expr.execute ? expr.execute(this, context) : expr;
-                this.component[prop] = sourceValue;
-
-                if (sourceValue.set) {
-                    this.componentStore.get(prop).change({
-                        sourceValue: sourceValue,
-                        propertyName: prop,
-                        component: this.component,
-                        sourceContext: context,
-                        execute() {
-                            this.sourceValue.set(this.component[this.propertyName]);
-                            this.sourceContext.refresh();
-                        }
-                    });
-                }
-            }
-        }
         this.binding.update(this.componentStore, driver);
         super.update(context, driver);
         return this;
     }
 
-    render() {
+    render(context) {
+        let props = this.props;
+        for (let prop in props) {
+            if (props.hasOwnProperty(prop)) {
+                var expr = props[prop];
+                var sourceValue = expr.execute ? expr.execute(this, context) : expr;
+                if (sourceValue) {
+                    this.component[prop] = sourceValue.valueOf();
+                }
+            }
+        }
+        this.componentStore.refresh();
     }
 
     dispose() {
