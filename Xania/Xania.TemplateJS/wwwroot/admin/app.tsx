@@ -34,7 +34,7 @@ class RemoteObject {
 
 var store = new Re.Store({
     user: "Ibrahim",
-    users: new RemoteObject('http://localhost:9880/api/query/', "users"),
+    users: new RemoteObject('/api/query/', "users"),
     currentUser: {},
     saveUser() {
         console.log("save user", this.currentUser);
@@ -52,9 +52,48 @@ export function menu({ driver, html, url }) {
 }
 
 export function invoices() {
+    var setProps1 = (obj: {}, symbols: any[]) => {
+        var i = symbols.length;
+        while (i--) {
+            var sym = symbols[i];
+            obj[sym] = i;
+        }
+    };
+    var setProps2 = (obj: {}, symbols: any[]) => {
+        var key = Symbol();
+        var values = [];
+        obj[key] = values;
+        var i = symbols.length;
+        while (i--) {
+            var sym = symbols[i];
+            values.push({sym: i});
+        }
+    };
+
+    function test() {
+        var props = [];
+        var i = 1000;
+        while (i--) {
+            props.push("prop"+ i);
+        }
+
+        var iterations = 100000;
+
+        for (let e = 0; e < iterations; e++) {
+            const o = {};
+            setProps1(o, props);
+        }
+
+        for (let e = 0; e < iterations; e++) {
+            const o = {};
+            setProps2(o, props);
+        }
+    }
+
     return new ViewResult(
         <div>
             invoices {query("user")}
+            <button onClick={test}>test</button>
             <ForEach expr={query("for user in await users")}>
                 <div>{query("user.name")} {query("user.email")} {query("user.roles")}</div>
             </ForEach>

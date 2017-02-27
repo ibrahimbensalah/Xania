@@ -8,14 +8,38 @@ declare var Monitoring;
 
 export function run(target: Node) {
 
-    var store = new Re.Store({ databases: ENV.generateData(true).toArray() });
+    var tracks = {};
+
+    var state = {
+        databases: ENV.generateData().toArray(),
+        trackByIndex(key, stream) {
+            let list: any[];
+            if (key in tracks) {
+                list = tracks[key];
+            } else {
+                tracks[key] = list = [];
+            }
+            for (let i = 0; i < stream.length; i++) {
+                if (i in list) {
+                    var src = stream[i];
+                    var dest = list[i];
+                    dest.db = src.db;
+                } else
+                    list[i] = stream[i];
+            }
+            list.length = stream.length;
+
+            return list;
+        }
+    };
+    var store = new Re.Store(state);
 
     dbmon(Xania)
         .bind(Dom.DomVisitor)
         .update(store, new Dom.DomDriver(target));
 
     var load = () => {
-        ENV.generateData(true);
+        state.databases = ENV.generateData().toArray();
         store.refresh();
 
         Monitoring.renderRate.ping();
@@ -28,7 +52,7 @@ export function run(target: Node) {
 var dbmon: any = (xania) =>
     <table clazz="table table-striped latest-data">
         <tbody>
-        <ForEach expr={query("for db in databases")}>
+        <ForEach expr={query("for db in (trackByIndex 'db' databases)")}>
             <tr>
                 <td className="dbname">
                     {query("db.dbname")}
@@ -38,7 +62,7 @@ var dbmon: any = (xania) =>
                         {query("db.lastSample.nbQueries")}
                     </span>
                 </td>
-                <ForEach expr={query("for q in db.lastSample.topFiveQueries")}>
+                <ForEach expr={query("for q in (trackByIndex 'q' db.lastSample.topFiveQueries)")}>
                     <td className={query("q.elapsedClassName")}>
                         {query("q.formatElapsed")}
                         <div className="popover left">

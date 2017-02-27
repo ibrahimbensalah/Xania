@@ -276,7 +276,7 @@ export module Reactive {
         constructor(private parent?: { get(name: string); refresh(); }) {
         }
 
-        add(name: string, value: Value): this {
+        set(name: string, value: Value): this {
             this[name] = value;
             return this;
         }
@@ -396,7 +396,6 @@ export module Reactive {
         protected context;
         protected driver;
         public length;
-        protected extensions: { key: any, extension: Extension }[];
         public childBindings: Binding[];
 
         execute(): this {
@@ -423,23 +422,15 @@ export module Reactive {
         public abstract render?(context, driver): any;
 
         extend(name: string, value: any) {
-            var key = value;
-            for (var i = 0; this.extensions && i < this.extensions.length; i++) {
-                var x = this.extensions[i];
-                if (x.key === key) {
-                    return x.extension.add(name, value);
-                }
+            var sym = this.symbol;
+
+            var extension = value[sym];
+            if (!extension) {
+                extension = new Extension(this.context)
+                    .set(name, value);
+
+                value[sym] = extension;
             }
-
-            var extension =
-                new Extension(this.context)
-                    .add(name, value);
-
-            if (!this.extensions)
-                this.extensions = [{ key, extension }];
-            else
-                this.extensions.push({ key, extension });
-
             return extension;
         }
 
@@ -451,6 +442,8 @@ export module Reactive {
             return source.map(selector);
         }
 
+        private symbol = Symbol();
+
         query(param, source) {
             this.observe(source);
 
@@ -461,7 +454,8 @@ export module Reactive {
                     return result;
                 var len = length.valueOf();
                 for (var i = 0; i < len; i++) {
-                    var ext = this.extend(param, source.get(i));
+                    var item = source.get(i);
+                    var ext = this.extend(param, item);
                     result.push(ext);
                 }
                 return result;
