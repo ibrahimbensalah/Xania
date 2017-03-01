@@ -76,6 +76,6 @@ export function execute({ driver, html, url }) {
         }
     });
 
-    xania.view(layout(mainView, url))
-        .bind(store(), driver);
+    // xania.view(layout(mainView, url))
+       // .bind(store(), driver);
 }

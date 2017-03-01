@@ -340,11 +340,11 @@ class Range {
 
 export var fsharp = peg.parse;
 
-export default function query(expr) {
+export default function compile(expr) {
     return Expression.compile(peg.parse(expr));
 }
 
-class Scope {
+export class Scope {
     constructor(private visitor: IAstVisitor, private contexts: any[]) {
     }
 

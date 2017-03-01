@@ -5,8 +5,8 @@ export class Animate implements Template.INode {
     constructor(private attrs: { transform?, dispose?}, private children: Template.INode[]) {
     }
 
-    bind(visitor) {
-        const bindings = this.children.map(x => x.bind(visitor));
+    bind() {
+        const bindings = this.children.map(x => x.bind());
         return new AnimateBinding(this.attrs, bindings);
     }
 }

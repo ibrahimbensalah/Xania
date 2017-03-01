@@ -9,40 +9,40 @@ export module Template {
     }
 
     export interface INode {
-        bind?<T>(visitor: IVisitor<T>): T;
+        bind?();
     }
 
-    export class TextTemplate implements INode {
-        constructor(private expr) {
+    export class TextTemplate<T> implements INode {
+        constructor(private expr, private visitor: IVisitor<T>) {
         }
 
-        bind<T>(visitor: IVisitor<T>): T {
-            return visitor.text(this.expr);
+        bind(): T {
+            return this.visitor.text(this.expr);
         }
     }
 
-    export class FragmentTemplate implements INode {
+    export class FragmentTemplate<T> implements INode {
         private children: INode[] = [];
 
-        constructor(private expr) { }
+        constructor(private expr, private visitor: IVisitor<T>) { }
 
         child(child: INode) {
             this.children.push(child);
             return this;
         }
 
-        bind<T>(visitor: IVisitor<T>): T {
-            return visitor.content(this.expr, this.children);
+        bind() {
+            return this.visitor.content(this.expr, this.children);
         }
     }
 
-    export class TagTemplate implements INode {
+    export class TagTemplate<T> implements INode {
         private attributes: { name: string; tpl }[] = [];
         private events = new Map<string, any>();
         // ReSharper disable once InconsistentNaming
         public modelAccessor;
 
-        constructor(public name: string, private ns: string, private _children: INode[] = []) {
+        constructor(public name: string, private ns: string, private _children: INode[] = [], private visitor: IVisitor<T>) {
         }
 
         public children(): INode[] {
@@ -84,9 +84,9 @@ export module Template {
             return this;
         }
 
-        bind<T>(visitor: IVisitor<T>) {
-            const bindings = this._children.map(x => x.bind(visitor));
-            var tagBinding = visitor.tag(this.name, this.ns, this.attributes, bindings);
+        bind() {
+            const bindings = this._children.map(x => x.bind());
+            var tagBinding = this.visitor.tag(this.name, this.ns, this.attributes, bindings);
 
             return tagBinding;
         }

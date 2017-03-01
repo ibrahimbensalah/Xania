@@ -16,8 +16,8 @@ class RemoteObject {
             method: "POST",
             headers: {
                 'Content-Type': "application/json"
-            },
-            body: JSON.stringify(query(expr).ast)
+            }
+            // body: JSON.stringify(query(expr).ast)
         };
 
         this.promise = fetch(url, config).then((response: any) => {
@@ -47,7 +47,7 @@ export function index() {
 }
 
 export function menu({ driver, html, url }) {
-    mainMenu(url).bind<Re.Binding>(Dom.DomVisitor)
+    mainMenu(url).bind()
         .update(new Re.Store({}), driver);
 }
 

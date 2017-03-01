@@ -1,7 +1,6 @@
 ﻿import { Core } from './core'
 import { Reactive as Re } from './reactive'
 import { Template } from './template'
-import query from "./query"
 
 export module Dom {
 
@@ -86,87 +85,6 @@ export module Dom {
         }
     }
 
-    export function parse(node): IView {
-        return {
-            template: parseNode(node),
-            bind(target, store) {
-                return this.template.accept(new DomDriver(target)).update(store);
-            }
-        } as IView;
-    }
-
-
-    /**
-     * TODO obsolete
-     * @param template
-     */
-    export function view(template: Template.INode) {
-        return {
-            bind(store, driver: Re.IDriver) {
-                if (!driver.insert)
-                    throw Error("not a driver");
-                // var parent = new DomBinding(target);
-                return template.bind<Re.Binding>(DomVisitor).update(store, driver);
-            }
-        } as IView;
-    }
-
-    function parseAttr(tagElement: Template.TagTemplate, attr: Attr) {
-        const name = attr.name;
-        const tpl = parseTpl(attr.value);
-        tagElement.attr(name, tpl || attr.value);
-
-        // conventions
-        if (!!tagElement.name.match(/^input$/i) && !!attr.name.match(/^name$/i) && tagElement.getAttribute("value") != undefined) {
-            const valueAccessor = parseTpl(attr.value);
-            tagElement.attr("value", valueAccessor);
-        }
-    }
-
-    function parseNode(node: Node): Template.INode {
-        var i: number;
-        if (node.nodeType === 1 && node.nodeName === "TEMPLATE") {
-            const content = <HTMLElement>node["content"];
-            var template = new Template.FragmentTemplate(null);
-            for (i = 0; i < content.childNodes.length; i++) {
-                var tpl = parseNode(content.childNodes[i]);
-                if (tpl)
-                    template.child(tpl);
-            }
-            return template;
-        } else if (node.nodeType === 1) {
-            const elt = <HTMLElement>node;
-
-            const template = new Template.TagTemplate(elt.tagName, elt.namespaceURI);
-            var fragmentTemplate = null;
-
-            for (i = 0; !!elt.attributes && i < elt.attributes.length; i++) {
-                var attribute = elt.attributes[i];
-                if (attribute.name === "data-repeat") {
-                    fragmentTemplate = new Template.FragmentTemplate(parseTpl(attribute.value)).child(template);
-                } else {
-                    parseAttr(template, attribute);
-                }
-            }
-
-            for (var e = 0; e < elt.childNodes.length; e++) {
-                var child = parseNode(elt.childNodes[e]);
-                if (child)
-                    template.addChild(child);
-            }
-
-            return fragmentTemplate || template;
-        } else if (node.nodeType === 3) {
-            var textContent = node.textContent;
-            if (textContent.trim().length > 0) {
-                const tpl = parseTpl(textContent);
-                return new Template.TextTemplate(tpl || node.textContent);
-            }
-        }
-
-        return undefined;
-    }
-
     export class FragmentBinding extends Re.Binding implements IDomBinding {
         public fragments: Fragment[] = [];
         private stream;
@@ -239,7 +157,7 @@ export module Dom {
 
             var fr: Fragment, streamlength = stream.length;
             for (var i = 0; i < streamlength; i++) {
-                var item = stream[i];
+                var item = stream.get ? stream.get(i) : stream[i];
 
                 var fragment: Fragment = null, fraglength = this.fragments.length;
                 for (let e = i; e < fraglength; e++) {
@@ -279,14 +197,14 @@ export module Dom {
         }
     }
 
-    class Fragment {
+    export class Fragment {
         public childBindings: any[] = [];
         public context;
 
         constructor(private owner: FragmentBinding) {
             for (var e = 0; e < this.owner.children.length; e++) {
                 this.childBindings[e] =
-                    owner.children[e].bind<Re.Binding>(DomVisitor);
+                    owner.children[e].bind();
             }
         }
 
@@ -671,47 +589,6 @@ export module Dom {
                     tag[attrName] = newValue;
             }
         }
-    }
-
-    export function parseTpl(text) {
-        var parts: any[] = [];
-
-        var appendText = (x) => {
-            var s = x.trim();
-            if (s.length > 0) {
-                parts.push(x);
-            }
-        };
-
-        var offset = 0, textlength = text.length;
-        while (offset < textlength) {
-            var begin = text.indexOf("{{", offset);
-            if (begin >= 0) {
-                if (begin > offset)
-                    appendText(text.substring(offset, begin));
-
-                offset = begin + 2;
-                const end = text.indexOf("}}", offset);
-                if (end >= 0) {
-                    parts.push(query(text.substring(offset, end)));
-                    offset = end + 2;
-                } else {
-                    throw new SyntaxError("Expected '}}' but not found starting from index: " + offset);
-                }
-            } else {
-                appendText(text.substring(offset));
-                break;
-            }
-        }
-
-        if (parts.length === 0)
-            return null;
-
-        if (parts.length === 1) {
-            return parts[0];
-        }
-
-        return parts;
     }
 }
 

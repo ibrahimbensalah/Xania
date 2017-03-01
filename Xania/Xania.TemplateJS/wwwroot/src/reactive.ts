@@ -393,7 +393,7 @@ export module Reactive {
     }
 
     export abstract class Binding {
-        protected context;
+        public context;
         protected driver;
         public length;
         public childBindings: Binding[];
@@ -422,16 +422,8 @@ export module Reactive {
         public abstract render?(context, driver): any;
 
         extend(name: string, value: any) {
-            var sym = this.symbol;
-
-            var extension = value[sym];
-            if (!extension) {
-                extension = new Extension(this.context)
-                    .set(name, value);
-
-                value[sym] = extension;
-            }
-            return extension;
+            return new Extension(this.context)
+                .set(name, value);
         }
 
         where(source, predicate) {
@@ -441,8 +433,6 @@ export module Reactive {
         select(source, selector) {
             return source.map(selector);
         }
-
-        private symbol = Symbol();
 
         query(param, source) {
             this.observe(source);
@@ -454,8 +444,7 @@ export module Reactive {
                     return result;
                 var len = length.valueOf();
                 for (var i = 0; i < len; i++) {
-                    var item = source.get(i);
-                    var ext = this.extend(param, item);
+                    var ext = this.extend(param, source.get(i));
                     result.push(ext);
                 }
                 return result;

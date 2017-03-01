@@ -1,7 +1,7 @@
 ﻿/// <reference path="../../node_modules/@types/jasmine/index.d.ts" />
 
 import { Template } from "../src/template";
-import query from "../src/query";
+import compile from "../src/compile";
 import { Dom } from "../src/dom";
 import { Reactive as Re } from '../src/reactive';
 import { Observables } from '../src/observables';
@@ -51,7 +51,7 @@ describe("templating",
         it("text binding",
             () => {
                 var store = new Re.Store({ p: ibrahim });
-                var binding = new Dom.TextBinding(query("p.firstName")).update(store, null);
+                var binding = new Dom.TextBinding(compile("p.firstName")).update(store, null);
 
                 store.get("p").get("firstName").set("bla");
 
@@ -63,11 +63,11 @@ describe("templating",
             () => {
                 var store = new Re.Store({ people: [ibrahim, ramy] });
                 var fragment = new RootDom();
-                var binding = new Dom.FragmentBinding(query("for p in people"),
+                var binding = new Dom.FragmentBinding(compile("for p in people"),
                     [
-                        new Template.TextTemplate(query("p.firstName + ' ' + p.lastName")),
-                        new Template.FragmentTemplate(query("for r in p.roles"))
-                            .child(new Template.TextTemplate(query("':: ' + r")))
+                        //new Template.TextTemplate(compile("p.firstName + ' ' + p.lastName")),
+                        //new Template.FragmentTemplate(compile("for r in p.roles"))
+                        //    .child(new Template.TextTemplate(compile("':: ' + r")))
                     ])
                     .update(store, fragment);
 
@@ -83,8 +83,8 @@ describe("templating",
         it("tag class binding",
             () => {
                 var binding = new Dom.TagBinding("div")
-                    .attr("class", query("p.firstName"))
-                    .attr("class.adult-person", query("p.adult"));
+                    .attr("class", compile("p.firstName"))
+                    .attr("class.adult-person", compile("p.adult"));
 
                 binding.update(new Re.Store({ p: ibrahim }), null);
                 expect(binding.tagNode.className).toBe("Ibrahim adult-person");
@@ -96,7 +96,7 @@ describe("templating",
         it("tag attribute binding",
             () => {
                 var binding = new Dom.TagBinding("div")
-                    .attr("id", query('p.age'));
+                    .attr("id", compile('p.age'));
 
                 binding.update(new Re.Store({ p: ibrahim }), null);
                 expect(binding.tagNode.id).toBe('36');
@@ -109,8 +109,8 @@ describe("templating",
             () => {
                 var store = new Re.Store({ p: ibrahim });
                 var div = new Dom.TagBinding("div")
-                    .child(new Dom.TextBinding(query("p.firstName")))
-                    .attr("data-age", query("p.age"));
+                    .child(new Dom.TextBinding(compile("p.firstName")))
+                    .attr("data-age", compile("p.age"));
                 div.update(store, null);
 
                 expect(div.tagNode.childNodes.length).toBe(1);
@@ -133,7 +133,7 @@ describe("templating",
                     }
                 });
                 var button = new Dom.TagBinding("button")
-                    .attr("onclick", query("p.sayHello"))
+                    .attr("onclick", compile("p.sayHello"))
                     .update(store, null);
 
                 button.trigger('click');
@@ -145,7 +145,7 @@ describe("templating",
             () => {
                 var stream = new Observables.Observable<number>();
 
-                var binding = new Dom.TextBinding(query("await stream"))
+                var binding = new Dom.TextBinding(compile("await stream"))
                     .update(new Re.Store({ stream }), null);
                 expect(binding.textNode.textContent).toBe("");
 

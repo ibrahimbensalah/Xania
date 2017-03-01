@@ -8,5 +8,5 @@ export function view(xania): Template.INode {
 
 export function bind(context, parent) {
     var vw: Template.INode = view(Xania);
-    return vw.bind<Re.Binding>(Dom.DomVisitor).update(context, parent);
+    return vw.bind().update(context, parent);
 }

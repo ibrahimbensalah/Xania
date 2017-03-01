@@ -1,7 +1,7 @@
 ﻿/// <reference path="../../node_modules/@types/jasmine/index.d.ts" />
 
 import { Reactive as Re } from "../src/reactive";
-import query, { TOKENS } from "../src/query";
+import compile, { TOKENS } from "../src/compile";
 import { Observables } from "../src/observables";
 
 interface IPerson { firstName: string; lastName: string; adult: boolean, age: number }
@@ -17,7 +17,7 @@ describe("query parser", () => {
 
     it(':: fun x -> x ',
         () => {
-            var ast = query("fun x -> x").ast;
+            var ast = compile("fun x -> x").ast;
             expect(ast).toBeDefined();
 
             var compose = ast;
@@ -28,7 +28,7 @@ describe("query parser", () => {
 
     it(':: .firstName ',
         () => {
-            var ast = query(".firstName").ast;
+            var ast = compile(".firstName").ast;
             expect(ast).toBeDefined();
 
             var compose = ast;
@@ -40,7 +40,7 @@ describe("query parser", () => {
 
     it(':: 1 + 2',
         () => {
-            var ast = query("1 + 2").ast;
+            var ast = compile("1 + 2").ast;
             expect(ast).toBeDefined();
 
             var expr = ast;
@@ -49,7 +49,7 @@ describe("query parser", () => {
 
     it(':: fn a',
         () => {
-            var ast = query("fun a").ast;
+            var ast = compile("fun a").ast;
             expect(ast).toBeDefined();
 
             var expr = ast;
@@ -60,7 +60,7 @@ describe("query parser", () => {
 
     it(':: fn ()',
         () => {
-            var ast = query("fun ()").ast;
+            var ast = compile("fun ()").ast;
             expect(ast).toBeDefined();
 
             var expr = ast;
@@ -71,7 +71,7 @@ describe("query parser", () => {
 
     it(':: (+) a b',
         () => {
-            var ast = query("(+) a b").ast;
+            var ast = compile("(+) a b").ast;
             expect(ast).toBeDefined();
 
             var expr = ast;
@@ -80,7 +80,7 @@ describe("query parser", () => {
 
     it(':: a |> b |> c',
         () => {
-            var ast = query("a |> b |> c").ast;
+            var ast = compile("a |> b |> c").ast;
             expect(ast).toBeDefined();
 
             var pipe1 = ast;
@@ -97,7 +97,7 @@ describe("query parser", () => {
 
     it(':: a + b |> c',
         () => {
-            var ast = query("a + b |> c").ast;
+            var ast = compile("a + b |> c").ast;
             expect(ast).toBeDefined();
 
             var pipe = ast;
@@ -114,7 +114,7 @@ describe("query parser", () => {
 
     it(':: a >> b ',
         () => {
-            var ast = query("a >> b").ast;
+            var ast = compile("a >> b").ast;
             expect(ast).toBeDefined();
 
             var compose = ast;
@@ -126,7 +126,7 @@ describe("query parser", () => {
 
     it(':: a.b ',
         () => {
-            var ast = query("a.b").ast;
+            var ast = compile("a.b").ast;
             expect(ast).toBeDefined();
 
             var compose = ast;
@@ -137,7 +137,7 @@ describe("query parser", () => {
 
     it(':: [1..n] ',
         () => {
-            var ast = query("[1..n]").ast;
+            var ast = compile("[1..n]").ast;
             expect(ast).toBeDefined();
 
             var range = ast;
@@ -148,7 +148,7 @@ describe("query parser", () => {
 
     it(':: for p in people where p.adult ',
         () => {
-            var ast = query("for p in people where p.adult").ast;
+            var ast = compile("for p in people where p.adult").ast;
             expect(ast).toBeDefined();
 
             var where = ast;
@@ -160,7 +160,7 @@ describe("query parser", () => {
 
     it(":: empty list -> 'list is empty' ",
         () => {
-            var rule = query("empty list -> 'list is empty'").ast;
+            var rule = compile("empty list -> 'list is empty'").ast;
             expect(rule).toBeDefined();
 
             expect(rule.type).toBe(TOKENS.BINARY);
@@ -174,9 +174,9 @@ describe("query parser", () => {
 
             var start = new Date().getTime();
 
-            var ast = query("a |> b.c >> (+) 1 |> d");
+            var ast = compile("a |> b.c >> (+) 1 |> d");
             for (var i = 0; i < 1000; i++) {
-                query("a |> b >> (+) 1 |> d");
+                compile("a |> b >> (+) 1 |> d");
             }
             var elapsed = new Date().getTime() - start;
 
@@ -256,7 +256,7 @@ describe("runtime", () => {
     it("expression dependencies",
         () => {
             var store = new Re.Store({ p: ibrahim });
-            var binding = new TestBinding(query("p.firstName"));
+            var binding = new TestBinding(compile("p.firstName"));
             binding.render(store);
 
             expect(binding.value).toBe("Ibrahim");
@@ -274,27 +274,27 @@ describe("runtime", () => {
         () => {
             var store = new Re.Store({ p: ibrahim });
 
-            var binding = new TestBinding(query("p"));
+            var binding = new TestBinding(compile("p"));
 
             expect(binding.render(store)).toBe(binding.render(store));
         });
 
     it("consistent member identity", () => {
         var store = new Re.Store({ xania: { owner: ibrahim } });
-        var binding = new TestBinding(query("xania.owner"));
+        var binding = new TestBinding(compile("xania.owner"));
         expect(binding.render(store)).toBe(binding.render(store));
     });
 
     it("consistent query identity", () => {
         var store = new Re.Store({ xania: { employees: [ibrahim] } });
-        var binding = new TestBinding(query("for e in xania.employees"));
+        var binding = new TestBinding(compile("for e in xania.employees"));
         expect(binding.render(store)[0]).toBe(binding.render(store)[0], "not identical");
     });
 
     it("assign expression",
         () => {
             var store = new Re.Store({ x: 1, y: 2, sum: 0 });
-            var binding = new TestBinding(query("sum <- x + y"));
+            var binding = new TestBinding(compile("sum <- x + y"));
             binding.render(store);
             expect(store.get("sum").valueOf()).toBe(3);
         });
@@ -303,7 +303,7 @@ describe("runtime", () => {
         () => {
             var observable = new Observables.Observable(123);
             var store = new Re.Store({ observable });
-            var binding = new TestBinding(query("await observable"));
+            var binding = new TestBinding(compile("await observable"));
 
             binding.render(store);
             expect(binding.value).toBe(123);
