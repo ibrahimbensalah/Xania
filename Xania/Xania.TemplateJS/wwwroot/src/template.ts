@@ -4,7 +4,6 @@ export module Template {
 
     export interface IVisitor<T> {
         text(expr): T;
-        content(expr, children: INode[]): T;
         tag(name, ns, attrs, children): T;
     }
 
@@ -18,21 +17,6 @@ export module Template {
 
         bind(): T {
             return this.visitor.text(this.expr);
-        }
-    }
-
-    export class FragmentTemplate<T> implements INode {
-        private children: INode[] = [];
-
-        constructor(private expr, private visitor: IVisitor<T>) { }
-
-        child(child: INode) {
-            this.children.push(child);
-            return this;
-        }
-
-        bind() {
-            return this.visitor.content(this.expr, this.children);
         }
     }
 

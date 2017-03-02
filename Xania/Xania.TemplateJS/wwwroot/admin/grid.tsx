@@ -1,4 +1,4 @@
-﻿import { ForEach, query } from "../src/xania"
+﻿import { Repeat, expr } from "../src/xania"
 import './grid.css'
 
 export default class DataGrid {
@@ -31,11 +31,11 @@ export default class DataGrid {
             <div id="users" data-modelid="Id" className="xn-grid" role="grid" data-itemheight="31">
                 <div className="xn-border-box xn-grid-header" style="z-index: 100">
                     <div role="rowheader" className="xn-grid-row-header xn-grid-header-cell">&nbsp;</div>
-                    <ForEach expr={query("for column in columns")}>
+                    <Repeat source={expr("for column in columns")}>
                         <div data-idx="UserName" role="gridcell" className="xn-grid-header-cell">
-                            <div className="xn-grid-cell-content"><a data-bind="click: sort.bind($data, 'UserName')">{query("column.field")}</a></div>
+                            <div className="xn-grid-cell-content"><a data-bind="click: sort.bind($data, 'UserName')">{expr("column.field")}</a></div>
                         </div>
-                    </ForEach>
+                    </Repeat>
                     <div className="xn-grid-header-cell" style="width: 100%; min-width: 100px">&nbsp;</div>
                 </div>
 
@@ -43,24 +43,24 @@ export default class DataGrid {
                     <div className="xn-content" style="padding-top: 0px; ">
                         <table style="width: 100%;">
                             <tbody data-bind="foreach: view">
-                                <ForEach expr={query("for row in data")}>
+                                <Repeat source={expr("for row in data")}>
                                     <tr role="listitem"
                                         onClick={this.onRowClick}
-                                        className={["xn-list-item", query("row = activeRow -> ' xn-grid-row-activated'"),
-                                                query("row.alternate -> ' xn-grid-row-alternate'"), query("row.updated -> ' xn-grid-row-updated'")]}>
+                                        className={["xn-list-item", expr("row = activeRow -> ' xn-grid-row-activated'"),
+                                            expr("row.alternate -> ' xn-grid-row-alternate'"), expr("row.updated -> ' xn-grid-row-updated'")]}>
                                         <td>
                                             <div className="xn-grid-row-header">
-                                                <span className={["fa", query("row = activeRow -> ' fa-edit'")]}></span>
+                                                <span className={["fa", expr("row = activeRow -> ' fa-edit'")]}></span>
                                             </div>
                                         </td>
-                                        <ForEach expr={query("for column in columns")}>
+                                        <Repeat source={expr("for column in columns")}>
                                             <td role="gridcell" tabindex="-1" className="xn-grid-cell">
-                                                <div className="xn-grid-cell-content"><a href="#">{query("cellValue row column")}</a></div>
+                                                <div className="xn-grid-cell-content"><a href="#">{expr("cellValue row column")}</a></div>
                                             </td>
-                                        </ForEach>
+                                        </Repeat>
                                         <td role="gridcell" tabindex="-1" className="xn-grid-cell" style="width: 100%;"></td>
                                     </tr>
-                                </ForEach>
+                                </Repeat>
                             </tbody>
                         </table>
                     </div>
@@ -69,5 +69,3 @@ export default class DataGrid {
         );
     }
 }
-
-export function bla() { }

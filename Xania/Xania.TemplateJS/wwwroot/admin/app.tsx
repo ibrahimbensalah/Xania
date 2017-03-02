@@ -1,36 +1,10 @@
-﻿import { Xania as xania, ForEach, query, View, Dom, Reactive as Re, Template } from "../src/xania"
+﻿import { Xania as xania, Repeat, expr, Dom, RemoteObject, Reactive as Re, Template } from "../src/xania"
 import { UrlHelper, ViewResult } from "../src/mvc"
 import './admin.css'
 import { Observables } from "../src/observables";
 import { ClockApp } from '../sample/clock/app'
 import { TodoApp } from "../sample/layout/todo";
 import DataGrid from "./grid"
-
-declare function fetch<T>(url: string, config?): Promise<T>;
-
-class RemoteObject {
-    promise: Promise<Object>;
-
-    constructor(private url: string, private expr) {
-        var config = {
-            method: "POST",
-            headers: {
-                'Content-Type': "application/json"
-            }
-            // body: JSON.stringify(query(expr).ast)
-        };
-
-        this.promise = fetch(url, config).then((response: any) => {
-            return response.json();
-        });
-    }
-
-    subscribe(observer: Observables.IObserver<any>) {
-        this.promise.then((data: any) => {
-            observer.onNext(data);
-        });
-    }
-}
 
 var store = new Re.Store({
     user: "Ibrahim",
@@ -92,11 +66,11 @@ export function invoices() {
 
     return new ViewResult(
         <div>
-            invoices {query("user")}
+            invoices {expr("user")}
             <button onClick={test}>test</button>
-            <ForEach expr={query("for user in await users")}>
-                <div>{query("user.name")} {query("user.email")} {query("user.roles")}</div>
-            </ForEach>
+            <Repeat source={expr("await users")}>
+                <div>{expr("name")} {expr("email")} {expr("roles")}</div>
+            </Repeat>
         </div>, store);
 }
 
@@ -105,9 +79,9 @@ export function timesheet() {
     var toggleTime = () => {
         time.toggle();
     };
-    return new ViewResult(<div>timesheet {query("await time")}
+    return new ViewResult(<div>timesheet {expr("await time")}
         <button onClick={toggleTime}>toggle time</button>
-        <ClockApp time={query("await time")} />
+        <ClockApp time={expr("await time")} />
     </div>, new Re.Store({ time }));
 }
 
@@ -122,11 +96,11 @@ export function users() {
     }
     return new ViewResult(
         <div style="height: 95%;" className="row">
-            <div className={[query("currentUser -> 'col-8'"), query("not currentUser -> 'col-12'")]}>
+            <div className={[expr("currentUser -> 'col-8'"), expr("not currentUser -> 'col-12'")]}>
                 <section className="section" style="height: 100%">
                     <div style="padding: 0px 16px 100px 16px; height: 100%;">
                         <header style="height: 50px"><span className="fa fa-adjust"></span> <span>Users</span></header>
-                        <DataGrid activeRecord={query("currentUser")} data={query("await users")} />
+                        <DataGrid activeRecord={expr("currentUser")} data={expr("await users")} />
                         <footer style="height: 50px; margin: 0 16px; padding: 0;"><button className="btn btn-primary" data-bind="click: users.create"><span className="glyphicon glyphicon-plus"></span> Add New</button></footer>
                     </div>
                 </section>
@@ -139,7 +113,7 @@ export function users() {
                     <div style="padding: 0px 16px 100px 16px; height: 100%;">
                         <header style="height: 50px">
                             <span className="fa fa-adjust"></span>
-                            <span>{query("currentUser.Name")}</span>
+                            <span>{expr("currentUser.Name")}</span>
                         </header>
                         <div className="col-lg-12 col-md-3"><label className="control-label" for="UserName">User name</label><div>
                             <input className="form-control" type="text" placeholder="User name" name="currentUser.Name" />
@@ -149,10 +123,10 @@ export function users() {
                             <div><input id="Email" className="form-control" type="text" placeholder="Email" name="currentUser.Email" /></div>
                         </div>
                         <div className="col-lg-12 col-md-3"><div>
-                            <input type="checkbox" checked={query("currentUser.EmailConfirmed")} /> <label className="control-label" for="EmailConfirmed">Email confirmed</label>
+                            <input type="checkbox" checked={expr("currentUser.EmailConfirmed")} /> <label className="control-label" for="EmailConfirmed">Email confirmed</label>
                         </div></div>
                         <div className="col-lg-12 col-md-3">
-                            <button className="btn btn-primary" onClick={query("saveUser ()")}>
+                            <button className="btn btn-primary" onClick={expr("saveUser ()")}>
                                 <span className="fa fa-save"></span> Save</button>
                         </div>
                     </div>

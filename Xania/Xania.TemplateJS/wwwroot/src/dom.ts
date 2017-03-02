@@ -31,9 +31,6 @@ export module Dom {
         static text(expr): TextBinding {
             return new TextBinding(expr);
         }
-        static content(expr, children: Template.INode[]): FragmentBinding {
-            return new FragmentBinding(expr, children);
-        }
         static tag(tagName: string, ns: string, attrs, children): TagBinding {
             var tag = new TagBinding(tagName, ns, children), length = attrs.length;
             for (var i = 0; i < length; i++) {
@@ -85,164 +82,6 @@ export module Dom {
         }
     }
 
-    export class FragmentBinding extends Re.Binding implements IDomBinding {
-        public fragments: Fragment[] = [];
-        private stream;
-
-        get length() {
-            var total = 0, length = this.fragments.length;
-            for (var i = 0; i < length; i++) {
-                total += this.fragments[i].length;
-            }
-            return total;
-        }
-
-        constructor(private ast, public children: Template.INode[]) {
-            super();
-            for (var child of children) {
-                if (!child.bind)
-                    throw Error("child is not a node");
-            }
-        }
-
-        notify() {
-            var stream, context = this.context;
-            if (!!this.ast && !!this.ast.execute) {
-                stream = this.ast.execute(this, context);
-                if (stream.length === void 0)
-                    if (stream.value === null) {
-                        stream = [];
-                    } else {
-                        stream = [stream];
-                    }
-            } else {
-                stream = [context];
-            }
-            this.stream = stream;
-
-            var i = 0;
-            while (i < this.fragments.length) {
-                var frag = this.fragments[i];
-                if (stream.indexOf(frag.context) < 0) {
-                    frag.dispose();
-                    this.fragments.splice(i, 1);
-                } else {
-                    i++;
-                }
-            }
-        }
-
-        dispose() {
-            for (var i = 0; i < this.fragments.length; i++) {
-                this.fragments[i].dispose();
-            }
-        }
-
-        private static swap(arr: Fragment[], srcIndex, tarIndex) {
-            if (srcIndex > tarIndex) {
-                var i = srcIndex;
-                srcIndex = tarIndex;
-                tarIndex = i;
-            }
-            if (srcIndex < tarIndex) {
-                var src = arr[srcIndex];
-                arr[srcIndex] = arr[tarIndex];
-                arr[tarIndex] = src;
-            }
-        }
-
-        render(context, driver: IDOMDriver) {
-            this.notify();
-            var stream = this.stream;
-
-            var fr: Fragment, streamlength = stream.length;
-            for (var i = 0; i < streamlength; i++) {
-                var item = stream.get ? stream.get(i) : stream[i];
-
-                var fragment: Fragment = null, fraglength = this.fragments.length;
-                for (let e = i; e < fraglength; e++) {
-                    fr = this.fragments[e];
-                    if (fr.context === item) {
-                        fragment = fr;
-                        FragmentBinding.swap(this.fragments, e, i);
-                        break;
-                    }
-                }
-
-                if (fragment === null /* not found */) {
-                    fragment = new Fragment(this);
-                    this.fragments.push(fragment);
-                    FragmentBinding.swap(this.fragments, fraglength, i);
-                }
-
-                fragment.update(item);
-            }
-
-            while (this.fragments.length > stream.length) {
-                var frag = this.fragments.pop();
-                frag.dispose();
-            }
-        }
-
-        insert(fragment: Fragment, dom, idx) {
-            if (this.driver) {
-                var offset = 0;
-                for (var i = 0; i < this.fragments.length; i++) {
-                    if (this.fragments[i] === fragment)
-                        break;
-                    offset += this.fragments[i].length;
-                }
-                this.driver.insert(this, dom, offset + idx);
-            }
-        }
-    }
-
-    export class Fragment {
-        public childBindings: any[] = [];
-        public context;
-
-        constructor(private owner: FragmentBinding) {
-            for (var e = 0; e < this.owner.children.length; e++) {
-                this.childBindings[e] =
-                    owner.children[e].bind();
-            }
-        }
-
-        dispose() {
-            for (var j = 0; j < this.childBindings.length; j++) {
-                var b = this.childBindings[j];
-                b.dispose();
-            }
-        }
-
-        get length() {
-            var total = 0;
-            for (var j = 0; j < this.childBindings.length; j++) {
-                total += this.childBindings[j].length;
-            }
-            return total;
-        }
-
-        update(context) {
-            this.context = context;
-            var length = this.owner.children.length;
-            for (var e = 0; e < length; e++) {
-                this.childBindings[e].update(context, this);
-            }
-            return this;
-        }
-
-        insert(binding: IDomBinding, dom, index) {
-            var offset = 0, length = this.childBindings.length;
-            for (var i = 0; i < length; i++) {
-                if (this.childBindings[i] === binding)
-                    break;
-                offset += this.childBindings[i].length;
-            }
-            this.owner.insert(this, dom, offset + index);
-        }
-    }
-
     interface IDOMDriver {
         insert(sender: IDomBinding, dom, idx);
     }
@@ -280,6 +119,7 @@ export module Dom {
 
         constructor(private tagName: string, private ns: string = null, childBindings?: Re.Binding[]) {
             super();
+
             this.childBindings = childBindings;
             if (ns === null)
                 this.tagNode = document.createElement(tagName);

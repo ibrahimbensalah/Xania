@@ -338,10 +338,12 @@ class Range {
     }
 }
 
-export var fsharp = peg.parse;
-
 export default function compile(expr) {
     return Expression.compile(peg.parse(expr));
+}
+
+export function parse(expr) {
+    return peg.parse(expr);
 }
 
 export class Scope {

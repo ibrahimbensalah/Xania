@@ -1,6 +1,6 @@
 ﻿import { Template } from "./template"
 import { Dom } from "./dom"
-import compile, { Scope } from "./compile"
+import compile, { Scope, parse } from "./compile"
 import { Reactive } from "./reactive"
 
 export class Xania {
@@ -74,9 +74,6 @@ export class Xania {
                     throw new Error("Failed to load view");
                 return view;
             }
-        } else if (typeof element.render === "function") {
-            var tpl = element.render();
-            return View.partial(tpl, new Reactive.Store(element));
         } else {
             throw Error("tag unresolved");
         }
@@ -87,48 +84,15 @@ export class Xania {
             .bind()
             .update(new Reactive.Store({}), driver);
     }
-    static partial(view, model) {
-        return {
-            bind() {
-                var binding = new PartialBinding(view, model);
-                if (view.subscribe) view.subscribe(binding);
-                if (model.subscribe) model.subscribe(binding);
-                return binding;
-            }
-        }
-    }
-}
-
-export function ForEach(attr, children) {
-    var tpl = new Template.FragmentTemplate<Reactive.Binding>(attr.expr || null, Dom.DomVisitor);
-
-    for (var i = 0; i < children.length; i++) {
-        tpl.child(children[i]);
-    }
-
-    return tpl;
-}
-
-export module View {
-    export function partial(view, model) {
-        return {
-            bind() {
-                var binding = new PartialBinding(view, model);
-                if (view.subscribe) view.subscribe(binding);
-                if (model.subscribe) model.subscribe(binding);
-                return binding;
-            }
-        }
-    }
 }
 
 class ComponentBinding extends Reactive.Binding {
-    private binding: Dom.FragmentBinding;
+    private binding: FragmentBinding;
     private componentStore = new Reactive.Store(this.component);
 
     constructor(private component, private props) {
         super();
-        this.binding = new Dom.FragmentBinding(null, [component.view(Xania)]);
+        this.binding = new FragmentBinding([component.view(Xania)]);
     }
 
     bind(): this {
@@ -161,63 +125,56 @@ class ComponentBinding extends Reactive.Binding {
 
 }
 
-class PartialBinding extends Reactive.Binding {
-    private binding;
-    private cache = [];
-    constructor(private view, private model) {
-        super();
-    }
+//class PartialBinding extends Reactive.Binding {
+//    private binding;
+//    private cache = [];
+//    constructor(private view, private model) {
+//        super();
+//    }
 
-    render(context, parent) {
-        var view = this.evaluateObject(this.view).valueOf();
+//    render(context, parent) {
+//        var view = this.evaluateObject(this.view).valueOf();
 
-        if (!view)
-            throw new Error("view is empty");
+//        if (!view)
+//            throw new Error("view is empty");
 
-        if (this.binding) {
-            this.binding.dispose();
-        }
+//        if (this.binding) {
+//            this.binding.dispose();
+//        }
 
-        var newBinding = new Dom.FragmentBinding(this.model, [view]);
+//        var newBinding = new Dom.FragmentBinding(this.model, [view]);
 
-        this.binding = newBinding;
-        this.binding.update(context, parent);
-    }
+//        this.binding = newBinding;
+//        this.binding.update(context, parent);
+//    }
 
-    onNext(_) {
-        this.execute();
-    }
-}
+//    onNext(_) {
+//        this.execute();
+//    }
+//}
 
 export { Reactive, Template, Dom }
 
 
-class Query {
-    constructor(private expr) { }
+export class Repeat {
+    private template: MapTemplate<Reactive.Binding>;
 
-    map(tpl) {
-        return new MapTemplate<Reactive.Binding>(this.expr, Dom.DomVisitor)
-            .child(tpl);
+    constructor(attrs, children) {
+        this.template =
+            new MapTemplate<Reactive.Binding>(attrs.source, children, Dom.DomVisitor);
     }
 
     bind() {
-        return this.expr;
+        return this.template.bind();
     }
 }
 
-export function query(expr: string) {
-    return new Query(compile(expr));
+export function expr(code: string) {
+    return compile(code);
 }
-
-export function text(expr: string) {
-    return compile(expr);
-}
-
 
 export class MapTemplate<T> implements Template.INode {
-    private children: Template.INode[] = [];
-
-    constructor(private expr, private visitor: Template.IVisitor<T>) { }
+    constructor(private expr, private children: Template.INode[], private visitor: Template.IVisitor<T>) { }
 
     child(child: Template.INode) {
         this.children.push(child);
@@ -341,12 +298,56 @@ class MapBinding extends Reactive.Binding {
     }
 }
 
+class FragmentBinding extends Reactive.Binding {
+    public fragment: Fragment;
+    private stream;
+
+    get length() {
+        return this.fragment.length;
+    }
+
+    constructor(public children: Template.INode[]) {
+        super();
+        for (var child of children) {
+            if (!child.bind)
+                throw Error("child is not a node");
+        }
+        this.fragment = new Fragment(this);
+    }
+
+    dispose() {
+        this.fragment.dispose();
+    }
+
+    private static swap(arr: Fragment[], srcIndex, tarIndex) {
+        if (srcIndex > tarIndex) {
+            var i = srcIndex;
+            srcIndex = tarIndex;
+            tarIndex = i;
+        }
+        if (srcIndex < tarIndex) {
+            var src = arr[srcIndex];
+            arr[srcIndex] = arr[tarIndex];
+            arr[tarIndex] = src;
+        }
+    }
+
+    render(context, driver) {
+        this.fragment.update(context);
+    }
+
+    insert(fragment: Fragment, dom, idx) {
+        if (this.driver) {
+            this.driver.insert(this, dom, idx);
+        }
+    }
+}
 
 export class Fragment {
     public childBindings: any[] = [];
     public context;
 
-    constructor(private owner: MapBinding) {
+    constructor(private owner: { children; context; insert }) {
         for (var e = 0; e < this.owner.children.length; e++) {
             this.childBindings[e] =
                 owner.children[e].bind();
@@ -354,11 +355,16 @@ export class Fragment {
     }
 
     get(name: string) {
-        var value = this.context.get(name);
-            if (value !== void 0)
-                return value;
+        var context = this.context;
+        var value = context.get ? context.get(name) : context[name];
+        if (value !== void 0)
+            return value;
 
-            return this.owner.context.get(name);
+        return this.owner.context.get(name);
+    }
+
+    refresh() {
+        this.context.refresh();
     }
 
     dispose() {
@@ -393,6 +399,31 @@ export class Fragment {
             offset += this.childBindings[i].length;
         }
         this.owner.insert(this, dom, offset + index);
+    }
+}
+
+declare function fetch<T>(url: string, config?): Promise<T>;
+export class RemoteObject {
+    promise: Promise<Object>;
+
+    constructor(private url: string, private expr) {
+        var config = {
+            method: "POST",
+            headers: {
+                'Content-Type': "application/json"
+            },
+            body: JSON.stringify(parse(expr))
+        };
+
+        this.promise = fetch(url, config).then((response: any) => {
+            return response.json();
+        });
+    }
+
+    subscribe(observer) {
+        this.promise.then((data: any) => {
+            observer.onNext(data);
+        });
     }
 }
 

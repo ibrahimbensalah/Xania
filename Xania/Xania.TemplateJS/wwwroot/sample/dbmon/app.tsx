@@ -1,4 +1,4 @@
-﻿import { Xania, ForEach, query, text, Reactive as Re, Dom } from "../../src/xania"
+﻿import { Xania, expr, Repeat, Reactive as Re, Dom } from "../../src/xania"
 
 // ReSharper disable InconsistentNaming
 declare var ENV;
@@ -31,28 +31,28 @@ export function run(target: Node) {
 var dbmon: any = (xania) =>
     <table clazz="table table-striped latest-data">
         <tbody>
-            {query("databases").map(
+            <Repeat source={expr("databases")}>
                 <tr>
                     <td className="dbname">
-                        {text("dbname")}
+                        {expr("dbname")}
                     </td>
                     <td className="query-count">
-                        <span className={text("lastSample.countClassName")}>
-                            {text("lastSample.nbQueries")}
+                        <span className={expr("lastSample.countClassName")}>
+                            {expr("lastSample.nbQueries")}
                         </span>
                     </td>
-                    {query("lastSample.topFiveQueries").map(
-                        <td className={text("elapsedClassName")}>
-                            {text("formatElapsed")}
+                    <Repeat source={expr("lastSample.topFiveQueries")} >
+                        <td className={expr("elapsedClassName")}>
+                            {expr("formatElapsed")}
                             <div className="popover left">
                                 <div className="popover-content">
-                                    {text("query")}
+                                    {expr("query")}
                                 </div>
                                 <div className="arrow"></div>
                             </div>
                         </td>
-                    )}
+                    </Repeat>
                 </tr>
-            )}
+            </Repeat>
         </tbody>
     </table>;

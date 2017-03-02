@@ -1,4 +1,4 @@
-﻿import { ForEach, query, Template, Reactive } from "../../src/xania";
+﻿import { Repeat, expr, Template, Reactive } from "../../src/xania";
 import { Animate } from "../../src/anim"
 import './app.css'
 
@@ -117,22 +117,21 @@ export class BallsApp {
                     <button onClick={this.onShuffle}>shuffle</button>
                 </div>
                 <div className="demo2">
-                    <ForEach expr={query("for ball in balls")}>
-                        <Animate transform={query("translate3d ball.idx ball.pressed")}>
+                    <Repeat source={expr("for ball in balls")}>
+                        <Animate transform={expr("translate3d ball.idx ball.pressed")}>
                             <div className="demo2-ball"
-                                onMouseDown={query("ball.press()")}
-                                onMouseMove={query("ball.pressed -> drag event ball state")}
-                                onMouseUp={query("release event ball")}
-                                onMouseOut={query("release event ball")}
+                                onMouseDown={expr("ball.press()")}
+                                onMouseMove={expr("ball.pressed -> drag event ball state")}
+                                onMouseUp={expr("release event ball")}
+                                onMouseOut={expr("release event ball")}
                                 style={[
-                                    "background-color: ", query("ball.backColor") ,
+                                    "background-color: ", expr("ball.backColor") ,
                                     "; transform: ",
-                                    query("initial ball"),
+                                    expr("initial ball"),
                                     "; z-index: 10; box-shadow: rgba(0, 0, 0, 0.498039) -0.666667px 5px 5px;"]} >
                             </div>
                         </Animate>
-                    </ForEach>
-
+                    </Repeat>
                 </div>
             </div>
         );

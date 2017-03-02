@@ -63,13 +63,13 @@ describe("templating",
             () => {
                 var store = new Re.Store({ people: [ibrahim, ramy] });
                 var fragment = new RootDom();
-                var binding = new Dom.FragmentBinding(compile("for p in people"),
-                    [
-                        //new Template.TextTemplate(compile("p.firstName + ' ' + p.lastName")),
-                        //new Template.FragmentTemplate(compile("for r in p.roles"))
-                        //    .child(new Template.TextTemplate(compile("':: ' + r")))
-                    ])
-                    .update(store, fragment);
+                //var binding = new FragmentBinding(compile("for p in people"),
+                //    [
+                //        //new Template.TextTemplate(compile("p.firstName + ' ' + p.lastName")),
+                //        //new Template.FragmentTemplate(compile("for r in p.roles"))
+                //        //    .child(new Template.TextTemplate(compile("':: ' + r")))
+                //    ])
+                //    .update(store, fragment);
 
                 expect(fragment.childNodes.length).toBe(3);
 
