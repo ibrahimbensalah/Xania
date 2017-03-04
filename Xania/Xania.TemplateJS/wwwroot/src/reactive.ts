@@ -550,6 +550,9 @@ export module Reactive {
             else
                 return expr;
         }
+        on(eventName, dom, eventBinding) {
+            this.driver.on(eventName, dom, eventBinding);
+        }
     }
 }
 

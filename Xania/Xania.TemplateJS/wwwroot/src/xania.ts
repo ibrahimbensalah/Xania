@@ -33,7 +33,7 @@ export class Xania {
         }
         return result;
     }
-    static svgElements = ["svg", "circle", "line", "g", "path"];
+    static svgElements = ["svg", "circle", "line", "g", "path", "marker"];
 
     static tag(element, attrs, ...children): Template.INode {
         var childTemplates = this.templates(children);
@@ -276,7 +276,7 @@ class MapBinding extends Reactive.Binding {
                 MapBinding.swap(this.fragments, fraglength, i);
             }
 
-            fragment.update(item);
+            fragment.update(item, driver);
         }
 
         while (this.fragments.length > stream.length) {
@@ -333,7 +333,7 @@ class FragmentBinding extends Reactive.Binding {
     }
 
     render(context, driver) {
-        this.fragment.update(context);
+        this.fragment.update(context, driver);
     }
 
     insert(fragment: Fragment, dom, idx) {
@@ -346,6 +346,7 @@ class FragmentBinding extends Reactive.Binding {
 export class Fragment {
     public childBindings: any[] = [];
     public context;
+    public driver;
 
     constructor(private owner: { children; context; insert }) {
         for (var e = 0; e < this.owner.children.length; e++) {
@@ -382,8 +383,9 @@ export class Fragment {
         return total;
     }
 
-    update(context) {
+    update(context, driver) {
         this.context = context;
+        this.driver = driver;
         var length = this.owner.children.length;
         for (var e = 0; e < length; e++) {
             this.childBindings[e].update(this, this);
@@ -399,6 +401,10 @@ export class Fragment {
             offset += this.childBindings[i].length;
         }
         this.owner.insert(this, dom, offset + index);
+    }
+
+    on(eventName, dom, eventBinding) {
+        this.driver.on(eventName, dom, eventBinding);
     }
 }
 

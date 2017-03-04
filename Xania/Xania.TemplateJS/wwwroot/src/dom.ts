@@ -44,12 +44,47 @@ export module Dom {
     export class DomDriver {
         private target;
         private domElements = [];
+        private events = [];
 
         constructor(target) {
             if (typeof target === "string")
                 this.target = document.querySelector(target);
             else
                 this.target = target;
+        }
+
+        on(eventName, dom, eventBinding) {
+            var events = this.events,
+                i = events.length,
+                eventBound = false;
+
+            while (i--) {
+                var ev = events[i];
+                if (ev.eventName === eventName) {
+                    if (ev.dom === dom)
+                        return;
+                    else {
+                        eventBound = true;
+                        break;
+                    }
+                }
+            }
+            if (!eventBound) {
+                this.target.addEventListener(eventName,
+                    event => {
+                        var events = this.events;
+                        var e = events.length;
+                        while (e--) {
+                            var ev = events[e];
+                            if (ev.dom === event.target && ev.eventName === eventName) {
+                                ev.eventBinding.fire(event);
+                                break;
+                            }
+                        }
+                    });
+            }
+
+            this.events.push({ eventName, dom, eventBinding });
         }
 
         insert(_, dom, idx: number) {
@@ -126,7 +161,7 @@ export module Dom {
     export class TagBinding extends Re.Binding implements IDomBinding {
         public tagNode;
         public length = 1;
-        private eventBindings: EventBinding[] = [];
+        public eventBindings: EventBinding[] = [];
         private domDriver: DomDriver;
 
         constructor(private tagName: string, private ns: string = null, childBindings?: Re.Binding[]) {
@@ -153,6 +188,15 @@ export module Dom {
             return this;
         }
 
+        attrs(attrs): this {
+            for (var prop in attrs) {
+                if (attrs.hasOwnProperty(prop)) {
+                    var attrValue = attrs[prop];
+                    this.attr(prop.toLowerCase(), attrValue);
+                }
+            }
+            return this;
+        }
         attr(name, ast): this {
             if (typeof ast === "string") {
                 this.tagNode.setAttribute(name, ast);
@@ -203,11 +247,8 @@ export module Dom {
             this.domDriver.insert(null, dom, offset + idx);
         }
 
-        update(context, parent): this {
-            for (let n = 0; n < this.eventBindings.length; n++) {
-                const event = this.eventBindings[n];
-                event.update(context);
-            }
+        update(context, driver): this {
+            super.update(context, driver);
 
             if (this.childBindings) {
                 var childLength = this.childBindings.length;
@@ -216,8 +257,10 @@ export module Dom {
                 }
             }
 
-            super.update(context, parent);
-
+            for (let n = 0; n < this.eventBindings.length; n++) {
+                const event = this.eventBindings[n];
+                event.update(context, driver);
+            }
             return this;
         }
 
@@ -225,14 +268,13 @@ export module Dom {
             driver.insert(this, this.tagNode, 0);
         }
 
-        trigger(name) {
-            //var handler = this.events[name];
-            //if (!!handler) {
-            //    var result = handler.execute(this, this.context);
-
-            //    if (typeof result === "function")
-            //        result();
-            //}
+        trigger(name, event, context?) {
+            for (let n = 0; n < this.eventBindings.length; n++) {
+                const eventBinding = this.eventBindings[n];
+                if (eventBinding.name === "move") {
+                    eventBinding.fire(event, context);
+                }
+            }
         }
     }
 
@@ -260,17 +302,18 @@ export module Dom {
 
     export class EventBinding {
         private context;
+        private driver;
         private state;
 
-        constructor(tagNode: any, private name, private expr) {
-            tagNode.addEventListener(this.name, this.fire.bind(this));
+        constructor(private tagNode: any, public name, private expr) {
         }
 
-        evaluate() {
+        evaluate(context) {
             if (typeof this.expr === "function")
                 return this.expr(event, this.context);
             return this.expr.execute(this,
                 [
+                    context || {},
                     { value: event },
                     { event: event },
                     { node: event.target },
@@ -279,8 +322,8 @@ export module Dom {
                 ]);
         }
 
-        fire(event) {
-            var newValue = this.evaluate();
+        fire(event, context?) {
+            var newValue = this.evaluate(context);
             this.state = newValue;
             if (newValue !== void 0) {
                 var tag = event.target;
@@ -294,8 +337,14 @@ export module Dom {
             this.context.refresh();
         }
 
-        update(context) {
+        update(context, driver) {
             this.context = context;
+            this.driver = driver;
+            this.render(context, driver);
+        }
+
+        render(context, driver) {
+            driver.on(this.name, this.tagNode, this);
         }
 
         extend() {

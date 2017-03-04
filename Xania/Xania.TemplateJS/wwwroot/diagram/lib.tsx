@@ -4,21 +4,62 @@ import { Dom } from "../src/dom";
 import compile from "../src/compile"
 
 export class GraphApp {
+
+    private P1: Point = { x: 10, y: 10 };
+    private P2: Point = { x: 300, y: 200 };
+
+    static horizontalArrow(x1: number, y1: number, x2: number, y2: number) {
+        var d = (x2 - x1) / 2;
+        return `m${x1},${y1} C${x1 + d},${y1} ${x2 - d},${y2} ${x2},${y2}`;
+    }
+
+    move(x, y) {
+        this.P2.x = x;
+        this.P2.y = y + 50;
+    }
+
     view(xania) {
         return (
-            <Canvas>
+            <div>
                 <div className={["xania-diagram", compile("pressed -> ' pressed'")]}>
-                    <Draggable style="background-color: yellow;" />
-                    <svg >
-                        <path d="M10 80 C 40 10, 65 10, 95 80 S 150 150, 180 80" stroke="black" fill="transparent" />
+                    <Draggable style="background-color: orange;" onMove={compile("move x y")} />
+                    <svg>
+                        <g>
+                            <path d={compile("horizontalArrow P1.x P1.y P2.x P2.y")} stroke="black" />
+                        </g>
                     </svg>
                 </div>
-            </Canvas>
+            </div>
         );
     }
 }
 
+interface Point {
+    x: number;
+    y: number;
+}
+
 class Canvas {
+    constructor(private attrs, private children) {
+    }
+
+
+    bind() {
+        var tag = new Dom.TagBinding("div", null, this.children.map(x => x.bind())),
+            attrs = this.attrs;
+
+        for (var prop in attrs) {
+            if (attrs.hasOwnProperty(prop)) {
+                var attrValue = attrs[prop];
+                tag.attr(prop.toLowerCase(), attrValue);
+            }
+        }
+
+        return tag;
+    }
+}
+
+class Draggable {
     constructor(private attrs, private children) {
     }
 
@@ -42,14 +83,12 @@ class Canvas {
         var { top, left } = window.getComputedStyle(target);
 
         this.state = {
-            top: Canvas.prixels(top),
-            left: Canvas.prixels(left),
+            top: Draggable.prixels(top),
+            left: Draggable.prixels(left),
             clientX,
             clientY
         };
         this.pressed = target;
-        console.log("init", this.state, target);
-
     }
 
     static prixels(px: string) {
@@ -63,51 +102,39 @@ class Canvas {
 
     private drag = event => {
         if (!this.pressed || event.buttons !== 1)
-            return;
+            return false;
 
         var { clientX, clientY } = event;
         var { pressed, state } = this;
 
-        if (clientX === state.clientX && clientY === state.clientY)
-            return;
+        var left = state.left + clientX - state.clientX;
+        var top = state.top + clientY - state.clientY;
 
-        state.left += clientX - state.clientX;
-        state.top += clientY - state.clientY;
+        if (state.left !== left || state.top !== top) {
+            pressed.style.left = state.left + "px";
+            pressed.style.top = state.top + "px";
 
-        pressed.style.left = state.left + "px";
-        pressed.style.top = state.top + "px";
+            state.clientX = clientX;
+            state.clientY = clientY;
+            state.left = left;
+            state.top = top;
 
-        state.clientX = clientX;
-        state.clientY = clientY;
-    }
-
-    bind() {
-        var tag = new Dom.TagBinding("div", null, this.children.map(x => x.bind())),
-            attrs = this.attrs;
-
-        for (var prop in attrs) {
-            if (attrs.hasOwnProperty(prop)) {
-                var attrValue = attrs[prop];
-                tag.attr(prop.toLowerCase(), attrValue);
-            }
+            return true;
         }
-
-        tag.event("mousedown", this.press);
-        tag.event("mousemove", this.drag);
-        //onMouseMove = { compile("pressed -> drag event state")}
-        tag.event("mouseup", this.release);
-
-        return tag;
-    }
-}
-
-class Draggable {
-    constructor(private attrs, private children) {
+        return false;
     }
 
     bind() {
         var tag = new DraggableBinding(this.children.map(x => x.bind())),
             attrs = this.attrs;
+
+        tag.event("mousedown", this.press);
+        tag.event("mousemove", event => {
+            if (this.drag(event)) {
+                tag.trigger("move", event, { x: this.state.left, y: this.state.top });
+            }
+        });
+        tag.event("mouseup", this.release);
 
         tag.attr("class", "xania-draggable");
         for (var prop in attrs) {
@@ -127,5 +154,13 @@ class Draggable {
 class DraggableBinding extends Dom.TagBinding {
     constructor(childBindings) {
         super("div", null, childBindings);
+    }
+
+    render(context, driver) {
+        super.render(context, {
+            insert(binding, dom, idx) {
+                driver.insert(binding, dom, idx);
+            }
+        });
     }
 }
