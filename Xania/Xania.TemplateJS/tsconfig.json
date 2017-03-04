@@ -22,6 +22,7 @@
   "include": [
     "grammar/fsharp.d.ts",
     "wwwroot/src/*.ts",
+    "wwwroot/diagram/**/*.tsx",
     "wwwroot/spec/*Spec.ts",
     "wwwroot/sample/**/*.ts",
     "wwwroot/sample/**/*.tsx",

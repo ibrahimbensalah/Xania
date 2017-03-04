@@ -1,0 +1,24 @@
+﻿.xania-diagram {
+    border: 1px solid red;
+    padding: 4px;
+    height: 500px;
+}
+
+    .xania-diagram .xania-draggable {
+        position: relative;
+        cursor: pointer;
+    }
+
+    .xania-diagram div.xania-draggable {
+        border: 2px solid blue;
+        padding: 4px;
+        display: block;
+        text-align: center;
+        width: 100px;
+        height: 100px;
+        border-radius: 50px;
+    }
+
+    .pressed {
+        color: blue;
+    }

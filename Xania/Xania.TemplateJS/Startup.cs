@@ -29,7 +29,10 @@ namespace Xania.TemplateJS
             }
 
             app.UseDefaultFiles();
-            app.UseStaticFiles();
+            app.UseStaticFiles(new StaticFileOptions
+            {
+                
+            });
 
             app.UseMvc();
 
@@ -44,7 +47,6 @@ namespace Xania.TemplateJS
                             .Replace("[APP]", result.Name)
                             .Replace("[BASE]", result.Base)
                             .Replace("[ARGS]", result.Args);
-
 
                         context.Response.ContentType = "text/html";
                         await context.Response.WriteAsync(fileContent);

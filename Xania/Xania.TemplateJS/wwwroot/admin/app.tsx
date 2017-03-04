@@ -5,7 +5,7 @@ import { Observables } from "../src/observables";
 import { ClockApp } from '../sample/clock/app'
 import { TodoApp } from "../sample/layout/todo";
 import DataGrid from "./grid"
-
+import Lib = require("../diagram/lib");
 var store = new Re.Store({
     user: "Ibrahim",
     users: new RemoteObject('/api/query/', "users"),
@@ -26,48 +26,9 @@ export function menu({ driver, html, url }) {
 }
 
 export function invoices() {
-    var setProps1 = (obj: {}, symbols: any[]) => {
-        var i = symbols.length;
-        while (i--) {
-            var sym = symbols[i];
-            obj[sym] = i;
-        }
-    };
-    var setProps2 = (obj: {}, symbols: any[]) => {
-        var key = Symbol();
-        var values = [];
-        obj[key] = values;
-        var i = symbols.length;
-        while (i--) {
-            var sym = symbols[i];
-            values.push({sym: i});
-        }
-    };
-
-    function test() {
-        var props = [];
-        var i = 1000;
-        while (i--) {
-            props.push("prop"+ i);
-        }
-
-        var iterations = 100000;
-
-        for (let e = 0; e < iterations; e++) {
-            const o = {};
-            setProps1(o, props);
-        }
-
-        for (let e = 0; e < iterations; e++) {
-            const o = {};
-            setProps2(o, props);
-        }
-    }
-
     return new ViewResult(
         <div>
-            invoices {expr("user")}
-            <button onClick={test}>test</button>
+            <div>invoices {expr("user")}</div>
             <Repeat source={expr("await users")}>
                 <div>{expr("name")} {expr("email")} {expr("roles")}</div>
             </Repeat>
@@ -146,7 +107,8 @@ var actions: IAppAction[] = [
     { path: "timesheet", display: "Timesheet" },
     { path: "invoices", display: "Invoices" },
     { path: "todos", display: "Todos" },
-    { path: "users", display: "Users" }
+    { path: "users", display: "Users" },
+    { path: "graph", display: "Graph" }
 ];
 
 var mainMenu: (url: UrlHelper) => Template.INode = (url: UrlHelper) =>
@@ -161,3 +123,7 @@ var panel = n =>
     <section className="mdl-layout__tab-panel" id={"scroll-tab-" + n}>
         <div className="page-content">tab {n}</div>
     </section>;
+
+export function graph() {
+    return new ViewResult(<Lib.GraphApp />, new Re.Store({}));
+}

@@ -33,7 +33,7 @@ export class Xania {
         }
         return result;
     }
-    static svgElements = ["svg", "circle", "line", "g"];
+    static svgElements = ["svg", "circle", "line", "g", "path"];
 
     static tag(element, attrs, ...children): Template.INode {
         var childTemplates = this.templates(children);
@@ -403,6 +403,7 @@ export class Fragment {
 }
 
 declare function fetch<T>(url: string, config?): Promise<T>;
+
 export class RemoteObject {
     promise: Promise<Object>;
 

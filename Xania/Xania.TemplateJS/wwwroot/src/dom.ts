@@ -73,6 +73,18 @@ export module Dom {
             }
         }
 
+        private sym = Symbol();
+
+        insertTag(binding, name, idx) {
+            var sym = this.sym;
+            var dom = binding[sym];
+            if (!dom) {
+                dom = document.createElement(name);
+                binding[sym] = dom;
+            }
+            this.insert(binding, dom, idx);
+        }
+
         dispose() {
             var domElements = this.domElements,
                 i = domElements.length;
@@ -164,6 +176,21 @@ export module Dom {
             }
 
             return this;
+        }
+
+        event(name, ast): this {
+            this.eventBindings.push(new EventBinding(this.tagNode, name, ast));
+            return this;
+        }
+
+        insertTag(binding, tagName, idx) {
+            var offset = 0, length = this.childBindings.length;
+            for (var i = 0; i < length; i++) {
+                if (this.childBindings[i] === binding)
+                    break;
+                offset += this.childBindings[i].length;
+            }
+            this.domDriver.insertTag(this, tagName, offset + idx);
         }
 
         insert(binding, dom, idx) {

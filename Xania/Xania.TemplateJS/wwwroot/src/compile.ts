@@ -45,8 +45,11 @@ class Expression {
     constructor(public ast, private stack: any[]) {
     }
 
-    execute(binding: IAstVisitor, context: any) {
+    execute(binding: IAstVisitor, contexts: any) {
         var { stack } = this;
+
+        var context = Array.isArray(contexts) ? new Scope(binding, contexts) : contexts;
+
         let idx = stack.length;
         while (idx--) {
             var ast = stack[idx];
