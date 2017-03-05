@@ -12,9 +12,13 @@ export class UrlHelper {
         window.onpopstate = (popStateEvent) => {
             var { state } = popStateEvent;
             var { pathname } = window.location;
-            var prevpath = this.appPath + "/" + this.actionPath.current;
-            if (prevpath !== pathname) {
-                var actionPath = state ? state.actionPath : this.initialPath;
+
+            if (state && pathname.startsWith(this.appPath + "/")) {
+                var actionPath = pathname.substring(this.appPath.length + 1);
+
+                if (state.actionPath !== actionPath)
+                    console.error(actionPath, state);
+
                 if (actionPath !== this.actionPath.current)
                     this.actionPath.notify(actionPath);
             }
@@ -81,7 +85,7 @@ class ViewBinding {
 }
 
 export interface IDriver {
-    
+
 }
 
 export class ViewResult {
