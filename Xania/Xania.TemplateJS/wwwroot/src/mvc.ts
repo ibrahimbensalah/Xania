@@ -11,14 +11,18 @@ export class UrlHelper {
 
         window.onpopstate = (popStateEvent) => {
             var { state } = popStateEvent;
-            var actionPath = state ? state.actionPath : this.initialPath;
-            if (actionPath !== this.actionPath.current)
-                this.actionPath.notify(actionPath);
+            var { pathname } = window.location;
+            var prevpath = this.appPath + "/" + this.actionPath.current;
+            if (prevpath !== pathname) {
+                var actionPath = state ? state.actionPath : this.initialPath;
+                if (actionPath !== this.actionPath.current)
+                    this.actionPath.notify(actionPath);
+            }
         }
     }
 
     action(path: string, view?) {
-        return (event) => {
+        return event => {
             var actionPath = path;
             var actionView = view;
             if (this.actionPath.current !== actionPath) {

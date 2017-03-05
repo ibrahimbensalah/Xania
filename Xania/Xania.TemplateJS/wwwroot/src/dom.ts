@@ -77,7 +77,6 @@ export module Dom {
                         while (e--) {
                             var ev = events[e];
                             if (ev.dom === event.target && ev.eventName === eventName) {
-                                console.log("fire event: ", ev);
                                 ev.eventBinding.fire(event);
                                 break;
                             }
@@ -92,14 +91,12 @@ export module Dom {
                 dispose() {
                     var idx = events.indexOf(this);
                     if (idx >= 0) {
-                        console.log("dispose event", this);
                         events.splice(idx, 1);
                         return true;
                     }
                     return false;
                 }
             };
-            console.log("register event: ", entry);
             this.events.push(entry);
             return entry;
         }
