@@ -1,7 +1,7 @@
 ﻿import './diagram.css'
 import { Template } from "../src/template";
 import { Dom } from "../src/dom";
-import compile from "../src/compile"
+import expr from "../src/compile";
 
 export class GraphApp {
 
@@ -23,12 +23,12 @@ export class GraphApp {
     view(xania) {
         return (
             <div style="height: 100%;">
-                <div className={["xania-diagram", compile("pressed -> ' pressed'")]}>
-                    <Draggable x={compile("P1.x")} y={compile("P1.y")} style="background-color: blue;" />
-                    <Draggable x={compile("P2.x")} y={compile("P2.y")} style="background-color: orange;" />
+                <div className={["xania-diagram", expr("pressed -> ' pressed'")]}>
+                    <Draggable x={expr("P1.x")} y={expr("P1.y")} style="background-color: blue;" />
+                    <Draggable x={expr("P2.x")} y={expr("P2.y")} style="background-color: orange;" />
                     <svg>
                         <g>
-                            <path d={compile("horizontalArrow (output P1.x P1.y) (input P2.x P2.y)")} stroke="black" />
+                            <path d={expr("horizontalArrow (output P1.x P1.y) (input P2.x P2.y)")} stroke="black" />
                         </g>
                     </svg>
                 </div>

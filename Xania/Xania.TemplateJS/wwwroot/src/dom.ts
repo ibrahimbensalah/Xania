@@ -62,7 +62,7 @@ export module Dom {
                 var ev = events[i];
                 if (ev.eventName === eventName) {
                     if (ev.dom === dom)
-                        return;
+                        return ev;
                     else {
                         eventBound = true;
                         break;
@@ -77,6 +77,7 @@ export module Dom {
                         while (e--) {
                             var ev = events[e];
                             if (ev.dom === event.target && ev.eventName === eventName) {
+                                console.log("fire event: ", ev);
                                 ev.eventBinding.fire(event);
                                 break;
                             }
@@ -84,7 +85,23 @@ export module Dom {
                     });
             }
 
-            this.events.push({ eventName, dom, eventBinding });
+            var entry = {
+                eventName,
+                dom,
+                eventBinding,
+                dispose() {
+                    var idx = events.indexOf(this);
+                    if (idx >= 0) {
+                        console.log("dispose event", this);
+                        events.splice(idx, 1);
+                        return true;
+                    }
+                    return false;
+                }
+            };
+            console.log("register event: ", entry);
+            this.events.push(entry);
+            return entry;
         }
 
         insert(_, dom, idx: number) {

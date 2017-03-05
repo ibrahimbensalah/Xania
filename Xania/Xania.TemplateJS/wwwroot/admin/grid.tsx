@@ -19,7 +19,6 @@ export default class DataGrid {
         var activeRow = context.get('row').valueOf();
         this.activeRow = activeRow;
         this.activeRecord = activeRow.data;
-        event.preventDefault();
     };
 
     cellValue(row, column) {
@@ -45,17 +44,17 @@ export default class DataGrid {
                             <tbody data-bind="foreach: view">
                                 <Repeat source={expr("for row in data")}>
                                     <tr role="listitem"
-                                        onClick={this.onRowClick}
                                         className={["xn-list-item", expr("row = activeRow -> ' xn-grid-row-activated'"),
                                             expr("row.alternate -> ' xn-grid-row-alternate'"), expr("row.updated -> ' xn-grid-row-updated'")]}>
                                         <td>
-                                            <div className="xn-grid-row-header">
+                                            <div className="xn-grid-row-header" onClick={this.onRowClick}>
                                                 <span className={["fa", expr("row = activeRow -> ' fa-edit'")]}></span>
+                                                <input type="radio" style={["pointer-events: none", expr("row = activeRow -> '; display: none'")] } />
                                             </div>
                                         </td>
                                         <Repeat source={expr("for column in columns")}>
                                             <td role="gridcell" tabindex="-1" className="xn-grid-cell">
-                                                <div className="xn-grid-cell-content"><a href="#">{expr("cellValue row column")}</a></div>
+                                                <div className="xn-grid-cell-content"><a>{expr("cellValue row column")}</a></div>
                                             </td>
                                         </Repeat>
                                         <td role="gridcell" tabindex="-1" className="xn-grid-cell" style="width: 100%;"></td>
