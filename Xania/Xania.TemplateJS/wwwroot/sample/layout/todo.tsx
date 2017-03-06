@@ -45,7 +45,7 @@ export class TodoApp {
                     <input className="toggle-all" type="checkbox" checked={expr("empty store.todos where not completed")}
                         onClick={this.onToggleAll} />
                     <ul className="todo-list">
-                        <Repeat source={expr("for todo in store.todos where (completed = (show = 'completed')) or (show = 'all')")}>
+                        <Repeat param="todo" source={expr("store.todos where (completed = (show = 'completed')) or (show = 'all')")}>
                             <Animate height="58px" transform="scale(1)" dispose={[{ height: "58px", opacity: 1 }, { height: 0, opacity: 0 }]}>
                                 <li className={[expr("todo.completed -> 'completed'"), expr("todo = editingTodo -> ' editing'")]} >
                                     <div className="view">

@@ -88,6 +88,7 @@ class Expression {
 
                             ast.value = ast.right.compiled.execute(binding, context);
                             break;
+                        case "where":
                         case WHERE:
                             source = ast.left.value;
                             let length = source.length;
@@ -95,7 +96,7 @@ class Expression {
                             for (var i = 0; i < length; i++) {
                                 var item = binding.member(source, i);
                                 var scope = new Scope(binding, [item, context]);
-                                var b = accept(ast.right, binding, scope).valueOf();
+                                var b = ast.right.compiled.execute(binding, scope);
                                 if (b)
                                     result.push(item);
                             }
@@ -184,8 +185,8 @@ class Expression {
                     break;
                 case MEMBER:
                     stack.push(ast);
-                    compile(ast.target, stack);
                     compile(ast.member, stack);
+                    compile(ast.target, stack);
                     break;
                 case AWAIT:
                     stack.push(ast);
@@ -204,6 +205,7 @@ class Expression {
                     stack.push(ast);
                     switch (ast.op) {
                         case "->":
+                        case "where":
                         case WHERE:
                             ast.right.compiled = Expression.compile(ast.right);
                             compile(ast.left, stack);

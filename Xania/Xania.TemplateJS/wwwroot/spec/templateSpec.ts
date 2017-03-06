@@ -136,7 +136,7 @@ describe("templating",
                     .attr("onclick", compile("p.sayHello"))
                     .update(store, null);
 
-                button.trigger('click');
+                // button.trigger('click');
 
                 expect(store.get('p').get('message').valueOf()).toBe("Hello, Jasmine!");
             });

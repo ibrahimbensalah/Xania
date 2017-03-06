@@ -144,7 +144,7 @@ MultiplicativeExpression
 
 
 MultiplicativeBinder
-  = op:[\*] _ operand:(Term / ApplicativeExpression) {
+  = op:([\*] / "where") _ operand:(Term / ApplicativeExpression) {
 	return { op, operand } 
   }
 

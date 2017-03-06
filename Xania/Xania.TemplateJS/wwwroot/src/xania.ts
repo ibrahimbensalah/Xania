@@ -161,7 +161,7 @@ export class Repeat {
 
     constructor(attrs, children) {
         this.template =
-            new MapTemplate<Reactive.Binding>(attrs.source, children, Dom.DomVisitor);
+            new MapTemplate<Reactive.Binding>(attrs.param, attrs.source, children, Dom.DomVisitor);
     }
 
     bind() {
@@ -174,7 +174,7 @@ export function expr(code: string) {
 }
 
 export class MapTemplate<T> implements Template.INode {
-    constructor(private expr, private children: Template.INode[], private visitor: Template.IVisitor<T>) { }
+    constructor(private param, private expr, private children: Template.INode[], private visitor: Template.IVisitor<T>) { }
 
     child(child: Template.INode) {
         this.children.push(child);
@@ -182,7 +182,7 @@ export class MapTemplate<T> implements Template.INode {
     }
 
     bind() {
-        return new MapBinding(this.expr, this.children);
+        return new MapBinding(this.param, this.expr, this.children);
     }
 }
 
@@ -198,7 +198,7 @@ class MapBinding extends Reactive.Binding {
         return total;
     }
 
-    constructor(private expr, public children: Template.INode[]) {
+    constructor(public param, private expr, public children: Template.INode[]) {
         super();
         for (var child of children) {
             if (!child.bind)
@@ -319,19 +319,6 @@ class FragmentBinding extends Reactive.Binding {
         this.fragment.dispose();
     }
 
-    private static swap(arr: Fragment[], srcIndex, tarIndex) {
-        if (srcIndex > tarIndex) {
-            var i = srcIndex;
-            srcIndex = tarIndex;
-            tarIndex = i;
-        }
-        if (srcIndex < tarIndex) {
-            var src = arr[srcIndex];
-            arr[srcIndex] = arr[tarIndex];
-            arr[tarIndex] = src;
-        }
-    }
-
     render(context, driver) {
         this.fragment.update(context, driver);
     }
@@ -348,7 +335,7 @@ export class Fragment {
     public context;
     public driver;
 
-    constructor(private owner: { children; context; insert }) {
+    constructor(private owner: { param?, children; context; insert }) {
         for (var e = 0; e < this.owner.children.length; e++) {
             this.childBindings[e] =
                 owner.children[e].bind();
@@ -356,6 +343,12 @@ export class Fragment {
     }
 
     get(name: string) {
+        if (this.owner.param) {
+            if (name === this.owner.param) {
+                return this.context;
+            }
+        }
+
         var context = this.context;
         var value = context.get ? context.get(name) : context[name];
         if (value !== void 0)
@@ -365,7 +358,7 @@ export class Fragment {
     }
 
     refresh() {
-        this.context.refresh();
+        this.owner.context.refresh();
     }
 
     dispose() {
