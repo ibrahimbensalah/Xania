@@ -118,7 +118,7 @@ export default class BallsApp {
                 </div>
                 <div className="demo2">
                     <Repeat source={expr("for ball in balls")}>
-                        <Animate transform={expr("translate3d ball.idx ball.pressed")}>
+                        <Animate transform={expr("translate3d ball.idx ball.pressed")} duration={ 2000 }>
                             <div className="demo2-ball"
                                 onMouseDown={expr("ball.press()")}
                                 onMouseMove={expr("ball.pressed -> drag event ball state")}

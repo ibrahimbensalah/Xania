@@ -65,7 +65,7 @@ LambdaExpression
 	}
 
 QueryExpression
-	= "for" _ param:IdentifierName _ "in" _ source:ListExpression selector:(_ SelectExpression)? {
+	= "for" _ param:IdentifierName _ "in" _ source:MultiplicativeExpression selector:(_ SelectExpression)? {
 		var query = { type: QUERY, param, source }
 
 		function reducer(source, predicate) {
@@ -144,7 +144,7 @@ MultiplicativeExpression
 
 
 MultiplicativeBinder
-  = op:([\*]) _ operand:(Term / ApplicativeExpression) {
+  = op:([\*]) _ operand:(Term / MultiplicativeExpression) {
 	return { op, operand } 
   }
   / "where" _ operand:EquilityExpression {
@@ -158,7 +158,7 @@ Term
   / "(" _ expr:Expression? _ ")" {
 	return expr === null ? { type: 'unit' } : expr 
   }
-  / "await" _ expr:ApplicativeExpression {
+  / "await" _ expr:MultiplicativeExpression {
 		return {
 			type: AWAIT,
 			expr: expr
@@ -171,16 +171,11 @@ Range
   }
 
 ApplicativeExpression
-	= fun:Application args:(_ ListExpression)* {
+	= fun:Application args:(_ (Term / Identifier))* {
 		var head = args.length == 0
 			? fun
   			: { type: APP, fun, args: args.filter(x => x[1].type != 'unit').map(x => x[1]) };
 		return head;
-  }
-
-ListExpression
-  = head:(Term / Identifier) filters:( _ FilterBinder )* {
-	 return filters.reduce(binaryReducer, head)
   }
 
 FilterBinder

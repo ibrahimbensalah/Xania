@@ -2,7 +2,7 @@
 import { Template } from "./template"
 
 export class Animate implements Template.INode {
-    constructor(private attrs: { transform?, dispose?}, private children: Template.INode[]) {
+    constructor(private attrs: { transform?, dispose?, duration? }, private children: Template.INode[]) {
     }
 
     bind() {
@@ -15,7 +15,7 @@ export class AnimateBinding extends Reactive.Binding {
 
     domElements = [];
 
-    constructor(private attrs: { transform?, dispose? }, childBindings: any[]) {
+    constructor(private attrs: { transform?, dispose?, duration? }, childBindings: any[]) {
         super();
         this.childBindings = childBindings;
     }
@@ -75,7 +75,7 @@ export class AnimateBinding extends Reactive.Binding {
                     delete this.players[k];
                 }
 
-                var timing = { duration: 200, iterations: 1, easing: 'ease-out' };
+                var timing = { duration: this.attrs.duration || 200, iterations: 1, easing: 'ease-out' };
                 var player = dom.animate(keyframes, timing);
                 player.onfinish = ((k, value) => e => {
                     dom.style[k] = Array.isArray(value) ? value[value.length - 1] : value;
@@ -127,7 +127,7 @@ export class AnimateBinding extends Reactive.Binding {
             for (let i = 0; i < this.domElements.length; i++) {
                 var dom = this.domElements[i];
 
-                var timing = { duration: 200, iterations: 1 };
+                var timing = { duration: this.attrs.duration || 200, iterations: 1 };
                 var animation = dom.animate(dispose, timing);
                 animation.onfinish = onfinish;
             }
