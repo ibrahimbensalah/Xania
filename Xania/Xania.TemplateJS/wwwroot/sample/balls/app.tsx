@@ -2,7 +2,7 @@
 import { Animate } from "../../src/anim"
 import './app.css'
 
-export class BallsApp {
+export default class BallsApp {
 
     private balls = [];
 

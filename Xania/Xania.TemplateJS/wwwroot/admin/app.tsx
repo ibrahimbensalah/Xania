@@ -6,6 +6,8 @@ import { ClockApp } from '../sample/clock/app'
 import { TodoApp } from "../sample/layout/todo";
 import DataGrid from "./grid"
 import Lib = require("../diagram/lib");
+import BallsApp from '../sample/balls/app';
+
 var store = new Re.Store({
     user: "Ibrahim",
     users: new RemoteObject('/api/query/', "users"),
@@ -15,6 +17,9 @@ var store = new Re.Store({
     }
 });
 
+export function balls() {
+    return new ViewResult(<BallsApp />);
+}
 
 export function index() {
     return new ViewResult(<div>index</div>, store);
@@ -108,7 +113,8 @@ var actions: IAppAction[] = [
     { path: "invoices", display: "Invoices" },
     { path: "todos", display: "Todos" },
     { path: "users", display: "Users" },
-    { path: "graph", display: "Graph" }
+    { path: "graph", display: "Graph" },
+    { path: "balls", display: "Balls" }
 ];
 
 var mainMenu: (url: UrlHelper) => Template.INode = (url: UrlHelper) =>

@@ -97,8 +97,6 @@ class DraggableBinding extends Dom.TagBinding {
     private state = { left: 0, top: 0, clientX: 0, clientY: 0 };
 
     private press = event => {
-        event.stopPropagation();
-
         var { clientX, clientY, target } = event;
 
         do {
@@ -132,13 +130,13 @@ class DraggableBinding extends Dom.TagBinding {
 
     private drag = event => {
         if (event.buttons !== 1)
-            return false;
+            return;
 
         var { clientX, clientY } = event;
         var { state } = this;
 
         if (!state)
-            return false;
+            return;
 
         var left = state.left + clientX - state.clientX;
         var top = state.top + clientY - state.clientY;
@@ -153,10 +151,7 @@ class DraggableBinding extends Dom.TagBinding {
             var y = this.evaluateObject(this.y);
             x.set(left);
             y.set(top);
-
-            return true;
         }
-        return false;
     }
 
     render(context, driver) {
