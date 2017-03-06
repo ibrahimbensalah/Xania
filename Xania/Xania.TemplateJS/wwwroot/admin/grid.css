@@ -45,6 +45,10 @@ div.xn-grid-row-header {
     background-color: #DDD;
 }
 
+    div.xn-grid-row-header input {
+        pointer-events: none;
+    }
+
 div.xn-grid-header-cell {
     display: table-cell;
     font-weight: bold;

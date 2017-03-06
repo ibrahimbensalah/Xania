@@ -1,10 +1,10 @@
-﻿import { Xania as xania, Repeat, expr, Dom, RemoteObject, Reactive as Re, Template } from "../src/xania"
+﻿import { Xania as xania, Repeat, expr, Dom, RemoteObject, Reactive as Re, Template, Resource } from "../src/xania"
 import { UrlHelper, ViewResult } from "../src/mvc"
 import './admin.css'
 import { Observables } from "../src/observables";
 import { ClockApp } from '../sample/clock/app'
-import { TodoApp } from "../sample/layout/todo";
-import DataGrid from "./grid"
+import TodoApp from "../sample/todos/app";
+import DataGrid, { TextColumn } from "./grid"
 import Lib = require("../diagram/lib");
 import BallsApp from '../sample/balls/app';
 
@@ -13,7 +13,9 @@ var store = new Re.Store({
     users: new RemoteObject('/api/query/', "users"),
     currentUser: {},
     saveUser() {
-        console.log("save user", this.currentUser);
+        Resource.create("/api/user", this.currentUser).then((response: any) => {
+            console.log("saved");
+        });
     }
 });
 
@@ -60,13 +62,21 @@ export function users() {
         store.get("currentUser").set({});
         store.refresh();
     }
+    var onSelectUser = user => {
+        store.get("currentUser").set(user);
+        store.refresh();
+    }
+
     return new ViewResult(
         <div style="height: 95%;" className="row">
             <div className={[expr("currentUser -> 'col-8'"), expr("not currentUser -> 'col-12'")]}>
                 <section className="section" style="height: 100%">
                     <div style="padding: 0px 16px 100px 16px; height: 100%;">
                         <header style="height: 50px"><span className="fa fa-adjust"></span> <span>Users</span></header>
-                        <DataGrid activeRecord={expr("currentUser")} data={expr("await users")} />
+                        <DataGrid data={expr("await users")} onSelectionChanged={onSelectUser} >
+                            <TextColumn field="name" display="User name" />
+                            <TextColumn field="emailConfirmed" display="Email confirmed" />
+                        </DataGrid>
                         <footer style="height: 50px; margin: 0 16px; padding: 0;"><button className="btn btn-primary" data-bind="click: users.create"><span className="glyphicon glyphicon-plus"></span> Add New</button></footer>
                     </div>
                 </section>
@@ -74,22 +84,18 @@ export function users() {
             <div className="col-4">
                 <section className="section" style="height: 100%">
                     <button type="button" className="close" aria-hidden="true" style="margin: 16px 16px 0 0;" onClick={onCancel}>×</button>
-                    <header style="height: 50px"><span className="fa fa-adjust"></span> <span>User</span></header>
+                    <header style="height: 50px"><span className="fa fa-adjust"></span> <span>{expr("currentUser.name")}</span></header>
 
                     <div style="padding: 0px 16px 100px 16px; height: 100%;">
-                        <header style="height: 50px">
-                            <span className="fa fa-adjust"></span>
-                            <span>{expr("currentUser.Name")}</span>
-                        </header>
                         <div className="col-lg-12 col-md-3"><label className="control-label" for="UserName">User name</label><div>
-                            <input className="form-control" type="text" placeholder="User name" name="currentUser.Name" />
+                            <input className="form-control" type="text" placeholder="User name" name="currentUser.name" />
                         </div>
                         </div>
                         <div className="col-lg-12 col-md-3"><label className="control-label" for="Email">Email</label>
-                            <div><input id="Email" className="form-control" type="text" placeholder="Email" name="currentUser.Email" /></div>
+                            <div><input id="Email" className="form-control" type="text" placeholder="Email" name="currentUser.email" /></div>
                         </div>
                         <div className="col-lg-12 col-md-3"><div>
-                            <input type="checkbox" checked={expr("currentUser.EmailConfirmed")} /> <label className="control-label" for="EmailConfirmed">Email confirmed</label>
+                            <input type="checkbox" checked={expr("currentUser.emailConfirmed")} /> <label className="control-label" for="EmailConfirmed">Email confirmed</label>
                         </div></div>
                         <div className="col-lg-12 col-md-3">
                             <button className="btn btn-primary" onClick={expr("saveUser ()")}>
@@ -132,4 +138,8 @@ var panel = n =>
 
 export function graph() {
     return new ViewResult(<Lib.GraphApp />, new Re.Store({}));
+}
+
+function action() {
+
 }

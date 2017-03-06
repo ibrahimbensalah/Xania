@@ -1,9 +1,9 @@
 ﻿import { Repeat, expr } from "../../src/xania"
 import { Animate } from "../../src/anim"
 import { Observables } from "../../src/observables"
-import './todos/index.css'
+import './css/index.css'
 
-export class TodoApp {
+export default class TodoApp {
 
     store = new TodoStore();
     show = "all";

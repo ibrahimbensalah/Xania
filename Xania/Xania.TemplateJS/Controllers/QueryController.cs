@@ -26,7 +26,8 @@ namespace Xania.TemplateJS.Controllers
                 {
                     Name = "User " + i,
                     Email = "user" + i + "@xania.nl",
-                    Roles = new[] {"Customer " + i, "Admin " + i}
+                    Roles = new[] {"Customer " + i, "Admin " + i},
+                    EmailConfirmed = i % 2 == 0
                 };
             }
         }
@@ -50,6 +51,7 @@ namespace Xania.TemplateJS.Controllers
         public string Name { get; set; }
         public string Email { get; set; }
         public string[] Roles { get; set; }
+        public bool EmailConfirmed { get; set; }
     }
 
     public class Store

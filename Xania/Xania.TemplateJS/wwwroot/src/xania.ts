@@ -28,7 +28,7 @@ export class Xania {
                     }
                 });
             } else {
-                throw Error("");
+                result.push(child);
             }
         }
         return result;
@@ -427,3 +427,16 @@ export class RemoteObject {
     }
 }
 
+export class Resource {
+    static create(url, body) {
+        var config = {
+            method: "POST",
+            headers: {
+                'Content-Type': "application/json"
+            },
+            body: JSON.stringify(body)
+        };
+
+        return fetch(url, config);
+    }
+}

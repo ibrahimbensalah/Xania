@@ -1,24 +1,34 @@
 ﻿import { Repeat, expr } from "../src/xania"
 import './grid.css'
 
+
+export function TextColumn(attrs) {
+    if (!attrs.field)
+        throw Error("property field is required");
+
+    return {
+        field: attrs.field,
+        display: attrs.display || attrs.field
+    };
+}
+
 export default class DataGrid {
     private data = [];
-    private columns = [];
     private activeRow = null;
     private activeRecord = null;
+    private onSelectionChanged = null;
 
-    constructor() {
-        this.columns.push({ field: "name" });
-        this.columns.push({ field: "email" });
-        this.columns.push({ field: "roles" });
-
-        // EmailConfirmed
+    constructor(private attrs, private columns = []) {
     }
 
-    onRowClick = (event, context) => {
-        var activeRow = context.get('row').valueOf();
-        this.activeRow = activeRow;
-        this.activeRecord = activeRow.data;
+    onRowClick = (row) => {
+        if (this.activeRow !== row) {
+            this.activeRow = row;
+
+            if (this.onSelectionChanged) {
+                this.onSelectionChanged(row, this);
+            }
+        }
     };
 
     cellValue(row, column) {
@@ -32,7 +42,7 @@ export default class DataGrid {
                     <div role="rowheader" className="xn-grid-row-header xn-grid-header-cell">&nbsp;</div>
                     <Repeat source={expr("for column in columns")}>
                         <div data-idx="UserName" role="gridcell" className="xn-grid-header-cell">
-                            <div className="xn-grid-cell-content"><a data-bind="click: sort.bind($data, 'UserName')">{expr("column.field")}</a></div>
+                            <div className="xn-grid-cell-content"><a data-bind="click: sort.bind($data, 'UserName')">{expr("column.display")}</a></div>
                         </div>
                     </Repeat>
                     <div className="xn-grid-header-cell" style="width: 100%; min-width: 100px">&nbsp;</div>
@@ -47,9 +57,9 @@ export default class DataGrid {
                                         className={["xn-list-item", expr("row = activeRow -> ' xn-grid-row-activated'"),
                                             expr("row.alternate -> ' xn-grid-row-alternate'"), expr("row.updated -> ' xn-grid-row-updated'")]}>
                                         <td>
-                                            <div className="xn-grid-row-header" onClick={this.onRowClick}>
+                                            <div className="xn-grid-row-header" onClick={expr("onRowClick row")}>
                                                 <span className={["fa", expr("row = activeRow -> ' fa-edit'")]}></span>
-                                                <input type="radio" style={["pointer-events: none", expr("row = activeRow -> '; display: none'")] } />
+                                                <input type="radio" style={expr("row = activeRow -> '; display: none'")} />
                                             </div>
                                         </td>
                                         <Repeat source={expr("for column in columns")}>
