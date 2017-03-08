@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Threading.Tasks;
 
 namespace Xania.DataAccess
 {
@@ -8,13 +9,13 @@ namespace Xania.DataAccess
         public static string Add(this IDocumentStore documentStore, string folder, Stream stream)
         {
             var resourceId = Guid.NewGuid().ToString("N");
-            documentStore.Add(folder, resourceId, stream.CopyTo);
+            documentStore.AddAsync(folder, resourceId, stream.CopyToAsync);
             return resourceId;
         }
 
-        public static void Add(this IDocumentStore documentStore, string folder, string resourceId, Stream stream)
+        public static Task AddAsync(this IDocumentStore documentStore, string folder, string resourceId, Stream stream)
         {
-            documentStore.Add(folder, resourceId, stream.CopyTo);
+            return documentStore.AddAsync(folder, resourceId, stream.CopyToAsync);
         }
 
         public static Stream Read(this IDocumentStore documentStore, string folder, string resourceId, Action<Stream> reader)

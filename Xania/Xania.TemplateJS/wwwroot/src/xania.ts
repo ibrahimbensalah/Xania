@@ -135,6 +135,42 @@ export function ForEach(attrs, children) {
     return new ForEachTemplate<Reactive.Binding>(attrs.param, attrs.source, children, Dom.DomVisitor);
 }
 
+export function If(attrs, children: Template.INode[]) {
+    return {
+        bind() {
+            return new IfBinding(attrs.expr, children);
+        }
+    }
+}
+
+export class IfBinding extends Reactive.Binding {
+    private conditionalBindings = [];
+    constructor(private expr, private children: Template.INode[]) {
+        super();
+    }
+
+    render(context, driver) {
+        var value = !!this.expr.execute(this, context).valueOf();
+        var childBindings: any[] = this.conditionalBindings,
+            i = childBindings.length;
+
+        if (value) {
+            if (!i) {
+                this.children.forEach(x => childBindings.push(x.bind().update(context, driver)));
+            } else {
+                while (i--) {
+                    childBindings[i].update(context, driver);
+                }
+            }
+        } else {
+            while (i--) {
+                childBindings[i].dispose();
+            }
+            childBindings.length = 0;
+        }
+    }
+}
+
 export function expr(code: string) {
     return compile(code);
 }
@@ -200,7 +236,7 @@ class ForEachBinding extends Reactive.Binding {
             fragments = this.fragments,
             fragmentLength = fragments.length;
 
-        while(i--) {
+        while (i--) {
             var item = stream.get ? stream.get(i) : stream[i], fragment;
 
             if (i < fragmentLength) {
@@ -271,7 +307,7 @@ class RepeatBinding extends Reactive.Binding {
         var i = 0;
         while (i < this.fragments.length) {
             var frag = this.fragments[i];
-            if (stream.indexOf(frag.context.valueOf()) < 0) {
+            if (stream.indexOf(frag.context) < 0) {
                 frag.dispose();
                 this.fragments.splice(i, 1);
             } else {
@@ -452,7 +488,7 @@ declare function fetch<T>(url: string, config?): Promise<T>;
 
 export class RemoteObject {
     private observers = [];
-    private value = null;
+    private object = [];
 
     constructor(private url: string, private body) {
         this.reload();
@@ -471,18 +507,28 @@ export class RemoteObject {
                 return response.json();
             })
             .then(data => {
-                this.value = data;
+                this.object = data;
                 for (var i = 0; i < this.observers.length; i++) {
-                    this.observers[i].onNext(this.value);
+                    this.observers[i].onNext(this.object);
                 }
             });
     }
 
     subscribe(observer) {
-        if (this.value !== null)
-            observer.onNext(this.value);
+        if (this.object !== null)
+            observer.onNext(this.object);
 
         this.observers.push(observer);
+    }
+
+    valueOf() {
+        return this.object;
+    }
+
+    save(user) {
+        Resource.create("/api/user", user).then((response: any) => {
+            this.reload();
+        });
     }
 }
 

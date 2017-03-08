@@ -2,12 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace Xania.DataAccess
 {
     public interface IDocumentStore
     {
-        void Add(string folder, string resourceId, Action<Stream> writer);
+        Task AddAsync(string folder, string resourceId, Func<Stream, Task> writer);
         T Read<T>(string folder, string resourceId, Func<Stream, T> reader);
         IEnumerable<string> List(string folder);
     }
@@ -16,12 +17,13 @@ namespace Xania.DataAccess
     {
         private readonly IDictionary<ListKey, MemoryStream> _streams = new Dictionary<ListKey, MemoryStream>();
 
-        public void Add(string folder, string resourceId, Action<Stream> writer)
+        public Task AddAsync(string folder, string resourceId, Func<Stream, Task> writer)
         {
             var key = new ListKey(folder, resourceId);
             var mem = new MemoryStream();
-            writer(mem);
             _streams[key] = mem;
+
+            return writer(mem);
         }
 
         public T Read<T>(string folder, string resourceId, Func<Stream, T> reader)

@@ -1,14 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace Xania.DataAccess
 {
     public interface IFileRepository
     {
-        void Add(IFile file);
+        Task AddAsync(IFile file);
         IFile Get(string resourceId);
         IEnumerable<IFile> List(string folder);
     }
@@ -19,7 +19,7 @@ namespace Xania.DataAccess
         string ContentType { get; }
         string ResourceId { get; }
         string Folder { get; }
-        void CopyTo(Stream output);
+        Task CopyToAsync(Stream output);
     }
 
     public abstract class FileBase : IFile
@@ -28,7 +28,7 @@ namespace Xania.DataAccess
         public string ContentType { get; set; }
         public string ResourceId { get; set; }
         public string Folder { get; set; }
-        public abstract void CopyTo(Stream output);
+        public abstract Task CopyToAsync(Stream output);
     }
 
     public interface IOutputStream
@@ -48,9 +48,10 @@ namespace Xania.DataAccess
             _documentStore = documentStore;
         }
 
-        public override void CopyTo(Stream output)
+        public override Task CopyToAsync(Stream output)
         {
             _documentStore.Read(Folder, ResourceId, s => s.CopyTo(output));
+            return Task.CompletedTask;
         }
     }
 
@@ -63,14 +64,15 @@ namespace Xania.DataAccess
             _filePath = filePath;
         }
 
-        public override void CopyTo(Stream output)
+        public override Task CopyToAsync(Stream output)
         {
             using (var stream = File.OpenRead(_filePath))
             {
                 stream.CopyTo(output);
                 output.Flush();
-                stream.Close();
             }
+
+            return Task.CompletedTask;
         }
     }
 
@@ -86,11 +88,11 @@ namespace Xania.DataAccess
             _documentStore = documentStore;
         }
 
-        public void Add(IFile file)
+        public async Task AddAsync(IFile file)
         {
             var metadata = FileMetadata.FromFile(file);
-            _documentStore.Add(file.Folder, metadata.ResourceId, file.CopyTo);
-            _metadataRepository.Add(metadata);
+            await _metadataRepository.AddAsync(metadata);
+            await _documentStore.AddAsync(file.Folder, metadata.ResourceId, file.CopyToAsync);
         }
 
         public IFile Get(string resourceId)
@@ -131,7 +133,6 @@ namespace Xania.DataAccess
 
     public class FileMetadata
     {
-        [Key]
         public string ResourceId { get; set; }
         public string Name { get; set; }
         public string ContentType { get; set; }

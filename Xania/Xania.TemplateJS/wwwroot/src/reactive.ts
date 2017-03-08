@@ -217,13 +217,14 @@ export module Reactive {
 
         constructor(observable: any) {
             this.subscription = observable.subscribe(this);
-            this.current = observable.current;
+            this.current = observable.valueOf();
         }
 
         get length() {
-            if (typeof this.current === "undefined")
+            if (typeof this.current === "undefined" || this.current === null)
                 return 0;
-            return this.current.length;
+            var length = this.current.length;
+            return length;
         }
 
         get(name: string) {
@@ -272,6 +273,10 @@ export module Reactive {
 
         valueOf() {
             return this.current;
+        }
+
+        indexOf(item) {
+            return this.current.indexOf(item);
         }
     }
 
@@ -528,9 +533,9 @@ export module Reactive {
             return value.awaited;
         }
 
-        evaluateText(parts): any {
+        evaluateText(parts, context = this.context): any {
             if (parts.execute) {
-                let result = parts.execute(this, this.context);
+                let result = parts.execute(this, context);
                 return result && result.valueOf();
             } else if (Array.isArray(parts)) {
                 var stack = parts.slice(0).reverse();
@@ -541,7 +546,7 @@ export module Reactive {
                     if (cur === void 0 || cur === null) {
                         // skip 
                     } else if (cur.execute) {
-                        stack.push(cur.execute(this, this.context));
+                        stack.push(cur.execute(this, context));
                     } else if (Array.isArray(cur)) {
                         var i = cur.length;
                         while (i--) {
@@ -557,13 +562,13 @@ export module Reactive {
                 return parts;
         }
 
-        evaluateObject(expr): any {
+        evaluateObject(expr, context = this.context): any {
             if (!expr)
                 return expr;
             else if (expr.execute)
-                return expr.execute(this, this.context);
+                return expr.execute(this, context);
             else if (Array.isArray(expr)) {
-                return expr.map(x => this.evaluateObject(x));
+                return expr.map(x => this.evaluateObject(x, context));
             }
             else
                 return expr;

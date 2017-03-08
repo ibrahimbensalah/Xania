@@ -1,4 +1,4 @@
-﻿import { Xania as xania, Repeat, expr, Dom, RemoteObject, Reactive as Re, Template, Resource } from "../src/xania"
+﻿import { Xania as xania, Repeat, If, expr, Dom, RemoteObject, Reactive as Re, Template } from "../src/xania"
 import { UrlHelper, ViewResult } from "../src/mvc"
 import './admin.css'
 import { Observables } from "../src/observables";
@@ -8,15 +8,17 @@ import DataGrid, { TextColumn } from "./grid"
 import Lib = require("../diagram/lib");
 import BallsApp from '../sample/balls/app';
 
-var remoteuUsers = new RemoteObject('/api/query/', "users");
 var store = new Re.Store({
+    filter: "",
     user: "Ibrahim",
-    users: remoteuUsers,
-    currentUser: {},
+    users: new RemoteObject('/api/query/', "users"),
+    currentUser: null,
     saveUser() {
-        Resource.create("/api/user", this.currentUser).then((response: any) => {
-            remoteuUsers.reload();
-        });
+        this.users.save(this.currentUser);
+        this.cancel();
+    },
+    cancel() {
+        this.currentUser = false;
     }
 });
 
@@ -59,10 +61,6 @@ export function todos() {
 }
 
 export function users() {
-    var onCancel = () => {
-        store.get("currentUser").set({});
-        store.refresh();
-    }
     var onSelectUser = user => {
         store.get("currentUser").set(user);
         store.refresh();
@@ -78,33 +76,39 @@ export function users() {
                             <TextColumn field="name" display="User name" />
                             <TextColumn field="emailConfirmed" display="Email confirmed" />
                         </DataGrid>
-                        <footer style="height: 50px; margin: 0 16px; padding: 0;"><button className="btn btn-primary" data-bind="click: users.create"><span className="glyphicon glyphicon-plus"></span> Add New</button></footer>
+                        <footer style="height: 50px; margin: 0 16px; padding: 0;">
+                            <button className="btn btn-primary">
+                                <span className="glyphicon glyphicon-plus"></span> Add New
+                            </button>
+                        </footer>
                     </div>
                 </section>
             </div>
-            <div className="col-4">
-                <section className="section" style="height: 100%">
-                    <button type="button" className="close" aria-hidden="true" style="margin: 16px 16px 0 0;" onClick={onCancel}>×</button>
-                    <header style="height: 50px"><span className="fa fa-adjust"></span> <span>{expr("currentUser.name")}</span></header>
+            <If expr={expr("currentUser")}>
+                <div className="col-4">
+                    <section className="section" style="height: 100%">
+                        <button type="button" className="close" aria-hidden="true" style="margin: 16px 16px 0 0;" onClick={expr("cancel")}>×</button>
+                        <header style="height: 50px"><span className="fa fa-adjust"></span> <span>{expr("currentUser.name")}</span></header>
 
-                    <div style="padding: 0px 16px 100px 16px; height: 100%;">
-                        <div className="col-lg-12 col-md-3"><label className="control-label" for="UserName">User name</label><div>
-                            <input className="form-control" type="text" placeholder="User name" name="currentUser.name" />
+                        <div style="padding: 0px 16px 100px 16px; height: 100%;">
+                            <div className="col-lg-12 col-md-3"><label className="control-label" for="UserName">User name</label><div>
+                                <input className="form-control" type="text" placeholder="User name" name="currentUser.name" />
+                            </div>
+                            </div>
+                            <div className="col-lg-12 col-md-3"><label className="control-label" for="Email">Email</label>
+                                <div><input id="Email" className="form-control" type="text" placeholder="Email" name="currentUser.email" /></div>
+                            </div>
+                            <div className="col-lg-12 col-md-3"><div>
+                                <input type="checkbox" checked={expr("currentUser.emailConfirmed")} /> <label className="control-label" for="EmailConfirmed">Email confirmed</label>
+                            </div></div>
+                            <div className="col-lg-12 col-md-3">
+                                <button className="btn btn-primary" onClick={expr("saveUser ()")}>
+                                    <span className="fa fa-save"></span> Save</button>
+                            </div>
                         </div>
-                        </div>
-                        <div className="col-lg-12 col-md-3"><label className="control-label" for="Email">Email</label>
-                            <div><input id="Email" className="form-control" type="text" placeholder="Email" name="currentUser.email" /></div>
-                        </div>
-                        <div className="col-lg-12 col-md-3"><div>
-                            <input type="checkbox" checked={expr("currentUser.emailConfirmed")} /> <label className="control-label" for="EmailConfirmed">Email confirmed</label>
-                        </div></div>
-                        <div className="col-lg-12 col-md-3">
-                            <button className="btn btn-primary" onClick={expr("saveUser ()")}>
-                                <span className="fa fa-save"></span> Save</button>
-                        </div>
-                    </div>
-                </section>
-            </div>
+                    </section>
+                </div>
+            </If>
         </div>, store);
 }
 

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace Xania.DataAccess
 {
@@ -15,7 +16,7 @@ namespace Xania.DataAccess
             _rootDirectory = rootDirectory;
         }
 
-        public void Add(string folder, string resourceId, Action<Stream> writer)
+        public Task AddAsync(string folder, string resourceId, Func<Stream, Task> writer)
         {
             lock (SyncObject)
             {
@@ -23,9 +24,10 @@ namespace Xania.DataAccess
                 var filePath = GetFilePath(folder, resourceId);
                 using (var fileStream = File.OpenWrite(filePath))
                 {
-                    writer(fileStream);
+                    var task = writer(fileStream);
                     fileStream.Flush();
-                    fileStream.Close();
+
+                    return task;
                 }
             }
         }
@@ -36,14 +38,7 @@ namespace Xania.DataAccess
             {
                 using (var stream = File.OpenRead(GetFilePath(folder, resourceId)))
                 {
-                    try
-                    {
-                        return reader(stream);
-                    }
-                    finally
-                    {
-                        stream.Close();
-                    }
+                    return reader(stream);
                 }
             }
         }

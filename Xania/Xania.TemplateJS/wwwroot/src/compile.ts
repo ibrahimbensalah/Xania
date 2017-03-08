@@ -124,7 +124,7 @@ class Expression {
                         console.error("could not resolve expression, " + JSON.stringify(ast.fun));
                         return void 0;
                     } else
-                        ast.value = binding.app(fun, args);
+                        ast.value = binding.app(fun.valueOf(), args);
                     break;
                 default:
                     throw Error("unsupported ast type " + ast.type);

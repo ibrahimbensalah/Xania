@@ -3,16 +3,25 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using Xania.DataAccess;
 
 namespace Xania.TemplateJS.Controllers
 {
     [Route("api/[controller]")]
     public class UserController
     {
-        [HttpPost]
-        public User AddUser([FromBody]User user)
+        private readonly IObjectStore<User> _users;
+
+        public UserController(IObjectStore<User> users)
         {
-            return user;
+            _users = users;
+        }
+
+        [HttpPost]
+        public async Task<User> AddUser([FromBody]User user)
+        {
+            await _users.AddAsync(user);
+            return null;
         }
     }
 }

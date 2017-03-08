@@ -1,11 +1,12 @@
 ﻿using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace Xania.DataAccess
 {
     public interface IObjectStore<TModel> : IEnumerable<TModel>
     {
-        void Add(TModel model);
+        Task<TModel> AddAsync(TModel model);
 
-        void Delete(TModel model);
+        Task DeleteAsync(TModel model);
     }
 }

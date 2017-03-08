@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace Xania.DataAccess
 {
@@ -29,14 +30,16 @@ namespace Xania.DataAccess
             return new TModel();
         }
 
-        public void Add(TModel model)
+        public Task<TModel> AddAsync(TModel model)
         {
             Items.Add(model);
+            return Task.FromResult(model);
         }
 
-        public void Delete(TModel model)
+        public Task DeleteAsync(TModel model)
         {
             Items.Remove(model);
+            return Task.CompletedTask;
         }
     }
 }

@@ -21,6 +21,7 @@
     <IISExpressUseClassicPipelineMode />
     <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\</SolutionDir>
     <RestorePackages>true</RestorePackages>
+    <UseGlobalApplicationHostFile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -107,10 +108,6 @@
     <Folder Include="Models\" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Xania.DataAccess\Xania.DataAccess.csproj">
-      <Project>{38105131-F4D3-43FB-90E2-DBCC2155DC47}</Project>
-      <Name>Xania.DataAccess</Name>
-    </ProjectReference>
     <ProjectReference Include="..\Xania.Ledger.Domain\Xania.Ledger.Domain.csproj">
       <Project>{09403585-214B-4B80-BF3F-47B24C5AB70E}</Project>
       <Name>Xania.Ledger.Domain</Name>

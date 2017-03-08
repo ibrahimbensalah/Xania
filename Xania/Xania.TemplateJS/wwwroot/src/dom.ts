@@ -338,7 +338,9 @@ export module Dom {
 
         fire(event, context?) {
             var newValue = this.evaluate(context);
-            this.state = newValue;
+
+            this.state = typeof newValue === "function" ? newValue() : newValue;
+
             if (newValue !== void 0) {
                 var tag = event.target;
                 if (newValue === null) {
@@ -492,16 +494,12 @@ export module Dom {
         render(context, parent) {
             let value = this.evaluateText(this.expr);
 
-            if (value === void 0) {
-                return;
-            }
-
-            if (value !== null && !!value.valueOf)
+            if (value && value.valueOf)
                 value = value.valueOf();
 
             var newValue;
             if (this.name === "checked") {
-                newValue = !!value ? "checked" : null;
+                newValue = value ? "checked" : null;
             } else {
                 newValue = value;
             }

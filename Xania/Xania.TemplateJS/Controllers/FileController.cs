@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -6,13 +6,14 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading.Tasks;
-using System.Web.Http;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Xania.DataAccess;
 
-namespace Xania.WebApi.Controllers
+namespace Xania.TemplateJS.Controllers
 {
-    [RoutePrefix("data/file")]
-    public class FileController : ApiController
+    [Route("data/file")]
+    public class FileController : Controller
     {
         private readonly IFileRepository _fileRepository;
         private readonly IXaniaConfiguration _configuration;
@@ -25,28 +26,14 @@ namespace Xania.WebApi.Controllers
 
         [HttpPost]
         [Route("{*folder}")]
-        public async Task<IHttpActionResult> UploadTask(string folder)
+        public async Task<CreatedResult> UploadTask(string folder, ICollection<IFormFile> files)
         {
-            if (!Request.Content.IsMimeMultipartContent())
-                throw new HttpResponseException(HttpStatusCode.UnsupportedMediaType);
-            
-            var provider = new MultipartFormDataStreamProvider(_configuration.UploadDir);
-
-            await Request.Content.ReadAsMultipartAsync(provider);
-
             var resources = new List<string>();
-            foreach (var file in provider.FileData)
+            foreach (var file in files)
             {
                 var resourceId = Guid.NewGuid().ToString();
                 resources.Add(resourceId);
-                _fileRepository.Add(new DiskFile(file.LocalFileName)
-                {
-                    Folder = folder,
-                    ContentType = file.Headers.ContentType.MediaType,
-                    Name = file.Headers.ContentDisposition.FileName,
-                    ResourceId = resourceId
-                });
-                File.Delete(file.LocalFileName);
+                await _fileRepository.AddAsync(new UploadFile(folder, resourceId, file));
             }
 
             return Created(Url.Content("~/data/file"), resources);
@@ -54,7 +41,7 @@ namespace Xania.WebApi.Controllers
 
         [HttpGet]
         [Route("{*resourcePath}")]
-        public HttpResponseMessage  Get(string resourcePath)
+        public HttpResponseMessage Get(string resourcePath)
         {
             var file = _fileRepository.Get(resourcePath);
             return new HttpResponseMessage(HttpStatusCode.OK)
@@ -65,7 +52,7 @@ namespace Xania.WebApi.Controllers
 
         [HttpGet]
         [Route("{*folder}")]
-        public IHttpActionResult List(string folder)
+        public OkObjectResult List(string folder)
         {
             var files =
                 from file in _fileRepository.List(folder)
@@ -76,6 +63,28 @@ namespace Xania.WebApi.Controllers
                     Url = Url.Content("~/data/file/download/" + file.ResourceId.ToString())
                 };
             return Ok(files);
+        }
+    }
+
+    public class UploadFile : IFile
+    {
+        private readonly IFormFile _file;
+
+        public UploadFile(string folder, string resourceId, IFormFile file)
+        {
+            _file = file;
+            Folder = folder;
+            ResourceId = resourceId;
+        }
+
+        public string Name => _file.Name;
+
+        public string ContentType => _file.ContentType;
+        public string ResourceId { get; }
+        public string Folder { get; }
+        public Task CopyToAsync(Stream output)
+        {
+            return _file.CopyToAsync(output);
         }
     }
 
@@ -91,7 +100,7 @@ namespace Xania.WebApi.Controllers
 
         protected override Task SerializeToStreamAsync(Stream stream, TransportContext context)
         {
-            return Task.Run(() => _file.CopyTo(stream));
+            return _file.CopyToAsync(stream);
         }
 
         protected override bool TryComputeLength(out long length)

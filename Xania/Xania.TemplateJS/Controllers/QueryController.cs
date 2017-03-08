@@ -3,23 +3,38 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using Xania.DataAccess;
 
 namespace Xania.TemplateJS.Controllers
 {
     [Route("api/[controller]")]
     public class QueryController: Controller
     {
+        private IObjectStore<User> _users;
+
+        public QueryController(IObjectStore<User> users)
+        {
+            _users = users;
+        }
+
         [HttpPost]
         public object Execute([FromBody]dynamic ast)
         {
-            return accept(ast, new Store(new Dictionary<string, object>
-            {
-                { "users", GetUsers() }
-            }));
+            return GetUsers();
+            //return accept(ast, new Store(new Dictionary<string, object>
+            //{
+            //    { "users", GetUsers() }
+            //}));
         }
 
         public IEnumerable<User> GetUsers()
         {
+            using (var enumerator = _users.GetEnumerator())
+            {
+                while (enumerator.MoveNext())
+                    yield return enumerator.Current;
+            }
+
             for (var i = 0; i < 10; i++)
             {
                 yield return new User
