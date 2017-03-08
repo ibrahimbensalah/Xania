@@ -1,4 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq.Expressions;
 using System.Threading.Tasks;
 
 namespace Xania.DataAccess
@@ -8,5 +10,6 @@ namespace Xania.DataAccess
         Task<TModel> AddAsync(TModel model);
 
         Task DeleteAsync(TModel model);
+        Task SaveAsync(Expression<Func<TModel, bool>> condition, TModel user);
     }
 }

@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
+using System.Linq.Expressions;
 using System.Threading.Tasks;
 
 namespace Xania.DataAccess
@@ -39,6 +41,17 @@ namespace Xania.DataAccess
         public Task DeleteAsync(TModel model)
         {
             Items.Remove(model);
+            return Task.CompletedTask;
+        }
+
+        public Task SaveAsync(Expression<Func<TModel, bool>> condition, TModel newItem)
+        {
+            var existingItem = Items.SingleOrDefault(condition.Compile());
+            if (existingItem != null)
+            {
+                Items.Remove(existingItem);
+            }
+            Items.Add(newItem);
             return Task.CompletedTask;
         }
     }

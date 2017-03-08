@@ -19,6 +19,13 @@ var store = new Re.Store({
     },
     cancel() {
         this.currentUser = false;
+    },
+    addUser() {
+        this.currentUser = {
+            name: "",
+            email: "",
+            emailConfirmed: false
+        }
     }
 });
 
@@ -77,8 +84,8 @@ export function users() {
                             <TextColumn field="emailConfirmed" display="Email confirmed" />
                         </DataGrid>
                         <footer style="height: 50px; margin: 0 16px; padding: 0;">
-                            <button className="btn btn-primary">
-                                <span className="glyphicon glyphicon-plus"></span> Add New
+                            <button className="btn btn-primary" onClick={expr("addUser")}>
+                                <span className="fa fa-plus"></span> Add New
                             </button>
                         </footer>
                     </div>

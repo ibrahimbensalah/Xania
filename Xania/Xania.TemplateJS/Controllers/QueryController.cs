@@ -34,17 +34,6 @@ namespace Xania.TemplateJS.Controllers
                 while (enumerator.MoveNext())
                     yield return enumerator.Current;
             }
-
-            for (var i = 0; i < 10; i++)
-            {
-                yield return new User
-                {
-                    Name = "User " + DateTime.Now,
-                    Email = "user" + i + "@xania.nl",
-                    Roles = new[] {"Customer " + i, "Admin " + i},
-                    EmailConfirmed = i % 2 == 0
-                };
-            }
         }
 
         private object accept(dynamic ast, Store store)
@@ -63,6 +52,8 @@ namespace Xania.TemplateJS.Controllers
 
     public class User
     {
+        public Guid Id { get; set; } = Guid.NewGuid();
+
         public string Name { get; set; }
         public string Email { get; set; }
         public string[] Roles { get; set; }
