@@ -24,7 +24,7 @@ namespace Xania.TemplateJS.Controllers
             {
                 yield return new User
                 {
-                    Name = "User " + i,
+                    Name = "User " + DateTime.Now,
                     Email = "user" + i + "@xania.nl",
                     Roles = new[] {"Customer " + i, "Admin " + i},
                     EmailConfirmed = i % 2 == 0

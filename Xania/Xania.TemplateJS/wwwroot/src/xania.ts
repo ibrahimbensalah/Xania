@@ -125,68 +125,115 @@ class ComponentBinding extends Reactive.Binding {
 
 }
 
-//class PartialBinding extends Reactive.Binding {
-//    private binding;
-//    private cache = [];
-//    constructor(private view, private model) {
-//        super();
-//    }
-
-//    render(context, parent) {
-//        var view = this.evaluateObject(this.view).valueOf();
-
-//        if (!view)
-//            throw new Error("view is empty");
-
-//        if (this.binding) {
-//            this.binding.dispose();
-//        }
-
-//        var newBinding = new Dom.FragmentBinding(this.model, [view]);
-
-//        this.binding = newBinding;
-//        this.binding.update(context, parent);
-//    }
-
-//    onNext(_) {
-//        this.execute();
-//    }
-//}
-
 export { Reactive, Template, Dom }
 
+export function Repeat(attrs, children) {
+    return new RepeatTemplate<Reactive.Binding>(attrs.param, attrs.source, children, Dom.DomVisitor);
+}
 
-export class Repeat {
-    private template: MapTemplate<Reactive.Binding>;
-
-    constructor(attrs, children) {
-        this.template =
-            new MapTemplate<Reactive.Binding>(attrs.param, attrs.source, children, Dom.DomVisitor);
-    }
-
-    bind() {
-        return this.template.bind();
-    }
+export function ForEach(attrs, children) {
+    return new ForEachTemplate<Reactive.Binding>(attrs.param, attrs.source, children, Dom.DomVisitor);
 }
 
 export function expr(code: string) {
     return compile(code);
 }
 
-export class MapTemplate<T> implements Template.INode {
+export class RepeatTemplate<T> implements Template.INode {
     constructor(private param, private expr, private children: Template.INode[], private visitor: Template.IVisitor<T>) { }
 
-    child(child: Template.INode) {
-        this.children.push(child);
-        return this;
-    }
-
     bind() {
-        return new MapBinding(this.param, this.expr, this.children);
+        return new RepeatBinding(this.param, this.expr, this.children);
     }
 }
 
-class MapBinding extends Reactive.Binding {
+export class ForEachTemplate<T> implements Template.INode {
+    constructor(private param, private expr, private children: Template.INode[], private visitor: Template.IVisitor<T>) { }
+
+    bind() {
+        return new ForEachBinding(this.param, this.expr, this.children);
+    }
+}
+
+class ForEachBinding extends Reactive.Binding {
+    public fragments: Fragment[] = [];
+
+    get length() {
+        var total = 0, length = this.fragments.length;
+        for (var i = 0; i < length; i++) {
+            total += this.fragments[i].length;
+        }
+        return total;
+    }
+
+    constructor(public param, private expr, public children: Template.INode[]) {
+        super();
+        for (var child of children) {
+            if (!child.bind)
+                throw Error("child is not a node");
+        }
+    }
+
+    dispose() {
+        for (var i = 0; i < this.fragments.length; i++) {
+            this.fragments[i].dispose();
+        }
+    }
+
+    private static swap(arr: Fragment[], srcIndex, tarIndex) {
+        if (srcIndex > tarIndex) {
+            var i = srcIndex;
+            srcIndex = tarIndex;
+            tarIndex = i;
+        }
+        if (srcIndex < tarIndex) {
+            var src = arr[srcIndex];
+            arr[srcIndex] = arr[tarIndex];
+            arr[tarIndex] = src;
+        }
+    }
+
+    render(context, driver) {
+        var stream = this.expr.execute(this, context).iterator();
+
+        var i = stream.length,
+            fragments = this.fragments,
+            fragmentLength = fragments.length;
+
+        while(i--) {
+            var item = stream.get ? stream.get(i) : stream[i], fragment;
+
+            if (i < fragmentLength) {
+                fragment = fragments[i];
+            } else {
+                fragment = new Fragment(this);
+                fragments.push(fragment);
+            }
+            fragment.update(item, driver);
+        }
+
+        while (fragments.length > stream.length) {
+            fragments.pop().dispose();
+        }
+    }
+
+    insert(fragment: Fragment, dom, idx) {
+        if (this.driver) {
+            var offset = 0, fragments = this.fragments, i = fragments.length;
+
+            while (i--) {
+                var fr = fragments[i];
+                if (fr === fragment)
+                    break;
+                offset += fr.length;
+            }
+            this.driver.insert(this, dom, offset + idx);
+        }
+    }
+}
+
+
+class RepeatBinding extends Reactive.Binding {
     public fragments: Fragment[] = [];
     private stream;
 
@@ -224,7 +271,7 @@ class MapBinding extends Reactive.Binding {
         var i = 0;
         while (i < this.fragments.length) {
             var frag = this.fragments[i];
-            if (stream.indexOf(frag.context) < 0) {
+            if (stream.indexOf(frag.context.valueOf()) < 0) {
                 frag.dispose();
                 this.fragments.splice(i, 1);
             } else {
@@ -239,7 +286,7 @@ class MapBinding extends Reactive.Binding {
         }
     }
 
-    private static swap(arr: Fragment[], srcIndex, tarIndex) {
+    static swap(arr: Fragment[], srcIndex, tarIndex) {
         if (srcIndex > tarIndex) {
             var i = srcIndex;
             srcIndex = tarIndex;
@@ -265,7 +312,7 @@ class MapBinding extends Reactive.Binding {
                 fr = this.fragments[e];
                 if (fr.context === item) {
                     fragment = fr;
-                    MapBinding.swap(this.fragments, e, i);
+                    RepeatBinding.swap(this.fragments, e, i);
                     break;
                 }
             }
@@ -273,7 +320,7 @@ class MapBinding extends Reactive.Binding {
             if (fragment === null /* not found */) {
                 fragment = new Fragment(this);
                 this.fragments.push(fragment);
-                MapBinding.swap(this.fragments, fraglength, i);
+                RepeatBinding.swap(this.fragments, fraglength, i);
             }
 
             fragment.update(item, driver);
@@ -404,26 +451,38 @@ export class Fragment {
 declare function fetch<T>(url: string, config?): Promise<T>;
 
 export class RemoteObject {
-    promise: Promise<Object>;
+    private observers = [];
+    private value = null;
 
-    constructor(private url: string, private expr) {
+    constructor(private url: string, private body) {
+        this.reload();
+    }
+
+    reload() {
         var config = {
             method: "POST",
             headers: {
                 'Content-Type': "application/json"
             },
-            body: JSON.stringify(parse(expr))
+            body: JSON.stringify(parse(this.body))
         };
-
-        this.promise = fetch(url, config).then((response: any) => {
-            return response.json();
-        });
+        return fetch(this.url, config)
+            .then((response: any) => {
+                return response.json();
+            })
+            .then(data => {
+                this.value = data;
+                for (var i = 0; i < this.observers.length; i++) {
+                    this.observers[i].onNext(this.value);
+                }
+            });
     }
 
     subscribe(observer) {
-        this.promise.then((data: any) => {
-            observer.onNext(data);
-        });
+        if (this.value !== null)
+            observer.onNext(this.value);
+
+        this.observers.push(observer);
     }
 }
 

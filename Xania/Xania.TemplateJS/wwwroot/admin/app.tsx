@@ -8,13 +8,14 @@ import DataGrid, { TextColumn } from "./grid"
 import Lib = require("../diagram/lib");
 import BallsApp from '../sample/balls/app';
 
+var remoteuUsers = new RemoteObject('/api/query/', "users");
 var store = new Re.Store({
     user: "Ibrahim",
-    users: new RemoteObject('/api/query/', "users"),
+    users: remoteuUsers,
     currentUser: {},
     saveUser() {
         Resource.create("/api/user", this.currentUser).then((response: any) => {
-            console.log("saved");
+            remoteuUsers.reload();
         });
     }
 });

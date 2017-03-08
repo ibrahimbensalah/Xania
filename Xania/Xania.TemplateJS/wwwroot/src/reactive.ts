@@ -116,6 +116,10 @@ export module Reactive {
             return true;
         }
 
+        set(value: any) {
+            this.parent.value[this.name] = value;
+        }
+
         valueOf() {
             return this.value;
         }
@@ -156,6 +160,10 @@ export module Reactive {
 
             return valueLength !== prevLength;
         }
+
+        indexOf(item) {
+            return this.value.indexOf(item);
+        }
     }
 
     class ObjectProperty extends Property {
@@ -172,10 +180,6 @@ export module Reactive {
                 return true;
             }
             return false;
-        }
-
-        set(value: any) {
-            this.parent.value[this.name] = value;
         }
     }
 
@@ -339,7 +343,7 @@ export module Reactive {
             return void 0;
         }
 
-        refresh() {
+        refresh(mutable = true) {
             var stack: { properties, value }[] = [this];
             var stackLength: number = 1;
             var dirty: any[] = [];
@@ -353,12 +357,14 @@ export module Reactive {
                 while (i--) {
                     var child = properties[i];
                     var changed = child.refresh(parentValue);
-                    stack[stackLength++] = child;
+                    if (mutable || changed) {
+                        stack[stackLength++] = child;
 
-                    if (changed === true) {
-                        const actions = child.actions;
-                        if (actions) {
-                            dirty[dirtyLength++] = actions;
+                        if (changed === true) {
+                            const actions = child.actions;
+                            if (actions) {
+                                dirty[dirtyLength++] = actions;
+                            }
                         }
                     }
                 };
@@ -392,6 +398,17 @@ export module Reactive {
         insert(sender: Binding, dom, idx);
     }
 
+    class ListItem {
+        constructor(private name: string, private value: any) {
+        }
+
+        get(name) {
+            if (name === this.name)
+                return this.value;
+            return void 0;
+        }
+    }
+
     export abstract class Binding {
         public context;
         protected driver;
@@ -421,11 +438,6 @@ export module Reactive {
 
         public abstract render?(context, driver): any;
 
-        extend(name: string, value: any) {
-            return new Extension(this.context)
-                .set(name, value);
-        }
-
         where(source, predicate) {
             throw new Error("Not implemented");
         }
@@ -442,7 +454,7 @@ export module Reactive {
                 var result = [];
                 if (length === void 0)
                     return result;
-                var len = length.valueOf();
+                var len = +length;
                 for (var i = 0; i < len; i++) {
                     var ext = this.extend(param, source.get(i));
                     result.push(ext);
@@ -453,6 +465,12 @@ export module Reactive {
                     return this.extend(param, item);
                 });
             }
+        }
+
+        extend(name: string, value: any) {
+            if (value === null || value === void 0)
+                return value;
+            return new ListItem(name, value);
         }
 
         member(target: { get(name: string) }, name) {
