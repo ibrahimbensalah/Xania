@@ -150,7 +150,8 @@ export class IfBinding extends Reactive.Binding {
     }
 
     render(context, driver) {
-        var value = !!this.expr.execute(this, context).valueOf();
+        var result = this.evaluateObject(this.expr, context);
+        var value = result && !!result.valueOf(); 
         var childBindings: any[] = this.conditionalBindings,
             i = childBindings.length;
 

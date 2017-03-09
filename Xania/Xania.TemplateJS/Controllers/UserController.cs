@@ -8,20 +8,26 @@ using Xania.DataAccess;
 namespace Xania.TemplateJS.Controllers
 {
     [Route("api/[controller]")]
-    public class UserController
+    public class CompanyController
     {
-        private readonly IObjectStore<User> _users;
+        private readonly IObjectStore<Company> _companies;
 
-        public UserController(IObjectStore<User> users)
+        public CompanyController(IObjectStore<Company> companies)
         {
-            _users = users;
+            _companies = companies;
         }
 
         [HttpPost]
-        public async Task<User> AddUser([FromBody]User user)
+        public async Task<User> AddCompany([FromBody]Company company)
         {
-            await _users.SaveAsync(x => x.Id == user.Id, user);
+            await _companies.SaveAsync(x => x.Id == company.Id, company);
             return null;
         }
+    }
+
+    public class Company
+    {
+        public Guid Id { get; set; } = Guid.NewGuid();
+        public string Name { get; set; }
     }
 }
