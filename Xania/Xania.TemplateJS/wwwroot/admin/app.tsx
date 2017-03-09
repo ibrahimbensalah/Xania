@@ -73,11 +73,34 @@ function Section(attrs, children) {
             <If expr={attrs.onCancel}>
                 <button type="button" className="close" aria-hidden="true" style="margin: 16px 16px 0 0;" onClick={attrs.onCancel}>×</button>
             </If>
-            <header style="height: 50px"><span className="fa fa-adjust"></span> <span>Users</span></header>
+            <header style="height: 50px"><span className="fa fa-adjust"></span> <span>{attrs.title || 'Untitled'}</span></header>
             <div style="padding: 0px 16px 100px 16px; height: 100%;">
                 {children}
             </div>
         </section>
+    );
+}
+
+function TextEditor(attrs) {
+    var id = Math.random();
+    return xania.tag("div",
+        Object.assign({ className: "form-group" }, attrs),
+        [
+            <label for={id}>{attrs.display}</label>,
+            <input className="form-control" id={id} type="text" placeholder={attrs.display} name={"currentRow." + attrs.field} />
+        ]
+    );
+}
+
+function BooleanEditor(attrs) {
+    var id = Math.random();
+    return xania.tag("div",
+        Object.assign({ className: "form-check" }, attrs),
+        [
+            <label className="form-check-label" htmlFor={id}>
+                <input className="form-check-input" id={id} type="checkbox" checked={expr("currentRow." + attrs.field)} /> {attrs.display}
+            </label>
+        ]
     );
 }
 
@@ -109,7 +132,7 @@ export function users() {
     return new ViewResult(
         <div style="height: 95%;" className="row">
             <div className={[expr("currentRow -> 'col-8'"), expr("not currentRow -> 'col-12'")]}>
-                <Section>
+                <Section title="Users">
                     <DataGrid data={expr("await dataSource")} onSelectionChanged={onSelect} >
                         <TextColumn field="name" display="User name" />
                         <TextColumn field="emailConfirmed" display="Email confirmed" />
@@ -122,18 +145,12 @@ export function users() {
             </div>
             <If expr={expr("currentRow")}>
                 <div className="col-4">
-                    <Section onCancel={expr("cancel")}>
-                        <div className="col-lg-12 col-md-3"><label className="control-label" for="UserName">User name</label><div>
-                            <input className="form-control" type="text" placeholder="User name" name="currentRow.name" />
-                        </div>
-                        </div>
-                        <div className="col-lg-12 col-md-3"><label className="control-label" for="Email">Email</label>
-                            <div><input id="Email" className="form-control" type="text" placeholder="Email" name="currentRow.email" /></div>
-                        </div>
-                        <div className="col-lg-12 col-md-3"><div>
-                            <input type="checkbox" checked={expr("currentRow.emailConfirmed")} /> <label className="control-label" for="EmailConfirmed">Email confirmed</label>
-                        </div></div>
-                        <div className="col-lg-12 col-md-3">
+                    <Section title={expr("currentRow.name")} onCancel={expr("cancel")}>
+                        <TextEditor field="name" display="User Name" />
+                        <TextEditor field="email" display="Email" />
+                        <BooleanEditor field="emailConfirmed" display="Email confirmed" />
+
+                        <div className="form-group" style="padding: 10px; background-color: #EEE; border: 1px solid #DDD;">
                             <button className="btn btn-primary" onClick={expr("save ()")}>
                                 <span className="fa fa-save"></span> Save</button>
                         </div>
