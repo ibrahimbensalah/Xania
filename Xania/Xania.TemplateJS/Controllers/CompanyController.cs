@@ -8,20 +8,57 @@ using Xania.DataAccess;
 namespace Xania.TemplateJS.Controllers
 {
     [Route("api/[controller]")]
-    public class UserController
+    public class CompanyController
     {
-        private readonly IObjectStore<User> _users;
+        private readonly IObjectStore<Company> _companies;
 
-        public UserController(IObjectStore<User> users)
+        public CompanyController(IObjectStore<Company> companies)
         {
-            _users = users;
+            _companies = companies;
         }
 
         [HttpPost]
-        public async Task<User> AddUser([FromBody]User user)
+        public async Task<User> AddCompany([FromBody]Company company)
         {
-            await _users.SaveAsync(x => x.Id == user.Id, user);
+            await _companies.SaveAsync(x => x.Id == company.Id, company);
             return null;
         }
+
+        [HttpPost]
+        [Route("query")]
+        public object Query([FromBody]dynamic ast)
+        {
+            return QueryHelper.accept(ast, new Dictionary<string, object>
+            {
+                { "companies", _companies }
+            });
+        }
+    }
+
+    public class Company
+    {
+        public Guid Id { get; set; } = Guid.NewGuid();
+        public string Name { get; set; }
+        public Address Address { get; set; } = new Address();
+    }
+
+    public class Address
+    {
+        public AddressLine[] Lines { get; set; }
+        public string Location { get; set; }
+        public string FullName { get; set; }
+    }
+
+    public class AddressLine
+    {
+        public AddressType Type { get; set; }
+    }
+
+    public enum AddressType
+    {
+        Street,
+        Location,
+        Phone,
+        Fax
     }
 }

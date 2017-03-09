@@ -8,26 +8,41 @@ using Xania.DataAccess;
 namespace Xania.TemplateJS.Controllers
 {
     [Route("api/[controller]")]
-    public class CompanyController
+    public class UserController
     {
-        private readonly IObjectStore<Company> _companies;
+        private readonly IObjectStore<User> _users;
 
-        public CompanyController(IObjectStore<Company> companies)
+        public UserController(IObjectStore<User> users)
         {
-            _companies = companies;
+            _users = users;
         }
 
         [HttpPost]
-        public async Task<User> AddCompany([FromBody]Company company)
+        public async Task<User> AddUser([FromBody]User user)
         {
-            await _companies.SaveAsync(x => x.Id == company.Id, company);
+            await _users.SaveAsync(x => x.Id == user.Id, user);
             return null;
+        }
+
+        [HttpPost]
+        [Route("query")]
+        public object Query([FromBody]dynamic ast)
+        {
+            return QueryHelper.accept(ast, new Dictionary<string, object>
+            {
+                { "users", _users }
+            });
         }
     }
 
-    public class Company
+    public class User
     {
         public Guid Id { get; set; } = Guid.NewGuid();
+
         public string Name { get; set; }
+        public string Email { get; set; }
+        public string[] Roles { get; set; }
+        public bool EmailConfirmed { get; set; }
     }
+
 }

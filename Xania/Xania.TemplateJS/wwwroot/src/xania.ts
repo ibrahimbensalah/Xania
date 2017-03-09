@@ -487,7 +487,7 @@ export class Fragment {
 
 declare function fetch<T>(url: string, config?): Promise<T>;
 
-export class RemoteObject {
+export class RemoteDataSource {
     private observers = [];
     private object = [];
 
@@ -503,7 +503,7 @@ export class RemoteObject {
             },
             body: JSON.stringify(parse(this.body))
         };
-        return fetch(this.url, config)
+        return fetch(this.url + "query", config)
             .then((response: any) => {
                 return response.json();
             })
@@ -526,8 +526,8 @@ export class RemoteObject {
         return this.object;
     }
 
-    save(user) {
-        Resource.create("/api/user", user).then((response: any) => {
+    save(record) {
+        Resource.create(this.url, record).then((response: any) => {
             this.reload();
         });
     }

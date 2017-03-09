@@ -7,59 +7,6 @@ using Xania.DataAccess;
 
 namespace Xania.TemplateJS.Controllers
 {
-    [Route("api/[controller]")]
-    public class QueryController: Controller
-    {
-        private IObjectStore<User> _users;
-
-        public QueryController(IObjectStore<User> users)
-        {
-            _users = users;
-        }
-
-        [HttpPost]
-        public object Execute([FromBody]dynamic ast)
-        {
-            return GetUsers();
-            //return accept(ast, new Store(new Dictionary<string, object>
-            //{
-            //    { "users", GetUsers() }
-            //}));
-        }
-
-        public IEnumerable<User> GetUsers()
-        {
-            using (var enumerator = _users.GetEnumerator())
-            {
-                while (enumerator.MoveNext())
-                    yield return enumerator.Current;
-            }
-        }
-
-        private object accept(dynamic ast, Store store)
-        {
-            var type = (ExpressionType)ast.type;
-            switch (type)
-            {
-                case ExpressionType.IDENT:
-                    var name = (string) ast.name;
-                    return store.Get(name);
-                default:
-                    throw new InvalidOperationException("unsupported type: " + type);
-            }
-        }
-    }
-
-    public class User
-    {
-        public Guid Id { get; set; } = Guid.NewGuid();
-
-        public string Name { get; set; }
-        public string Email { get; set; }
-        public string[] Roles { get; set; }
-        public bool EmailConfirmed { get; set; }
-    }
-
     public class Store
     {
         private readonly IDictionary<string, object> _values;

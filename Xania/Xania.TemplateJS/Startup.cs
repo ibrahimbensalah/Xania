@@ -20,6 +20,7 @@ namespace Xania.TemplateJS
             services.AddMvc();
             services.AddSingleton<IObjectStore<User>>(new TransientObjectStore<User>());
             services.AddSingleton<IObjectStore<Company>>(new TransientObjectStore<Company>());
+            services.AddSingleton<IObjectStore<Invoice>>(new TransientObjectStore<Invoice>());
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

@@ -1,4 +1,4 @@
-﻿import { Xania as xania, Repeat, If, expr, Dom, RemoteObject, Reactive as Re, Template } from "../src/xania"
+﻿import { Xania as xania, Repeat, If, expr, Dom, RemoteDataSource, Reactive as Re, Template } from "../src/xania"
 import { UrlHelper, ViewResult } from "../src/mvc"
 import './admin.css'
 import { Observables } from "../src/observables";
@@ -11,7 +11,7 @@ import BallsApp from '../sample/balls/app';
 var store = new Re.Store({
     filter: "",
     user: "Ibrahim",
-    ds: new RemoteObject('/api/query/', "users"),
+    ds: new RemoteDataSource('/api/user/', "users"),
     current: null,
     saveUser() {
         this.users.save(this.currentUser);
@@ -40,16 +40,6 @@ export function index() {
 export function menu({ driver, html, url }) {
     mainMenu(url).bind()
         .update(new Re.Store({}), driver);
-}
-
-export function invoices() {
-    return new ViewResult(
-        <div>
-            <div>invoices {expr("user")}</div>
-            <Repeat source={expr("await users")}>
-                <div>{expr("name")} {expr("email")} {expr("roles")}</div>
-            </Repeat>
-        </div>, store);
 }
 
 export function timesheet() {
@@ -104,28 +94,70 @@ function BooleanEditor(attrs) {
     );
 }
 
-export function users() {
-    var store = new Re.Store({
-        dataSource: new RemoteObject('/api/query/', "users"),
-        currentRow: null,
-        save() {
-            this.dataSource.save(this.currentRow);
-            this.cancel();
-        },
-        cancel() {
-            this.currentRow = false;
-        },
-        createNew() {
-            return {
-                name: "",
-                email: "",
-                emailConfirmed: false
-            }
-        }
-    });
+abstract class ModelRepository {
+    private dataSource;
+    private currentRow = null;
 
-    var onSelect = user => {
-        store.get("currentRow").set(user);
+    constructor(url: string, expr: string) {
+        this.dataSource = new RemoteDataSource(url, expr);
+    }
+
+    save() {
+        this.dataSource.save(this.currentRow);
+        this.cancel();
+    }
+
+    cancel() {
+        this.currentRow = false;
+    }
+
+    abstract createNew();
+}
+
+class UserRepository extends ModelRepository {
+
+    constructor() {
+        super('/api/user/', "users");
+    }
+
+    createNew() {
+        return {
+            name: "",
+            email: "",
+            emailConfirmed: false
+        }
+    }
+}
+
+class InvoiceRepository extends ModelRepository {
+    constructor() {
+        super("/api/invoice/", "invoices");
+    }
+
+    createNew() {
+        return {
+            description: null
+        };
+    }
+}
+
+class CompanyRepository extends ModelRepository {
+    constructor() {
+        super("/api/company/", "companies");
+    }
+
+    createNew() {
+        return {
+            name: null
+        };
+    }
+}
+
+export function users() {
+    var store = new Re.Store(new UserRepository());
+
+    var onSelect = row => {
+        store.get("currentRow").set(row);
         store.refresh();
     }
 
@@ -149,6 +181,79 @@ export function users() {
                         <TextEditor field="name" display="User Name" />
                         <TextEditor field="email" display="Email" />
                         <BooleanEditor field="emailConfirmed" display="Email confirmed" />
+
+                        <div className="form-group" style="padding: 10px; background-color: #EEE; border: 1px solid #DDD;">
+                            <button className="btn btn-primary" onClick={expr("save ()")}>
+                                <span className="fa fa-save"></span> Save</button>
+                        </div>
+                    </Section>
+                </div>
+            </If>
+        </div>, store);
+}
+
+export function invoices() {
+    var store = new Re.Store(new InvoiceRepository());
+
+    var onSelect = row => {
+        store.get("currentRow").set(row);
+        store.refresh();
+    }
+
+    return new ViewResult(
+        <div style="height: 95%;" className="row">
+            <div className={[expr("currentRow -> 'col-8'"), expr("not currentRow -> 'col-12'")]}>
+                <Section title="Invoices">
+                    <DataGrid data={expr("await dataSource")} onSelectionChanged={onSelect} >
+                        <TextColumn field="description" display="Description" />
+                        <TextColumn field="invoiceDate" display="Invoice Date" />
+                    </DataGrid>
+                    <footer style="height: 50px; margin: 0 16px; padding: 0;">
+                        <button className="btn btn-primary" onClick={expr("currentRow <- createNew()")}>
+                            <span className="fa fa-plus"></span> Add New</button>
+                    </footer>
+                </Section>
+            </div>
+            <If expr={expr("currentRow")}>
+                <div className="col-4">
+                    <Section title={expr("currentRow.description")} onCancel={expr("cancel")}>
+                        <TextEditor field="description" display="Description" />
+
+                        <div className="form-group" style="padding: 10px; background-color: #EEE; border: 1px solid #DDD;">
+                            <button className="btn btn-primary" onClick={expr("save ()")}>
+                                <span className="fa fa-save"></span> Save</button>
+                        </div>
+                    </Section>
+                </div>
+            </If>
+        </div>, store);
+}
+
+export function companies() {
+    var store = new Re.Store(new CompanyRepository());
+
+    var onSelect = row => {
+        store.get("currentRow").set(row);
+        store.refresh();
+    }
+
+    return new ViewResult(
+        <div style="height: 95%;" className="row">
+            <div className={[expr("currentRow -> 'col-8'"), expr("not currentRow -> 'col-12'")]}>
+                <Section title="Companies">
+                    <DataGrid data={expr("await dataSource")} onSelectionChanged={onSelect} >
+                        <TextColumn field="name" display="Company Name" />
+                    </DataGrid>
+                    <footer style="height: 50px; margin: 0 16px; padding: 0;">
+                        <button className="btn btn-primary" onClick={expr("currentRow <- createNew()")}>
+                            <span className="fa fa-plus"></span> Add New</button>
+                    </footer>
+                </Section>
+            </div>
+            <If expr={expr("currentRow")}>
+                <div className="col-4">
+                    <Section title={expr("currentRow.description")} onCancel={expr("cancel")}>
+                        <TextEditor field="name" display="Company Name" />
 
                         <div className="form-group" style="padding: 10px; background-color: #EEE; border: 1px solid #DDD;">
                             <button className="btn btn-primary" onClick={expr("save ()")}>
