@@ -336,7 +336,7 @@ export module Dom {
                 ]);
         }
 
-        fire(event, context?) {
+        fire(event, context = this.context) {
             var newValue = this.evaluate(context);
 
             this.state = typeof newValue === "function" ? newValue() : newValue;

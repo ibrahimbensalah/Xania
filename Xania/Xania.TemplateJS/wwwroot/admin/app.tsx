@@ -1,4 +1,4 @@
-﻿import { Xania as xania, Repeat, If, expr, Dom, RemoteDataSource, Reactive as Re, Template } from "../src/xania"
+﻿import { Xania as xania, Repeat, With, If, expr, Dom, RemoteDataSource, Reactive as Re, Template } from "../src/xania"
 import { UrlHelper, ViewResult } from "../src/mvc"
 import './admin.css'
 import { Observables } from "../src/observables";
@@ -77,7 +77,7 @@ function TextEditor(attrs) {
         Object.assign({ className: "form-group" }, attrs),
         [
             <label for={id}>{attrs.display}</label>,
-            <input className="form-control" id={id} type="text" placeholder={attrs.display} name={"currentRow." + attrs.field} />
+            <input className="form-control" id={id} type="text" placeholder={attrs.display} name={attrs.field} />
         ]
     );
 }
@@ -88,7 +88,7 @@ function BooleanEditor(attrs) {
         Object.assign({ className: "form-check" }, attrs),
         [
             <label className="form-check-label" htmlFor={id}>
-                <input className="form-check-input" id={id} type="checkbox" checked={expr("currentRow." + attrs.field)} /> {attrs.display}
+                <input className="form-check-input" id={id} type="checkbox" checked={expr(attrs.field)} /> {attrs.display}
             </label>
         ]
     );
@@ -96,7 +96,7 @@ function BooleanEditor(attrs) {
 
 abstract class ModelRepository {
     private dataSource;
-    private currentRow = null;
+    protected currentRow = null;
 
     constructor(url: string, expr: string) {
         this.dataSource = new RemoteDataSource(url, expr);
@@ -108,7 +108,7 @@ abstract class ModelRepository {
     }
 
     cancel() {
-        this.currentRow = false;
+        this.currentRow = null;
     }
 
     abstract createNew();
@@ -130,13 +130,22 @@ class UserRepository extends ModelRepository {
 }
 
 class InvoiceRepository extends ModelRepository {
+
     constructor() {
         super("/api/invoice/", "invoices");
     }
 
+    addLine() {
+        this.currentRow.lines.push({
+            description: "new line",
+            amount: Math.floor(Math.random() * 10)
+        });
+    }
+
     createNew() {
         return {
-            description: null
+            description: null,
+            lines: []
         };
     }
 }
@@ -175,9 +184,9 @@ export function users() {
                     </footer>
                 </Section>
             </div>
-            <If expr={expr("currentRow")}>
+            <With object={expr("currentRow")}>
                 <div className="col-4">
-                    <Section title={expr("currentRow.name")} onCancel={expr("cancel")}>
+                    <Section title={expr("name")} onCancel={expr("cancel")}>
                         <TextEditor field="name" display="User Name" />
                         <TextEditor field="email" display="Email" />
                         <BooleanEditor field="emailConfirmed" display="Email confirmed" />
@@ -188,7 +197,7 @@ export function users() {
                         </div>
                     </Section>
                 </div>
-            </If>
+            </With>
         </div>, store);
 }
 
@@ -214,10 +223,17 @@ export function invoices() {
                     </footer>
                 </Section>
             </div>
-            <If expr={expr("currentRow")}>
+            <With object={expr("currentRow")}>
                 <div className="col-4">
-                    <Section title={expr("currentRow.description")} onCancel={expr("cancel")}>
+                    <Section title={expr("description")} onCancel={expr("cancel")}>
                         <TextEditor field="description" display="Description" />
+                        <button onClick={expr("addLine ()")}>add</button>
+                        <div className="row">
+                            <Repeat source={expr("lines")}>
+                                <div className="col-6"><input type="text" className="form-control" name="description" /></div>
+                                <div className="col-6"><input type="text" className="form-control" name="amount" /></div>
+                            </Repeat>
+                        </div>
 
                         <div className="form-group" style="padding: 10px; background-color: #EEE; border: 1px solid #DDD;">
                             <button className="btn btn-primary" onClick={expr("save ()")}>
@@ -225,7 +241,7 @@ export function invoices() {
                         </div>
                     </Section>
                 </div>
-            </If>
+            </With>
         </div>, store);
 }
 
@@ -250,9 +266,9 @@ export function companies() {
                     </footer>
                 </Section>
             </div>
-            <If expr={expr("currentRow")}>
+            <With object={expr("currentRow")}>
                 <div className="col-4">
-                    <Section title={expr("currentRow.description")} onCancel={expr("cancel")}>
+                    <Section title={expr("description")} onCancel={expr("cancel")}>
                         <TextEditor field="name" display="Company Name" />
 
                         <div className="form-group" style="padding: 10px; background-color: #EEE; border: 1px solid #DDD;">
@@ -261,7 +277,7 @@ export function companies() {
                         </div>
                     </Section>
                 </div>
-            </If>
+            </With>
         </div>, store);
 }
 

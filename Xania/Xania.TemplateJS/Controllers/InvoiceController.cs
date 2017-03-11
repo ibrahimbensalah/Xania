@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Xania.DataAccess;
@@ -34,7 +33,6 @@ namespace Xania.TemplateJS.Controllers
             });
         }
     }
-
     public class Invoice
     {
         public Guid Id { get; set; } = Guid.NewGuid();
@@ -43,7 +41,11 @@ namespace Xania.TemplateJS.Controllers
 
         public DateTime? InvoiceDate { get; set; } = DateTime.Now;
 
-        public InvoiceItem[] Lines { get; set; }
+        public InvoiceItem[] Lines { get; set; } = {
+            new InvoiceItem { Description = "Item 1", Amount = 100 },
+            new InvoiceItem { Description = "Item 2", Amount = 200 },
+            new InvoiceItem { Description = "Item 3", Amount = 300 }
+        };
     }
 
     public class InvoiceItem

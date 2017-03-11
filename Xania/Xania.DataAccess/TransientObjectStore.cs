@@ -17,6 +17,11 @@ namespace Xania.DataAccess
             Items = new List<TModel>();
         }
 
+        public void Add(TModel model)
+        {
+            Items.Add(model);
+        }
+
         public IEnumerator<TModel> GetEnumerator()
         {
             return Items.GetEnumerator();

@@ -135,6 +135,55 @@ export function ForEach(attrs, children) {
     return new ForEachTemplate<Reactive.Binding>(attrs.param, attrs.source, children, Dom.DomVisitor);
 }
 
+export function With(attrs, children: Template.INode[]) {
+    return {
+        bind() {
+            return new WithBinding(attrs.object, children);
+        }
+    }
+}
+
+export class WithBinding extends Reactive.Binding {
+    private conditionalBindings = [];
+    private object;
+
+    constructor(private expr, private children: Template.INode[]) {
+        super();
+    }
+
+    render(context, driver) {
+        var result = this.evaluateObject(this.expr, context);
+        this.object = result;
+
+        var value = result && !!result.valueOf();
+        var childBindings: any[] = this.conditionalBindings,
+            i = childBindings.length;
+
+        if (value) {
+            if (!i) {
+                this.children.forEach(x => childBindings.push(x.bind().update(this, driver)));
+            } else {
+                while (i--) {
+                    childBindings[i].update(this, driver);
+                }
+            }
+        } else {
+            while (i--) {
+                childBindings[i].dispose();
+            }
+            childBindings.length = 0;
+        }
+    }
+
+    get(name: string) {
+        return this.object.get(name);
+    }
+
+    refresh() {
+        this.context.refresh();
+    }
+}
+
 export function If(attrs, children: Template.INode[]) {
     return {
         bind() {
