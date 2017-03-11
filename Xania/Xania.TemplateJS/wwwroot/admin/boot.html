@@ -9,7 +9,9 @@
   <script src="/lib/system.js/dist/system.js"></script>
   <script src="/lib/fetch/fetch.js"></script>
   <script>
-    var appPath = '[BASE][APP]';
+    var basePath = '[BASE]';
+    var appName = '[APP]';
+    var appPath = basePath + appName;
     var actionPath = '[ARGS]' || 'index';
     System.config({
       packages: { '/': {} },
@@ -45,6 +47,11 @@
             var result = app[path]();
             mainDriver.dispose();
             result.execute(mainDriver, dom.Dom.DomVisitor);
+          } else {
+            System.import(basePath + path).then(function(module) {
+              mainDriver.dispose();
+              module.action().execute(mainDriver, dom.Dom.DomVisitor).execute();
+            });
           }
         });
 

@@ -582,6 +582,26 @@ export class RemoteDataSource {
     }
 }
 
+export abstract class ModelRepository {
+    private dataSource;
+    protected currentRow = null;
+
+    constructor(url: string, expr: string) {
+        this.dataSource = new RemoteDataSource(url, expr);
+    }
+
+    save() {
+        this.dataSource.save(this.currentRow);
+        this.cancel();
+    }
+
+    cancel() {
+        this.currentRow = null;
+    }
+
+    abstract createNew();
+}
+
 export class Resource {
     static create(url, body) {
         var config = {
