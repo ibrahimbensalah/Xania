@@ -23,8 +23,10 @@ class UserRepository extends ModelRepository {
 var store = new Re.Store(new UserRepository());
 
 var onSelect = row => {
-    store.get("currentRow").set(row);
-    store.refresh();
+    if (store.get("currentRow").valueOf() !== row) {
+        store.get("currentRow").set(row);
+        store.refresh();
+    }
 }
 
 export function action() {

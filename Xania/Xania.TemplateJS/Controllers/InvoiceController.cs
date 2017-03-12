@@ -41,6 +41,8 @@ namespace Xania.TemplateJS.Controllers
 
         public DateTime? InvoiceDate { get; set; } = DateTime.Now;
 
+        public int? CompanyId { get; set; }
+
         public InvoiceItem[] Lines { get; set; } = {
             new InvoiceItem { Description = "Item 1", Amount = 100 },
             new InvoiceItem { Description = "Item 2", Amount = 200 },

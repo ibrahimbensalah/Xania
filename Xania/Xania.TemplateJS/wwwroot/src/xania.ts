@@ -21,12 +21,7 @@ export class Xania {
                     result.push(childTemplates[j]);
                 }
             } else if (typeof child.view === "function") {
-                result.push({
-                    component: child,
-                    bind() {
-                        return new ComponentBinding(this.component, {});
-                    }
-                });
+                result.push(Component(child, {}));
             } else {
                 result.push(child);
             }
@@ -49,6 +44,8 @@ export class Xania {
                         var attrValue = attrs[prop];
                         if (prop === "className" || prop === "classname" || prop === "clazz")
                             tag.attr("class", attrValue);
+                        else if (prop === "htmlFor")
+                            tag.attr("for", attrValue);
                         else
                             tag.attr(prop, attrValue);
                     }
@@ -67,7 +64,7 @@ export class Xania {
             if (element.prototype.bind) {
                 return Reflect.construct(element, [attrs || {}, childTemplates]);
             } else if (element.prototype.view) {
-                return new ComponentBinding(Reflect.construct(element, [attrs || {}, childTemplates]), attrs);
+                return Component(Reflect.construct(element, [attrs || {}, childTemplates]), attrs);
             } else {
                 var view = element(attrs || {}, childTemplates);
                 if (!view)
@@ -86,6 +83,15 @@ export class Xania {
     }
 }
 
+function Component(component, props) {
+    return {
+        component,
+        bind() {
+            return new ComponentBinding(this.component, props);
+        }
+    }
+};
+
 class ComponentBinding extends Reactive.Binding {
     private binding: FragmentBinding;
     private componentStore = new Reactive.Store(this.component);
@@ -93,10 +99,6 @@ class ComponentBinding extends Reactive.Binding {
     constructor(private component, private props) {
         super();
         this.binding = new FragmentBinding([component.view(Xania)]);
-    }
-
-    bind(): this {
-        return this;
     }
 
     update(context, driver): this {
@@ -117,6 +119,7 @@ class ComponentBinding extends Reactive.Binding {
             }
         }
         this.componentStore.refresh();
+        this.binding.execute();
     }
 
     dispose() {
@@ -200,7 +203,7 @@ export class IfBinding extends Reactive.Binding {
 
     render(context, driver) {
         var result = this.evaluateObject(this.expr, context);
-        var value = result && !!result.valueOf(); 
+        var value = result && !!result.valueOf();
         var childBindings: any[] = this.conditionalBindings,
             i = childBindings.length;
 

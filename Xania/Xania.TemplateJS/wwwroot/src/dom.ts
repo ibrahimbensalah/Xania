@@ -223,6 +223,9 @@ export module Dom {
             } else if (name === "checked" && this.tagName === "input") {
                 const checkedBinding = new CheckedBinding(this.tagNode, ast);
                 this.childBindings.push(checkedBinding);
+            } else if (name === "selected" && this.tagName === "option") {
+                const selectedBinding = new SelectedBinding(this.tagNode, ast);
+                this.childBindings.push(selectedBinding);
             } else {
                 var match = /^on(.+)/.exec(name);
                 if (match) {
@@ -516,6 +519,21 @@ export module Dom {
                 if (attrName === "value")
                     tag[attrName] = newValue;
             }
+        }
+    }
+
+    export class SelectedBinding extends Re.Binding {
+        constructor(private tagNode: any, private expr) {
+            super();
+        }
+
+        render(context, parent) {
+            let value = this.evaluateText(this.expr);
+
+            if (value && value.valueOf)
+                value = value.valueOf();
+
+            this.tagNode.selected = value;
         }
     }
 }

@@ -6,7 +6,6 @@ import DataGrid, { TextColumn } from "../grid"
 import Html from '../../src/html'
 
 class InvoiceRepository extends ModelRepository {
-
     constructor() {
         super("/api/invoice/", "invoices");
     }
@@ -21,19 +20,33 @@ class InvoiceRepository extends ModelRepository {
     createNew() {
         return {
             description: null,
+            companyId: null,
             lines: []
         };
     }
 }
 
-var store = new Re.Store(new InvoiceRepository());
-
-var onSelect = row => {
-    store.get("currentRow").set(row);
-    store.refresh();
-}
-
 export function action() {
+    var companies = [
+        { value: 1, text: "Rider International" },
+        { value: 2, text: "Xania BV" }
+    ];
+
+    var controller = new InvoiceRepository();
+    var store = new Re.Store(controller);
+
+    var onSelect = row => {
+        if (store.get("currentRow").valueOf() !== row) {
+            store.get("currentRow").set(row);
+            store.refresh();
+        }
+    }
+
+    var onSelectCompany = value => {
+        store.get("currentRow").get("companyId").set(parseInt(value));
+        store.refresh();
+    }
+
     return new ViewResult(
         <div style="height: 95%;" className="row">
             <div className={[expr("currentRow -> 'col-8'"), expr("not currentRow -> 'col-12'")]}>
@@ -51,16 +64,21 @@ export function action() {
             <With object={expr("currentRow")}>
                 <div className="col-4">
                     <Section title={expr("description")} onCancel={expr("cancel")}>
+                        <Html.Select value={expr("companyId")} display="Company" options={companies} onChange={onSelectCompany} />
                         <Html.TextEditor field="description" display="Description" />
-                        <button onClick={expr("addLine ()")}>add</button>
+
                         <div className="row">
-                            <Repeat source={expr("lines")}>
-                                <div className="col-6"><input type="text" className="form-control" name="description" />
-                                </div>
-                                <div className="col-6"><input type="text" className="form-control" name="amount" />
-                                </div>
-                            </Repeat>
+                            <table>
+                                <Repeat source={expr("lines")}>
+                                    <tr>
+                                        <td><input type="text" className="form-control" name="description" /></td>
+                                        <td><input type="text" className="form-control" name="amount" /></td>
+                                        <td><input type="text" className="form-control" name="amount" /></td>
+                                    </tr>
+                                </Repeat>
+                            </table>
                         </div>
+                        <button onClick={expr("addLine ()")}>add</button>
 
                         <div className="form-group" style="padding: 10px; background-color: #EEE; border: 1px solid #DDD;">
                             <button className="btn btn-primary" onClick={expr("save ()")}>
@@ -69,6 +87,6 @@ export function action() {
                     </Section>
                 </div>
             </With>
-        </div>,
+        </div >,
         store);
 }
