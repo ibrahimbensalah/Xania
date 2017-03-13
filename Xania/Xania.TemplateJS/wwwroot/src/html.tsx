@@ -29,18 +29,17 @@ export class Select {
     private value: string = null;
     private options = [];
 
-    private onChange = event => {
-        var target = event.target;
-
-        return this.attrs.onChange(target.value);
-    };
-
     view() {
         var id = Math.floor(new Date().getTime() + Math.random() * 10000) % 10000000;
+        var onChange = event => {
+            var target = event.target;
+
+            return this.attrs.onChange(target.value);
+        };
         return (
-            <div className="form-group" style="select component">
+            <div className="form-group" >
                 <label htmlFor={id}>{this.attrs.display}</label>
-                <select className="form-control" id={id} onChange={this.onChange}>
+                <select className="form-control" id={id} onChange={onChange}>
                     <option></option>
                     <Repeat source={expr("for option in options")}>
                         <option selected={expr("option.value = value -> 'selected'")} value={expr("option.value")}>{expr("option.text")}</option>

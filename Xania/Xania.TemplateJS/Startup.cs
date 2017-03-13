@@ -22,8 +22,8 @@ namespace Xania.TemplateJS
             services.AddSingleton<IObjectStore<Company>>(new TransientObjectStore<Company>());
             services.AddSingleton<IObjectStore<Invoice>>(new TransientObjectStore<Invoice>()
             {
-                new Invoice() { Description = "invoice 1" },
-                new Invoice() { Description = "invoice 2" },
+                new Invoice() {Description = "invoice 1", InvoiceNumber = "201701"},
+                new Invoice() {Description = "invoice 2", InvoiceNumber = "201702"}
             });
         }
 
@@ -40,7 +40,7 @@ namespace Xania.TemplateJS
             app.UseDefaultFiles();
             app.UseStaticFiles(new StaticFileOptions
             {
-                
+
             });
 
             app.UseMvc();
@@ -76,7 +76,7 @@ namespace Xania.TemplateJS
 
         private AppResult GetClientApp(string pathValue, string baseDirectory)
         {
-            var parts = pathValue.Split(new [] {'/'}, StringSplitOptions.RemoveEmptyEntries);
+            var parts = pathValue.Split(new[] { '/' }, StringSplitOptions.RemoveEmptyEntries);
             string basePath = "/";
             string bootFile = baseDirectory + "/boot.html";
             for (var i = 0; i < parts.Length; i++)

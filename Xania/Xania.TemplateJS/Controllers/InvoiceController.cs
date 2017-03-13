@@ -37,22 +37,24 @@ namespace Xania.TemplateJS.Controllers
     {
         public Guid Id { get; set; } = Guid.NewGuid();
 
+        public string InvoiceNumber { get; set; }
+
         public string Description { get; set; }
 
         public DateTime? InvoiceDate { get; set; } = DateTime.Now;
 
         public int? CompanyId { get; set; }
 
-        public InvoiceItem[] Lines { get; set; } = {
-            new InvoiceItem { Description = "Item 1", Amount = 100 },
-            new InvoiceItem { Description = "Item 2", Amount = 200 },
-            new InvoiceItem { Description = "Item 3", Amount = 300 }
+        public HourDeclaration[] Lines { get; set; } = {
+            new HourDeclaration { Description = "Item 1", HourlyRate = 75, Hours = 120 },
+            new HourDeclaration { Description = "Item 2", HourlyRate = 75, Hours = 20 }
         };
     }
 
-    public class InvoiceItem
+    public class HourDeclaration
     {
         public string Description { get; set; }
-        public decimal Amount { get; set; }
+        public decimal HourlyRate { get; set; }
+        public float Hours { get; set; }
     }
 }

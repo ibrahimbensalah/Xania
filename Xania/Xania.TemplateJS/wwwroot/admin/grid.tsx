@@ -3,11 +3,16 @@ import './grid.css'
 
 
 export function TextColumn(attrs) {
-    if (!attrs.field)
+    if (!attrs.field && !attrs.template)
         throw Error("property field is required");
+
+    var template = attrs.template;
+    if (typeof attrs.field === "string")
+        template = expr("row."+attrs.field);
 
     return {
         field: attrs.field,
+        template,
         display: attrs.display || attrs.field
     };
 }
@@ -30,10 +35,6 @@ export default class DataGrid {
             }
         }
     };
-
-    cellValue(row, column) {
-        return row[column.field];
-    }
 
     view(xania) {
         return (
@@ -62,11 +63,11 @@ export default class DataGrid {
                                                 <input type="radio" style={expr("row = activeRow -> '; display: none'")} />
                                             </div>
                                         </td>
-                                        <Repeat source={expr("for column in columns")}>
+                                        {this.columns.map((column: any) => (
                                             <td role="gridcell" tabindex="-1" className="xn-grid-cell">
-                                                <div className="xn-grid-cell-content"><a>{expr("cellValue row column")}</a></div>
-                                            </td>
-                                        </Repeat>
+                                                <div className="xn-grid-cell-content"><a>{column.template}</a></div>
+                                            </td>)
+                                        )}
                                         <td role="gridcell" tabindex="-1" className="xn-grid-cell" style="width: 100%;"></td>
                                     </tr>
                                 </Repeat>

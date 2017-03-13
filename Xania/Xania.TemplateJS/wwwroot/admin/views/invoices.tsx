@@ -13,14 +13,25 @@ class InvoiceRepository extends ModelRepository {
     addLine() {
         this.currentRow.lines.push({
             description: "new line",
-            amount: Math.floor(Math.random() * 10)
+            hours: null,
+            hourlyRate: null
         });
+    }
+
+    removeLine(event, line) {
+        var idx = this.currentRow.lines.indexOf(line);
+        if (idx >= 0) {
+            this.currentRow.lines.splice(idx, 1);
+        }
+
+        event.preventDefault();
     }
 
     createNew() {
         return {
             description: null,
             companyId: null,
+            invoiceNumber: null,
             lines: []
         };
     }
@@ -35,7 +46,7 @@ export function action() {
     var controller = new InvoiceRepository();
     var store = new Re.Store(controller);
 
-    var onSelect = row => {
+    var onSelectRow = row => {
         if (store.get("currentRow").valueOf() !== row) {
             store.get("currentRow").set(row);
             store.refresh();
@@ -51,8 +62,8 @@ export function action() {
         <div style="height: 95%;" className="row">
             <div className={[expr("currentRow -> 'col-8'"), expr("not currentRow -> 'col-12'")]}>
                 <Section title="Invoices">
-                    <DataGrid data={expr("await dataSource")} onSelectionChanged={onSelect}>
-                        <TextColumn field="description" display="Description" />
+                    <DataGrid data={expr("await dataSource")} onSelectionChanged={onSelectRow}>
+                        <TextColumn template={<span><span className="invoice-number">{expr("row.invoiceNumber")}</span>{expr("row.description")}</span>} display="Description" />
                         <TextColumn field="invoiceDate" display="Invoice Date" />
                     </DataGrid>
                     <footer style="height: 50px; margin: 0 16px; padding: 0;">
@@ -64,16 +75,24 @@ export function action() {
             <With object={expr("currentRow")}>
                 <div className="col-4">
                     <Section title={expr("description")} onCancel={expr("cancel")}>
+                        <Html.TextEditor field="invoiceNumber" display="Invoice Number" />
                         <Html.Select value={expr("companyId")} display="Company" options={companies} onChange={onSelectCompany} />
                         <Html.TextEditor field="description" display="Description" />
 
                         <div className="row">
+                            <header style="height: 50px"><span className="fa fa-bolt"></span> <span>Hour Declarations</span></header>
                             <table>
-                                <Repeat source={expr("lines")}>
+                                <Repeat source={expr("for line in lines")}>
                                     <tr>
-                                        <td><input type="text" className="form-control" name="description" /></td>
-                                        <td><input type="text" className="form-control" name="amount" /></td>
-                                        <td><input type="text" className="form-control" name="amount" /></td>
+                                        <td colspan="3"><input type="text" className="form-control" name="line.description" /></td>
+                                    </tr>
+                                    <tr style="border-bottom: 10px solid rgba(0, 0, 0, 0);">
+                                        <td><input type="text" className="form-control" placeholder="Rate" name="line.hourlyRate" /></td>
+                                        <td><input type="text" className="form-control" placeholder="Hours" name="line.hours" /></td>
+                                        <td style="width: 120px; text-align: right; padding: 0 20px; font-weight: bold; color: gray;">
+                                            &euro; {expr("line.hours * line.hourlyRate")}
+                                            <a href="" onClick={expr("removeLine event line")}>&times;</a>
+                                        </td>
                                     </tr>
                                 </Repeat>
                             </table>

@@ -2,5 +2,9 @@
   {
     "outputFile": "wwwroot/diagram/diagram.css",
     "inputFile": "wwwroot/diagram/diagram.less"
+  },
+  {
+    "outputFile": "wwwroot/admin/admin.css",
+    "inputFile": "wwwroot/admin/admin.less"
   }
 ]
