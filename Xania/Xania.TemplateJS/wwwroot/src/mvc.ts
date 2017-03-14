@@ -93,7 +93,7 @@ export class ViewResult {
 
     execute(driver: IDriver, visitor) {
         var binding = this.view.bind(visitor);
-        return binding.update(this.model, driver);
+        return binding.update2(this.model, driver).execute();
     }
 }
 

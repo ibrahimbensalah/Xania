@@ -8,7 +8,7 @@ export module Dom {
 
     interface IDomBinding {
         length;
-        update(context, parent);
+        update2(context, parent);
         dispose();
     }
 
@@ -175,7 +175,6 @@ export module Dom {
     export class TagBinding extends Re.Binding implements IDomBinding {
         public tagNode;
         public length = 1;
-        public eventBindings: EventBinding[] = [];
         private domDriver: DomDriver;
 
         constructor(private tagName: string, private ns: string = null, childBindings?: Re.Binding[]) {
@@ -229,7 +228,7 @@ export module Dom {
             } else {
                 var match = /^on(.+)/.exec(name);
                 if (match) {
-                    this.eventBindings.push(new EventBinding(this.tagNode, match[1], ast));
+                    this.childBindings.push(new EventBinding(this.tagNode, match[1], ast));
                 } else {
                     var attrBinding = new AttributeBinding(this.tagNode, name, ast);
                     this.childBindings.push(attrBinding);
@@ -240,7 +239,7 @@ export module Dom {
         }
 
         event(name, ast): this {
-            this.eventBindings.push(new EventBinding(this.tagNode, name, ast));
+            this.childBindings.push(new EventBinding(this.tagNode, name, ast));
             return this;
         }
 
@@ -264,20 +263,16 @@ export module Dom {
             this.domDriver.insert(null, dom, offset + idx);
         }
 
-        update(context, driver): this {
-            super.update(context, driver);
+        update2(context, driver): this {
+            super.update2(context, driver);
 
             if (this.childBindings) {
                 var childLength = this.childBindings.length;
                 for (var i = 0; i < childLength; i++) {
-                    this.childBindings[i].update(context, this);
+                    this.childBindings[i].update2(context, this);
                 }
             }
 
-            for (let n = 0; n < this.eventBindings.length; n++) {
-                const event = this.eventBindings[n];
-                event.update(context, driver);
-            }
             return this;
         }
 
@@ -286,8 +281,8 @@ export module Dom {
         }
 
         trigger(name, event, context?) {
-            for (let n = 0; n < this.eventBindings.length; n++) {
-                const eventBinding = this.eventBindings[n];
+            for (let n = 0; n < this.childBindings.length; n++) {
+                const eventBinding = <EventBinding>this.childBindings[n];
                 if (eventBinding.name === "move") {
                     eventBinding.fire(event, context);
                 }
@@ -317,12 +312,11 @@ export module Dom {
         }
     }
 
-    export class EventBinding {
-        private context;
-        private driver;
+    export class EventBinding extends Re.Binding {
         private state;
 
         constructor(private tagNode: any, public name, private expr) {
+            super();
         }
 
         evaluate(context) {
@@ -354,12 +348,6 @@ export module Dom {
             }
 
             this.context.refresh();
-        }
-
-        update(context, driver) {
-            this.context = context;
-            this.driver = driver;
-            this.render(context, driver);
         }
 
         render(context, driver) {

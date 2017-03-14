@@ -420,18 +420,14 @@ export module Reactive {
         public length;
         public childBindings: Binding[];
 
-        execute(): this {
+        execute(): Binding[] {
             this.render(this.context, this.driver);
-            return this;
+            return this.childBindings;
         }
 
-        update(context, driver: IDriver): this {
-            if (this.context !== context || this.driver !== driver) {
-                this.context = context;
-                this.driver = driver;
-
-                this.render(context, driver);
-            }
+        update2(context, driver: IDriver): this {
+            this.context = context;
+            this.driver = driver;
             return this;
         }
 

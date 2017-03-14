@@ -101,9 +101,9 @@ class ComponentBinding extends Reactive.Binding {
         this.binding = new FragmentBinding([component.view(Xania)]);
     }
 
-    update(context, driver): this {
-        this.binding.update(this.componentStore, driver);
-        super.update(context, driver);
+    update2(context, driver): this {
+        this.binding.update2(this.componentStore, driver);
+        super.update2(context, driver);
         return this;
     }
 
@@ -412,7 +412,7 @@ class RepeatBinding extends Reactive.Binding {
                 RepeatBinding.swap(this.fragments, fraglength, i);
             }
 
-            fragment.update(item, driver);
+            fragment.update2(item, driver);
         }
 
         while (this.fragments.length > stream.length) {
@@ -456,7 +456,7 @@ class FragmentBinding extends Reactive.Binding {
     }
 
     render(context, driver) {
-        this.fragment.update(context, driver);
+        this.fragment.update2(context, driver);
     }
 
     insert(fragment: Fragment, dom, idx) {
@@ -512,14 +512,18 @@ export class Fragment {
         return total;
     }
 
-    update(context, driver) {
+    update2(context, driver) {
         this.context = context;
         this.driver = driver;
         var length = this.owner.children.length;
         for (var e = 0; e < length; e++) {
-            this.childBindings[e].update(this, this);
+            this.childBindings[e].update2(this, this);
         }
         return this;
+    }
+
+    execute() {
+        return this.childBindings;
     }
 
     insert(binding, dom, index) {

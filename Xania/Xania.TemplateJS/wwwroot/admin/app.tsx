@@ -11,8 +11,22 @@ import BallsApp from "../sample/balls/app";
 import { Section } from "./layout"
 
 export function menu({ driver, html, url }) {
-    mainMenu(url).bind()
-        .update(new Re.Store({}), driver);
+    var root =
+        mainMenu(url)
+            .bind()
+            .update2(new Re.Store({}), driver);
+
+    var stack = [root];
+    while (stack.length) {
+        var binding = stack.pop();
+        var children = binding.execute();
+        if (children) {
+            var i = children.length;
+            while (i--) {
+                stack.push(children[i]);
+            }
+        }
+    }
 }
 
 interface IAppAction {
