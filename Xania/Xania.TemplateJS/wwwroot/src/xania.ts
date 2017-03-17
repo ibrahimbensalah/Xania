@@ -93,18 +93,15 @@ function Component(component, props) {
 };
 
 class ComponentBinding extends Reactive.Binding {
-    private binding: FragmentBinding;
     private componentStore = new Reactive.Store(this.component);
 
     constructor(private component, private props) {
         super();
-        this.binding = new FragmentBinding([component.view(Xania)]);
+        this.childBindings = [component.view(Xania).bind()];
     }
 
-    update2(context, driver): this {
-        this.binding.update2(this.componentStore, driver);
-        super.update2(context, driver);
-        return this;
+    updateChildren(context, driver) {
+        super.updateChildren(this.componentStore, driver);
     }
 
     render(context) {
@@ -119,11 +116,19 @@ class ComponentBinding extends Reactive.Binding {
             }
         }
         this.componentStore.refresh();
-        this.binding.execute();
+        // this.binding.execute();
     }
 
     dispose() {
-        this.binding.dispose();
+        var { childBindings } = this;
+        if (childBindings) {
+            var i = childBindings.length || 0;
+            while (i--) {
+                var child: any = childBindings[i];
+                child.dispose();
+            }
+        }
+        // this.binding.dispose();
     }
 
 }

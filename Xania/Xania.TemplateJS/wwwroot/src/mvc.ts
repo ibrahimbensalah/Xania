@@ -92,8 +92,24 @@ export class ViewResult {
     constructor(private view, private model?) { }
 
     execute(driver: IDriver, visitor) {
-        var binding = this.view.bind(visitor);
-        return binding.update2(this.model, driver).execute();
+        return this.view.bind()
+            .update2(this.model, driver);
     }
 }
+
+export function mount(root) {
+    var stack = [root];
+    while (stack.length) {
+        const binding = stack.pop();
+        const children = binding.execute();
+        if (children) {
+            var i = children.length;
+            while (i--) {
+                stack.push(children[i]);
+            }
+        }
+    }
+
+}
+
 

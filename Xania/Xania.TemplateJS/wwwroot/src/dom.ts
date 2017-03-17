@@ -253,29 +253,6 @@ export module Dom {
             this.domDriver.insertTag(this, tagName, offset + idx);
         }
 
-        insert(binding, dom, idx) {
-            var offset = 0, length = this.childBindings.length;
-            for (var i = 0; i < length; i++) {
-                if (this.childBindings[i] === binding)
-                    break;
-                offset += this.childBindings[i].length;
-            }
-            this.domDriver.insert(null, dom, offset + idx);
-        }
-
-        update2(context, driver): this {
-            super.update2(context, driver);
-
-            if (this.childBindings) {
-                var childLength = this.childBindings.length;
-                for (var i = 0; i < childLength; i++) {
-                    this.childBindings[i].update2(context, this);
-                }
-            }
-
-            return this;
-        }
-
         render(context, driver) {
             driver.insert(this, this.tagNode, 0);
         }

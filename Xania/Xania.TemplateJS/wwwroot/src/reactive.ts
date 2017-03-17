@@ -428,7 +428,20 @@ export module Reactive {
         update2(context, driver: IDriver): this {
             this.context = context;
             this.driver = driver;
+
+            this.updateChildren(context, driver);
+
             return this;
+        }
+
+        updateChildren(context, driver) {
+            var { childBindings } = this;
+            if (childBindings) {
+                let i = childBindings.length || 0;
+                while (i--) {
+                    childBindings[i].update2(context, driver);
+                }
+            }
         }
 
         observe(value) {
@@ -571,6 +584,16 @@ export module Reactive {
         }
         on(eventName, dom, eventBinding) {
             this.driver.on(eventName, dom, eventBinding);
+        }
+
+        insert(binding, dom, idx) {
+            var offset = 0, length = this.childBindings.length;
+            for (var i = 0; i < length; i++) {
+                if (this.childBindings[i] === binding)
+                    break;
+                offset += this.childBindings[i].length;
+            }
+            this.driver.insert(null, dom, offset + idx);
         }
     }
 }
