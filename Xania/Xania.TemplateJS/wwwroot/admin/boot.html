@@ -33,37 +33,39 @@
       return System.import(path);
     }
 
-    Promise.all([appPath, '/src/mvc', '/src/dom'].map(importModule))
-      .then(function (modules) {
-        var app = modules[0];
-        var mvc = modules[1];
-        var dom = modules[2];
-
-        var url = new mvc.UrlHelper(appPath, actionPath, app);
-
-        var mainDriver = new dom.Dom.DomDriver('.main-content');
-        url.actionPath.subscribe(function (path) {
-          if (typeof app[path] === "function") {
-            var result = app[path]();
-            mainDriver.dispose();
-            result.execute(mainDriver, dom.Dom.DomVisitor);
-          } else {
-            System.import(basePath + path).then(function (module) {
-              mainDriver.dispose();
-              mvc.mount(module.action().execute(mainDriver, dom.Dom.DomVisitor));
-            });
-          }
-        });
-
-        var html = new mvc.HtmlHelper(System);
-
-        mvc.mount(
-          app.menu({
-            url: url,
-            html: html,
-            driver: new dom.Dom.DomDriver('.main-menu')
-          }));
+    function load(names, callback) {
+      var promises = names.map(x => System.import(x));
+      Promise.all(promises).then(function (modules) {
+        callback.apply(null, modules);
       });
+    }
+
+    load([appPath, '/src/xania', '/src/mvc', '/src/dom'], function (app, xania, mvc, dom) {
+      var url = new mvc.UrlHelper(appPath, actionPath, app);
+
+      var mainDriver = new dom.Dom.DomDriver('.main-content');
+      url.actionPath.subscribe(function (path) {
+        if (typeof app[path] === "function") {
+          var result = app[path]();
+          mainDriver.dispose();
+          xania.mount(result.execute(mainDriver, dom.Dom.DomVisitor));
+        } else {
+          System.import(basePath + path).then(function (module) {
+            mainDriver.dispose();
+            xania.mount(module.action().execute(mainDriver, dom.Dom.DomVisitor));
+          });
+        }
+      });
+
+      var html = new mvc.HtmlHelper(System);
+
+      xania.mount(
+        app.menu({
+          url: url,
+          html: html,
+          driver: new dom.Dom.DomDriver('.main-menu')
+        }));
+    });
   </script>
 </head>
 <body>

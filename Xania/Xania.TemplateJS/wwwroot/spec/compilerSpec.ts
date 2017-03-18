@@ -148,7 +148,7 @@ describe("query parser", () => {
 
     it(':: for p in people where p.adult ',
         () => {
-            var ast = compile("for p in people where p.adult").ast;
+            var ast = compile("people where p.adult").ast;
             expect(ast).toBeDefined();
 
             var where = ast;

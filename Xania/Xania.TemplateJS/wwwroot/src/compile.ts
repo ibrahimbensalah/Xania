@@ -21,6 +21,10 @@ function not(value) {
     return !value;
 }
 
+function or(x, y) {
+    return x || y ? true : false;
+}
+
 function count(list) {
     return list.length;
 }
@@ -174,6 +178,10 @@ class Expression {
                             ast.type = CONST;
                             ast.value = not;
                             break;
+                        case "or":
+                            ast.type = CONST;
+                            ast.value = or;
+                            break;
                         default:
                             stack.push(ast);
                             break;
@@ -223,6 +231,9 @@ class Expression {
                     for (let i = 0; i < length; i++) {
                         compile(ast.args[i], stack);
                     }
+                    break;
+                case LAMBDA:
+                    debugger;
                     break;
                 default:
                     throw Error("unsupported ast type " + ast.type);

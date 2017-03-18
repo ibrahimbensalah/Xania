@@ -1,4 +1,4 @@
-﻿import { Xania, expr, Repeat, Reactive as Re, Dom } from "../../src/xania"
+﻿import Xania, { expr, Repeat, Reactive as Re, Dom, mount } from "../../src/xania"
 
 // ReSharper disable InconsistentNaming
 declare var ENV;
@@ -13,9 +13,10 @@ export function run(target: Node) {
     };
     var store = new Re.Store(state);
 
-    dbmon(Xania)
+    var binding = dbmon(Xania)
         .bind(Dom.DomVisitor)
-        .update(store, new Dom.DomDriver(target));
+        .update2(store, new Dom.DomDriver(target));
+    mount(binding);
 
     var load = () => {
         ENV.generateData(true);

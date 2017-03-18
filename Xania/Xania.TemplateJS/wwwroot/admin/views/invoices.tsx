@@ -1,5 +1,5 @@
 ﻿
-import { Xania as xania, Repeat, With, If, expr, Dom, RemoteDataSource, ModelRepository, Reactive as Re, Template } from "../../src/xania"
+import xania, { Repeat, With, If, expr, Dom, RemoteDataSource, ModelRepository, Reactive as Re, Template } from "../../src/xania"
 import { ViewResult } from "../../src/mvc"
 import { Section } from "../layout"
 import DataGrid, { TextColumn } from "../grid"

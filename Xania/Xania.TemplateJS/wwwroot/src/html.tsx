@@ -1,4 +1,4 @@
-﻿import { Xania as xania, expr, Repeat } from "./xania";
+﻿import xania, { expr, Repeat } from "./xania";
 
 export function TextEditor(attrs) {
     var id = Math.random();

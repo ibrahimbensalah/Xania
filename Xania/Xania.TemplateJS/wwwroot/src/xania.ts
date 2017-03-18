@@ -3,7 +3,7 @@ import { Dom } from "./dom"
 import compile, { Scope, parse } from "./compile"
 import { Reactive } from "./reactive"
 
-export class Xania {
+export default class Xania {
     static templates(elements) {
         var result = [];
         for (var i = 0; i < elements.length; i++) {
@@ -83,6 +83,22 @@ export class Xania {
     }
 }
 
+
+export function mount(root: Reactive.Binding) {
+    var stack = [root];
+    while (stack.length) {
+        const binding = stack.pop();
+        const children = binding.execute();
+        if (children) {
+            var i = children.length;
+            while (i--) {
+                stack.push(children[i]);
+            }
+        }
+    }
+
+}
+
 function Component(component, props) {
     return {
         component,
@@ -100,8 +116,8 @@ class ComponentBinding extends Reactive.Binding {
         this.childBindings = [component.view(Xania).bind()];
     }
 
-    updateChildren(context, driver) {
-        super.updateChildren(this.componentStore, driver);
+    updateChildren(context) {
+        super.updateChildren(this.componentStore);
     }
 
     render(context) {
@@ -131,6 +147,17 @@ class ComponentBinding extends Reactive.Binding {
         // this.binding.dispose();
     }
 
+
+    insert(binding, dom, idx) {
+        var offset = 0,
+            length = this.childBindings.length;
+        for (var i = 0; i < length; i++) {
+            if (this.childBindings[i] === binding)
+                break;
+            offset += this.childBindings[i].length;
+        }
+        this.driver.insert(this, dom, offset + idx);
+    }
 }
 
 export { Reactive, Template, Dom }
@@ -155,7 +182,7 @@ export class WithBinding extends Reactive.Binding {
     private conditionalBindings = [];
     private object;
 
-    constructor(private expr, private children: Template.INode[]) {
+    constructor(private expr, private childTemplates: Template.INode[]) {
         super();
     }
 
@@ -169,7 +196,10 @@ export class WithBinding extends Reactive.Binding {
 
         if (value) {
             if (!i) {
-                this.children.forEach(x => childBindings.push(x.bind().update(this, driver)));
+                this.childTemplates.map(x => x.bind().update2(this, driver)).forEach(x => {
+                    // mount(x);
+                    childBindings.push(x);
+                });
             } else {
                 while (i--) {
                     childBindings[i].update(this, driver);
@@ -189,6 +219,10 @@ export class WithBinding extends Reactive.Binding {
 
     refresh() {
         this.context.refresh();
+    }
+
+    dispose() {
+        throw Error("not implemented");
     }
 }
 
@@ -226,6 +260,10 @@ export class IfBinding extends Reactive.Binding {
             }
             childBindings.length = 0;
         }
+    }
+
+    dispose() {
+        throw Error("not implemented");
     }
 }
 
@@ -328,13 +366,10 @@ class ForEachBinding extends Reactive.Binding {
 
 
 class RepeatBinding extends Reactive.Binding {
-    public fragments: Fragment[] = [];
-    private stream;
-
     get length() {
-        var total = 0, length = this.fragments.length;
+        var total = 0, length = this.childBindings.length;
         for (var i = 0; i < length; i++) {
-            total += this.fragments[i].length;
+            total += this.childBindings[i].length;
         }
         return total;
     }
@@ -347,40 +382,20 @@ class RepeatBinding extends Reactive.Binding {
         }
     }
 
-    notify() {
-        var stream, context = this.context;
-        if (!!this.expr && !!this.expr.execute) {
-            stream = this.expr.execute(this, context);
-            if (stream.length === void 0)
-                if (stream.value === null) {
-                    stream = [];
-                } else {
-                    stream = [stream];
-                }
-        } else {
-            stream = [context];
-        }
-        this.stream = stream;
-
-        var i = 0;
-        while (i < this.fragments.length) {
-            var frag = this.fragments[i];
-            if (stream.indexOf(frag.context) < 0) {
-                frag.dispose();
-                this.fragments.splice(i, 1);
-            } else {
-                i++;
-            }
-        }
+    execute() {
+        this.render(this.context, this.driver);
+        // return undefined to self handle mounting of child elements
+        return void 0;
     }
 
     dispose() {
-        for (var i = 0; i < this.fragments.length; i++) {
-            this.fragments[i].dispose();
+        let { childBindings } = this, i = childBindings.length;
+        while (i--) {
+            childBindings[i].dispose();
         }
     }
 
-    static swap(arr: Fragment[], srcIndex, tarIndex) {
+    static swap(arr: any[], srcIndex, tarIndex) {
         if (srcIndex > tarIndex) {
             var i = srcIndex;
             srcIndex = tarIndex;
@@ -394,45 +409,61 @@ class RepeatBinding extends Reactive.Binding {
     }
 
     render(context, driver) {
-        this.notify();
-        var stream = this.stream;
+        var stream;
+        if (!!this.expr && !!this.expr.execute) {
+            stream = this.expr.execute(this, context);
+            if (stream.length === void 0)
+                if (stream.value === null) {
+                    stream = [];
+                } else {
+                    stream = [stream];
+                }
+        } else {
+            stream = [context];
+        }
 
-        var fr: Fragment, streamlength = stream.length;
+        var i = 0, { childBindings } = this;
+        while (i < childBindings.length) {
+            var frag = childBindings[i];
+            if (stream.indexOf(frag.context) < 0) {
+                frag.dispose();
+                childBindings.splice(i, 1);
+            } else {
+                i++;
+            }
+        }
+
+        var fr: Reactive.Binding, streamlength = stream.length;
         for (var i = 0; i < streamlength; i++) {
             var item = stream.get ? stream.get(i) : stream[i];
 
-            var fragment: Fragment = null, fraglength = this.fragments.length;
+            var fragment: Reactive.Binding = null, fraglength = childBindings.length;
             for (let e = i; e < fraglength; e++) {
-                fr = this.fragments[e];
+                fr = childBindings[e];
                 if (fr.context === item) {
                     fragment = fr;
-                    RepeatBinding.swap(this.fragments, e, i);
+                    RepeatBinding.swap(childBindings, e, i);
                     break;
                 }
             }
 
             if (fragment === null /* not found */) {
-                fragment = new Fragment(this);
-                this.fragments.push(fragment);
-                RepeatBinding.swap(this.fragments, fraglength, i);
+                fragment = new FragmentBinding(this.param, this.children);
+                childBindings.push(fragment);
+                RepeatBinding.swap(childBindings, fraglength, i);
             }
 
-            fragment.update2(item, driver);
-        }
-
-        while (this.fragments.length > stream.length) {
-            var frag = this.fragments.pop();
-            frag.dispose();
+            mount(fragment.update2(item, this));
         }
     }
 
-    insert(fragment: Fragment, dom, idx) {
+    insert(fragment, dom, idx) {
         if (this.driver) {
-            var offset = 0;
-            for (var i = 0; i < this.fragments.length; i++) {
-                if (this.fragments[i] === fragment)
+            var offset = 0, { childBindings } = this;
+            for (var i = 0; i < childBindings.length; i++) {
+                if (childBindings[i] === fragment)
                     break;
-                offset += this.fragments[i].length;
+                offset += childBindings[i].length;
             }
             this.driver.insert(this, dom, offset + idx);
         }
@@ -440,34 +471,42 @@ class RepeatBinding extends Reactive.Binding {
 }
 
 class FragmentBinding extends Reactive.Binding {
-    public fragment: Fragment;
-    private stream;
-
     get length() {
-        return this.fragment.length;
+        var { childBindings } = this, i = childBindings.length, length = 0;
+        while (i--) {
+            length += childBindings[i].length;
+        }
+        return length;
     }
 
-    constructor(public children: Template.INode[]) {
+    constructor(private param: string, public children: Template.INode[]) {
         super();
-        for (var child of children) {
-            if (!child.bind)
-                throw Error("child is not a node");
-        }
-        this.fragment = new Fragment(this);
+        this.childBindings = children.map(x => x.bind());
     }
 
-    dispose() {
-        this.fragment.dispose();
+    get(name: string) {
+        if (name === this.param)
+            return this.context;
+        return void 0;
     }
 
-    render(context, driver) {
-        this.fragment.update2(context, driver);
+    updateChildren(context) {
+        if (this.param !== void 0)
+            super.updateChildren(this);
+        else 
+            super.updateChildren(context);
     }
 
-    insert(fragment: Fragment, dom, idx) {
-        if (this.driver) {
-            this.driver.insert(this, dom, idx);
-        }
+    render() {
+    }
+
+    insert(binding: Reactive.Binding, dom, idx) {
+        this.driver.insert(this, dom, idx);
+    }
+
+    refresh() {
+        var driver: any = this.driver;
+        driver.context.refresh();
     }
 }
 

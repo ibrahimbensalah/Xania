@@ -29,9 +29,9 @@ export class AnimateBinding extends Reactive.Binding {
     }
 
     update(context, driver) {
-        super.update(context, driver);
+        super.update2(context, driver);
         for (var i = 0; i < this.childBindings.length; i++) {
-            this.childBindings[i].update(context, this);
+            this.childBindings[i].update2(context, this);
         }
         return this;
     }

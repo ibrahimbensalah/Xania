@@ -46,18 +46,16 @@ export default class TodoApp {
                         onClick={this.onToggleAll} />
                     <ul className="todo-list">
                         <Repeat param="todo" source={expr("store.todos where (completed = (show = 'completed')) or (show = 'all')")}>
-                            <Animate height="58px" transform="scale(1)" dispose={[{ height: "58px", opacity: 1 }, { height: 0, opacity: 0 }]}>
-                                <li className={[expr("todo.completed -> 'completed'"), expr("todo = editingTodo -> ' editing'")]} >
-                                    <div className="view">
-                                        <input className="toggle" type="checkbox" checked={expr("todo.completed")} />
-                                        <label onDblClick={expr("editingTodo <- todo")}>{expr("todo.title")}</label>
-                                        <button className="destroy" onClick={expr("store.remove todo")}></button>
-                                    </div>
-                                    <input className="edit" value={expr("todo.title")} autofocus=""
-                                        onBlur={this.onResetEditing}
-                                        onKeyUp={this.onResetEditing} />
-                                </li>
-                            </Animate>
+                            <li className={[expr("todo.completed -> 'completed'"), expr("todo = editingTodo -> ' editing'")]} >
+                                <div className="view">
+                                    <input className="toggle" type="checkbox" checked={expr("todo.completed")} />
+                                    <label onDblClick={expr("editingTodo <- todo")}>{expr("todo.title")}</label>
+                                    <button className="destroy" onClick={expr("store.remove todo")}></button>
+                                </div>
+                                <input className="edit" value={expr("todo.title")} autofocus=""
+                                    onBlur={this.onResetEditing}
+                                    onKeyUp={this.onResetEditing} />
+                            </li>
                         </Repeat>
                     </ul>
                 </section>

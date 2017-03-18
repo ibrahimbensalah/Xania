@@ -197,7 +197,7 @@ Application
 	}
   
 Keyword
-  = ("select" / "where" / "await" / "or" / "and") [\b]
+  = ("select" / "where" / "await" / "or" / "and") & _
 
 Identifier
   = !Keyword name:IdentifierName members:( "." IdentifierName)* assign:( _ "<-" _ AdditiveExpression )? {

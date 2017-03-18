@@ -243,14 +243,24 @@ export module Dom {
             return this;
         }
 
-        insertTag(binding, tagName, idx) {
+        //insertTag(binding, tagName, idx) {
+        //    var offset = 0, length = this.childBindings.length;
+        //    for (var i = 0; i < length; i++) {
+        //        if (this.childBindings[i] === binding)
+        //            break;
+        //        offset += this.childBindings[i].length;
+        //    }
+        //    this.domDriver.insertTag(this, tagName, offset + idx);
+        //}
+
+        insert(binding, dom, idx) {
             var offset = 0, length = this.childBindings.length;
             for (var i = 0; i < length; i++) {
                 if (this.childBindings[i] === binding)
                     break;
                 offset += this.childBindings[i].length;
             }
-            this.domDriver.insertTag(this, tagName, offset + idx);
+            this.domDriver.insert(this, dom, offset + idx);
         }
 
         render(context, driver) {

@@ -1,4 +1,4 @@
-﻿import { Xania, Repeat, Template, Dom, Reactive as Re, expr } from "../../src/xania"
+﻿import Xania, { Repeat, Template, Dom, Reactive as Re, expr } from "../../src/xania"
 import './app.css'
 
 export class ClockApp {

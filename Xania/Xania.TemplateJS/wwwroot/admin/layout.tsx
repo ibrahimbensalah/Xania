@@ -1,4 +1,4 @@
-﻿import { Xania as xania, If } from "../src/xania"
+﻿import xania, { If } from "../src/xania"
 
 export function Section(attrs, children) {
     return (

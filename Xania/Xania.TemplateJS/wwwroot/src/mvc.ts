@@ -97,19 +97,3 @@ export class ViewResult {
     }
 }
 
-export function mount(root) {
-    var stack = [root];
-    while (stack.length) {
-        const binding = stack.pop();
-        const children = binding.execute();
-        if (children) {
-            var i = children.length;
-            while (i--) {
-                stack.push(children[i]);
-            }
-        }
-    }
-
-}
-
-

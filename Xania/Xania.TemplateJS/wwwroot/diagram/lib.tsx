@@ -26,9 +26,11 @@ export class GraphApp {
                 <div className={["xania-diagram", expr("pressed -> ' pressed'")]}>
                     <Draggable x={expr("P1.x")} y={expr("P1.y")} style="background-color: blue;" />
                     <Draggable x={expr("P2.x")} y={expr("P2.y")} style="background-color: orange;" />
+                    <Draggable x={expr("P1.x")} y={expr("P1.y + 200")} style="background-color: green;" />
                     <svg>
                         <g>
                             <path d={expr("horizontalArrow (output P1.x P1.y) (input P2.x P2.y)")} stroke="black" />
+                            <path d={expr("horizontalArrow (output P1.x (P1.y + 200)) (input P2.x P2.y)")} stroke="black" />
                         </g>
                     </svg>
                 </div>
@@ -67,7 +69,7 @@ class Draggable {
     }
 
     bind() {
-        var tag = new DraggableBinding(this.attrs.x, this.attrs.y, this.children.map(x => x.bind())),
+        var tag = new DraggableBinding(this.attrs, this.children.map(x => x.bind())),
             attrs = this.attrs;
 
         tag.attr("class", "xania-draggable");
@@ -86,7 +88,7 @@ class Draggable {
 }
 
 class DraggableBinding extends Dom.TagBinding {
-    constructor(private x, private y, childBindings) {
+    constructor(private props, childBindings) {
         super("div", null, childBindings);
         this.event("mousedown", this.press);
         this.event("mousemove", this.drag);
@@ -147,18 +149,20 @@ class DraggableBinding extends Dom.TagBinding {
             state.left = left;
             state.top = top;
 
-            var x = this.evaluateObject(this.x);
-            var y = this.evaluateObject(this.y);
-            x.set(left);
-            y.set(top);
+            var x = this.evaluateObject(this.props.x);
+            var y = this.evaluateObject(this.props.y);
+            if (typeof x.set === "function")
+                x.set(left);
+            if (typeof y.set === "function")
+                y.set(top);
         }
     }
 
     render(context, driver) {
         super.render(context, driver);
 
-        var x = this.evaluateText(this.x);
-        var y = this.evaluateText(this.y);
+        var x = this.evaluateText(this.props.x);
+        var y = this.evaluateText(this.props.y);
 
         var style = this.tagNode.style;
         style.left = x + "px";

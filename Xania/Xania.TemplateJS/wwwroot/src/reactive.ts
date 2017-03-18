@@ -25,10 +25,11 @@ export module Reactive {
         get(propertyName: string): IProperty {
             var properties = this.properties;
 
-            var length = properties.length;
-            for (var i = 0; i < length; i++) {
-                if (properties[i].name === propertyName) {
-                    return properties[i];
+            var i = properties.length;
+            while (i--) {
+                var prop = properties[i];
+                if (prop.name === propertyName) {
+                    return prop;
                 }
             }
 
@@ -131,7 +132,7 @@ export module Reactive {
         public length = 0;
 
         refresh(parentValue) {
-            var name = this.name,
+            const name = this.name,
                 array = parentValue[name],
                 properties = this.properties,
                 prevLength = this.length,
@@ -400,11 +401,12 @@ export module Reactive {
 
 
     export interface IDriver {
-        insert(sender: Binding, dom, idx);
+        insert?(sender: Binding, dom, idx);
+        on(eventName, dom, eventBinding);
     }
 
     class ListItem {
-        constructor(private name: string, private value: any) {
+        constructor(private name: string, private value: any, private binding) {
         }
 
         get(name) {
@@ -412,13 +414,17 @@ export module Reactive {
                 return this.value;
             return void 0;
         }
+
+        refresh() {
+            this.binding.refresh();
+        }
     }
 
     export abstract class Binding {
         public context;
-        protected driver;
+        protected driver: IDriver;
         public length;
-        public childBindings: Binding[];
+        public childBindings: Binding[] = [];
 
         execute(): Binding[] {
             this.render(this.context, this.driver);
@@ -429,17 +435,17 @@ export module Reactive {
             this.context = context;
             this.driver = driver;
 
-            this.updateChildren(context, driver);
+            this.updateChildren(context);
 
             return this;
         }
 
-        updateChildren(context, driver) {
+        updateChildren(context) {
             var { childBindings } = this;
             if (childBindings) {
                 let i = childBindings.length || 0;
                 while (i--) {
-                    childBindings[i].update2(context, driver);
+                    childBindings[i].update2(context, this);
                 }
             }
         }
@@ -451,6 +457,14 @@ export module Reactive {
         }
 
         public abstract render?(context, driver): any;
+        dispose() {
+            var { childBindings } = this, i = childBindings.length;
+            while (i--) {
+                childBindings[i].dispose();
+            }
+            childBindings.length = 0;
+        }
+
 
         where(source, predicate) {
             throw new Error("Not implemented");
@@ -484,7 +498,7 @@ export module Reactive {
         extend(name: string, value: any) {
             if (value === null || value === void 0)
                 return value;
-            return new ListItem(name, value);
+            return new ListItem(name, value, this);
         }
 
         member(target: { get(name: string) }, name) {
@@ -584,16 +598,6 @@ export module Reactive {
         }
         on(eventName, dom, eventBinding) {
             this.driver.on(eventName, dom, eventBinding);
-        }
-
-        insert(binding, dom, idx) {
-            var offset = 0, length = this.childBindings.length;
-            for (var i = 0; i < length; i++) {
-                if (this.childBindings[i] === binding)
-                    break;
-                offset += this.childBindings[i].length;
-            }
-            this.driver.insert(null, dom, offset + idx);
         }
     }
 }

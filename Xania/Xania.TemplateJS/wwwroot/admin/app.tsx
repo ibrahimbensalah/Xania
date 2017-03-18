@@ -1,4 +1,4 @@
-﻿import { Xania as xania, Repeat, With, If, expr, Dom, RemoteDataSource, ModelRepository, Reactive as Re, Template } from "../src/xania"
+﻿import xania, { Repeat, With, If, expr, Dom, RemoteDataSource, ModelRepository, Reactive as Re, Template } from "../src/xania"
 import Html from '../src/html'
 import { UrlHelper, ViewResult } from "../src/mvc"
 import './admin.css'
