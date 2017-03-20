@@ -66,6 +66,7 @@
 
     export class List {
         static count(fn, list) {
+            debugger;
             if (!list)
                 return 0;
             var result = 0, length = list.length;

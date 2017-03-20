@@ -315,8 +315,7 @@ export module Dom {
                     { value: event },
                     { event: event },
                     { node: event.target },
-                    { state: this.state || null },
-                    this.context
+                    { state: this.state || null }
                 ]);
         }
 

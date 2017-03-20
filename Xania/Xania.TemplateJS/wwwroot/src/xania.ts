@@ -186,6 +186,14 @@ export class WithBinding extends Reactive.Binding {
         super();
     }
 
+    execute() {
+        this.render(this.context, this.driver);
+        // while most (if not all other) bindings return the list of childBindings to be mounted, 
+        // this returns undefined to be able to self manage mounting of childBindings.
+        // Not sure if this needs refactoring, renaming or convince myself this is the pure approach.
+        return void 0;
+    }
+
     render(context, driver) {
         var result = this.evaluateObject(this.expr, context);
         this.object = result;
@@ -197,12 +205,12 @@ export class WithBinding extends Reactive.Binding {
         if (value) {
             if (!i) {
                 this.childTemplates.map(x => x.bind().update2(this, driver)).forEach(x => {
-                    // mount(x);
+                    mount(x);
                     childBindings.push(x);
                 });
             } else {
                 while (i--) {
-                    childBindings[i].update(this, driver);
+                    childBindings[i].update2(this, driver);
                 }
             }
         } else {
@@ -229,41 +237,8 @@ export class WithBinding extends Reactive.Binding {
 export function If(attrs, children: Template.INode[]) {
     return {
         bind() {
-            return new IfBinding(attrs.expr, children);
+            return new WithBinding(attrs.expr, children);
         }
-    }
-}
-
-export class IfBinding extends Reactive.Binding {
-    private conditionalBindings = [];
-    constructor(private expr, private children: Template.INode[]) {
-        super();
-    }
-
-    render(context, driver) {
-        var result = this.evaluateObject(this.expr, context);
-        var value = result && !!result.valueOf();
-        var childBindings: any[] = this.conditionalBindings,
-            i = childBindings.length;
-
-        if (value) {
-            if (!i) {
-                this.children.forEach(x => childBindings.push(x.bind().update(context, driver)));
-            } else {
-                while (i--) {
-                    childBindings[i].update(context, driver);
-                }
-            }
-        } else {
-            while (i--) {
-                childBindings[i].dispose();
-            }
-            childBindings.length = 0;
-        }
-    }
-
-    dispose() {
-        throw Error("not implemented");
     }
 }
 
@@ -384,7 +359,9 @@ class RepeatBinding extends Reactive.Binding {
 
     execute() {
         this.render(this.context, this.driver);
-        // return undefined to self handle mounting of child elements
+        // while most (if not all other) bindings return the list of childBindings to be mounted, 
+        // this returns undefined to be able to self manage mounting of childBindings.
+        // Not sure if this needs refactoring, renaming or convince myself this is the pure approach.
         return void 0;
     }
 
@@ -468,6 +445,10 @@ class RepeatBinding extends Reactive.Binding {
             this.driver.insert(this, dom, offset + idx);
         }
     }
+
+    refresh() {
+        this.context.refresh();
+    }
 }
 
 class FragmentBinding extends Reactive.Binding {
@@ -501,7 +482,13 @@ class FragmentBinding extends Reactive.Binding {
     }
 
     insert(binding: Reactive.Binding, dom, idx) {
-        this.driver.insert(this, dom, idx);
+        var offset = 0, length = this.childBindings.length;
+        for (var i = 0; i < length; i++) {
+            if (this.childBindings[i] === binding)
+                break;
+            offset += this.childBindings[i].length;
+        }
+        this.driver.insert(this, dom, offset + idx);
     }
 
     refresh() {

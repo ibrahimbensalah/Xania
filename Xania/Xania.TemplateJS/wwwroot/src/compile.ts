@@ -218,6 +218,14 @@ class Expression {
                             ast.right.compiled = Expression.compile(ast.right);
                             compile(ast.left, stack);
                             break;
+                        case PIPE:
+                            ast.type = 5;
+                            ast.fun = ast.right;
+                            ast.args = [ast.left];
+                            stack.push(ast);
+                            compile(ast.left, stack);
+                            compile(ast.right, stack);
+                            break;
                         default:
                             compile(ast.right, stack);
                             compile(ast.left, stack);

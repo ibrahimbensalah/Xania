@@ -92,8 +92,8 @@ RuleBinder
   }
 
 PipeBinder
-  = op:"|>" _ operand:ApplicativeExpression {
-     return { op, operand }
+  = op:"|>" _ operand:Application {
+     return { op: PIPE, operand }
   }
 
 EquilityExpression
@@ -184,7 +184,7 @@ FilterBinder
   }
 
 CompositionBinder
-  = op:">>" _ operand:ApplicativeExpression {
+  = op:">>" _ operand:Application {
      return { op, operand }
   }
 

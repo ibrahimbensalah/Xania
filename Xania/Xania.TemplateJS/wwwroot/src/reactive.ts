@@ -412,7 +412,7 @@ export module Reactive {
         get(name) {
             if (name === this.name)
                 return this.value;
-            return void 0;
+            return this.binding.context.get(name);
         }
 
         refresh() {

@@ -5,8 +5,8 @@ import expr from "../src/compile";
 
 export class GraphApp {
 
-    private P1: Point = { x: 100, y: 10 };
-    private P2: Point = { x: 400, y: 100 };
+    private P1: Point = { x: 0, y: 0 };
+    private P2: Point = { x: 250, y: 200 };
 
     static horizontalArrow({x: x1, y: y1}, {x: x2, y: y2}) {
         var d = (x2 - x1) / 2;
@@ -16,6 +16,7 @@ export class GraphApp {
     static input(x, y) {
         return { x, y: y + 50 };
     }
+
     static output(x, y) {
         return { x: x + 100, y: y + 50 };
     }
@@ -23,14 +24,17 @@ export class GraphApp {
     view(xania) {
         return (
             <div style="height: 100%;">
+                <div>{expr("P1.x")} {expr("P1.y")}</div>
                 <div className={["xania-diagram", expr("pressed -> ' pressed'")]}>
                     <Draggable x={expr("P1.x")} y={expr("P1.y")} style="background-color: blue;" />
                     <Draggable x={expr("P2.x")} y={expr("P2.y")} style="background-color: orange;" />
-                    <Draggable x={expr("P1.x")} y={expr("P1.y + 200")} style="background-color: green;" />
+                    <Draggable x={0} y={expr("P1.y + 200")} style="background-color: green;" />
+                    <Draggable x={expr("P1.x + 250")} y={0} style="background-color: red;" />
                     <svg>
                         <g>
-                            <path d={expr("horizontalArrow (output P1.x P1.y) (input P2.x P2.y)")} stroke="black" />
-                            <path d={expr("horizontalArrow (output P1.x (P1.y + 200)) (input P2.x P2.y)")} stroke="black" />
+                            <path d={expr("horizontalArrow (output P1.x P1.y) (input P2.x P2.y)")} stroke="blue" />
+                            <path d={expr("horizontalArrow (output 0 (P1.y + 200)) (input P2.x P2.y)")} stroke="green" />
+                            <path d={expr("horizontalArrow (output P1.x P1.y) (input (P1.x + 250) 0)")} stroke="red" />
                         </g>
                     </svg>
                 </div>
@@ -42,26 +46,6 @@ export class GraphApp {
 interface Point {
     x: number;
     y: number;
-}
-
-class Canvas {
-    constructor(private attrs, private children) {
-    }
-
-
-    bind() {
-        var tag = new Dom.TagBinding("div", null, this.children.map(x => x.bind())),
-            attrs = this.attrs;
-
-        for (var prop in attrs) {
-            if (attrs.hasOwnProperty(prop)) {
-                var attrValue = attrs[prop];
-                tag.attr(prop.toLowerCase(), attrValue);
-            }
-        }
-
-        return tag;
-    }
 }
 
 class Draggable {
@@ -125,7 +109,7 @@ class DraggableBinding extends Dom.TagBinding {
         return parseFloat(px.replace("px", "")) || 0;
     }
 
-    private release = event => {
+    private release = () => {
         this.pressed = null;
         this.state = null;
     }

@@ -42,7 +42,7 @@ export default class TodoApp {
                         onKeyUp={this.onAddTodo} />
                 </header>
                 <section className={["main", expr("store.todos.length = 0 -> ' hidden'")]}>
-                    <input className="toggle-all" type="checkbox" checked={expr("empty store.todos where not completed")}
+                    <input className="toggle-all" type="checkbox" checked={expr("store.todos where not completed |> empty")}
                         onClick={this.onToggleAll} />
                     <ul className="todo-list">
                         <Repeat param="todo" source={expr("store.todos where (completed = (show = 'completed')) or (show = 'all')")}>
@@ -60,7 +60,7 @@ export default class TodoApp {
                     </ul>
                 </section>
                 <footer className={["footer", expr("store.todos.length = 0 -> ' hidden'")]}>
-                    <span className="todo-count"><strong>{expr("count store.todos where not completed")}</strong> item(s) left</span>
+                    <span className="todo-count"><strong>{expr("store.todos where not completed |> count")}</strong> item(s) left</span>
                     <ul className="filters">
                         <li><a href="#" className={expr("show = 'all' -> 'selected'")}
                             onClick={this.onShow.bind(this, 'all')}>All</a></li>

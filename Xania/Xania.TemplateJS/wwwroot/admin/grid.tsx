@@ -43,7 +43,7 @@ export default class DataGrid {
                     <div role="rowheader" className="xn-grid-row-header xn-grid-header-cell">&nbsp;</div>
                     <Repeat source={expr("for column in columns")}>
                         <div data-idx="UserName" role="gridcell" className="xn-grid-header-cell">
-                            <div className="xn-grid-cell-content"><a data-bind="click: sort.bind($data, 'UserName')">{expr("column.display")}</a></div>
+                            <div className="xn-grid-cell-content"><a href>{expr("column.display")}</a></div>
                         </div>
                     </Repeat>
                     <div className="xn-grid-header-cell" style="width: 100%; min-width: 100px">&nbsp;</div>
