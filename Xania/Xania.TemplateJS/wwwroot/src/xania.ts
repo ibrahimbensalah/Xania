@@ -166,10 +166,6 @@ export function Repeat(attrs, children) {
     return new RepeatTemplate<Reactive.Binding>(attrs.param, attrs.source, children, Dom.DomVisitor);
 }
 
-export function ForEach(attrs, children) {
-    return new ForEachTemplate<Reactive.Binding>(attrs.param, attrs.source, children, Dom.DomVisitor);
-}
-
 export function With(attrs, children: Template.INode[]) {
     return {
         bind() {
@@ -253,92 +249,6 @@ export class RepeatTemplate<T> implements Template.INode {
         return new RepeatBinding(this.param, this.expr, this.children);
     }
 }
-
-export class ForEachTemplate<T> implements Template.INode {
-    constructor(private param, private expr, private children: Template.INode[], private visitor: Template.IVisitor<T>) { }
-
-    bind() {
-        return new ForEachBinding(this.param, this.expr, this.children);
-    }
-}
-
-class ForEachBinding extends Reactive.Binding {
-    public fragments: Fragment[] = [];
-
-    get length() {
-        var total = 0, length = this.fragments.length;
-        for (var i = 0; i < length; i++) {
-            total += this.fragments[i].length;
-        }
-        return total;
-    }
-
-    constructor(public param, private expr, public children: Template.INode[]) {
-        super();
-        for (var child of children) {
-            if (!child.bind)
-                throw Error("child is not a node");
-        }
-    }
-
-    dispose() {
-        for (var i = 0; i < this.fragments.length; i++) {
-            this.fragments[i].dispose();
-        }
-    }
-
-    private static swap(arr: Fragment[], srcIndex, tarIndex) {
-        if (srcIndex > tarIndex) {
-            var i = srcIndex;
-            srcIndex = tarIndex;
-            tarIndex = i;
-        }
-        if (srcIndex < tarIndex) {
-            var src = arr[srcIndex];
-            arr[srcIndex] = arr[tarIndex];
-            arr[tarIndex] = src;
-        }
-    }
-
-    render(context, driver) {
-        var stream = this.expr.execute(this, context).iterator();
-
-        var i = stream.length,
-            fragments = this.fragments,
-            fragmentLength = fragments.length;
-
-        while (i--) {
-            var item = stream.get ? stream.get(i) : stream[i], fragment;
-
-            if (i < fragmentLength) {
-                fragment = fragments[i];
-            } else {
-                fragment = new Fragment(this);
-                fragments.push(fragment);
-            }
-            fragment.update(item, driver);
-        }
-
-        while (fragments.length > stream.length) {
-            fragments.pop().dispose();
-        }
-    }
-
-    insert(fragment: Fragment, dom, idx) {
-        if (this.driver) {
-            var offset = 0, fragments = this.fragments, i = fragments.length;
-
-            while (i--) {
-                var fr = fragments[i];
-                if (fr === fragment)
-                    break;
-                offset += fr.length;
-            }
-            this.driver.insert(this, dom, offset + idx);
-        }
-    }
-}
-
 
 class RepeatBinding extends Reactive.Binding {
     get length() {

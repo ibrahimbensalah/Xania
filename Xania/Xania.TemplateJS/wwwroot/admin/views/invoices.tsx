@@ -80,7 +80,7 @@ export function action() {
                         <Html.TextEditor field="description" display="Description" />
 
                         <div className="row">
-                            <header style="height: 50px"><span className="fa fa-bolt"></span> <span>Hour Declarations</span></header>
+                            <header style="height: 50px"><span className="fa fa-calendar-times-o"></span> <span>Hour Declarations</span></header>
                             <table>
                                 <Repeat source={expr("for line in lines")}>
                                     <tr>

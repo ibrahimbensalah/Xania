@@ -167,7 +167,7 @@ export module Dom {
                 this.oldValue = newValue;
                 var textNode = this.textNode;
                 textNode.nodeValue = newValue;
-                this.driver.insert(this, textNode, 0);
+                driver.insert(this, textNode, 0);
             }
         }
     }
@@ -285,16 +285,12 @@ export module Dom {
             super();
         }
 
-        static AttributeName = "class";
-
         render() {
             var newValue = this.evaluateText(this.ast);
 
             if (newValue !== this.oldValue) {
                 this.oldValue = newValue;
-                this.tagNode.className = newValue === void 0 || newValue === null
-                    ? Core.empty
-                    : newValue;
+                this.tagNode.className = newValue;
             }
         }
     }

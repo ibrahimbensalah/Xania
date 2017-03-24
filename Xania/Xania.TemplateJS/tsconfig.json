@@ -17,10 +17,10 @@
     "jsxFactory": "xania.tag"
   },
   "exclude": [
-    "src/fsharp.peg.ts"
+    "src/fsharp.peg.ts",
+    "wwwroot/src/query.peg.js"
   ],
   "include": [
-    "grammar/fsharp.d.ts",
     "wwwroot/src/*.ts",
     "wwwroot/src/*.tsx",
     "wwwroot/diagram/**/*.tsx",

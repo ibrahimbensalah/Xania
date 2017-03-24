@@ -65,6 +65,16 @@ export module Reactive {
                 return property;
             }
         }
+
+        toString(): string {
+            var value = this.value;
+            if (typeof value === "string")
+                return value;
+            else if (value === void 0 || value === null)
+                return Core.empty;
+            else
+                return value.toString();
+        }
     }
 
     interface IDependency {
@@ -559,7 +569,7 @@ export module Reactive {
         evaluateText(parts, context = this.context): any {
             if (parts.execute) {
                 let result = parts.execute(this, context);
-                return result && result.valueOf();
+                return result && result.toString();
             } else if (Array.isArray(parts)) {
                 var stack = parts.slice(0).reverse();
                 let result = Core.empty;
@@ -581,8 +591,11 @@ export module Reactive {
                 }
 
                 return result;
-            } else
+            } else if (typeof parts === "string") {
                 return parts;
+            } else {
+                return parts.toString();
+            } 
         }
 
         evaluateObject(expr, context = this.context): any {
