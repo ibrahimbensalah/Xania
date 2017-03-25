@@ -1,4 +1,4 @@
-﻿import Xania, { expr, Repeat, Reactive as Re, Dom, mount } from "../../src/xania"
+﻿import Xania, { expr, List, Reactive as Re, Dom, mount } from "../../src/xania"
 
 // ReSharper disable InconsistentNaming
 declare var ENV;
@@ -32,7 +32,7 @@ export function run(target: Node) {
 var dbmon: any = (xania) =>
     <table clazz="table table-striped latest-data">
         <tbody>
-            <Repeat source={expr("databases")}>
+            <List source={expr("databases")}>
                 <tr>
                     <td className="dbname">
                         {expr("dbname")}
@@ -42,7 +42,7 @@ var dbmon: any = (xania) =>
                             {expr("lastSample.nbQueries")}
                         </span>
                     </td>
-                    <Repeat source={expr("lastSample.topFiveQueries")} >
+                    <List source={expr("lastSample.topFiveQueries")} >
                         <td className={expr("elapsedClassName")}>
                             {expr("formatElapsed")}
                             <div className="popover left">
@@ -52,8 +52,8 @@ var dbmon: any = (xania) =>
                                 <div className="arrow"></div>
                             </div>
                         </td>
-                    </Repeat>
+                    </List>
                 </tr>
-            </Repeat>
+            </List>
         </tbody>
     </table>;

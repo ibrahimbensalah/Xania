@@ -87,11 +87,11 @@ namespace Xania.TemplateJS
                 var jsExists = File.Exists(baseDirectory + "/" + app + ".js");
                 var dirExists = Directory.Exists(baseDirectory + "/" + app);
 
-                if (File.Exists(baseDirectory + basePath + "boot.html"))
-                    bootFile = baseDirectory + basePath + "boot.html";
-
                 if (jsExists && dirExists)
                     throw new InvalidOperationException("jsExists && dirExists");
+
+                if (File.Exists(baseDirectory + basePath + "boot.html"))
+                    bootFile = baseDirectory + basePath + "boot.html";
 
                 if (jsExists)
                 {

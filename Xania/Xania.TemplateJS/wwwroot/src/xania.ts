@@ -162,7 +162,69 @@ class ComponentBinding extends Reactive.Binding {
 
 export { Reactive, Template, Dom }
 
+export function Partial(attrs, children): Template.INode {
+    if (children && children.length)
+        throw Error("View does not allow child elements");
+
+    return {
+        bind() {
+            return new PartialBinding(attrs);
+        }
+    }
+}
+
+class PartialBinding extends Reactive.Binding {
+    constructor(private attrs) {
+        super();
+    }
+
+    execute() {
+        this.render(this.context, this.driver);
+        return void 0;
+    }
+
+    dispose() {
+        let { childBindings } = this, i = childBindings.length;
+        while (i--) {
+            childBindings[i].dispose();
+        }
+        childBindings.length = 0;
+    }
+
+    render(context, driver) {
+        this.dispose();
+
+        var result = this.evaluateObject(this.attrs.template, context);
+        var template = result && result.valueOf();
+        if (template) {
+            var binding = template.bind().update2(context, this);
+            this.childBindings.push(binding);
+            mount(binding);
+        }
+    }
+
+    insert(fragment, dom, idx) {
+        if (this.driver) {
+            var offset = 0, { childBindings } = this;
+            for (var i = 0; i < childBindings.length; i++) {
+                if (childBindings[i] === fragment)
+                    break;
+                offset += childBindings[i].length;
+            }
+            this.driver.insert(this, dom, offset + idx);
+        }
+    }
+}
+
+export function List(attrs, children) {
+    return new ListTemplate(attrs, children);
+}
+
 export function Repeat(attrs, children) {
+    return new RepeatTemplate<Reactive.Binding>(attrs.param, attrs.source, children, Dom.DomVisitor);
+}
+
+export function Collection(attrs, children) {
     return new RepeatTemplate<Reactive.Binding>(attrs.param, attrs.source, children, Dom.DomVisitor);
 }
 
@@ -247,6 +309,96 @@ export class RepeatTemplate<T> implements Template.INode {
 
     bind() {
         return new RepeatBinding(this.param, this.expr, this.children);
+    }
+}
+
+export class ListTemplate implements Template.INode {
+    constructor(private attrs, private children: Template.INode[]) { }
+
+    bind() {
+        return new ListBinding(this.attrs, this.children);
+    }
+}
+
+class ListBinding extends Reactive.Binding {
+    constructor(private attrs, private children) {
+        super();
+    }
+
+    get length() {
+        var total = 0, length = this.childBindings.length;
+        for (var i = 0; i < length; i++) {
+            total += this.childBindings[i].length;
+        }
+        return total;
+    }
+
+    execute() {
+        this.render(this.context, this.driver);
+        return void 0;
+    }
+
+    dispose() {
+        let { childBindings } = this, i = childBindings.length;
+        while (i--) {
+            childBindings[i].dispose();
+        }
+    }
+
+    render(context, driver) {
+        var stream;
+        var sourceExpr = this.attrs.source;
+        if (!!sourceExpr && !!sourceExpr.execute) {
+            stream = sourceExpr.execute(this, context);
+            if (stream.length === void 0)
+                if (stream.value === null) {
+                    stream = [];
+                } else {
+                    stream = [stream];
+                }
+        } else {
+            stream = [context];
+        }
+
+        let { childBindings } = this,
+            childLength = childBindings.length,
+            streamLength = stream.length,
+            i = 0;
+
+        while (streamLength < childLength) {
+            childBindings[--childLength].dispose();
+            childBindings.length = childLength;
+        }
+
+        while (i < streamLength) {
+            var item = stream.get ? stream.get(i) : stream[i];
+            var childBinding: Reactive.Binding;
+            if (i < childLength)
+                childBinding = childBindings[i];
+            else {
+                childBinding = new FragmentBinding(void 0, this.children);
+                childBindings.push(childBinding);
+            }
+            childBinding.update2(item, this);
+            mount(childBinding);
+            i++;
+        }
+    }
+
+    insert(fragment, dom, idx) {
+        if (this.driver) {
+            var offset = 0, { childBindings } = this;
+            for (var i = 0; i < childBindings.length; i++) {
+                if (childBindings[i] === fragment)
+                    break;
+                offset += childBindings[i].length;
+            }
+            this.driver.insert(this, dom, offset + idx);
+        }
+    }
+
+    refresh() {
+        this.context.refresh();
     }
 }
 
@@ -384,7 +536,7 @@ class FragmentBinding extends Reactive.Binding {
     updateChildren(context) {
         if (this.param !== void 0)
             super.updateChildren(this);
-        else 
+        else
             super.updateChildren(context);
     }
 

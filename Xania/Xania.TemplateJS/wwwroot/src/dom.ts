@@ -329,7 +329,8 @@ export module Dom {
                 }
             }
 
-            this.context.refresh();
+            if (this.context)
+                this.context.refresh();
         }
 
         render(context, driver) {

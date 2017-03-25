@@ -1,4 +1,4 @@
-﻿import xania, { Repeat, With, If, expr, Dom, RemoteDataSource, ModelRepository, Reactive as Re, Template } from "../src/xania"
+﻿import xania, { Repeat, List, With, If, expr, Dom, RemoteDataSource, ModelRepository, Reactive as Re, Template, Partial } from "../src/xania"
 import Html from '../src/html'
 import { UrlHelper, ViewResult } from "../src/mvc"
 import './admin.css'
@@ -28,7 +28,8 @@ var actions: IAppAction[] = [
     { path: "views/companies", display: "Companies" },
     { path: "views/users", display: "Users" },
     { path: "graph", display: "Graph" },
-    { path: "balls", display: "Balls" }
+    { path: "balls", display: "Balls" },
+    { path: "stacked", display: "Stacked" }
 ];
 
 var mainMenu: (url: UrlHelper) => Template.INode = (url: UrlHelper) =>
@@ -64,5 +65,30 @@ export function graph() {
 
 export function balls() {
     return new ViewResult(<BallsApp />);
+}
+
+export function stacked() {
+    return new ViewResult(
+        <div>
+            <div>
+                <button onClick={expr("pushTemplate1 ()")}>push 1</button>
+                <button onClick={expr("pushTemplate2 ()")}>push 2</button>
+                <button onClick={expr("templates.pop ()")}>Pop</button>
+            </div>
+            <Repeat source={expr("for n in templates")} >
+                <section>
+                    <Partial template={expr("n")} />
+                </section>
+            </Repeat>
+        </div>, new Re.Store({
+            templates: [],
+            pushTemplate1() {
+                this.templates.push(<div style="border: 1px solid red; color: red; padding: 2px 10px; margin: 2px; float: left;">template 1</div>);
+            },
+            pushTemplate2() {
+                this.templates.push(<div style="border: 1px solid green; color: green; padding: 2px 10px; margin: 2px; float: left;">template 2</div>);
+            }
+        })
+    );
 }
 
