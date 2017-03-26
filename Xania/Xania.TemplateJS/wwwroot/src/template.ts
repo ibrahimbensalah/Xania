@@ -40,6 +40,16 @@ export module Template {
             return this._children;
         }
 
+        public attrs(attrs) {
+            for (let attrName in attrs) {
+                if (attrs.hasOwnProperty(attrName)) {
+                    var attrValue = attrs[attrName];
+                    this.attr(attrName, attrValue);
+                }
+            }
+            return this;
+        }
+
         public attr(name: string, expr: any) {
             return this.addAttribute(name, expr);
         }
@@ -92,6 +102,4 @@ export module Template {
     }
 }
 
-export {
-    Template as t
-}
+export default Template;

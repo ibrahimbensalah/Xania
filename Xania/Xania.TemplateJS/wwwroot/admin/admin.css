@@ -15,9 +15,9 @@ body {
   width: 200px;
 }
 .main-content {
-  margin: 0;
-  padding: 0;
   flex: 1;
+  border: 3px solid orange;
+  overflow: auto;
 }
 .main-menu-ul {
   margin: 0px;

@@ -24,6 +24,7 @@
     "wwwroot/src/*.ts",
     "wwwroot/src/*.tsx",
     "wwwroot/diagram/**/*.tsx",
+    "wwwroot/layout/**/*.tsx",
     "wwwroot/spec/*Spec.ts",
     "wwwroot/sample/**/*.ts",
     "wwwroot/sample/**/*.tsx",

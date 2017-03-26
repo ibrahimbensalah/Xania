@@ -9,6 +9,7 @@ import DataGrid, { TextColumn } from "./grid"
 import Lib = require("../diagram/lib");
 import BallsApp from "../sample/balls/app";
 import { Section } from "./layout"
+import StackLayout from '../layout/stack'
 
 export function menu({ driver, html, url }) {
     return mainMenu(url)
@@ -68,23 +69,6 @@ export function balls() {
 }
 
 export function stacked() {
-    return View(
-        <div>
-            <div>
-                <button onClick={expr("templates.push tpl1")}>push 1</button>
-                <button onClick={expr("templates.push tpl2")}>push 2</button>
-                <button onClick={expr("templates.pop ()")}>Pop</button>
-            </div>
-            <Repeat source={expr("for n in templates")} >
-                <section>
-                    <Html.Partial template={expr("n")} />
-                </section>
-            </Repeat>
-        </div>, new Re.Store({
-            templates: [],
-            tpl1: <div style="border: 1px solid red; color: red; padding: 2px 10px; margin: 2px; float: left;">template 1</div>,
-            tpl2: <div style="border: 1px solid green; color: green; padding: 2px 10px; margin: 2px; float: left;">template 2</div>
-        })
-    );
+    return View(<StackLayout />);
 }
 

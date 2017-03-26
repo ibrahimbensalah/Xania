@@ -1,0 +1,22 @@
+﻿div.stack-container {
+  flex-direction: row;
+  display: flex;
+  overflow: auto;
+  width: 100%;
+  height: 100%;
+
+  section.stack-item {
+    border: 1px solid black;
+    padding: 10px;
+    min-width: 200px;
+
+    button {
+      display: block;
+    }
+  }
+
+  section.stack-item:last-child {
+    flex: 1;
+    min-width: 50%;
+  }
+}

@@ -6,5 +6,9 @@
   {
     "outputFile": "wwwroot/admin/admin.css",
     "inputFile": "wwwroot/admin/admin.less"
+  },
+  {
+    "outputFile": "wwwroot/layout/stack.css",
+    "inputFile": "wwwroot/layout/stack.less"
   }
 ]

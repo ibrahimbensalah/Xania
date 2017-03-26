@@ -21,9 +21,34 @@ export default class Xania {
                     result.push(childTemplates[j]);
                 }
             } else if (typeof child.view === "function") {
-                result.push(Component(child, {}));
+                result.push(Component(child, []));
             } else {
                 result.push(child);
+            }
+        }
+        return result;
+    }
+
+    static attributes(attrs): any {
+        var result = {};
+        if (attrs) {
+            for (var prop in attrs) {
+                if (attrs.hasOwnProperty(prop)) {
+                    var attrValue = attrs[prop];
+                    if (prop === "className" || prop === "classname" || prop === "clazz")
+                        Object.assign(result, { "class": attrValue });
+                    else if (prop === "htmlFor")
+                        Object.assign(result, { "for": attrValue });
+                    else
+                        result[prop] = attrValue;
+                }
+            }
+            if (typeof attrs.name === "string") {
+                if (attrs.type === "text") {
+                    if (!attrs.value) {
+                        Object.assign(result, {"value": compile(attrs.name) });
+                    }
+                }
             }
         }
         return result;
@@ -33,11 +58,12 @@ export default class Xania {
 
     static tag(element, attrs, ...children): Template.INode {
         var childNodes: Template.INode[] = this.templates(children);
+        var attributes = this.attributes(attrs);
 
         if (element instanceof Template.TagTemplate) {
             return element;
         } else if (typeof element === "string") {
-            let tag = Xania.htmlTag(element, attrs);
+            let tag = Xania.htmlTag(element).attrs(attributes);
             var length = childNodes.length, i = 0;
             while (i < length) {
                 tag.child(childNodes[i++]);
@@ -45,11 +71,11 @@ export default class Xania {
             return tag;
         } else if (typeof element === "function") {
             if (element.prototype.bind) {
-                return Reflect.construct(element, [attrs || {}, childNodes]);
+                return Reflect.construct(element, [attributes, childNodes]);
             } else if (element.prototype.view) {
-                return Component(Reflect.construct(element, [attrs || {}, childNodes]), attrs);
+                return Component(Reflect.construct(element, [attributes, childNodes]), attributes);
             } else {
-                var view = element(attrs || {}, childNodes);
+                var view = element(attributes, childNodes);
                 if (!view)
                     throw new Error("Failed to load view");
                 return view;
@@ -59,30 +85,9 @@ export default class Xania {
         }
     }
 
-    static htmlTag(tagName: string, attrs) {
+    static htmlTag(tagName: string) {
         var ns = Xania.svgElements.indexOf(tagName) >= 0 ? "http://www.w3.org/2000/svg" : null;
-        var tag = new Template.TagTemplate<Reactive.Binding>(tagName, ns, Dom.DomVisitor);
-        if (attrs) {
-            for (var prop in attrs) {
-                if (attrs.hasOwnProperty(prop)) {
-                    var attrValue = attrs[prop];
-                    if (prop === "className" || prop === "classname" || prop === "clazz")
-                        tag.attr("class", attrValue);
-                    else if (prop === "htmlFor")
-                        tag.attr("for", attrValue);
-                    else
-                        tag.attr(prop, attrValue);
-                }
-            }
-            if (typeof attrs.name === "string") {
-                if (attrs.type === "text") {
-                    if (!attrs.value) {
-                        tag.attr("value", compile(attrs.name));
-                    }
-                }
-            }
-        }
-        return tag;
+        return new Template.TagTemplate<Reactive.Binding>(tagName, ns, Dom.DomVisitor);
     }
 
     static render(element, driver: IDriver) {
@@ -108,7 +113,7 @@ export function mount(root: Reactive.Binding) {
 
 }
 
-function Component(component, props) {
+function Component(component, props: any) {
     return {
         component,
         bind(driver: IDriver) {
@@ -120,7 +125,7 @@ function Component(component, props) {
 class ComponentBinding extends Reactive.Binding {
     private componentStore = new Reactive.Store(this.component);
 
-    constructor(private component, private props, driver) {
+    constructor(private component, private props: any, driver) {
         super(driver);
         this.childBindings = [component.view(Xania).bind(driver)];
     }
@@ -130,7 +135,7 @@ class ComponentBinding extends Reactive.Binding {
     }
 
     render(context) {
-        let props = this.props;
+        let { props } = this;
         for (let prop in props) {
             if (props.hasOwnProperty(prop)) {
                 var expr = props[prop];
@@ -141,7 +146,6 @@ class ComponentBinding extends Reactive.Binding {
             }
         }
         this.componentStore.refresh();
-        // this.binding.execute();
     }
 
     dispose() {
@@ -370,7 +374,7 @@ class RepeatBinding extends Reactive.Binding {
         return total;
     }
 
-    constructor(driver: IDriver,  public param, private expr, public children: Template.INode[]) {
+    constructor(driver: IDriver, public param, private expr, public children: Template.INode[]) {
         super(driver);
         for (var child of children) {
             if (!child.bind)

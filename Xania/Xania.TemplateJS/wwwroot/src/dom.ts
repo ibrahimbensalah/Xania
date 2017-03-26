@@ -192,11 +192,17 @@ export module Dom {
             this.tagNode.remove();
         }
 
-        child(child: Template.INode): this {
-            if (!this.childBindings)
-                this.childBindings = [];
+        children(nodes: Template.INode[]): this {
+            var length = nodes.length;
+            for (var i = 0; i < length; i++) {
+                this.child(nodes[i]);
+            }
 
-            this.childBindings.push(child.bind(this));
+            return this;
+        }
+
+        child(node: Template.INode): this {
+            this.childBindings.push(node.bind(this));
             return this;
         }
 
@@ -519,3 +525,7 @@ export function join(separator: string, value) {
 // ReSharper restore InconsistentNaming
 
 export default Dom;
+
+let TagBinding = Dom.TagBinding;
+
+export { TagBinding };
