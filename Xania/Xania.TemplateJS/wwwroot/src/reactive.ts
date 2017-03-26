@@ -432,21 +432,24 @@ export module Reactive {
 
     export abstract class Binding {
         public context;
-        protected driver: IDriver;
         public length;
         public childBindings: Binding[] = [];
+
+        constructor(protected driver: IDriver) {
+            if (!driver)
+                throw new Error("Argument driver is required.");
+            if (typeof driver.insert !== "function")
+                throw new Error("Driver is incompatible.");
+        }
 
         execute(): Binding[] {
             this.render(this.context, this.driver);
             return this.childBindings;
         }
 
-        update2(context, driver: IDriver): this {
+        update(context): this {
             this.context = context;
-            this.driver = driver;
-
             this.updateChildren(context);
-
             return this;
         }
 
@@ -455,7 +458,7 @@ export module Reactive {
             if (childBindings) {
                 let i = childBindings.length || 0;
                 while (i--) {
-                    childBindings[i].update2(context, this);
+                    childBindings[i].update(context);
                 }
             }
         }

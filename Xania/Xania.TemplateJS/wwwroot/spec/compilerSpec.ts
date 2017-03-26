@@ -232,7 +232,7 @@ class TestBinding extends Re.Binding {
     public value;
 
     constructor(private ast) {
-        super();
+        super(null);
     }
 
     render(context) {

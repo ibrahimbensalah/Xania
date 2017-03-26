@@ -1,22 +1,28 @@
 ﻿import { Core } from "./core"
 
+export interface IDriver {
+    insert?(binding, dom, idx);
+    on(eventName, dom, eventBinding);
+}
+
 export module Template {
 
     export interface IVisitor<T> {
-        text(expr): T;
-        tag(name, ns, attrs, children): T;
+        text(expr, driver: IDriver): T;
+        tag(name, ns, attrs, driver: IDriver): T;
     }
 
     export interface INode {
-        bind?();
+        bind?(driver: IDriver);
+        child?(node: INode);
     }
 
     export class TextTemplate<T> implements INode {
         constructor(private expr, private visitor: IVisitor<T>) {
         }
 
-        bind(): T {
-            return this.visitor.text(this.expr);
+        bind(driver: IDriver): T {
+            return this.visitor.text(this.expr, driver);
         }
     }
 
@@ -25,8 +31,9 @@ export module Template {
         private events = new Map<string, any>();
         // ReSharper disable once InconsistentNaming
         public modelAccessor;
+        private _children: INode[] = [];
 
-        constructor(public name: string, private ns: string, private _children: INode[] = [], private visitor: IVisitor<T>) {
+        constructor(public name: string, private ns: string, private visitor: IVisitor<T>) {
         }
 
         public children(): INode[] {
@@ -68,11 +75,19 @@ export module Template {
             return this;
         }
 
-        bind() {
-            const bindings = this._children.map(x => x.bind());
-            var tagBinding = this.visitor.tag(this.name, this.ns, this.attributes, bindings);
+        bind(driver: IDriver) {
+            var tag: any = this.visitor.tag(this.name, this.ns, this.attributes, driver);
 
-            return tagBinding;
+            var i = 0, children = this._children, length = children.length;
+            while (i < length) {
+                tag.child(children[i++]);
+            }
+
+            return tag;
+        }
+
+        child(node: INode) {
+            this._children.push(node);
         }
     }
 }

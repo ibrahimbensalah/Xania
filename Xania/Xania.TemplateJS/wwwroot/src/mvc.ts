@@ -85,15 +85,18 @@ class ViewBinding {
 }
 
 export interface IDriver {
-
 }
 
 export class ViewResult {
     constructor(private view, private model?) { }
 
     execute(driver: IDriver, visitor) {
-        return this.view.bind()
-            .update2(this.model, driver);
+        return this.view.bind(driver)
+            .update(this.model);
     }
+}
+
+export function View(view, model?) {
+    return new ViewResult(view, model);
 }
 

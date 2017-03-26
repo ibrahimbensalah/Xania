@@ -1,13 +1,13 @@
 ﻿import { Reactive } from "./reactive"
-import { Template } from "./template"
+import { Template, IDriver } from "./template"
 
 export class Animate implements Template.INode {
     constructor(private attrs: { transform?, dispose?, duration? }, private children: Template.INode[]) {
     }
 
-    bind() {
-        const bindings = this.children.map(x => x.bind());
-        return new AnimateBinding(this.attrs, bindings);
+    bind(driver: IDriver) {
+        const bindings = this.children.map(x => x.bind(driver));
+        return new AnimateBinding(driver, this.attrs, bindings);
     }
 }
 
@@ -15,8 +15,8 @@ export class AnimateBinding extends Reactive.Binding {
 
     domElements = [];
 
-    constructor(private attrs: { transform?, dispose?, duration? }, childBindings: any[]) {
-        super();
+    constructor(driver: IDriver, private attrs: { transform?, dispose?, duration? }, childBindings: any[]) {
+        super(driver);
         this.childBindings = childBindings;
     }
 
@@ -28,10 +28,10 @@ export class AnimateBinding extends Reactive.Binding {
         return length;
     }
 
-    update(context, driver) {
-        super.update2(context, driver);
+    update(context) {
+        super.update(context);
         for (var i = 0; i < this.childBindings.length; i++) {
-            this.childBindings[i].update2(context, this);
+            this.childBindings[i].update(context);
         }
         return this;
     }

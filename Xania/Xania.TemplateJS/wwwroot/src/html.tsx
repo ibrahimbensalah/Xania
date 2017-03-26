@@ -1,4 +1,5 @@
-﻿import xania, { expr, Repeat } from "./xania";
+﻿import xania, { mount, expr, Repeat, Template, Reactive } from "./xania";
+import { IDriver } from "./template";
 
 export function TextEditor(attrs) {
     var id = Math.random();
@@ -86,4 +87,58 @@ export class DropDown {
     }
 }
 
-export default { TextEditor, BooleanEditor, DropDown, Select }
+export function Partial(attrs, children): Template.INode {
+    if (children && children.length)
+        throw Error("View does not allow child elements");
+
+    return {
+        bind(driver: IDriver) {
+            return new PartialBinding(driver, attrs);
+        }
+    }
+}
+
+class PartialBinding extends Reactive.Binding {
+    constructor(driver: IDriver, private attrs) {
+        super(driver);
+    }
+
+    execute() {
+        this.render(this.context, this.driver);
+        return void 0;
+    }
+
+    dispose() {
+        let { childBindings } = this, i = childBindings.length;
+        while (i--) {
+            childBindings[i].dispose();
+        }
+        childBindings.length = 0;
+    }
+
+    render(context, driver) {
+        this.dispose();
+
+        var result = this.evaluateObject(this.attrs.template, context);
+        var template = result && result.valueOf();
+        if (template) {
+            var binding = template.bind(this).update(context);
+            this.childBindings.push(binding);
+            mount(binding);
+        }
+    }
+
+    insert(fragment, dom, idx) {
+        if (this.driver) {
+            var offset = 0, { childBindings } = this;
+            for (var i = 0; i < childBindings.length; i++) {
+                if (childBindings[i] === fragment)
+                    break;
+                offset += childBindings[i].length;
+            }
+            this.driver.insert(this, dom, offset + idx);
+        }
+    }
+}
+
+export default { TextEditor, BooleanEditor, DropDown, Select, Partial }

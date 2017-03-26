@@ -1,4 +1,4 @@
-﻿import { Template } from "./template"
+﻿import { Template, IDriver } from "./template"
 import { Dom } from "./dom"
 import compile, { Scope, parse } from "./compile"
 import { Reactive } from "./reactive"
@@ -28,45 +28,28 @@ export default class Xania {
         }
         return result;
     }
+
     static svgElements = ["svg", "circle", "line", "g", "path", "marker"];
 
     static tag(element, attrs, ...children): Template.INode {
-        var childTemplates = this.templates(children);
+        var childNodes: Template.INode[] = this.templates(children);
 
         if (element instanceof Template.TagTemplate) {
             return element;
         } else if (typeof element === "string") {
-            var ns = Xania.svgElements.indexOf(element) >= 0 ? "http://www.w3.org/2000/svg" : null;
-            var tag = new Template.TagTemplate<Reactive.Binding>(element, ns, childTemplates, Dom.DomVisitor);
-            if (attrs) {
-                for (var prop in attrs) {
-                    if (attrs.hasOwnProperty(prop)) {
-                        var attrValue = attrs[prop];
-                        if (prop === "className" || prop === "classname" || prop === "clazz")
-                            tag.attr("class", attrValue);
-                        else if (prop === "htmlFor")
-                            tag.attr("for", attrValue);
-                        else
-                            tag.attr(prop, attrValue);
-                    }
-                }
-                if (typeof attrs.name === "string") {
-                    if (attrs.type === "text") {
-                        if (!attrs.value) {
-                            tag.attr("value", compile(attrs.name));
-                        }
-                    }
-                }
+            let tag = Xania.htmlTag(element, attrs);
+            var length = childNodes.length, i = 0;
+            while (i < length) {
+                tag.child(childNodes[i++]);
             }
-
             return tag;
         } else if (typeof element === "function") {
             if (element.prototype.bind) {
-                return Reflect.construct(element, [attrs || {}, childTemplates]);
+                return Reflect.construct(element, [attrs || {}, childNodes]);
             } else if (element.prototype.view) {
-                return Component(Reflect.construct(element, [attrs || {}, childTemplates]), attrs);
+                return Component(Reflect.construct(element, [attrs || {}, childNodes]), attrs);
             } else {
-                var view = element(attrs || {}, childTemplates);
+                var view = element(attrs || {}, childNodes);
                 if (!view)
                     throw new Error("Failed to load view");
                 return view;
@@ -76,10 +59,36 @@ export default class Xania {
         }
     }
 
-    static render(element, driver) {
+    static htmlTag(tagName: string, attrs) {
+        var ns = Xania.svgElements.indexOf(tagName) >= 0 ? "http://www.w3.org/2000/svg" : null;
+        var tag = new Template.TagTemplate<Reactive.Binding>(tagName, ns, Dom.DomVisitor);
+        if (attrs) {
+            for (var prop in attrs) {
+                if (attrs.hasOwnProperty(prop)) {
+                    var attrValue = attrs[prop];
+                    if (prop === "className" || prop === "classname" || prop === "clazz")
+                        tag.attr("class", attrValue);
+                    else if (prop === "htmlFor")
+                        tag.attr("for", attrValue);
+                    else
+                        tag.attr(prop, attrValue);
+                }
+            }
+            if (typeof attrs.name === "string") {
+                if (attrs.type === "text") {
+                    if (!attrs.value) {
+                        tag.attr("value", compile(attrs.name));
+                    }
+                }
+            }
+        }
+        return tag;
+    }
+
+    static render(element, driver: IDriver) {
         return Xania.tag(element, {})
-            .bind()
-            .update(new Reactive.Store({}), driver);
+            .bind(driver)
+            .update(new Reactive.Store({}));
     }
 }
 
@@ -102,8 +111,8 @@ export function mount(root: Reactive.Binding) {
 function Component(component, props) {
     return {
         component,
-        bind() {
-            return new ComponentBinding(this.component, props);
+        bind(driver: IDriver) {
+            return new ComponentBinding(this.component, props, driver);
         }
     }
 };
@@ -111,9 +120,9 @@ function Component(component, props) {
 class ComponentBinding extends Reactive.Binding {
     private componentStore = new Reactive.Store(this.component);
 
-    constructor(private component, private props) {
-        super();
-        this.childBindings = [component.view(Xania).bind()];
+    constructor(private component, private props, driver) {
+        super(driver);
+        this.childBindings = [component.view(Xania).bind(driver)];
     }
 
     updateChildren(context) {
@@ -162,76 +171,22 @@ class ComponentBinding extends Reactive.Binding {
 
 export { Reactive, Template, Dom }
 
-export function Partial(attrs, children): Template.INode {
-    if (children && children.length)
-        throw Error("View does not allow child elements");
-
-    return {
-        bind() {
-            return new PartialBinding(attrs);
-        }
-    }
-}
-
-class PartialBinding extends Reactive.Binding {
-    constructor(private attrs) {
-        super();
-    }
-
-    execute() {
-        this.render(this.context, this.driver);
-        return void 0;
-    }
-
-    dispose() {
-        let { childBindings } = this, i = childBindings.length;
-        while (i--) {
-            childBindings[i].dispose();
-        }
-        childBindings.length = 0;
-    }
-
-    render(context, driver) {
-        this.dispose();
-
-        var result = this.evaluateObject(this.attrs.template, context);
-        var template = result && result.valueOf();
-        if (template) {
-            var binding = template.bind().update2(context, this);
-            this.childBindings.push(binding);
-            mount(binding);
-        }
-    }
-
-    insert(fragment, dom, idx) {
-        if (this.driver) {
-            var offset = 0, { childBindings } = this;
-            for (var i = 0; i < childBindings.length; i++) {
-                if (childBindings[i] === fragment)
-                    break;
-                offset += childBindings[i].length;
-            }
-            this.driver.insert(this, dom, offset + idx);
-        }
-    }
-}
-
 export function List(attrs, children) {
     return new ListTemplate(attrs, children);
 }
 
 export function Repeat(attrs, children) {
-    return new RepeatTemplate<Reactive.Binding>(attrs.param, attrs.source, children, Dom.DomVisitor);
+    return new RepeatTemplate<Reactive.Binding>(attrs.param, attrs.source, children);
 }
 
 export function Collection(attrs, children) {
-    return new RepeatTemplate<Reactive.Binding>(attrs.param, attrs.source, children, Dom.DomVisitor);
+    return new RepeatTemplate<Reactive.Binding>(attrs.param, attrs.source, children);
 }
 
 export function With(attrs, children: Template.INode[]) {
     return {
-        bind() {
-            return new WithBinding(attrs.object, children);
+        bind(driver: IDriver) {
+            return new WithBinding(driver, attrs.object, children);
         }
     }
 }
@@ -240,8 +195,8 @@ export class WithBinding extends Reactive.Binding {
     private conditionalBindings = [];
     private object;
 
-    constructor(private expr, private childTemplates: Template.INode[]) {
-        super();
+    constructor(driver: IDriver, private expr, private childTemplates: Template.INode[]) {
+        super(driver);
     }
 
     execute() {
@@ -262,13 +217,13 @@ export class WithBinding extends Reactive.Binding {
 
         if (value) {
             if (!i) {
-                this.childTemplates.map(x => x.bind().update2(this, driver)).forEach(x => {
+                this.childTemplates.map(x => x.bind(driver).update(this)).forEach(x => {
                     mount(x);
                     childBindings.push(x);
                 });
             } else {
                 while (i--) {
-                    childBindings[i].update2(this, driver);
+                    childBindings[i].update(this);
                 }
             }
         } else {
@@ -294,8 +249,8 @@ export class WithBinding extends Reactive.Binding {
 
 export function If(attrs, children: Template.INode[]) {
     return {
-        bind() {
-            return new WithBinding(attrs.expr, children);
+        bind(driver: IDriver) {
+            return new WithBinding(driver, attrs.expr, children);
         }
     }
 }
@@ -305,24 +260,28 @@ export function expr(code: string) {
 }
 
 export class RepeatTemplate<T> implements Template.INode {
-    constructor(private param, private expr, private children: Template.INode[], private visitor: Template.IVisitor<T>) { }
+    constructor(private param, private expr, private children: Template.INode[] = []) { }
 
-    bind() {
-        return new RepeatBinding(this.param, this.expr, this.children);
+    bind(driver: IDriver) {
+        return new RepeatBinding(driver, this.param, this.expr, this.children);
+    }
+
+    child(node: Template.INode) {
+        this.children.push(node);
     }
 }
 
 export class ListTemplate implements Template.INode {
     constructor(private attrs, private children: Template.INode[]) { }
 
-    bind() {
-        return new ListBinding(this.attrs, this.children);
+    bind(driver: IDriver) {
+        return new ListBinding(driver, this.attrs, this.children);
     }
 }
 
 class ListBinding extends Reactive.Binding {
-    constructor(private attrs, private children) {
-        super();
+    constructor(driver: IDriver, private attrs, private children) {
+        super(driver);
     }
 
     get length() {
@@ -376,10 +335,10 @@ class ListBinding extends Reactive.Binding {
             if (i < childLength)
                 childBinding = childBindings[i];
             else {
-                childBinding = new FragmentBinding(void 0, this.children);
+                childBinding = new FragmentBinding(this, void 0, this.children);
                 childBindings.push(childBinding);
             }
-            childBinding.update2(item, this);
+            childBinding.update(item);
             mount(childBinding);
             i++;
         }
@@ -411,8 +370,8 @@ class RepeatBinding extends Reactive.Binding {
         return total;
     }
 
-    constructor(public param, private expr, public children: Template.INode[]) {
-        super();
+    constructor(driver: IDriver,  public param, private expr, public children: Template.INode[]) {
+        super(driver);
         for (var child of children) {
             if (!child.bind)
                 throw Error("child is not a node");
@@ -487,12 +446,12 @@ class RepeatBinding extends Reactive.Binding {
             }
 
             if (fragment === null /* not found */) {
-                fragment = new FragmentBinding(this.param, this.children);
+                fragment = new FragmentBinding(this, this.param, this.children);
                 childBindings.push(fragment);
                 RepeatBinding.swap(childBindings, fraglength, i);
             }
 
-            mount(fragment.update2(item, this));
+            mount(fragment.update(item));
         }
     }
 
@@ -522,9 +481,9 @@ class FragmentBinding extends Reactive.Binding {
         return length;
     }
 
-    constructor(private param: string, public children: Template.INode[]) {
-        super();
-        this.childBindings = children.map(x => x.bind());
+    constructor(driver: IDriver, private param: string, public children: Template.INode[]) {
+        super(driver);
+        this.childBindings = children.map(x => x.bind(this));
     }
 
     get(name: string) {
@@ -566,8 +525,7 @@ export class Fragment {
 
     constructor(private owner: { param?, children; context; insert }) {
         for (var e = 0; e < this.owner.children.length; e++) {
-            this.childBindings[e] =
-                owner.children[e].bind();
+            this.childBindings[e] = owner.children[e].bind(this);
         }
     }
 
@@ -605,12 +563,11 @@ export class Fragment {
         return total;
     }
 
-    update2(context, driver) {
+    update(context) {
         this.context = context;
-        this.driver = driver;
         var length = this.owner.children.length;
         for (var e = 0; e < length; e++) {
-            this.childBindings[e].update2(this, this);
+            this.childBindings[e].update(this);
         }
         return this;
     }

@@ -14,8 +14,9 @@ export function run(target: Node) {
     var store = new Re.Store(state);
 
     var binding = dbmon(Xania)
-        .bind(Dom.DomVisitor)
-        .update2(store, new Dom.DomDriver(target));
+        .bind(new Dom.DomDriver(target))
+        .update(store);
+
     mount(binding);
 
     var load = () => {

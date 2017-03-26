@@ -1,5 +1,5 @@
 ﻿import './diagram.css'
-import { Template } from "../src/template";
+import { Template, IDriver } from "../src/template";
 import { Dom } from "../src/dom";
 import expr from "../src/compile";
 
@@ -49,11 +49,11 @@ interface Point {
 }
 
 class Draggable {
-    constructor(private attrs, private children) {
+    constructor(private attrs, private children: Template.INode[]) {
     }
 
-    bind() {
-        var tag = new DraggableBinding(this.attrs, this.children.map(x => x.bind())),
+    bind(driver: IDriver) {
+        var tag = new DraggableBinding(driver, this.attrs),
             attrs = this.attrs;
 
         tag.attr("class", "xania-draggable");
@@ -66,14 +66,18 @@ class Draggable {
                     tag.attr(prop.toLowerCase(), attrValue);
             }
         }
+        const { children } = this, length = this.children.length;
+        for (var i = 0; i < length; i++) {
+            tag.child(children[i]);
+        }
 
         return tag;
     }
 }
 
 class DraggableBinding extends Dom.TagBinding {
-    constructor(private props, childBindings) {
-        super("div", null, childBindings);
+    constructor(driver: IDriver, private props) {
+        super(driver, "div", null);
         this.event("mousedown", this.press);
         this.event("mousemove", this.drag);
         this.event("mouseup", this.release);

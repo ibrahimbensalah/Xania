@@ -1,6 +1,6 @@
 ﻿import { Core } from './core'
 import { Reactive as Re } from './reactive'
-import { Template } from './template'
+import { Template, IDriver } from './template'
 
 export module Dom {
 
@@ -8,7 +8,7 @@ export module Dom {
 
     interface IDomBinding {
         length;
-        update2(context, parent);
+        update(context);
         dispose();
     }
 
@@ -28,11 +28,11 @@ export module Dom {
     }
 
     export class DomVisitor {
-        static text(expr): TextBinding {
-            return new TextBinding(expr);
+        static text(expr, driver: IDriver): TextBinding {
+            return new TextBinding(expr, driver);
         }
-        static tag(tagName: string, ns: string, attrs, children): TagBinding {
-            var tag = new TagBinding(tagName, ns, children), length = attrs.length;
+        static tag(tagName: string, ns: string, attrs, driver: IDriver): TagBinding {
+            var tag = new TagBinding(driver, tagName, ns), length = attrs.length;
             for (var i = 0; i < length; i++) {
                 tag.attr(attrs[i].name, attrs[i].tpl);
             }
@@ -152,8 +152,8 @@ export module Dom {
         public length = 1;
         public oldValue;
 
-        constructor(private expr) {
-            super();
+        constructor(private expr, driver: IDriver) {
+            super(driver);
             this.textNode = (<any>document).createTextNode("");
         }
 
@@ -177,10 +177,9 @@ export module Dom {
         public length = 1;
         private domDriver: DomDriver;
 
-        constructor(private tagName: string, private ns: string = null, childBindings?: Re.Binding[]) {
-            super();
+        constructor(driver: IDriver, private tagName: string, private ns: string = null) {
+            super(driver);
 
-            this.childBindings = childBindings;
             if (ns === null)
                 this.tagNode = document.createElement(tagName);
             else {
@@ -193,11 +192,11 @@ export module Dom {
             this.tagNode.remove();
         }
 
-        child(child: Re.Binding): this {
+        child(child: Template.INode): this {
             if (!this.childBindings)
                 this.childBindings = [];
 
-            this.childBindings.push(child);
+            this.childBindings.push(child.bind(this));
             return this;
         }
 
@@ -210,27 +209,27 @@ export module Dom {
             }
             return this;
         }
-        attr(name, ast): this {
-            if (typeof ast === "string") {
-                this.tagNode.setAttribute(name, ast);
+        attr(name, expr): this {
+            if (typeof expr === "string") {
+                this.tagNode.setAttribute(name, expr);
             } else if (name === "class") {
-                var classBinding = new ClassBinding(this.tagNode, ast);
+                var classBinding = new ClassBinding(this.tagNode, expr, this.driver);
                 this.childBindings.push(classBinding);
             } else if (name === "value" && this.tagName === "input") {
-                const valueBinding = new ValueBinding(this.tagNode, ast);
+                const valueBinding = new ValueBinding(this.tagNode, expr, this.driver);
                 this.childBindings.push(valueBinding);
             } else if (name === "checked" && this.tagName === "input") {
-                const checkedBinding = new CheckedBinding(this.tagNode, ast);
+                const checkedBinding = new CheckedBinding(this.tagNode, expr, this.driver);
                 this.childBindings.push(checkedBinding);
             } else if (name === "selected" && this.tagName === "option") {
-                const selectedBinding = new SelectedBinding(this.tagNode, ast);
+                const selectedBinding = new SelectedBinding(this.tagNode, expr, this.driver);
                 this.childBindings.push(selectedBinding);
             } else {
                 var match = /^on(.+)/.exec(name);
                 if (match) {
-                    this.childBindings.push(new EventBinding(this.tagNode, match[1], ast));
+                    this.childBindings.push(new EventBinding(this.tagNode, match[1], expr, this.driver));
                 } else {
-                    var attrBinding = new AttributeBinding(this.tagNode, name, ast);
+                    var attrBinding = new AttributeBinding(this.tagNode, name, expr, this.driver);
                     this.childBindings.push(attrBinding);
                 }
             }
@@ -238,8 +237,8 @@ export module Dom {
             return this;
         }
 
-        event(name, ast): this {
-            this.childBindings.push(new EventBinding(this.tagNode, name, ast));
+        event(name, expr): this {
+            this.childBindings.push(new EventBinding(this.tagNode, name, expr, this.driver));
             return this;
         }
 
@@ -281,12 +280,12 @@ export module Dom {
         public dom;
         private oldValue;
 
-        constructor(private tagNode: HTMLElement, private ast) {
-            super();
+        constructor(private tagNode: HTMLElement, private expr, driver: IDriver) {
+            super(driver);
         }
 
         render() {
-            var newValue = this.evaluateText(this.ast);
+            var newValue = this.evaluateText(this.expr);
 
             if (newValue !== this.oldValue) {
                 this.oldValue = newValue;
@@ -298,8 +297,8 @@ export module Dom {
     export class EventBinding extends Re.Binding {
         private state;
 
-        constructor(private tagNode: any, public name, private expr) {
-            super();
+        constructor(private tagNode: any, public name, private expr, driver: IDriver) {
+            super(driver);
         }
 
         evaluate(context) {
@@ -362,6 +361,7 @@ export module Dom {
                 if (arg === null)
                     args[1].set(null);
                 else {
+                    // ReSharper disable once QualifiedExpressionMaybeNull
                     arg = arg.valueOf();
                     args[1].set(arg.valueOf());
                 }
@@ -386,8 +386,8 @@ export module Dom {
     class CheckedBinding extends Re.Binding {
         private oldValue;
 
-        constructor(private tagNode: any, private expr) {
-            super();
+        constructor(private tagNode: any, private expr, driver: IDriver) {
+            super(driver);
 
             tagNode.addEventListener("change", this.fire.bind(this));
         }
@@ -402,7 +402,7 @@ export module Dom {
         }
 
         render() {
-            let value = this.evaluateText(this.expr);
+            let value = this.evaluateObject(this.expr);
 
             var newValue = value && value.valueOf();
             var oldValue = this.oldValue;
@@ -428,8 +428,8 @@ export module Dom {
     class ValueBinding extends Re.Binding {
         private oldValue;
 
-        constructor(private tagNode: any, private expr) {
-            super();
+        constructor(private tagNode: any, private expr, driver: IDriver) {
+            super(driver);
 
             tagNode.addEventListener("change", this.fire.bind(this));
         }
@@ -461,8 +461,8 @@ export module Dom {
     }
 
     export class AttributeBinding extends Re.Binding {
-        constructor(private tagNode: any, private name, private expr) {
-            super();
+        constructor(private tagNode: any, private name, private expr, driver: IDriver) {
+            super(driver);
         }
 
         render(context, parent) {
@@ -494,8 +494,8 @@ export module Dom {
     }
 
     export class SelectedBinding extends Re.Binding {
-        constructor(private tagNode: any, private expr) {
-            super();
+        constructor(private tagNode: any, private expr, driver: IDriver) {
+            super(driver);
         }
 
         render(context, parent) {
