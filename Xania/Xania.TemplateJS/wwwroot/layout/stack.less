@@ -6,17 +6,37 @@
   height: 100%;
 
   section.stack-item {
-    border: 1px solid black;
-    padding: 10px;
-    min-width: 200px;
+    border: 1px solid gray;
+    margin: 0 5px 10px 0;
+    padding: 0;
+    box-shadow: rgba(0, 0, 0, 0.4) 0 0 4px;
+    display: flex;
+    flex-direction: column;
+
+    .stack-item-content {
+      height: 100%; 
+      padding: 10px; 
+      min-width: 200px;
+      flex: 1;
+    }
 
     button {
       display: block;
+    }
+
+    header {
+      padding: 5px 8px;
+      background-color: lightgrey;
+      color: black;
+
+      button.close span {
+        pointer-events: none;
+      }
     }
   }
 
   section.stack-item:last-child {
     flex: 1;
-    min-width: 50%;
+    min-width: 70%;
   }
 }

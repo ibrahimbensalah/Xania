@@ -20,6 +20,7 @@ export module Reactive {
 
     abstract class Value {
         public properties: IProperty[] = [];
+        public variables: Variable[] = [];
         public value;
 
         get(propertyName: string): IProperty {
@@ -74,6 +75,18 @@ export module Reactive {
                 return Core.empty;
             else
                 return value.toString();
+        }
+
+        variable(name, context) {
+            var { variables } = this, i = variables.length;
+            while (i--) {
+                var v = variables[i];
+                if (v.name === name)
+                    return v;
+            }
+            var newVar = new Variable(name, this, context);
+            variables.push(newVar);
+            return newVar;
         }
     }
 
@@ -148,6 +161,9 @@ export module Reactive {
                 prevLength = this.length,
                 valueLength = array && array.length;
 
+            this.length = valueLength;
+            var changed = valueLength !== prevLength;
+
             if (array && properties) {
                 var i = properties.length;
                 while (i--) {
@@ -156,20 +172,14 @@ export module Reactive {
                     var idx = array.indexOf(property.value);
                     if (idx < 0) {
                         properties.splice(i, 1);
+                        changed = true;
                     } else {
                         property.name = idx;
                     }
                 }
             }
-
-            this.length = valueLength;
-            if (array !== this.value) {
-                this.value = array;
-
-                return true;
-            }
-
-            return valueLength !== prevLength;
+            this.value = array;
+            return changed;
         }
 
         indexOf(item) {
@@ -415,8 +425,8 @@ export module Reactive {
         on(eventName, dom, eventBinding);
     }
 
-    class ListItem {
-        constructor(private name: string, private value: any, private parent) {
+    class Variable {
+        constructor(public name: string, public value: any, private parent) {
         }
 
         get(name) {
@@ -511,7 +521,8 @@ export module Reactive {
         extend(name: string, value: any) {
             if (value === null || value === void 0)
                 return value;
-            return new ListItem(name, value, this.context);
+
+            return value.variable(name, this.context);
         }
 
         member(target: { get(name: string) }, name) {

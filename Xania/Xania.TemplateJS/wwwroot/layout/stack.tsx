@@ -1,4 +1,4 @@
-﻿import { expr, List } from "../src/xania";
+﻿import { expr, List, Repeat } from "../src/xania";
 import Template, { IDriver } from '../src/template';
 import Reactive from "../src/reactive";
 import { TagBinding } from "../src/dom";
@@ -17,10 +17,17 @@ export default class StackLayout {
             return;
 
         var len = this.templates.length;
-        if (len > (idx + 1))
-            this.templates = this.templates.slice(0, idx+1);
+        if (len > idx + 1)
+            this.templates.length = idx + 1;
 
         this.templates.push(tpl);
+    }
+
+    private close(tpl) {
+        var idx = this.templates.indexOf(tpl);
+        if (idx >= 0) {
+            this.templates.length = idx;
+        }
     }
 
     private add(tpl, clear = false) {
@@ -35,16 +42,27 @@ export default class StackLayout {
         return (
             <StackContainer className="stack-container">
                 <section className="stack-item">
-                    <button onClick={() => this.add(tpl1, true)}>add tpl1</button>
-                    <button onClick={() => this.add(tpl2, true)}>add tpl2</button>
-                    <button onClick={() => this.add(this.page1(xania, 0), true)}>add green</button>
-                    <button onClick={() => this.templates.pop()}>Pop</button>
+                    <header>
+                        Main
+                    </header>
+                    <div className="stack-item-content">
+                        <button onClick={() => this.add(tpl1, true)}>add tpl1</button>
+                        <button onClick={() => this.add(tpl2, true)}>add tpl2</button>
+                        <button onClick={() => this.add(this.page1(xania, 0), true)}>add green</button>
+                        <button onClick={() => this.templates.pop()}>Pop</button>
+                    </div>
                 </section>
-                <List source={expr("for n in templates")} >
+                <Repeat source={expr("for tpl in templates")} >
                     <section className="stack-item">
-                        <Html.Partial template={expr("n")} />
+                        <header>
+                            <button onClick={expr("close tpl")} type="button" className="close" style="pull-right"><span aria-hidden="true">&times;</span></button>
+                            Header 1
+                        </header>
+                        <div className="stack-item-content">
+                            <Html.Partial template={expr("tpl")} />
+                        </div>
                     </section>
-                </List>
+                </Repeat>
             </StackContainer>
         );
     }
@@ -93,8 +111,6 @@ class StackContainerBinding extends TagBinding {
             return false;
         }
 
-        console.log("insert dom", { dom, idx });
-
         var counter = 1000;
         var step = () => {
             counter--;
@@ -102,20 +118,20 @@ class StackContainerBinding extends TagBinding {
                 return;
 
             var prevScrollLeft = dom.parentNode.scrollLeft;
-            var minX = 4;
+            var diff = prevScrollLeft - dom.offsetLeft;
+            var minX = 10;
 
-            var d = prevScrollLeft - dom.offsetLeft;
-            if (d > minX) {
+            if (diff > minX) {
                 dom.parentNode.scrollLeft -= minX;
-            } else if (d < minX) {
+            } else if (diff < minX) {
                 dom.parentNode.scrollLeft += minX;
-            } else if (d !== 0) {
-                dom.parentNode.scrollLeft -= d;
+            } else if (diff !== 0) {
+                dom.parentNode.scrollLeft -= diff;
             } else {
                 return;
             }
 
-            if (d && counter && (dom.parentNode.scrollLeft != prevScrollLeft)) {
+            if (diff && counter && (dom.parentNode.scrollLeft !== prevScrollLeft)) {
                 setTimeout(step, 1);
             }
         }

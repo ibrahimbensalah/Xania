@@ -11,7 +11,7 @@
 
 declare function require(module: string);
 
-var peg = require("../lib/xania/query");
+var peg = require("../lib/xania/query.peg");
 
 function empty(list) {
     return list.length === 0;

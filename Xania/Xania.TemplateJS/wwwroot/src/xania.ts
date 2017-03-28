@@ -444,6 +444,7 @@ class RepeatBinding extends Reactive.Binding {
                 fr = childBindings[e];
                 if (fr.context === item) {
                     fragment = fr;
+                    fragment.execute();
                     RepeatBinding.swap(childBindings, e, i);
                     break;
                 }
