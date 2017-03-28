@@ -4,6 +4,8 @@ import Reactive from "../src/reactive";
 import { TagBinding } from "../src/dom";
 import Html from "../src/html";
 import './stack.css';
+import TodoApp from "../sample/todos/app";
+import BallsApp from "../sample/balls/app";
 
 export default class StackLayout {
     private templates;
@@ -38,7 +40,7 @@ export default class StackLayout {
     }
     public view(xania) {
         var tpl1 = <div style="border: 1px solid red; color: red; padding: 2px 10px; margin: 2px;">template 1</div>;
-        var tpl2 = <div style="border: 1px solid green; color: green; padding: 2px 10px; margin: 2px;">template 2</div>;
+        var tpl2 = <BallsApp />;
         return (
             <StackContainer className="stack-container">
                 <section className="stack-item">
@@ -80,7 +82,7 @@ export default class StackLayout {
     }
 
     public bluepage(xania, idx) {
-        var tpl1 = <div style="border: 1px solid blue; color: green;">template blue</div>;
+        var tpl1 = <TodoApp />;
 
         return (
             <div style="border: 1px solid blue;">

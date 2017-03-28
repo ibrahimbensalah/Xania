@@ -19,15 +19,18 @@ div.stack-container section.stack-item .stack-item-content {
   min-width: 200px;
   flex: 1;
 }
+div.stack-container section.stack-item .stack-item-content:after {
+  flex: 1;
+}
 div.stack-container section.stack-item button {
   display: block;
 }
-div.stack-container section.stack-item header {
+div.stack-container section.stack-item > header {
   padding: 5px 8px;
   background-color: lightgrey;
   color: black;
 }
-div.stack-container section.stack-item header button.close span {
+div.stack-container section.stack-item > header button.close span {
   pointer-events: none;
 }
 div.stack-container section.stack-item:last-child {
