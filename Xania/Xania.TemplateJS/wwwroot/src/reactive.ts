@@ -416,17 +416,17 @@ export module Reactive {
     }
 
     class ListItem {
-        constructor(private name: string, private value: any, private binding) {
+        constructor(private name: string, private value: any, private parent) {
         }
 
         get(name) {
             if (name === this.name)
                 return this.value;
-            return this.binding.context.get(name);
+            return this.parent.get(name);
         }
 
         refresh() {
-            this.binding.refresh();
+            this.parent.refresh();
         }
     }
 
@@ -511,7 +511,7 @@ export module Reactive {
         extend(name: string, value: any) {
             if (value === null || value === void 0)
                 return value;
-            return new ListItem(name, value, this);
+            return new ListItem(name, value, this.context);
         }
 
         member(target: { get(name: string) }, name) {

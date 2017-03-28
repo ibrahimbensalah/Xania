@@ -107,31 +107,23 @@ export module Dom {
 
             var curIdx = domElements.indexOf(dom);
             if (idx !== curIdx) {
-                if (idx < target.childNodes.length) {
-                    var current = target.childNodes[idx];
+                var childNodes = target.childNodes;
+                if (idx < childNodes.length) {
+                    var current = childNodes[idx];
                     if (current !== dom) {
                         target.insertBefore(dom, current);
                     }
                 } else {
                     target.appendChild(dom);
                 }
-                domElements.length = 0;
-                for (let i = 0; i < target.childNodes.length; i++) {
-                    domElements[i] = target.childNodes[i];
+                var length = childNodes.length;
+                domElements.length = length;
+                for (let i = 0; i < length; i++) {
+                    domElements[i] = childNodes[i];
                 }
+                return true;
             }
-        }
-
-        private sym = Symbol();
-
-        insertTag(binding, name, idx) {
-            var sym = this.sym;
-            var dom = binding[sym];
-            if (!dom) {
-                dom = document.createElement(name);
-                binding[sym] = dom;
-            }
-            this.insert(binding, dom, idx);
+            return false;
         }
 
         dispose() {
@@ -265,7 +257,7 @@ export module Dom {
                     break;
                 offset += this.childBindings[i].length;
             }
-            this.domDriver.insert(this, dom, offset + idx);
+            return this.domDriver.insert(this, dom, offset + idx);
         }
 
         render(context, driver) {

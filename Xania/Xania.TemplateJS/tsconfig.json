@@ -16,10 +16,6 @@
     "jsx": "react",
     "jsxFactory": "xania.tag"
   },
-  "exclude": [
-    "src/fsharp.peg.ts",
-    "wwwroot/src/query.peg.js"
-  ],
   "include": [
     "wwwroot/src/*.ts",
     "wwwroot/src/*.tsx",

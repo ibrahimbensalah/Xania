@@ -1,4 +1,4 @@
-﻿import { expr, Repeat } from "../src/xania";
+﻿import { expr, List } from "../src/xania";
 import Template, { IDriver } from '../src/template';
 import Reactive from "../src/reactive";
 import { TagBinding } from "../src/dom";
@@ -10,6 +10,17 @@ export default class StackLayout {
 
     constructor() {
         this.templates = [];
+    }
+
+    private open(idx: number, tpl) {
+        if (this.templates[idx + 1] === tpl)
+            return;
+
+        var len = this.templates.length;
+        if (len > (idx + 1))
+            this.templates = this.templates.slice(0, idx+1);
+
+        this.templates.push(tpl);
     }
 
     private add(tpl, clear = false) {
@@ -26,35 +37,36 @@ export default class StackLayout {
                 <section className="stack-item">
                     <button onClick={() => this.add(tpl1, true)}>add tpl1</button>
                     <button onClick={() => this.add(tpl2, true)}>add tpl2</button>
-                    <button onClick={() => this.add(this.page1(xania), true)}>add green</button>
+                    <button onClick={() => this.add(this.page1(xania, 0), true)}>add green</button>
                     <button onClick={() => this.templates.pop()}>Pop</button>
                 </section>
-                <Repeat source={expr("for n in templates")} >
+                <List source={expr("for n in templates")} >
                     <section className="stack-item">
                         <Html.Partial template={expr("n")} />
                     </section>
-                </Repeat>
+                </List>
             </StackContainer>
         );
     }
 
-    public page1(xania) {
+    public page1(xania, idx) {
         var tpl1 = <div style="border: 1px solid green; color: green;">template green</div>;
+        var bluepage = this.bluepage(xania, idx + 1);
 
         return (
             <div>
-                <button onClick={() => this.add(tpl1, false)}>tpl1</button>
-                <button onClick={() => this.add(this.subpage(xania), false)}>blue</button>
+                <button onClick={() => this.open(idx, tpl1)}>open tpl1</button>
+                <button onClick={() => this.open(idx, bluepage)}>open blue</button>
             </div>
         );
     }
 
-    public subpage(xania) {
+    public bluepage(xania, idx) {
         var tpl1 = <div style="border: 1px solid blue; color: green;">template blue</div>;
 
         return (
-            <div>
-                <button onClick={() => this.add(tpl1, false)}>tpl1</button>
+            <div style="border: 1px solid blue;">
+                <button onClick={() => this.open(idx, tpl1)}>tpl1</button>
             </div>
         );
     }
@@ -77,7 +89,11 @@ class StackContainerBinding extends TagBinding {
     }
 
     insert(binding, dom, idx) {
-        super.insert(binding, dom, idx);
+        if (!super.insert(binding, dom, idx)) {
+            return false;
+        }
+
+        console.log("insert dom", { dom, idx });
 
         var counter = 1000;
         var step = () => {
@@ -106,5 +122,7 @@ class StackContainerBinding extends TagBinding {
 
         if (dom.parentNode)
             step();
+
+        return true;
     }
 }

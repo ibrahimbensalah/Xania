@@ -453,9 +453,8 @@ class RepeatBinding extends Reactive.Binding {
                 fragment = new FragmentBinding(this, this.param, this.children);
                 childBindings.push(fragment);
                 RepeatBinding.swap(childBindings, fraglength, i);
+                mount(fragment.update(item));
             }
-
-            mount(fragment.update(item));
         }
     }
 
