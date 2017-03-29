@@ -24,10 +24,10 @@ interface IAppAction {
 
 var actions: IAppAction[] = [
     { path: "timesheet", display: "Timesheet" },
-    { path: "views/invoices", display: "Invoices" },
+    { path: "invoices", display: "Invoices" },
     { path: "todos", display: "Todos" },
-    { path: "views/companies", display: "Companies" },
-    { path: "views/users", display: "Users" },
+    { path: "companies", display: "Companies" },
+    { path: "users", display: "Users" },
     { path: "graph", display: "Graph" },
     { path: "balls", display: "Balls" },
     { path: "stacked", display: "Stacked" }

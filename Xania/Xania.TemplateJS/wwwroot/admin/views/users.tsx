@@ -29,7 +29,7 @@ var onSelect = row => {
     }
 }
 
-export function action() {
+export function view() {
     return new ViewResult(
         <div style="height: 95%;" className="row">
             <div className={[expr("currentRow -> 'col-8'"), expr("not currentRow -> 'col-12'")]}>

@@ -37,7 +37,7 @@ class InvoiceRepository extends ModelRepository {
     }
 }
 
-export function action() {
+export function view() {
     var companies = [
         { value: 1, text: "Rider International" },
         { value: 2, text: "Xania BV" }

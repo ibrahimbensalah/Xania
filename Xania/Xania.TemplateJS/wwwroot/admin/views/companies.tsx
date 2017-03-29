@@ -18,7 +18,7 @@ class CompanyRepository extends ModelRepository {
     }
 }
 
-export function action() {
+export function view() {
     var store = new Re.Store(new CompanyRepository());
 
     var onSelect = row => {
