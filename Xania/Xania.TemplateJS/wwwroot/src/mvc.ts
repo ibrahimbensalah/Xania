@@ -1,4 +1,6 @@
 ﻿import { Observables } from "./observables"
+import xania, { mount } from './xania'
+import Dom from './dom'
 
 export class UrlHelper {
     public observers = [];
@@ -87,12 +89,41 @@ class ViewBinding {
 export interface IDriver {
 }
 
-export class ViewResult {
+interface IControllerContext {
+    action(viewName: string): IControllerContext;
+}
+
+interface IRoute {
+    path: string;
+    action: () => ViewResult;
+}
+
+export class ViewResult implements IControllerContext {
+    private routes: IRoute[] = [];
     constructor(private view, private model?) { }
 
-    execute(driver: IDriver, visitor) {
-        return this.view.bind(driver)
+    execute(driver: IDriver) {
+        var view =  this.view.bind(driver)
             .update(this.model);
+
+        mount(view);
+
+        return view;
+    }
+
+    route(path, action: () => ViewResult): this {
+        this.routes.push({ path, action });
+        return this;
+    }
+
+    action(path: string) {
+        var {routes} = this, i = routes.length;
+        while (i--) {
+            var route = routes[i];
+            if (route.path === path)
+                return route.action();
+        }
+        return null;
     }
 }
 
@@ -100,3 +131,43 @@ export function View(view, model?) {
     return new ViewResult(view, model);
 }
 
+declare class System {
+    static import(path: string);
+}
+
+export function boot(basePath: string, appPath: string, actionPath: string, app: any) {
+    var url = new UrlHelper(appPath, actionPath, app);
+
+    var mainDriver = new Dom.DomDriver(".main-content");
+    url.actionPath.subscribe(path => {
+        var rootCtrl = {
+            controller: app,
+            action: function (viewName) {
+                var controller = this.controller;
+                return typeof controller[viewName] === "function"
+                    ? app[viewName]()
+                    : System.import(basePath + "views/" + viewName).then(mod => mod.view());
+            }
+        }
+
+        mainDriver.dispose();
+        var parts: string[] = path.split("/");
+        var viewResult  = <ViewResult>parts.reduce<IControllerContext>((ctx: IControllerContext, name: string) => ctx.action(name), rootCtrl);
+        viewResult.execute(mainDriver);
+    });
+
+    function dataReady(data, resolve) {
+        if (data !== null && data !== void 0 && !!data.then)
+            return data.then(resolve);
+
+        return resolve.call(resolve, data);
+    }
+
+    var html = new HtmlHelper(System);
+
+    mount(app.menu({
+        url: url,
+        html: html,
+        driver: new Dom.DomDriver('.main-menu')
+    }));
+}

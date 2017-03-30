@@ -40,55 +40,8 @@
       });
     }
 
-    load([appPath, '/src/xania', '/src/mvc', '/src/dom'], function (app, xania, mvc, dom) {
-      var url = new mvc.UrlHelper(appPath, actionPath, app);
-
-      var mainDriver = new dom.Dom.DomDriver('.main-content');
-      url.actionPath.subscribe(function (path) {
-        var rootCtrl = {
-          controller: app,
-          action: function (viewName) {
-            var controller = this.controller;
-            return typeof controller[viewName] === "function"
-              ? app[viewName]()
-              : System.import(basePath + "views/" + viewName).then(function (module) {
-                return module.view();
-              });
-          }
-        }
-
-        mainDriver.dispose();
-        var parts = path.split('/');
-        var idx = 0;
-        dataReady(renderPath(rootCtrl, idx++), function next(viewResult) {
-          console.log(viewResult);
-          if (idx < parts.length)
-            dataReady(renderPath(viewResult, idx++), next);
-        });
-
-        function renderPath(controller, idx) {
-          return dataReady(controller.action(parts[idx]), function (viewResult) {
-            xania.mount(viewResult.execute(mainDriver, dom.Dom.DomVisitor));
-            return viewResult;
-          });
-        }
-      });
-
-      function dataReady(data, resolve) {
-        if (data !== null && data !== void 0 && !!data.then)
-          return data.then(resolve);
-
-        return resolve.call(resolve, data);
-      }
-
-      var html = new mvc.HtmlHelper(System);
-
-      xania.mount(
-        app.menu({
-          url: url,
-          html: html,
-          driver: new dom.Dom.DomDriver('.main-menu')
-        }));
+    load([appPath, '/src/mvc'], function (app, mvc) {
+      mvc.boot(basePath, appPath, actionPath, app);
     });
   </script>
 </head>

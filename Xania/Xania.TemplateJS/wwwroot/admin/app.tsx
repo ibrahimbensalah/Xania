@@ -69,6 +69,7 @@ export function balls() {
 }
 
 export function stacked() {
-    return View(<StackLayout />);
+    return View(<StackLayout />)
+        .route("test", () => View(<div>hello child</div>).route("bla", () => View(<div>hello child of child</div>)));
 }
 
