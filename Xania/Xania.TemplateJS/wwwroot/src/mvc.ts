@@ -4,47 +4,27 @@ import Dom from './dom'
 
 export class UrlHelper {
     public observers = [];
-    public actionPath: Observables.Observable<string>;
-    private initialPath: string;
 
-    constructor(private appPath, actionPath, private appInstance) {
-        this.actionPath = new Observables.Observable<string>(actionPath);
-        this.initialPath = actionPath;
-
-        window.onpopstate = (popStateEvent) => {
-            var { state } = popStateEvent;
-            var { pathname } = window.location;
-
-            if (state && pathname.startsWith(this.appPath + "/")) {
-                var actionPath = pathname.substring(this.appPath.length + 1);
-
-                if (state.actionPath !== actionPath)
-                    console.error(actionPath, state);
-
-                if (actionPath !== this.actionPath.current)
-                    this.actionPath.notify(actionPath);
-            }
-        }
+    constructor(public router: Router, private basePath = "/") {
     }
 
     action(path: string, view?) {
         return event => {
-            var actionPath = path;
-            var actionView = view;
-            if (this.actionPath.current !== actionPath) {
-                var action = { actionPath, actionView };
-                window.history.pushState(action, "", this.appPath + "/" + actionPath);
-                this.actionPath.notify(actionPath);
-            }
+            var action = { path: this.router.goto(this.basePath + path) };
+            console.log("push state", action);
+            window.history.pushState(action, "", action.path);
             event.preventDefault();
         };
+    }
+
+    child(path) {
+        return new UrlHelper(this.router, this.basePath + path);
     }
 }
 
 export class HtmlHelper {
 
     constructor(private loader: { import(path: string); }) {
-
     }
 
     partial(viewPath: string) {
@@ -65,7 +45,6 @@ class ViewBinding {
     }
 
     update(context, parent) {
-
         if (!this.view)
             throw new Error("view is empty");
 
@@ -103,7 +82,7 @@ export class ViewResult implements IControllerContext {
     constructor(private view, private model?) { }
 
     execute(driver: IDriver) {
-        var view =  this.view.bind(driver)
+        var view = this.view.bind(driver)
             .update(this.model);
 
         mount(view);
@@ -123,7 +102,7 @@ export class ViewResult implements IControllerContext {
             if (route.path === path)
                 return route.action();
         }
-        return null;
+        return void 0;
     }
 }
 
@@ -136,24 +115,37 @@ declare class System {
 }
 
 export function boot(basePath: string, appPath: string, actionPath: string, app: any) {
-    var url = new UrlHelper(appPath, actionPath, app);
+
+    var router = Router.start(appPath, actionPath);
+
+    var url = new UrlHelper(router);
 
     var mainDriver = new Dom.DomDriver(".main-content");
-    url.actionPath.subscribe(path => {
+    router.subscribe(route => {
         var rootCtrl = {
             controller: app,
             action: function (viewName) {
                 var controller = this.controller;
                 return typeof controller[viewName] === "function"
-                    ? app[viewName]()
+                    ? app[viewName]({ url: url.child(viewName) })
                     : System.import(basePath + "views/" + viewName).then(mod => mod.view());
             }
         }
 
         mainDriver.dispose();
-        var parts: string[] = path.split("/");
-        var viewResult  = <ViewResult>parts.reduce<IControllerContext>((ctx: IControllerContext, name: string) => ctx.action(name), rootCtrl);
-        viewResult.execute(mainDriver);
+        var parts: string[] = route.match(/\/([^\/]+)/g).map(x => x.slice(1));
+        var viewResult = <ViewResult>parts.reduce<IControllerContext>((ctx: IControllerContext, name: string) => {
+            return dataReady(ctx, x => {
+                var result = x.action(name);
+                if (typeof result === "undefined")
+                    throw { error: "route not found: ", route: name, view: x };
+                return result;
+            });
+        }, rootCtrl);
+
+        dataReady(viewResult, x => {
+            x.execute(mainDriver);
+        });
     });
 
     function dataReady(data, resolve) {
@@ -171,3 +163,51 @@ export function boot(basePath: string, appPath: string, actionPath: string, app:
         driver: new Dom.DomDriver('.main-menu')
     }));
 }
+
+interface IRouter {
+    goto(path: string);
+}
+
+class Router implements IRouter {
+    private observable: Observables.Observable<string>;
+    constructor(private appPath: string, private init: string) {
+        this.observable = new Observables.Observable<string>(init);
+    }
+
+    static start(appPath: string, init: string) {
+        var router = new Router(appPath, init);
+        window.onpopstate = () => {
+            var { pathname } = window.location;
+
+            if (pathname.startsWith(appPath)) {
+                var actionPath = pathname.substring(appPath.length);
+                router.goto(actionPath);
+            }
+        }
+
+        return router;
+    }
+
+    subscribe(observer: Observables.IObserver<string>) {
+        return this.observable.subscribe(observer);
+    }
+
+    goto(path: string) {
+        if (path !== this.observable.valueOf()) {
+            this.observable.notify(path);
+        }
+        return this.appPath + path;
+    }
+}
+
+/*
+
+    child2(path): UrlHelper {
+        return new UrlHelper(this.appPath + "/" + path, {
+            router: this.router,
+            goto(value: string) {
+                this.router.goto(path + "/" + value);
+            }
+        } as any);
+    }
+*/

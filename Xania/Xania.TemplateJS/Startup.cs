@@ -100,7 +100,7 @@ namespace Xania.TemplateJS
                         Content = File.ReadAllText(bootFile),
                         Base = basePath ?? "",
                         Name = part,
-                        Args = string.Join("/", parts.Skip(i + 1))
+                        Args = string.Join("", parts.Skip(i + 1).Select(x => "/" + x))
                     };
                 }
 

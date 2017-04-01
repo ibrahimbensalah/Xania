@@ -315,7 +315,7 @@ export module Dom {
         fire(event, context = this.context) {
             var newValue = this.evaluate(context);
 
-            this.state = typeof newValue === "function" ? newValue() : newValue;
+            this.state = typeof newValue === "function" ? newValue(event) : newValue;
 
             if (newValue !== void 0) {
                 var tag = event.target;

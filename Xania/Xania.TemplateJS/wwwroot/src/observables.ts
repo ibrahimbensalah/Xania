@@ -34,9 +34,8 @@
             return observable;
         }
 
-        notify(value: T) {
-            this.current = value;
-            var next = this.valueOf();
+        notify(next: T) {
+            this.current = next;
             for (var i = 0; i < this.subscriptions.length; i++) {
                 this.subscriptions[i].notify(next);
             }

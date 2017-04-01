@@ -6,9 +6,11 @@ import Html from "../src/html";
 import './stack.css';
 import TodoApp from "../sample/todos/app";
 import BallsApp from "../sample/balls/app";
+import { UrlHelper } from "../src/mvc";
 
 export default class StackLayout {
     private templates;
+    private url: UrlHelper = null;
 
     constructor() {
         this.templates = [];
@@ -52,6 +54,7 @@ export default class StackLayout {
                         <button onClick={() => this.add(tpl2, true)}>add tpl2</button>
                         <button onClick={() => this.add(this.page1(xania, 0), true)}>add green</button>
                         <button onClick={() => this.templates.pop()}>Pop</button>
+                        <a onClick={() => this.url.action("/test")}>Link</a>
                     </div>
                 </section>
                 <Repeat source={expr("for tpl in templates")} >

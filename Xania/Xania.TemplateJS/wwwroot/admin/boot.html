@@ -8,11 +8,38 @@
   <title>Xania Admin</title>
   <script src="/lib/system.js/dist/system.js"></script>
   <script src="/lib/fetch/fetch.js"></script>
+</head>
+<body>
+  <nav class="navbar navbar-toggleable-md navbar-light bg-faded">
+    <button class="navbar-toggler navbar-toggler-right" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <a class="navbar-brand" href="[BASE][APP]">Your Company</a>
+
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav mr-auto">
+        <li class="nav-item active">
+          <a class="nav-link" href="#">Home <span class="sr-only">(current)</span></a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="#">Link</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link disabled" href="#">Disabled</a>
+        </li>
+      </ul>
+    </div>
+  </nav>
+  <div class="flex-container">
+    <menu class="main-menu"></menu>
+    <main class="main-content" style="height: 100%;"></main>
+  </div>
+
   <script>
     var basePath = '[BASE]';
     var appName = '[APP]';
     var appPath = basePath + appName;
-    var actionPath = '[ARGS]' || 'index';
+    var actionPath = '[ARGS]' || '/index';
     System.config({
       packages: { '/': {} },
       paths: {
@@ -44,32 +71,6 @@
       mvc.boot(basePath, appPath, actionPath, app);
     });
   </script>
-</head>
-<body>
-  <nav class="navbar navbar-toggleable-md navbar-light bg-faded">
-    <button class="navbar-toggler navbar-toggler-right" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
-      <span class="navbar-toggler-icon"></span>
-    </button>
-    <a class="navbar-brand" href="[BASE][APP]">Xania Software</a>
 
-    <div class="collapse navbar-collapse" id="navbarSupportedContent">
-      <ul class="navbar-nav mr-auto">
-        <li class="nav-item active">
-          <a class="nav-link" href="#">Home <span class="sr-only">(current)</span></a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link" href="#">Link</a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link disabled" href="#">Disabled</a>
-        </li>
-      </ul>
-    </div>
-  </nav>
-  <div class="flex-container">
-    <menu class="main-menu"></menu>
-    <main class="main-content" style="height: 100%;"></main>
-  </div>
 </body>
-
 </html>
