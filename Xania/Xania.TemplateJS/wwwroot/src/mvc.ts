@@ -11,14 +11,13 @@ export class UrlHelper {
     action(path: string, view?) {
         return event => {
             var action = { path: this.router.goto(this.basePath + path) };
-            console.log("push state", action);
             window.history.pushState(action, "", action.path);
             event.preventDefault();
         };
     }
 
     child(path) {
-        return new UrlHelper(this.router, this.basePath + path);
+        return new UrlHelper(this.router, this.basePath + path + "/");
     }
 }
 
@@ -69,17 +68,26 @@ export interface IDriver {
 }
 
 interface IControllerContext {
-    action(viewName: string): IControllerContext;
+    get(path: string): IRoute;
+    execute(driver: IDriver);
 }
 
 interface IRoute {
-    path: string;
-    action: () => ViewResult;
+    execute(context) : ViewResult;
+}
+
+class ActionRoute implements IRoute {
+    constructor(public path, private action: (context) => ViewResult) { }
+
+    execute(context) {
+        return this.action(context);
+    }
 }
 
 export class ViewResult implements IControllerContext {
-    private routes: IRoute[] = [];
-    constructor(private view, private model?) { }
+    private routes: ActionRoute[] = [];
+
+    constructor(private view, private model?) {}
 
     execute(driver: IDriver) {
         var view = this.view.bind(driver)
@@ -90,17 +98,17 @@ export class ViewResult implements IControllerContext {
         return view;
     }
 
-    route(path, action: () => ViewResult): this {
-        this.routes.push({ path, action });
+    route(path, action: (context) => ViewResult): this {
+        this.routes.push(new ActionRoute( path, action ));
         return this;
     }
 
-    action(path: string) {
-        var {routes} = this, i = routes.length;
+    get(path: string): IRoute {
+        var { routes } = this, i = routes.length;
         while (i--) {
             var route = routes[i];
             if (route.path === path)
-                return route.action();
+                return route;
         }
         return void 0;
     }
@@ -116,60 +124,76 @@ declare class System {
 
 export function boot(basePath: string, appPath: string, actionPath: string, app: any) {
 
-    var router = Router.start(appPath, actionPath);
-
-    var url = new UrlHelper(router);
+    const router = Router.start(appPath, actionPath);
 
     var mainDriver = new Dom.DomDriver(".main-content");
-    router.subscribe(route => {
-        var rootCtrl = {
-            controller: app,
-            action: function (viewName) {
-                var controller = this.controller;
-                return typeof controller[viewName] === "function"
-                    ? app[viewName]({ url: url.child(viewName) })
-                    : System.import(basePath + "views/" + viewName).then(mod => mod.view());
-            }
+    var viewContext = {
+        controller: app,
+        url: new UrlHelper(router),
+        map: new Map(),
+        execute(driver: IDriver) {
+            throw Error("Not supported.");
+        },
+        get(path: string): IRoute {
+            return typeof this.controller[path] === "function"
+                ? new ActionRoute(path, this.controller[path])
+                : new ActionRoute(path, context => System.import(basePath + "views/" + path).then(mod => mod.view(context)));
         }
-
+    }
+    router.subscribe(route => {
         mainDriver.dispose();
         var parts: string[] = route.match(/\/([^\/]+)/g).map(x => x.slice(1));
-        var viewResult = <ViewResult>parts.reduce<IControllerContext>((ctx: IControllerContext, name: string) => {
-            return dataReady(ctx, x => {
-                var result = x.action(name);
-                if (typeof result === "undefined")
-                    throw { error: "route not found: ", route: name, view: x };
-                return result;
-            });
-        }, rootCtrl);
+        var reduced = parts.reduce<IControllerContext>((ctx: IControllerContext, name: string) => {
+                return dataReady(ctx,
+                    (x: any) => {
+                        var context = { url: x.url.child(name) };
+                        var result = x.get(name).execute(context);
 
-        dataReady(viewResult, x => {
-            x.execute(mainDriver);
-        });
+                        if (typeof result === "undefined")
+                            throw { error: "route not found: ", route: name, view: x };
+
+                        return dataReady(result,
+                            y => ({
+                                viewResult: y,
+                                url: context.url,
+                                map: new Map(),
+                                execute(driver: IDriver) {
+                                    return this.viewResult.execute(driver);
+                                },
+                                get(path: string): IRoute {
+                                    return this.viewResult.get(path);
+                                }
+                            }));
+                    });
+            },
+            viewContext);
+
+        dataReady(reduced,
+            x => {
+                x.execute(mainDriver);
+            });
     });
 
-    function dataReady(data, resolve) {
-        if (data !== null && data !== void 0 && !!data.then)
-            return data.then(resolve);
+    function dataReady<T>(data: T | PromiseLike<T>, resolve: (x:T) => any) {
+        var promise = data as PromiseLike<T>;
+        if (promise && promise.then)
+            return promise.then(resolve);
 
-        return resolve.call(resolve, data);
+        return resolve(data as T);
     }
 
     var html = new HtmlHelper(System);
 
     mount(app.menu({
-        url: url,
+        url: new UrlHelper(router),
         html: html,
         driver: new Dom.DomDriver('.main-menu')
     }));
 }
 
-interface IRouter {
-    goto(path: string);
-}
-
-class Router implements IRouter {
+class Router {
     private observable: Observables.Observable<string>;
+
     constructor(private appPath: string, private init: string) {
         this.observable = new Observables.Observable<string>(init);
     }
@@ -199,15 +223,3 @@ class Router implements IRouter {
         return this.appPath + path;
     }
 }
-
-/*
-
-    child2(path): UrlHelper {
-        return new UrlHelper(this.appPath + "/" + path, {
-            router: this.router,
-            goto(value: string) {
-                this.router.goto(path + "/" + value);
-            }
-        } as any);
-    }
-*/

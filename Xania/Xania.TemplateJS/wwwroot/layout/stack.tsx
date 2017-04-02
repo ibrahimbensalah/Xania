@@ -40,6 +40,7 @@ export default class StackLayout {
         else
             this.templates.push(tpl);
     }
+
     public view(xania) {
         var tpl1 = <div style="border: 1px solid red; color: red; padding: 2px 10px; margin: 2px;">template 1</div>;
         var tpl2 = <BallsApp />;
@@ -54,7 +55,7 @@ export default class StackLayout {
                         <button onClick={() => this.add(tpl2, true)}>add tpl2</button>
                         <button onClick={() => this.add(this.page1(xania, 0), true)}>add green</button>
                         <button onClick={() => this.templates.pop()}>Pop</button>
-                        <a onClick={() => this.url.action("/test")}>Link</a>
+                        <a onClick={() => this.url.action("foo")}>Link</a>
                     </div>
                 </section>
                 <Repeat source={expr("for tpl in templates")} >

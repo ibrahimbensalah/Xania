@@ -68,8 +68,12 @@ export function balls() {
     return View(<BallsApp />);
 }
 
-export function stacked({url}) {
+export function stacked({ url }) {
     return View(<StackLayout url={url} />)
-        .route("test", () => View(<div>hello child</div>).route("bla", () => View(<div>hello child of child</div>)));
+        // child route
+        .route("foo", ({ url }) => {
+            return View(<div>hello child <a href="" onClick={() => url.action("bar")}>bar</a></div>)
+                // child child route
+                .route("bar", () => View(<div>hello child of child</div>));
+        });
 }
-
