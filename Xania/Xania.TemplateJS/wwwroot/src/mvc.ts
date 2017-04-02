@@ -73,7 +73,7 @@ interface IControllerContext {
 }
 
 interface IRoute {
-    execute(context) : ViewResult;
+    execute(context): ViewResult;
 }
 
 class ActionRoute implements IRoute {
@@ -87,7 +87,7 @@ class ActionRoute implements IRoute {
 export class ViewResult implements IControllerContext {
     private routes: ActionRoute[] = [];
 
-    constructor(private view, private model?) {}
+    constructor(private view, private model?) { }
 
     execute(driver: IDriver) {
         var view = this.view.bind(driver)
@@ -99,7 +99,7 @@ export class ViewResult implements IControllerContext {
     }
 
     route(path, action: (context) => ViewResult): this {
-        this.routes.push(new ActionRoute( path, action ));
+        this.routes.push(new ActionRoute(path, action));
         return this;
     }
 
@@ -140,33 +140,49 @@ export function boot(basePath: string, appPath: string, actionPath: string, app:
                 : new ActionRoute(path, context => System.import(basePath + "views/" + path).then(mod => mod.view(context)));
         }
     }
-    router.subscribe(route => {
+    var views = [];
+    router.subscribe((route: string) => {
         mainDriver.dispose();
-        var parts: string[] = route.match(/\/([^\/]+)/g).map(x => x.slice(1));
-        var reduced = parts.reduce<IControllerContext>((ctx: IControllerContext, name: string) => {
-                return dataReady(ctx,
-                    (x: any) => {
-                        var context = { url: x.url.child(name) };
-                        var result = x.get(name).execute(context);
+        var reduced =
+            route
+                .match(/\/([^\/]+)/g)
+                .map(x => x.slice(1))
+                .reduce<IControllerContext>((ctx: IControllerContext, name: string, idx: number) => {
+                    if (idx in views) {
+                        var cache = views[idx];
+                        if (cache.name === name)
+                            return cache.retval;
 
-                        if (typeof result === "undefined")
-                            throw { error: "route not found: ", route: name, view: x };
+                        views.length = idx;
+                    }
 
-                        return dataReady(result,
-                            y => ({
-                                viewResult: y,
-                                url: context.url,
-                                map: new Map(),
-                                execute(driver: IDriver) {
-                                    return this.viewResult.execute(driver);
-                                },
-                                get(path: string): IRoute {
-                                    return this.viewResult.get(path);
-                                }
-                            }));
-                    });
-            },
-            viewContext);
+                    var retval = dataReady(ctx,
+                        (parentContext: any) => {
+
+                            var context = { url: parentContext.url.child(name) };
+                            var result = parentContext.get(name).execute(context);
+
+                            if (typeof result === "undefined")
+                                throw { error: "route not found: ", route: name, view: parentContext };
+
+                            return dataReady(result,
+                                viewResult => ({
+                                    viewResult,
+                                    url: context.url,
+                                    map: new Map(),
+                                    execute(driver: IDriver) {
+                                        return this.viewResult.execute(driver);
+                                    },
+                                    get(path: string): IRoute {
+                                        return this.viewResult.get(path);
+                                    }
+                                }));
+                        });
+
+                    views[idx] = { name, retval };
+                    return retval;
+                },
+                viewContext);
 
         dataReady(reduced,
             x => {
@@ -174,7 +190,7 @@ export function boot(basePath: string, appPath: string, actionPath: string, app:
             });
     });
 
-    function dataReady<T>(data: T | PromiseLike<T>, resolve: (x:T) => any) {
+    function dataReady<T>(data: T | PromiseLike<T>, resolve: (x: T) => any) {
         var promise = data as PromiseLike<T>;
         if (promise && promise.then)
             return promise.then(resolve);
