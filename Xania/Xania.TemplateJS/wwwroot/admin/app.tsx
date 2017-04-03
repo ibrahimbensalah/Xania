@@ -30,7 +30,8 @@ var actions: IAppAction[] = [
     { path: "users", display: "Users" },
     { path: "graph", display: "Graph" },
     { path: "balls", display: "Balls" },
-    { path: "stacked", display: "Stacked" }
+    { path: "stacked", display: "Stacked" },
+    { path: "hierachical", display: "Hierarchical url" }
 ];
 
 var mainMenu: (url: UrlHelper) => Template.INode = (url: UrlHelper) =>
@@ -76,4 +77,30 @@ export function stacked({ url }) {
                 // child child route
                 .route("bar", () => View(<div>hello child of child</div>));
         });
+}
+
+export function hierachical({ url }) {
+    var rootView =
+        <div>
+            <h3>root</h3>
+            goto <a href="" onClick={url.action("level1")}>level 1</a>
+        </div>;
+    return View(rootView).route("level1", level1);
+}
+
+function level1({ url }) {
+    return View(
+        <div>
+            <h3>level 1</h3>
+            goto <a href="" onClick={url.action("level2")}>level 2</a>
+        </div>
+    ).route("level2", level2);
+}
+
+function level2() {
+    return View(
+        <div>
+            <h3>level 2</h3>
+        </div>
+    );
 }

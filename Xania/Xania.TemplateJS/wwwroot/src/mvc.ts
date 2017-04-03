@@ -65,6 +65,7 @@ class ViewBinding {
 }
 
 export interface IDriver {
+    dispose();
 }
 
 interface IControllerContext {
@@ -90,6 +91,7 @@ export class ViewResult implements IControllerContext {
     constructor(private view, private model?) { }
 
     execute(driver: IDriver) {
+        driver.dispose();
         var view = this.view.bind(driver)
             .update(this.model);
 
@@ -122,6 +124,57 @@ declare class System {
     static import(path: string);
 }
 
+function dataReady<T>(data: T | PromiseLike<T>, resolve: (x: T) => any) {
+    var promise = data as PromiseLike<T>;
+    if (promise && promise.then)
+        return promise.then(resolve);
+
+    return resolve(data as T);
+}
+
+function getView(ctx: IControllerContext, name: string) {
+    return dataReady(ctx,
+        (parentContext: any) => {
+
+            var context = { url: parentContext.url.child(name) };
+            var result = parentContext.get(name).execute(context);
+
+            if (typeof result === "undefined")
+                throw { error: "route not found: ", route: name, view: parentContext };
+
+            return dataReady(result,
+                viewResult => ({
+                    viewResult,
+                    url: context.url,
+                    map: new Map(),
+                    execute(driver: IDriver) {
+                        return this.viewResult.execute(driver);
+                    },
+                    get(path: string): IRoute {
+                        return this.viewResult.get(path);
+                    }
+                }));
+        });
+}
+
+function cache(reducer) {
+    var views = [];
+    return (ctx: IControllerContext, name: string, idx: number) => {
+        if (idx in views) {
+            var cache = views[idx];
+            if (cache.name === name)
+                return cache.retval;
+
+            views.length = idx;
+        }
+
+        var retval = reducer(ctx, name, idx);
+
+        views[idx] = { name, retval };
+        return retval;
+    }
+}
+
 export function boot(basePath: string, appPath: string, actionPath: string, app: any) {
 
     const router = Router.start(appPath, actionPath);
@@ -140,69 +193,20 @@ export function boot(basePath: string, appPath: string, actionPath: string, app:
                 : new ActionRoute(path, context => System.import(basePath + "views/" + path).then(mod => mod.view(context)));
         }
     }
-    var views = [];
+
+    var reducer = cache(getView);
     router.subscribe((route: string) => {
-        mainDriver.dispose();
         var reduced =
             route
                 .match(/\/([^\/]+)/g)
                 .map(x => x.slice(1))
-                .reduce<IControllerContext>((ctx: IControllerContext, name: string, idx: number) => {
-                    if (idx in views) {
-                        var cache = views[idx];
-                        if (cache.name === name)
-                            return cache.retval;
-
-                        views.length = idx;
-                    }
-
-                    var retval = dataReady(ctx,
-                        (parentContext: any) => {
-
-                            var context = { url: parentContext.url.child(name) };
-                            var result = parentContext.get(name).execute(context);
-
-                            if (typeof result === "undefined")
-                                throw { error: "route not found: ", route: name, view: parentContext };
-
-                            return dataReady(result,
-                                viewResult => ({
-                                    viewResult,
-                                    url: context.url,
-                                    map: new Map(),
-                                    execute(driver: IDriver) {
-                                        return this.viewResult.execute(driver);
-                                    },
-                                    get(path: string): IRoute {
-                                        return this.viewResult.get(path);
-                                    }
-                                }));
-                        });
-
-                    views[idx] = { name, retval };
-                    return retval;
-                },
-                viewContext);
-
-        dataReady(reduced,
-            x => {
-                x.execute(mainDriver);
-            });
+                .reduce<IControllerContext>(reducer, viewContext);
+        dataReady(reduced, x => x.execute(mainDriver));
     });
-
-    function dataReady<T>(data: T | PromiseLike<T>, resolve: (x: T) => any) {
-        var promise = data as PromiseLike<T>;
-        if (promise && promise.then)
-            return promise.then(resolve);
-
-        return resolve(data as T);
-    }
-
-    var html = new HtmlHelper(System);
 
     mount(app.menu({
         url: new UrlHelper(router),
-        html: html,
+        html: new HtmlHelper(System),
         driver: new Dom.DomDriver('.main-menu')
     }));
 }
