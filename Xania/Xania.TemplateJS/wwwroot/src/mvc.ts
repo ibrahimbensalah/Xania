@@ -68,8 +68,13 @@ export interface IDriver {
     dispose();
 }
 
+export interface IViewContext {
+    url: UrlHelper;
+    model?: any;
+}
+
 interface IControllerContext {
-    get(path: string): IRoute;
+    get(path: string, context: IViewContext): ViewResult;
     execute(driver: IDriver);
 }
 
@@ -105,12 +110,14 @@ export class ViewResult implements IControllerContext {
         return this;
     }
 
-    get(path: string): IRoute {
+    get(path: string, viewContext: IViewContext): ViewResult {
         var { routes } = this, i = routes.length;
+
         while (i--) {
             var route = routes[i];
-            if (route.path === path)
-                return route;
+            if (route.path === path) {
+                return route.execute(viewContext);
+            }
         }
         return void 0;
     }
@@ -134,24 +141,22 @@ function dataReady<T>(data: T | PromiseLike<T>, resolve: (x: T) => any) {
 
 function getView(ctx: IControllerContext, name: string) {
     return dataReady(ctx,
-        (parentContext: any) => {
-
-            var context = { url: parentContext.url.child(name) };
-            var result = parentContext.get(name).execute(context);
+        (controllerContext: any) => {
+            var childContext = { url: controllerContext.url.child(name) };
+            var result = controllerContext.get(name, childContext);
 
             if (typeof result === "undefined")
-                throw { error: "route not found: ", route: name, view: parentContext };
+                throw { error: "route not found: ", route: name, controllerContext };
 
             return dataReady(result,
                 viewResult => ({
-                    viewResult,
-                    url: context.url,
+                    url: childContext.url,
                     map: new Map(),
                     execute(driver: IDriver) {
-                        return this.viewResult.execute(driver);
+                        return viewResult.execute(driver);
                     },
-                    get(path: string): IRoute {
-                        return this.viewResult.get(path);
+                    get(path: string, viewContext: IViewContext): ViewResult {
+                        return viewResult.get(path, viewContext);
                     }
                 }));
         });
@@ -180,17 +185,17 @@ export function boot(basePath: string, appPath: string, actionPath: string, app:
     const router = Router.start(appPath, actionPath);
 
     var mainDriver = new Dom.DomDriver(".main-content");
-    var viewContext = {
+    var controllerContext = {
         controller: app,
         url: new UrlHelper(router),
         map: new Map(),
         execute(driver: IDriver) {
             throw Error("Not supported.");
         },
-        get(path: string): IRoute {
+        get(path: string, viewContext: IViewContext): ViewResult {
             return typeof this.controller[path] === "function"
-                ? new ActionRoute(path, this.controller[path])
-                : new ActionRoute(path, context => System.import(basePath + "views/" + path).then(mod => mod.view(context)));
+                ? this.controller[path](viewContext)
+                : System.import(basePath + "views/" + path).then(mod => mod.view(viewContext));
         }
     }
 
@@ -200,7 +205,7 @@ export function boot(basePath: string, appPath: string, actionPath: string, app:
             route
                 .match(/\/([^\/]+)/g)
                 .map(x => x.slice(1))
-                .reduce<IControllerContext>(reducer, viewContext);
+                .reduce<IControllerContext>(reducer, controllerContext);
         dataReady(reduced, x => x.execute(mainDriver));
     });
 

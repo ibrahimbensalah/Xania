@@ -1,316 +1,316 @@
-﻿/// <reference path="../../node_modules/@types/jasmine/index.d.ts" />
+﻿///// <reference path="../../node_modules/@types/jasmine/index.d.ts" />
 
-import { Reactive as Re } from "../src/reactive";
-import compile, { TOKENS } from "../src/compile";
-import { Observables } from "../src/observables";
+//import { Reactive as Re } from "../src/reactive";
+//import compile, { TOKENS } from "../src/compile";
+//import { Observables } from "../src/observables";
 
-interface IPerson { firstName: string; lastName: string; adult: boolean, age: number }
+//interface IPerson { firstName: string; lastName: string; adult: boolean, age: number }
 
-var ibrahim: IPerson = {
-    age: 36,
-    firstName: "Ibrahim",
-    lastName: "ben Salah",
-    adult: true
-};
+//var ibrahim: IPerson = {
+//    age: 36,
+//    firstName: "Ibrahim",
+//    lastName: "ben Salah",
+//    adult: true
+//};
 
-describe("query parser", () => {
+//describe("query parser", () => {
 
-    it(':: fun x -> x ',
-        () => {
-            var ast = compile("fun x -> x").ast;
-            expect(ast).toBeDefined();
+//    it(':: fun x -> x ',
+//        () => {
+//            var ast = compile("fun x -> x").ast;
+//            expect(ast).toBeDefined();
 
-            var compose = ast;
-            expect(compose.type).toBe("lambda");
-            expect(compose.param).toBe("x");
-            expect(compose.body.name).toBe("x");
-        });
+//            var compose = ast;
+//            expect(compose.type).toBe("lambda");
+//            expect(compose.param).toBe("x");
+//            expect(compose.body.name).toBe("x");
+//        });
 
-    it(':: .firstName ',
-        () => {
-            var ast = compile(".firstName").ast;
-            expect(ast).toBeDefined();
+//    it(':: .firstName ',
+//        () => {
+//            var ast = compile(".firstName").ast;
+//            expect(ast).toBeDefined();
 
-            var compose = ast;
-            expect(compose.type).toBe("lambda");
-            expect(compose.param).toBe("x");
-            expect(compose.body.target.name).toBe("x");
-            expect(compose.body.member.name).toBe("firstName");
-        });
+//            var compose = ast;
+//            expect(compose.type).toBe("lambda");
+//            expect(compose.param).toBe("x");
+//            expect(compose.body.target.name).toBe("x");
+//            expect(compose.body.member.name).toBe("firstName");
+//        });
 
-    it(':: 1 + 2',
-        () => {
-            var ast = compile("1 + 2").ast;
-            expect(ast).toBeDefined();
+//    it(':: 1 + 2',
+//        () => {
+//            var ast = compile("1 + 2").ast;
+//            expect(ast).toBeDefined();
 
-            var expr = ast;
-            expect(expr.type).toBe(TOKENS.BINARY);
-        });
+//            var expr = ast;
+//            expect(expr.type).toBe(TOKENS.BINARY);
+//        });
 
-    it(':: fn a',
-        () => {
-            var ast = compile("fun a").ast;
-            expect(ast).toBeDefined();
+//    it(':: fn a',
+//        () => {
+//            var ast = compile("fun a").ast;
+//            expect(ast).toBeDefined();
 
-            var expr = ast;
-            expect(expr.type).toBe(TOKENS.APP);
-            expect(expr.fun).toEqual({ type: TOKENS.IDENT, name: 'fun' });
-            expect(expr.args).toEqual([{ type: TOKENS.IDENT, name: "a" }]);
-        });
+//            var expr = ast;
+//            expect(expr.type).toBe(TOKENS.APP);
+//            expect(expr.fun).toEqual({ type: TOKENS.IDENT, name: 'fun' });
+//            expect(expr.args).toEqual([{ type: TOKENS.IDENT, name: "a" }]);
+//        });
 
-    it(':: fn ()',
-        () => {
-            var ast = compile("fun ()").ast;
-            expect(ast).toBeDefined();
+//    it(':: fn ()',
+//        () => {
+//            var ast = compile("fun ()").ast;
+//            expect(ast).toBeDefined();
 
-            var expr = ast;
-            expect(expr.type).toBe(TOKENS.APP);
-            expect(expr.fun).toEqual({ type: TOKENS.IDENT, name: 'fun' });
-            expect(expr.args.length).toBe(0);
-        });
+//            var expr = ast;
+//            expect(expr.type).toBe(TOKENS.APP);
+//            expect(expr.fun).toEqual({ type: TOKENS.IDENT, name: 'fun' });
+//            expect(expr.args.length).toBe(0);
+//        });
 
-    it(':: (+) a b',
-        () => {
-            var ast = compile("(+) a b").ast;
-            expect(ast).toBeDefined();
+//    it(':: (+) a b',
+//        () => {
+//            var ast = compile("(+) a b").ast;
+//            expect(ast).toBeDefined();
 
-            var expr = ast;
-            expect(expr).toEqual({ "type": TOKENS.APP, "fun": "+", "args": [{ "type": TOKENS.IDENT, "name": "a" }, { "type": TOKENS.IDENT, "name": "b" }] });
-        });
+//            var expr = ast;
+//            expect(expr).toEqual({ "type": TOKENS.APP, "fun": "+", "args": [{ "type": TOKENS.IDENT, "name": "a" }, { "type": TOKENS.IDENT, "name": "b" }] });
+//        });
 
-    it(':: a |> b |> c',
-        () => {
-            var ast = compile("a |> b |> c").ast;
-            expect(ast).toBeDefined();
+//    it(':: a |> b |> c',
+//        () => {
+//            var ast = compile("a |> b |> c").ast;
+//            expect(ast).toBeDefined();
 
-            var pipe1 = ast;
-            expect(pipe1.type).toBe(TOKENS.BINARY);
-            expect(pipe1.op).toBe("|>");
-            expect(pipe1.right).toEqual({ "type": TOKENS.IDENT, "name": "c" });
+//            var pipe1 = ast;
+//            expect(pipe1.type).toBe(TOKENS.BINARY);
+//            expect(pipe1.op).toBe("|>");
+//            expect(pipe1.right).toEqual({ "type": TOKENS.IDENT, "name": "c" });
 
-            var pipe2 = pipe1.left;
-            expect(pipe2.type).toBe(TOKENS.BINARY);
-            expect(pipe2.op).toBe("|>");
-            expect(pipe2.right).toEqual({ "type": TOKENS.IDENT, "name": "b" });
-            expect(pipe2.left).toEqual({ "type": TOKENS.IDENT, "name": "a" });
-        });
+//            var pipe2 = pipe1.left;
+//            expect(pipe2.type).toBe(TOKENS.BINARY);
+//            expect(pipe2.op).toBe("|>");
+//            expect(pipe2.right).toEqual({ "type": TOKENS.IDENT, "name": "b" });
+//            expect(pipe2.left).toEqual({ "type": TOKENS.IDENT, "name": "a" });
+//        });
 
-    it(':: a + b |> c',
-        () => {
-            var ast = compile("a + b |> c").ast;
-            expect(ast).toBeDefined();
+//    it(':: a + b |> c',
+//        () => {
+//            var ast = compile("a + b |> c").ast;
+//            expect(ast).toBeDefined();
 
-            var pipe = ast;
-            expect(pipe.type).toBe(TOKENS.BINARY);
-            expect(pipe.op).toBe("|>");
-            expect(pipe.right).toEqual({ type: TOKENS.IDENT, name: "c" });
+//            var pipe = ast;
+//            expect(pipe.type).toBe(TOKENS.BINARY);
+//            expect(pipe.op).toBe("|>");
+//            expect(pipe.right).toEqual({ type: TOKENS.IDENT, name: "c" });
 
-            var add = pipe.left;
-            expect(add.right.name).toBe("b");
-            expect(add.left.name).toBe("a");
+//            var add = pipe.left;
+//            expect(add.right.name).toBe("b");
+//            expect(add.left.name).toBe("a");
 
-            // [{"type":"pipe","fun":"|>","args":[{"type":TOKENS.IDENT,"name":"c"},{"type":"pipe","fun":"|>","args":[{"type":TOKENS.IDENT,"name":"b"},{"type":TOKENS.IDENT,"name":"a"}]}]}]
-        });
+//            // [{"type":"pipe","fun":"|>","args":[{"type":TOKENS.IDENT,"name":"c"},{"type":"pipe","fun":"|>","args":[{"type":TOKENS.IDENT,"name":"b"},{"type":TOKENS.IDENT,"name":"a"}]}]}]
+//        });
 
-    it(':: a >> b ',
-        () => {
-            var ast = compile("a >> b").ast;
-            expect(ast).toBeDefined();
+//    it(':: a >> b ',
+//        () => {
+//            var ast = compile("a >> b").ast;
+//            expect(ast).toBeDefined();
 
-            var compose = ast;
-            expect(compose.type).toBe(TOKENS.COMPOSE, JSON.stringify(ast, null, 2));
-            expect(compose.fun).toBe(">>", JSON.stringify(ast, null, 2));
-            expect(compose.args[0].name).toBe("b", JSON.stringify(compose.args[0], null, 2));
-            expect(compose.args[1].name).toBe("a", JSON.stringify(compose.args[1], null, 2));
-        });
+//            var compose = ast;
+//            expect(compose.type).toBe(TOKENS.COMPOSE, JSON.stringify(ast, null, 2));
+//            expect(compose.fun).toBe(">>", JSON.stringify(ast, null, 2));
+//            expect(compose.args[0].name).toBe("b", JSON.stringify(compose.args[0], null, 2));
+//            expect(compose.args[1].name).toBe("a", JSON.stringify(compose.args[1], null, 2));
+//        });
 
-    it(':: a.b ',
-        () => {
-            var ast = compile("a.b").ast;
-            expect(ast).toBeDefined();
+//    it(':: a.b ',
+//        () => {
+//            var ast = compile("a.b").ast;
+//            expect(ast).toBeDefined();
 
-            var compose = ast;
-            expect(compose.type).toBe(TOKENS.MEMBER, JSON.stringify(ast, null, 2));
-            expect(compose.target.name).toBe("a", JSON.stringify(ast, null, 2));
-            expect(compose.member).toBe("b", JSON.stringify(ast, null, 2));
-        });
+//            var compose = ast;
+//            expect(compose.type).toBe(TOKENS.MEMBER, JSON.stringify(ast, null, 2));
+//            expect(compose.target.name).toBe("a", JSON.stringify(ast, null, 2));
+//            expect(compose.member).toBe("b", JSON.stringify(ast, null, 2));
+//        });
 
-    it(':: [1..n] ',
-        () => {
-            var ast = compile("[1..n]").ast;
-            expect(ast).toBeDefined();
+//    it(':: [1..n] ',
+//        () => {
+//            var ast = compile("[1..n]").ast;
+//            expect(ast).toBeDefined();
 
-            var range = ast;
-            expect(range.type).toBe(TOKENS.RANGE, JSON.stringify(ast, null, 2));
-            expect(range.from.value).toBe(1, JSON.stringify(ast, null, 2));
-            expect(range.to.name).toBe("n", JSON.stringify(ast, null, 2));
-        });
+//            var range = ast;
+//            expect(range.type).toBe(TOKENS.RANGE, JSON.stringify(ast, null, 2));
+//            expect(range.from.value).toBe(1, JSON.stringify(ast, null, 2));
+//            expect(range.to.name).toBe("n", JSON.stringify(ast, null, 2));
+//        });
 
-    it(':: for p in people where p.adult ',
-        () => {
-            var ast = compile("people where p.adult").ast;
-            expect(ast).toBeDefined();
+//    it(':: for p in people where p.adult ',
+//        () => {
+//            var ast = compile("people where p.adult").ast;
+//            expect(ast).toBeDefined();
 
-            var where = ast;
+//            var where = ast;
 
-            expect(where.type).toBe(TOKENS.WHERE);
-            expect(where.predicate.type).toBe(TOKENS.MEMBER);
-            expect(where.source.type).toBe(TOKENS.QUERY);
-        });
+//            expect(where.type).toBe(TOKENS.WHERE);
+//            expect(where.predicate.type).toBe(TOKENS.MEMBER);
+//            expect(where.source.type).toBe(TOKENS.QUERY);
+//        });
 
-    it(":: empty list -> 'list is empty' ",
-        () => {
-            var rule = compile("empty list -> 'list is empty'").ast;
-            expect(rule).toBeDefined();
+//    it(":: empty list -> 'list is empty' ",
+//        () => {
+//            var rule = compile("empty list -> 'list is empty'").ast;
+//            expect(rule).toBeDefined();
 
-            expect(rule.type).toBe(TOKENS.BINARY);
-            expect(rule.op).toBe("->");
-            expect(rule.right.value).toBe('list is empty');
-        });
-
-
-    it(':: regression test',
-        () => {
-
-            var start = new Date().getTime();
-
-            var ast = compile("a |> b.c >> (+) 1 |> d");
-            for (var i = 0; i < 1000; i++) {
-                compile("a |> b >> (+) 1 |> d");
-            }
-            var elapsed = new Date().getTime() - start;
-
-            if (elapsed > 2000) fail("too slow");
-
-            expect(ast).toEqual(
-                {
-                    "type": TOKENS.BINARY,
-                    "op": "|>",
-                    "right": {
-                        "type": TOKENS.IDENT,
-                        "name": "d"
-                    },
-                    "left": {
-                        "type": TOKENS.BINARY,
-                        "op": "|>",
-                        "right": {
-                            "type": TOKENS.COMPOSE,
-                            "fun": ">>",
-                            "args": [
-                                {
-                                    "type": TOKENS.APP,
-                                    "fun": "+",
-                                    "args":
-                                    [
-                                        {
-                                            "type": TOKENS.CONST,
-                                            "value": 1
-                                        }
-                                    ]
-                                },
-                                {
-                                    "type": TOKENS.MEMBER,
-                                    "target": {
-                                        "type": TOKENS.IDENT,
-                                        "name": "b"
-                                    },
-                                    "member": "c"
-                                }
-                            ]
-                        },
-                        "left": {
-                            "type": TOKENS.IDENT,
-                            "name": "a"
-                        }
-                    }
-                });
-        });
-});
+//            expect(rule.type).toBe(TOKENS.BINARY);
+//            expect(rule.op).toBe("->");
+//            expect(rule.right.value).toBe('list is empty');
+//        });
 
 
-class TestBinding extends Re.Binding {
-    public value;
+//    it(':: regression test',
+//        () => {
 
-    constructor(private ast) {
-        super(null);
-    }
+//            var start = new Date().getTime();
 
-    render(context) {
-        this.context = context;
-        // return this.value = accept(this.ast, this, context).valueOf();
-    }
+//            var ast = compile("a |> b.c >> (+) 1 |> d");
+//            for (var i = 0; i < 1000; i++) {
+//                compile("a |> b >> (+) 1 |> d");
+//            }
+//            var elapsed = new Date().getTime() - start;
 
-    app(fun, args: any[]) {
-        if (fun === "assign") {
-            var value = args[0].valueOf();
-            args[1].set(value);
-            return value;
-        }
+//            if (elapsed > 2000) fail("too slow");
 
-        return super.app(fun, args);
-    }
-}
+//            expect(ast).toEqual(
+//                {
+//                    "type": TOKENS.BINARY,
+//                    "op": "|>",
+//                    "right": {
+//                        "type": TOKENS.IDENT,
+//                        "name": "d"
+//                    },
+//                    "left": {
+//                        "type": TOKENS.BINARY,
+//                        "op": "|>",
+//                        "right": {
+//                            "type": TOKENS.COMPOSE,
+//                            "fun": ">>",
+//                            "args": [
+//                                {
+//                                    "type": TOKENS.APP,
+//                                    "fun": "+",
+//                                    "args":
+//                                    [
+//                                        {
+//                                            "type": TOKENS.CONST,
+//                                            "value": 1
+//                                        }
+//                                    ]
+//                                },
+//                                {
+//                                    "type": TOKENS.MEMBER,
+//                                    "target": {
+//                                        "type": TOKENS.IDENT,
+//                                        "name": "b"
+//                                    },
+//                                    "member": "c"
+//                                }
+//                            ]
+//                        },
+//                        "left": {
+//                            "type": TOKENS.IDENT,
+//                            "name": "a"
+//                        }
+//                    }
+//                });
+//        });
+//});
 
-describe("runtime", () => {
 
-    it("expression dependencies",
-        () => {
-            var store = new Re.Store({ p: ibrahim });
-            var binding = new TestBinding(compile("p.firstName"));
-            binding.render(store);
+//class TestBinding extends Re.Binding {
+//    public value;
 
-            expect(binding.value).toBe("Ibrahim");
-            // expect(binding.dependencies.length).toBe(2);
+//    constructor(private ast) {
+//        super(null);
+//    }
 
-            // expect(store.dirty.length).toBe(0);
+//    render(context) {
+//        this.context = context;
+//        // return this.value = accept(this.ast, this, context).valueOf();
+//    }
 
-            store.get("p").get("firstName").set("Mr Ibraihm");
-            expect(binding.value).toBe("Mr Ibraihm");
+//    app(fun, args: any[]) {
+//        if (fun === "assign") {
+//            var value = args[0].valueOf();
+//            args[1].set(value);
+//            return value;
+//        }
 
-            // expect(binding.dependencies.length).toBe(2);
-        });
+//        return super.app(fun, args);
+//    }
+//}
 
-    it("consistent variable identity",
-        () => {
-            var store = new Re.Store({ p: ibrahim });
+//describe("runtime", () => {
 
-            var binding = new TestBinding(compile("p"));
+//    it("expression dependencies",
+//        () => {
+//            var store = new Re.Store({ p: ibrahim });
+//            var binding = new TestBinding(compile("p.firstName"));
+//            binding.render(store);
 
-            expect(binding.render(store)).toBe(binding.render(store));
-        });
+//            expect(binding.value).toBe("Ibrahim");
+//            // expect(binding.dependencies.length).toBe(2);
 
-    it("consistent member identity", () => {
-        var store = new Re.Store({ xania: { owner: ibrahim } });
-        var binding = new TestBinding(compile("xania.owner"));
-        expect(binding.render(store)).toBe(binding.render(store));
-    });
+//            // expect(store.dirty.length).toBe(0);
 
-    it("consistent query identity", () => {
-        var store = new Re.Store({ xania: { employees: [ibrahim] } });
-        var binding = new TestBinding(compile("for e in xania.employees"));
-        expect(binding.render(store)[0]).toBe(binding.render(store)[0], "not identical");
-    });
+//            store.get("p").get("firstName").set("Mr Ibraihm");
+//            expect(binding.value).toBe("Mr Ibraihm");
 
-    it("assign expression",
-        () => {
-            var store = new Re.Store({ x: 1, y: 2, sum: 0 });
-            var binding = new TestBinding(compile("sum <- x + y"));
-            binding.render(store);
-            expect(store.get("sum").valueOf()).toBe(3);
-        });
+//            // expect(binding.dependencies.length).toBe(2);
+//        });
 
-    it('await observable',
-        () => {
-            var observable = new Observables.Observable(123);
-            var store = new Re.Store({ observable });
-            var binding = new TestBinding(compile("await observable"));
+//    it("consistent variable identity",
+//        () => {
+//            var store = new Re.Store({ p: ibrahim });
 
-            binding.render(store);
-            expect(binding.value).toBe(123);
+//            var binding = new TestBinding(compile("p"));
 
-            observable.notify(456);
-            expect(binding.value).toBe(456);
-        });
+//            expect(binding.render(store)).toBe(binding.render(store));
+//        });
 
-});
+//    it("consistent member identity", () => {
+//        var store = new Re.Store({ xania: { owner: ibrahim } });
+//        var binding = new TestBinding(compile("xania.owner"));
+//        expect(binding.render(store)).toBe(binding.render(store));
+//    });
+
+//    it("consistent query identity", () => {
+//        var store = new Re.Store({ xania: { employees: [ibrahim] } });
+//        var binding = new TestBinding(compile("for e in xania.employees"));
+//        expect(binding.render(store)[0]).toBe(binding.render(store)[0], "not identical");
+//    });
+
+//    it("assign expression",
+//        () => {
+//            var store = new Re.Store({ x: 1, y: 2, sum: 0 });
+//            var binding = new TestBinding(compile("sum <- x + y"));
+//            binding.render(store);
+//            expect(store.get("sum").valueOf()).toBe(3);
+//        });
+
+//    it('await observable',
+//        () => {
+//            var observable = new Observables.Observable(123);
+//            var store = new Re.Store({ observable });
+//            var binding = new TestBinding(compile("await observable"));
+
+//            binding.render(store);
+//            expect(binding.value).toBe(123);
+
+//            observable.notify(456);
+//            expect(binding.value).toBe(456);
+//        });
+
+//});
 

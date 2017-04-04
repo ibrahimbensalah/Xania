@@ -1,6 +1,6 @@
 ﻿import xania, { Repeat, List, With, If, expr, Dom, RemoteDataSource, ModelRepository, Reactive as Re, Template } from "../src/xania"
 import Html from '../src/html'
-import { UrlHelper, View } from "../src/mvc"
+import { UrlHelper, View, ViewResult, IViewContext } from "../src/mvc"
 import './admin.css'
 import { Observables } from "../src/observables";
 import { ClockApp } from '../sample/clock/app'
@@ -103,4 +103,16 @@ function level2() {
             <h3>level 2</h3>
         </div>
     );
+}
+
+class CombineViewResult {
+    constructor(private viewResult: ViewResult, private parent: CombineViewResult = null) { }
+
+    get(path: string, viewContext: IViewContext) {
+        return new CombineViewResult(this.viewResult.get(path, viewContext), this);
+    }
+
+    execute(driver) {
+        this.viewResult.execute(driver);
+    }
 }
