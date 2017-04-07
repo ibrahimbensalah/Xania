@@ -21,46 +21,17 @@ export class UrlHelper {
     }
 }
 
-export class HtmlHelper {
-
-    constructor(private loader: { import(path: string); }) {
-    }
-
-    partial(viewPath: string) {
-        var view = this.loader.import(viewPath);
-        return {
-            bind(visitor) {
-                return new ViewBinding(visitor, view, {});
-            }
-        }
-    }
-}
-
 class ViewBinding {
-    private binding;
-    private cancellationToken: number;
-
-    constructor(private visitor, private view, private model) {
+    constructor(private binding) {
     }
 
-    update(context, parent) {
-        if (!this.view)
-            throw new Error("view is empty");
-
-        var cancellationToken = Math.random();
-        this.cancellationToken = cancellationToken;
-        this.view.then(app => {
-            if (cancellationToken === this.cancellationToken) {
-                this.dispose();
-                this.binding = app.bind(context, parent);
-            }
-        });
+    execute() {
+        return this.binding.execute();
     }
 
-    dispose() {
-        if (this.binding) {
-            this.binding.dispose();
-        }
+    update(context): this {
+        // this.binding.update(context);
+        return this;
     }
 }
 
@@ -120,6 +91,10 @@ export class ViewResult implements IControllerContext {
             }
         }
         return void 0;
+    }
+
+    bind(driver) {
+        return new ViewBinding(this.view.bind(driver).update(this.model));
     }
 }
 
@@ -211,7 +186,7 @@ export function boot(basePath: string, appPath: string, actionPath: string, app:
 
     mount(app.menu({
         url: new UrlHelper(router),
-        html: new HtmlHelper(System),
+        // html: new HtmlHelper(System),
         driver: new Dom.DomDriver('.main-menu')
     }));
 }

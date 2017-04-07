@@ -1,4 +1,4 @@
-﻿import xania, { Repeat, List, With, If, expr, Dom, RemoteDataSource, ModelRepository, Reactive as Re, Template } from "../src/xania"
+﻿import xania, { Repeat, List, With, If, expr, Dom, RemoteDataSource, ModelRepository, Reactive as Re, Template, Component } from "../src/xania"
 import Html from '../src/html'
 import { UrlHelper, View, ViewResult, IViewContext } from "../src/mvc"
 import './admin.css'
@@ -52,9 +52,9 @@ export function timesheet() {
         time.toggle();
     };
     return View(<div>timesheet {expr("await time")}
-        <button onClick={toggleTime}>toggle time</button>
-        <ClockApp time={expr("await time")} />
-    </div>, new Re.Store({ time }));
+                    <button onClick={toggleTime}>toggle time</button>
+                    <ClockApp time={expr("await time")} />
+                </div>, new Re.Store({ time }));
 }
 
 export function todos() {
@@ -85,7 +85,7 @@ export function hierachical({ url }) {
             <h3>root</h3>
             goto <a href="" onClick={url.action("level1")}>level 1</a>
         </div>;
-    return View(rootView).route("level1", level1);
+    return new StackLayoutView(View(rootView).route("level1", level1));
 }
 
 function level1({ url }) {
@@ -100,19 +100,34 @@ function level1({ url }) {
 function level2() {
     return View(
         <div>
-            <h3>level 2</h3>
-        </div>
+            <h3>level 2 {expr("firstName")}</h3>
+        </div>, new Re.Store({ firstName: "ibrahim" })
     );
 }
 
-class CombineViewResult {
-    constructor(private viewResult: ViewResult, private parent: CombineViewResult = null) { }
+class StackLayoutView {
+    private layout;
+    private views = [];
+
+    constructor(private viewResult: ViewResult, parent: StackLayoutView = null) {
+        this.layout = View(
+            <div>
+                <h3>Layout</h3>
+                <Repeat source={expr("for vw in views")} >
+                    <Html.Partial template={expr("vw")} />
+                </Repeat>
+            </div>, new Re.Store(this)
+        );
+        this.views = parent
+            ? parent.views.concat([viewResult])
+            : [viewResult];
+    }
 
     get(path: string, viewContext: IViewContext) {
-        return new CombineViewResult(this.viewResult.get(path, viewContext), this);
+        return new StackLayoutView(this.viewResult.get(path, viewContext), this);
     }
 
     execute(driver) {
-        this.viewResult.execute(driver);
+        this.layout.execute(driver);
     }
 }

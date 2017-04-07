@@ -46,7 +46,7 @@ export default class Xania {
             if (typeof attrs.name === "string") {
                 if (attrs.type === "text") {
                     if (!attrs.value) {
-                        Object.assign(result, {"value": compile(attrs.name) });
+                        Object.assign(result, { "value": compile(attrs.name) });
                     }
                 }
             }
@@ -113,7 +113,7 @@ export function mount(root: Reactive.Binding) {
 
 }
 
-function Component(component, props: any) {
+export function Component(component, props: any) {
     return {
         component,
         bind(driver: IDriver) {
