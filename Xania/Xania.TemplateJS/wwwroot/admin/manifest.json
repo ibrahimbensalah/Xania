@@ -1,0 +1,20 @@
+﻿{
+  "name": "Xania Admin",
+  "short_name": "Xania",
+  "icons": [
+    {
+      "src": "icon-medium.png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "icon-large.png",
+      "sizes": "192x192"
+    }
+  ],
+  "theme_color": "#DDF",
+  "background_color": "#DFE",
+  "display": "fullscreen",
+  "orientation": "portrait",
+  "start_url": "/admin/app"
+
+}

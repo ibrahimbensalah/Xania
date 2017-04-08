@@ -3,11 +3,14 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta name="description" content="Bringing MVC to the Web, combining best of React, Aurelia (convention), Angular and ASP.NET MVC, but also the best of OOP and F(R)P.">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <link href="/lib/font-awesome/css/font-awesome.min.css" rel="stylesheet" />
   <link href="/lib/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet" />
   <title>Xania Admin</title>
-  <script src="/lib/system.js/dist/system.js"></script>
+  <script src="/jspm_packages/system.js"></script>
   <script src="/lib/fetch/fetch.js"></script>
+  <link rel="manifest" href="manifest.json">
 </head>
 <body>
   <nav class="navbar navbar-toggleable-md navbar-light bg-faded">
@@ -44,10 +47,12 @@
       packages: { '/': {} },
       paths: {
         "github:*": "/jspm_packages/github/*",
-        "npm:*": "/jspm_packages/npm/*"
+        "npm:*": "/jspm_packages/npm/*",
+        "ts:*": "/jspm_packages/npm/*"
       },
       map: {
         "css": "github:systemjs/plugin-css@0.1.32",
+        "ts": "github:frankwallis/plugin-typescript@7.0.6",
         "less": "npm:systemjs-less-plugin@2.0.0"
       },
       meta: {

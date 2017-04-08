@@ -1,5 +1,5 @@
 ﻿import { Observables } from "./observables"
-import xania, { mount } from './xania'
+import xania, { expr, mount, Repeat, Reactive } from './xania'
 import Dom from './dom'
 
 export class UrlHelper {
@@ -33,6 +33,10 @@ class ViewBinding {
         // this.binding.update(context);
         return this;
     }
+
+    dispose() {
+        this.binding.dispose();
+    }
 }
 
 export interface IDriver {
@@ -46,7 +50,7 @@ export interface IViewContext {
 
 interface IControllerContext {
     get(path: string, context: IViewContext): ViewResult;
-    execute(driver: IDriver);
+    bind(driver: IDriver);
 }
 
 interface IRoute {
@@ -66,18 +70,13 @@ export class ViewResult implements IControllerContext {
 
     constructor(private view, private model?) { }
 
-    execute(driver: IDriver) {
-        driver.dispose();
-        var view = this.view.bind(driver)
-            .update(this.model);
-
-        mount(view);
-
-        return view;
-    }
-
-    route(path, action: (context) => ViewResult): this {
-        this.routes.push(new ActionRoute(path, action));
+    route(map: any): this {
+        for (var key in map) {
+            if (map.hasOwnProperty(key)) {
+                var handler = map[key];
+                this.routes.push(new ActionRoute(key, handler));
+            }
+        }
         return this;
     }
 
@@ -114,9 +113,10 @@ function dataReady<T>(data: T | PromiseLike<T>, resolve: (x: T) => any) {
     return resolve(data as T);
 }
 
-function getView(ctx: IControllerContext, name: string) {
+function getView(ctx: IControllerContext, path: string) {
     return dataReady(ctx,
         (controllerContext: any) => {
+            var name = path.slice(1);
             var childContext = { url: controllerContext.url.child(name) };
             var result = controllerContext.get(name, childContext);
 
@@ -127,8 +127,8 @@ function getView(ctx: IControllerContext, name: string) {
                 viewResult => ({
                     url: childContext.url,
                     map: new Map(),
-                    execute(driver: IDriver) {
-                        return viewResult.execute(driver);
+                    bind(driver: IDriver) {
+                        return viewResult.bind(driver);
                     },
                     get(path: string, viewContext: IViewContext): ViewResult {
                         return viewResult.get(path, viewContext);
@@ -137,22 +137,32 @@ function getView(ctx: IControllerContext, name: string) {
         });
 }
 
-function cache(reducer) {
-    var views = [];
-    return (ctx: IControllerContext, name: string, idx: number) => {
+function cache<T, R>(reducer: (acc:R, next: T, idx: number) => R, views: {key: T, value}[] = []) {
+    return (ctx: R, next: T, idx: number) => {
         if (idx in views) {
-            var cache = views[idx];
-            if (cache.name === name)
-                return cache.retval;
-
+            var entry = views[idx];
+            if (entry.key === next)
+                return entry.value;
             views.length = idx;
         }
 
-        var retval = reducer(ctx, name, idx);
+        var value = reducer(ctx, next, idx);
 
-        views[idx] = { name, retval };
-        return retval;
+        views[idx] = { key:next, value };
+        return value;
     }
+}
+
+function scan<T, R>(list: T[], fn: (t: R, x: T, idx?: number) => R, acc: R) {
+    var idx = 0;
+    var len = list.length;
+    var result: R[] = [];
+    while (idx < len) {
+        acc = fn(acc, list[idx], idx);
+        result.push(acc);
+        idx++;
+    }
+    return result;
 }
 
 export function boot(basePath: string, appPath: string, actionPath: string, app: any) {
@@ -164,7 +174,7 @@ export function boot(basePath: string, appPath: string, actionPath: string, app:
         controller: app,
         url: new UrlHelper(router),
         map: new Map(),
-        execute(driver: IDriver) {
+        bind() {
             throw Error("Not supported.");
         },
         get(path: string, viewContext: IViewContext): ViewResult {
@@ -174,16 +184,20 @@ export function boot(basePath: string, appPath: string, actionPath: string, app:
         }
     }
 
-    var reducer = cache(getView);
-    router.subscribe((route: string) => {
-        var reduced =
-            route
-                .match(/\/([^\/]+)/g)
-                .map(x => x.slice(1))
-                .reduce<IControllerContext>(reducer, controllerContext);
-        dataReady(reduced, x => x.execute(mainDriver));
-    });
+    var scanner = cache(getView);
+    var views =
+        router
+            .map((route: string) =>
+                scan(route.match(/\/([^\/]+)/g), scanner, controllerContext)
+            );
 
+    var store = new Reactive.Store({ views });
+    var layout
+        = app
+            .layout(expr("await views"))
+            .bind(mainDriver)
+            .update(store);
+    mount(layout);
     mount(app.menu({
         url: new UrlHelper(router),
         // html: new HtmlHelper(System),
@@ -221,5 +235,9 @@ class Router {
             this.observable.notify(path);
         }
         return this.appPath + path;
+    }
+
+    map<T>(mapper: (t: string) => T): Observables.MappedObservable<string, T> {
+        return this.observable.map(mapper);
     }
 }

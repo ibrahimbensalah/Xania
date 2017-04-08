@@ -18,6 +18,7 @@ System.config({
     "core-js": "npm:core-js@1.2.7",
     "css": "github:systemjs/plugin-css@0.1.32",
     "less": "npm:systemjs-less-plugin@2.0.0",
+    "ts": "github:frankwallis/plugin-typescript@7.0.6",
     "github:jspm/nodelibs-assert@0.1.0": {
       "assert": "npm:assert@1.4.1"
     },

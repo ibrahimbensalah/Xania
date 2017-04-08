@@ -6,7 +6,7 @@
     }
 
     export interface IObservable<T> {
-        subscriber(observer: IObserver<T>);
+        subscribe(observer: IObserver<T>);
     }
 
     export interface IObserver<T> {
@@ -25,7 +25,10 @@
         }
 
         subscribe(observer: IObserver<T> | Function): ISubscription {
-            return new Subscription(this, observer).notify(this.current);
+            var subs = new Subscription(this, observer);
+            if (this.current !== undefined)
+                subs.notify(this.current);
+            return subs;
         }
 
         map<TM>(mapper: (T) => TM): MappedObservable<T, TM> {
@@ -43,6 +46,51 @@
 
         valueOf(): any {
             return this.current;
+        }
+
+        await() {
+            var a = new Awaitable<T>(this);
+            this.subscribe(a);
+            return a;
+        }
+
+        change() {
+            var a = new Changeable<T>(this);
+            this.subscribe(a);
+            return a;
+        }
+
+        get length() {
+            var current: any = this.current;
+            if (!current)
+                return void 0;
+            return current.length;
+        }
+    }
+
+    class Awaitable<T> extends Observable<T> {
+        constructor(private source: IObservable<T>) {
+            super();
+        }
+
+        onNext(value: T | PromiseLike<T>) {
+            var promise = value as PromiseLike<T>;
+            if (promise && promise.then) {
+                promise.then(x => this.notify(x));
+            } else {
+                return super.notify(value as T);
+            }
+        }
+    }
+
+    class Changeable<T> extends Observable<T> {
+        constructor(private source: IObservable<T>) {
+            super();
+        }
+
+        onNext(value: T) {
+            if (value !== this.current)
+                this.notify(value);
         }
     }
 
@@ -73,17 +121,13 @@
         }
     }
 
-    export class MappedObservable<T, TM> extends Observable<T> {
+    export class MappedObservable<T, TM> extends Observable<TM> {
         constructor(private mapper: (T) => TM, init: T) {
-            super(init);
+            super(mapper(init));
         }
 
         onNext(value: T) {
-            super.notify(value);
-        }
-
-        valueOf(): TM {
-            return this.mapper(super.valueOf());
+            super.notify(this.mapper(value));
         }
     }
 

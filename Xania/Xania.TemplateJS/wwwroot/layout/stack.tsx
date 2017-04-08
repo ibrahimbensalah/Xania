@@ -97,7 +97,7 @@ export default class StackLayout {
 }
 
 
-function StackContainer(attrs, children: Template.INode[]) {
+export function StackContainer(attrs, children: Template.INode[]) {
     return {
         bind(driver: IDriver) {
             return new StackContainerBinding(driver)

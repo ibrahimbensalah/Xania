@@ -1,15 +1,15 @@
-﻿import xania, { Repeat, List, With, If, expr, Dom, RemoteDataSource, ModelRepository, Reactive as Re, Template, Component } from "../src/xania"
+﻿import xania, { Repeat, expr, Reactive as Re, Template } from "../src/xania"
 import Html from '../src/html'
 import { UrlHelper, View, ViewResult, IViewContext } from "../src/mvc"
 import './admin.css'
 import { Observables } from "../src/observables";
 import { ClockApp } from '../sample/clock/app'
 import TodoApp from "../sample/todos/app";
-import DataGrid, { TextColumn } from "./grid"
 import Lib = require("../diagram/lib");
 import BallsApp from "../sample/balls/app";
-import { Section } from "./layout"
 import StackLayout from '../layout/stack'
+import { IDriver } from "../src/template";
+import { StackContainer } from "../layout/stack"
 
 export function menu({ driver, html, url }) {
     return mainMenu(url)
@@ -25,7 +25,6 @@ interface IAppAction {
 var actions: IAppAction[] = [
     { path: "timesheet", display: "Timesheet" },
     { path: "invoices", display: "Invoices" },
-    { path: "todos", display: "Todos" },
     { path: "companies", display: "Companies" },
     { path: "users", display: "Users" },
     { path: "graph", display: "Graph" },
@@ -52,13 +51,9 @@ export function timesheet() {
         time.toggle();
     };
     return View(<div>timesheet {expr("await time")}
-                    <button onClick={toggleTime}>toggle time</button>
-                    <ClockApp time={expr("await time")} />
-                </div>, new Re.Store({ time }));
-}
-
-export function todos() {
-    return View(<TodoApp />);
+        <button onClick={toggleTime}>toggle time</button>
+        <ClockApp time={expr("await time")} />
+    </div>, new Re.Store({ time }));
 }
 
 export function graph() {
@@ -72,10 +67,14 @@ export function balls() {
 export function stacked({ url }) {
     return View(<StackLayout url={url} />)
         // child route
-        .route("foo", ({ url }) => {
-            return View(<div>hello child <a href="" onClick={() => url.action("bar")}>bar</a></div>)
-                // child child route
-                .route("bar", () => View(<div>hello child of child</div>));
+        .route({
+            foo: ({ url }) => {
+                return View(<div>hello child <a href="" onClick={() => url.action("bar")}>bar</a></div>)
+                    // child child route
+                    .route({
+                        bar: () => View(<div>hello child of child</div>)
+                    });
+            }
         });
 }
 
@@ -83,51 +82,99 @@ export function hierachical({ url }) {
     var rootView =
         <div>
             <h3>root</h3>
-            goto <a href="" onClick={url.action("level1")}>level 1</a>
+            <input />
+            <div>
+                goto <a href="" onClick={url.action("level1a")}>level 1a</a>
+            </div>
+            <div>
+                goto <a href="" onClick={url.action("level1b")}>level 1b</a>
+            </div>
         </div>;
-    return new StackLayoutView(View(rootView).route("level1", level1));
+    return View(rootView).route({ level1a, level1b });
 }
 
-function level1({ url }) {
+function level1a({ url }) {
     return View(
         <div>
-            <h3>level 1</h3>
-            goto <a href="" onClick={url.action("level2")}>level 2</a>
+            <h3>level 1a</h3>
+            goto <a href="" onClick={url.action("todos")}>Todos</a>
         </div>
-    ).route("level2", level2);
+    ).route({ todos });
 }
 
-function level2() {
+function level1b({ url }) {
     return View(
         <div>
-            <h3>level 2 {expr("firstName")}</h3>
-        </div>, new Re.Store({ firstName: "ibrahim" })
+            <h3>level 1b</h3>
+            goto <a href="" onClick={url.action("todos")}>Todos</a>
+        </div>
+    ).route({ todos });
+}
+
+function todos() {
+    return View(
+        <div>
+            <h3>level 2 [{expr("firstName")}] {expr("show")}</h3>
+            <TodoApp show={expr("show")}/>
+            <div>
+                show <input type="text" name="show" />
+            </div>
+        </div>,
+        new Re.Store({ firstName: "ibrahim", show: "active" })
     );
 }
 
 class StackLayoutView {
-    private layout;
+    private view;
     private views = [];
 
-    constructor(private viewResult: ViewResult, parent: StackLayoutView = null) {
-        this.layout = View(
-            <div>
-                <h3>Layout</h3>
-                <Repeat source={expr("for vw in views")} >
-                    <Html.Partial template={expr("vw")} />
-                </Repeat>
-            </div>, new Re.Store(this)
-        );
+    constructor(private layout: Layout, private viewResult: ViewResult, parent: StackLayoutView = null) {
         this.views = parent
             ? parent.views.concat([viewResult])
             : [viewResult];
+
+        this.view = View(
+            <Repeat source={expr("for vw in views")}>
+                <Html.Partial template={expr("vw")} />
+            </Repeat>,
+            new Re.Store({ views: this.views })
+        );
     }
 
     get(path: string, viewContext: IViewContext) {
-        return new StackLayoutView(this.viewResult.get(path, viewContext), this);
+        return new StackLayoutView(this.layout, this.viewResult.get(path, viewContext), this);
     }
 
-    execute(driver) {
-        this.layout.execute(driver);
+    bind(driver: IDriver) {
+        return this.view.bind(driver);
     }
 }
+
+class Layout {
+    private views = [];
+    private store = new Re.Store(this);
+    private view = View(
+        <Repeat source={expr("for vw in views")}>
+            <Html.Partial template={expr("vw")} />
+        </Repeat>,
+        this.store
+    );
+
+    update(views) {
+        this.views = views;
+        this.store.refresh();
+    }
+}
+
+export var layout = source => (
+    <StackContainer className="stack-container">
+        <Repeat param="vw" source={expr("await views")}>
+            <section className="stack-item">
+                <header>Header 1</header>
+                <div className="stack-item-content">
+                    <Html.Partial template={expr("vw")} />
+                </div>
+            </section>
+        </Repeat>
+    </StackContainer>
+);

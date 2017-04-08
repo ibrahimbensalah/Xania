@@ -97,8 +97,11 @@ export default class Xania {
     }
 }
 
+interface IBinding {
+    execute(): IBinding[];
+}
 
-export function mount(root: Reactive.Binding) {
+export function mount(root: IBinding) {
     var stack = [root];
     while (stack.length) {
         const binding = stack.pop();
