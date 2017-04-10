@@ -242,3 +242,5 @@ _Pvt_Extensions
 /Xania/products-WB0412697.zip
 /Xania/Xania.TemplateJS/wwwroot/lib
 /Xania/Xania.TemplateJS/wwwroot/**/*.js
+/Xania/Xania.AdminUI/wwwroot/lib
+/Xania/Xania.AdminUI/.bowerrc
