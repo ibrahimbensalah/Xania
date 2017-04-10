@@ -32,7 +32,7 @@
         }
 
         map<TM>(mapper: (T) => TM): MappedObservable<T, TM> {
-            var observable = new MappedObservable<T, TM>(mapper, this.current);
+            var observable = new MappedObservable<T, TM>(mapper);
             this.subscribe(observable);
             return observable;
         }
@@ -122,8 +122,8 @@
     }
 
     export class MappedObservable<T, TM> extends Observable<TM> {
-        constructor(private mapper: (T) => TM, init: T) {
-            super(mapper(init));
+        constructor(private mapper: (T) => TM) {
+            super();
         }
 
         onNext(value: T) {

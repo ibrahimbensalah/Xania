@@ -113,31 +113,7 @@ function dataReady<T>(data: T | PromiseLike<T>, resolve: (x: T) => any) {
     return resolve(data as T);
 }
 
-function getView(ctx: IControllerContext, path: string) {
-    return dataReady(ctx,
-        (controllerContext: any) => {
-            var name = path.slice(1);
-            var childContext = { url: controllerContext.url.child(name) };
-            var result = controllerContext.get(name, childContext);
-
-            if (typeof result === "undefined")
-                throw { error: "route not found: ", route: name, controllerContext };
-
-            return dataReady(result,
-                viewResult => ({
-                    url: childContext.url,
-                    map: new Map(),
-                    bind(driver: IDriver) {
-                        return viewResult.bind(driver);
-                    },
-                    get(path: string, viewContext: IViewContext): ViewResult {
-                        return viewResult.get(path, viewContext);
-                    }
-                }));
-        });
-}
-
-function cache<T, R>(reducer: (acc:R, next: T, idx: number) => R, views: {key: T, value}[] = []) {
+function cache<T, R>(reducer: (acc: R, next: T, idx: number) => R, views: { key: T, value }[] = []) {
     return (ctx: R, next: T, idx: number) => {
         if (idx in views) {
             var entry = views[idx];
@@ -148,7 +124,7 @@ function cache<T, R>(reducer: (acc:R, next: T, idx: number) => R, views: {key: T
 
         var value = reducer(ctx, next, idx);
 
-        views[idx] = { key:next, value };
+        views[idx] = { key: next, value };
         return value;
     }
 }
@@ -165,55 +141,87 @@ function scan<T, R>(list: T[], fn: (t: R, x: T, idx?: number) => R, acc: R) {
     return result;
 }
 
-export function boot(basePath: string, appPath: string, actionPath: string, app: any) {
+export function boot(basePath: string, appPath: string, app: any) {
 
-    const router = Router.start(appPath, actionPath);
+    const router = Router.fromPopState(appPath);
 
-    var mainDriver = new Dom.DomDriver(".main-content");
-    var controllerContext = {
-        controller: app,
-        url: new UrlHelper(router),
-        map: new Map(),
-        bind() {
-            throw Error("Not supported.");
-        },
-        get(path: string, viewContext: IViewContext): ViewResult {
-            return typeof this.controller[path] === "function"
-                ? this.controller[path](viewContext)
-                : System.import(basePath + "views/" + path).then(mod => mod.view(viewContext));
-        }
-    }
+    const store = new Reactive.Store({
+        views: router.start(app, basePath)
+    });
 
-    var scanner = cache(getView);
-    var views =
-        router
-            .map((route: string) =>
-                scan(route.match(/\/([^\/]+)/g), scanner, controllerContext)
-            );
+    mount(
+        app.layout(expr("await views"))
+            .bind(new Dom.DomDriver(".main-content"))
+            .update(store)
+    );
 
-    var store = new Reactive.Store({ views });
-    var layout
-        = app
-            .layout(expr("await views"))
-            .bind(mainDriver)
-            .update(store);
-    mount(layout);
     mount(app.menu({
         url: new UrlHelper(router),
         // html: new HtmlHelper(System),
         driver: new Dom.DomDriver('.main-menu')
     }));
+
+    return router;
 }
 
 class Router {
-    private observable: Observables.Observable<string>;
+    private actions: Observables.Observable<string>;
 
-    constructor(private appPath: string, private init: string) {
-        this.observable = new Observables.Observable<string>(init);
+    constructor(private appPath: string, private init?: string) {
+        this.actions = new Observables.Observable<string>(init);
     }
 
-    static start(appPath: string, init: string) {
-        var router = new Router(appPath, init);
+    static getView(ctx: IControllerContext, path: string) {
+        return dataReady(ctx,
+            (controllerContext: any) => {
+                var name = path.slice(1);
+                var childContext = { url: controllerContext.url.child(name) };
+                var result = controllerContext.get(name, childContext);
+
+                if (typeof result === "undefined")
+                    throw { error: "route not found: ", route: name, controllerContext };
+
+                return dataReady(result,
+                    viewResult => ({
+                        url: childContext.url,
+                        map: new Map(),
+                        bind(driver: IDriver) {
+                            return viewResult.bind(driver);
+                        },
+                        get(path: string, viewContext: IViewContext): ViewResult {
+                            return viewResult.get(path, viewContext);
+                        }
+                    }));
+            });
+    }
+
+
+    start(app, basePath) {
+        var controllerContext = {
+            controller: app,
+            url: new UrlHelper(this),
+            bind() {
+                throw Error("Not supported.");
+            },
+            get(path: string, viewContext: IViewContext): ViewResult {
+                return typeof this.controller[path] === "function"
+                    ? this.controller[path](viewContext)
+                    : System.import(basePath + "views/" + path).then(mod => mod.view(viewContext));
+            }
+        }
+
+        var scanner = cache(Router.getView);
+
+        return this.actions.map((route: string) =>
+            scan(route.match(/\/([^\/]+)/g), scanner, controllerContext));
+    }
+
+    action(actionPath) {
+        this.actions.notify(actionPath);
+    }
+
+    static fromPopState(appPath: string) {
+        var router = new Router(appPath);
         window.onpopstate = () => {
             var { pathname } = window.location;
 
@@ -222,22 +230,17 @@ class Router {
                 router.goto(actionPath);
             }
         }
-
         return router;
     }
 
     subscribe(observer: Observables.IObserver<string>) {
-        return this.observable.subscribe(observer);
+        return this.actions.subscribe(observer);
     }
 
     goto(path: string) {
-        if (path !== this.observable.valueOf()) {
-            this.observable.notify(path);
+        if (path !== this.actions.valueOf()) {
+            this.actions.notify(path);
         }
         return this.appPath + path;
-    }
-
-    map<T>(mapper: (t: string) => T): Observables.MappedObservable<string, T> {
-        return this.observable.map(mapper);
     }
 }

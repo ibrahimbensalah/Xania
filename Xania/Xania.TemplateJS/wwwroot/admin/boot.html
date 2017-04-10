@@ -73,7 +73,8 @@
     }
 
     load([appPath, '/src/mvc'], function (app, mvc) {
-      mvc.boot(basePath, appPath, actionPath, app);
+      mvc.boot(basePath, appPath, app)
+        .action(actionPath);
     });
   </script>
 
