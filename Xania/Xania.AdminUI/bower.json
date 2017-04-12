@@ -1,0 +1,17 @@
+{
+  "name": "Xania.Admin",
+  "version": "0.0.1-alpha",
+  "dependencies": {
+    "bootstrap": "4.0.0-alpha.6",
+    "tether": "latest",
+    "jquery": "^3.0.0",
+    "fontawesome": "latest",
+    "simple-line-icons": "latest",
+    "pace": "latest",
+    "chart.js": "^2.3.0"
+  },
+  "private": true,
+  "resolutions": {
+    "jquery": "^3.0.0"
+  }
+}
