@@ -125,7 +125,7 @@ class StackContainerBinding extends TagBinding {
 
             var prevScrollLeft = dom.parentNode.scrollLeft;
             var diff = prevScrollLeft - dom.offsetLeft;
-            var minX = 10;
+            var minX = 5;
 
             if (diff > minX) {
                 dom.parentNode.scrollLeft -= minX;

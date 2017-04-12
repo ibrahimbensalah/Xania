@@ -12,11 +12,10 @@ body {
 .main-menu {
   margin: 0 16px 0 0;
   padding: 0px;
-  width: 200px;
 }
 .main-content {
   flex: 1;
-  overflow: auto;
+  height: 100%;
 }
 .main-menu-ul {
   margin: 0px;

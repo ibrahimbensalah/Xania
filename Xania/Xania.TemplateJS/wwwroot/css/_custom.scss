@@ -1,0 +1,11 @@
+// Here you can add other styles
+
+html, body, main, .app-body {
+    height: 100%;
+}
+
+main {
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 0;
+}
