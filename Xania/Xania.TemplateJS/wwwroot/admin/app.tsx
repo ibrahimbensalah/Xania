@@ -20,24 +20,28 @@ export function menu({ driver, html, url }) {
 interface IAppAction {
     path: string,
     display?: string;
+    icon?: string;
 }
 
 var actions: IAppAction[] = [
-    { path: "timesheet", display: "Timesheet" },
+    { path: "timesheet", display: "Timesheet", icon: "icon-puzzle" },
     { path: "invoices", display: "Invoices" },
     { path: "companies", display: "Companies" },
     { path: "users", display: "Users" },
     { path: "graph", display: "Graph" },
     { path: "balls", display: "Balls" },
     { path: "stacked", display: "Stacked" },
-    { path: "hierachical", display: "Hierarchical url" }
+    { path: "hierachical", display: "Hierarchical url", icon: "icon-speedometer" }
 ];
 
 var mainMenu: (url: UrlHelper) => Template.INode = (url: UrlHelper) =>
-    <ul className="main-menu-ul">
+    <ul className="nav">
+        <li className="nav-title">
+            Demos
+        </li>
         {actions.map(x => (
-            <li className="main-menuitem">
-                <a className="main-menuitem-link" href="" onClick={url.action(x.path)}>{x.display || x.path}</a>
+            <li className="nav-item">
+                <a className="nav-link" href="" onClick={url.action(x.path)}><i className={x.icon || "icon-star"}></i> {x.display || x.path}</a>
             </li>))}
     </ul>;
 
@@ -115,7 +119,7 @@ function todos() {
     return View(
         <div>
             <h3>level 2 [{expr("firstName")}] {expr("show")}</h3>
-            <TodoApp show={expr("show")}/>
+            <TodoApp show={expr("show")} />
             <div>
                 show <input type="text" name="show" />
             </div>
@@ -168,11 +172,11 @@ class Layout {
 
 export var layout = source => (
     <StackContainer className="stack-container">
-        <Repeat param="vw" source={expr("await views")}>
+        <Repeat param="vw" source={ source }>
             <section className="stack-item">
-                <header>Header 1</header>
                 <div className="stack-item-content">
-                    <Html.Partial template={expr("vw")} />
+                    <header>Header 1</header>
+                    <Html.Partial template={expr("await vw")} />
                 </div>
             </section>
         </Repeat>

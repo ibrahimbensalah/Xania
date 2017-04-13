@@ -4,6 +4,7 @@ using System.Linq;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Xania.DataAccess;
@@ -13,6 +14,15 @@ namespace Xania.TemplateJS
 {
     public class Startup
     {
+        public Startup(IHostingEnvironment env)
+        {
+            var builder = new ConfigurationBuilder()
+                .SetBasePath(env.ContentRootPath)
+                .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
+                .AddJsonFile($"appsettings.{env.EnvironmentName}.json", optional: true)
+                .AddEnvironmentVariables();
+            Configuration = builder.Build();
+        }
         // This method gets called by the runtime. Use this method to add services to the container.
         // For more information on how to configure your application, visit http://go.microsoft.com/fwlink/?LinkID=398940
         public void ConfigureServices(IServiceCollection services)
@@ -26,10 +36,12 @@ namespace Xania.TemplateJS
                 new Invoice() {Description = "invoice 2", InvoiceNumber = "201702"}
             });
         }
+        public IConfigurationRoot Configuration { get; }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IHostingEnvironment env, ILoggerFactory loggerFactory)
         {
+            loggerFactory.AddConsole(Configuration.GetSection("Logging"));
             loggerFactory.AddConsole();
 
             if (env.IsDevelopment())
@@ -37,17 +49,17 @@ namespace Xania.TemplateJS
                 app.UseDeveloperExceptionPage();
             }
 
-            app.UseDefaultFiles();
-            app.UseStaticFiles(new StaticFileOptions
+            app.UseStaticFiles();
+            app.UseMvc(routes =>
             {
-
+                routes.MapRoute(
+                    name: "default",
+                    template: "{controller=Home}/{action=Index}/{id?}");
             });
-
-            app.UseMvc();
 
             app.Use(async (context, next) =>
             {
-                if (!context.Request.Path.Value.EndsWith(".js"))
+                // if (!context.Request.Path.Value.EndsWith(".js"))
                 {
                     var result = GetClientApp(context.Request.Path.Value, "wwwroot");
                     if (result != null)

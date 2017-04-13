@@ -10,5 +10,10 @@
   {
     "outputFile": "wwwroot/layout/stack.css",
     "inputFile": "wwwroot/layout/stack.less"
+  },
+  {
+    "outputFile": "wwwroot/css/style.css",
+    "inputFile": "wwwroot/css/style.scss",
+    "sourceMap": true
   }
 ]

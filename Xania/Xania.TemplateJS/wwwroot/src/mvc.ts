@@ -97,6 +97,7 @@ export class ViewResult implements IControllerContext {
     }
 }
 
+// ReSharper disable once InconsistentNaming
 export function View(view, model?) {
     return new ViewResult(view, model);
 }
@@ -113,8 +114,8 @@ function dataReady<T>(data: T | PromiseLike<T>, resolve: (x: T) => any) {
     return resolve(data as T);
 }
 
-function cache<T, R>(reducer: (acc: R, next: T, idx: number) => R, views: { key: T, value }[] = []) {
-    return (ctx: R, next: T, idx: number) => {
+function cache<T, TR>(reducer: (acc: TR, next: T, idx: number) => TR, views: { key: T, value }[] = []) {
+    return (ctx: TR, next: T, idx: number) => {
         if (idx in views) {
             var entry = views[idx];
             if (entry.key === next)

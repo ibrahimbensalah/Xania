@@ -1,0 +1,9 @@
+.app-footer {
+  min-height: $footer-height;
+  padding: 0 $spacer;
+  line-height: $footer-height;
+  color: $footer-color;
+  background: $footer-bg;
+  box-sizing: content-box;
+  @include borders($footer-borders);
+}
