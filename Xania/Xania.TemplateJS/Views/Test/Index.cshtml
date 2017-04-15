@@ -1,0 +1,24 @@
+﻿@{
+    Layout = null;
+}
+<!DOCTYPE html>
+<html data-ng-app="app.main">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jasmine Tests</title>
+  <link href="/lib/jasmine-core/lib/jasmine-core/jasmine.css" rel="stylesheet" />
+
+  <script src="/lib/jasmine-core/lib/jasmine-core/jasmine.js"></script>
+  <script src="/lib/jasmine-core/lib/jasmine-core/jasmine-html.js"></script>
+  <script src="/lib/jasmine-core/lib/jasmine-core/boot.js"></script>
+
+  <script src="/lib/system.js/dist/system.src.js"></script>
+</head>
+<body>
+  @Html.Partial("_MvcScripts")
+  <script>
+    System.import("/spec/mvcSpec.js").then(window.onload);
+  </script>
+</body>
+</html>

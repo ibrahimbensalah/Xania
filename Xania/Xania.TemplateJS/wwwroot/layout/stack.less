@@ -16,21 +16,31 @@ div.stack-container {
       background-color: white;
       box-shadow: rgba(0, 0, 0, 0.4) 1px 1px 4px;
       height: 100%;
-      padding: 10px;
+      padding: 10px 10px 10px;
       min-width: 200px;
       text-align: left;
+      display: flex;
+      flex-direction: column;
 
-      button {
-        display: block;
-      }
-
-      > header {
-        font-size: 18px;
+      .stack-item-header {
+        font-size: 16px;
+        padding: 0 0 4px 0px;
 
         button.close span {
           pointer-events: none;
           font-size: larger;
         }
+      }
+
+      .stack-item-body {
+        flex: 1;
+        height: 100%;
+        overflow: auto;
+      }
+
+
+      button {
+        display: block;
       }
     }
   }

@@ -222,35 +222,19 @@ export module Reactive {
             return false;
         }
 
-        public awaited: Awaited;
+        public awaited: AwaitedObservable;
         await() {
             if (!this.awaited) {
-                this.awaited = new Awaited(this.value);
+                this.awaited = new AwaitedObservable(this.value);
             }
             return this.awaited;
         }
     }
 
-    export class Awaited {
-        private subscription;
+    abstract class Awaited {
         private actions: IAction[];
-        private current;
 
-        constructor(observable: any) {
-            this.subscription = observable.subscribe(this);
-            this.current = observable.valueOf();
-        }
-
-        get length() {
-            if (typeof this.current === "undefined" || this.current === null)
-                return 0;
-            var length = this.current.length;
-            return length;
-        }
-
-        get(name: string) {
-            return this.current[name];
-        }
+        constructor(protected current?) { }
 
         onNext(newValue) {
             if (this.current !== newValue) {
@@ -288,16 +272,46 @@ export module Reactive {
             return true;
         }
 
-        dispose() {
-            this.subscription.dispose();
-        }
-
         valueOf() {
             return this.current;
         }
 
+        get(name: string) {
+            return this.current[name];
+        }
+
+        get length() {
+            if (typeof this.current === "undefined" || this.current === null)
+                return 0;
+            var length = this.current.length;
+            return length;
+        }
+
         indexOf(item) {
             return this.current.indexOf(item);
+        }
+    }
+
+    export class AwaitedPromise extends Awaited {
+        constructor(private promise) {
+            super();
+
+            promise.then(data => {
+                super.onNext(data);
+            });
+        }
+    }
+
+    export class AwaitedObservable extends Awaited {
+        private subscription;
+
+        constructor(observable: any) {
+            super(observable.valueOf());
+            this.subscription = observable.subscribe(this);
+        }
+
+        dispose() {
+            this.subscription.dispose();
         }
     }
 
@@ -570,8 +584,10 @@ export module Reactive {
         await(value) {
             if (!value.awaited) {
                 var observable = value.valueOf();
-                if (typeof observable.subscribe === "function")
-                    value.awaited = new Awaited(observable);
+                if (observable.then)
+                    value.awaited = new AwaitedPromise(value);
+                else if (typeof observable.subscribe === "function")
+                    value.awaited = new AwaitedObservable(observable);
                 else
                     return value;
             }

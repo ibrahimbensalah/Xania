@@ -7,8 +7,6 @@ import { ClockApp } from '../sample/clock/app'
 import TodoApp from "../sample/todos/app";
 import Lib = require("../diagram/lib");
 import BallsApp from "../sample/balls/app";
-import StackLayout from '../layout/stack'
-import { IDriver } from "../src/template";
 import { StackContainer } from "../layout/stack"
 
 export function menu({ driver, html, url }) {
@@ -30,7 +28,6 @@ var actions: IAppAction[] = [
     { path: "users", display: "Users" },
     { path: "graph", display: "Graph" },
     { path: "balls", display: "Balls" },
-    { path: "stacked", display: "Stacked" },
     { path: "hierachical", display: "Hierarchical url", icon: "icon-speedometer" }
 ];
 
@@ -66,20 +63,6 @@ export function graph() {
 
 export function balls() {
     return View(<BallsApp />);
-}
-
-export function stacked({ url }) {
-    return View(<StackLayout url={url} />)
-        // child route
-        .route({
-            foo: ({ url }) => {
-                return View(<div>hello child <a href="" onClick={() => url.action("bar")}>bar</a></div>)
-                    // child child route
-                    .route({
-                        bar: () => View(<div>hello child of child</div>)
-                    });
-            }
-        });
 }
 
 export function hierachical({ url }) {
@@ -128,55 +111,15 @@ function todos() {
     );
 }
 
-class StackLayoutView {
-    private view;
-    private views = [];
-
-    constructor(private layout: Layout, private viewResult: ViewResult, parent: StackLayoutView = null) {
-        this.views = parent
-            ? parent.views.concat([viewResult])
-            : [viewResult];
-
-        this.view = View(
-            <Repeat source={expr("for vw in views")}>
-                <Html.Partial template={expr("vw")} />
-            </Repeat>,
-            new Re.Store({ views: this.views })
-        );
-    }
-
-    get(path: string, viewContext: IViewContext) {
-        return new StackLayoutView(this.layout, this.viewResult.get(path, viewContext), this);
-    }
-
-    bind(driver: IDriver) {
-        return this.view.bind(driver);
-    }
-}
-
-class Layout {
-    private views = [];
-    private store = new Re.Store(this);
-    private view = View(
-        <Repeat source={expr("for vw in views")}>
-            <Html.Partial template={expr("vw")} />
-        </Repeat>,
-        this.store
-    );
-
-    update(views) {
-        this.views = views;
-        this.store.refresh();
-    }
-}
-
 export var layout = source => (
     <StackContainer className="stack-container">
         <Repeat param="vw" source={ source }>
             <section className="stack-item">
                 <div className="stack-item-content">
-                    <header>Header 1</header>
-                    <Html.Partial template={expr("await vw")} />
+                    <header className="stack-item-header">Header 1</header>
+                    <div className="stack-item-body">
+                        <Html.Partial template={expr("await vw")} />
+                    </div>
                 </div>
             </section>
         </Repeat>

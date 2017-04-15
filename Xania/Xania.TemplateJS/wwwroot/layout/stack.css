@@ -14,19 +14,27 @@ div.stack-container section.stack-item .stack-item-content {
   background-color: white;
   box-shadow: rgba(0, 0, 0, 0.4) 1px 1px 4px;
   height: 100%;
-  padding: 10px;
+  padding: 10px 10px 10px;
   min-width: 200px;
   text-align: left;
+  display: flex;
+  flex-direction: column;
+}
+div.stack-container section.stack-item .stack-item-content .stack-item-header {
+  font-size: 16px;
+  padding: 0 0 4px 0px;
+}
+div.stack-container section.stack-item .stack-item-content .stack-item-header button.close span {
+  pointer-events: none;
+  font-size: larger;
+}
+div.stack-container section.stack-item .stack-item-content .stack-item-body {
+  flex: 1;
+  height: 100%;
+  overflow: auto;
 }
 div.stack-container section.stack-item .stack-item-content button {
   display: block;
-}
-div.stack-container section.stack-item .stack-item-content > header {
-  font-size: 18px;
-}
-div.stack-container section.stack-item .stack-item-content > header button.close span {
-  pointer-events: none;
-  font-size: larger;
 }
 div.stack-container section.stack-item:last-child {
   flex: 1;

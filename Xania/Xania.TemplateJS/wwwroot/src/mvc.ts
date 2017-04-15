@@ -49,8 +49,34 @@ export interface IViewContext {
 }
 
 interface IControllerContext {
-    get(path: string, context: IViewContext): ViewResult;
+    url: UrlHelper,
+    get(path: string): IControllerContext;
     bind(driver: IDriver);
+}
+
+class ControllerContext {
+    constructor(private controller: any, private basePath: string, private url: UrlHelper, private template) { }
+
+    bind(driver: IDriver) {
+        return this.template.bind(driver);
+    }
+
+    get(path: string): IControllerContext {
+        var childContext = { url: this.url.child(path) };
+        var viewResult;
+
+        if (typeof this.controller[path] === "function") {
+            viewResult = this.controller[path](childContext);
+        }
+        else if (typeof this.controller.get === "function") {
+            viewResult = this.controller.get(path, childContext);
+        } else {
+            viewResult = System.import(this.basePath + "views/" + path).then(mod => mod.view(childContext));
+        }
+
+        return dataReady(viewResult,
+            x => new ControllerContext(x, this.basePath + "/" + path, childContext.url, x));
+    }
 }
 
 interface IRoute {
@@ -65,7 +91,7 @@ class ActionRoute implements IRoute {
     }
 }
 
-export class ViewResult implements IControllerContext {
+export class ViewResult {
     private routes: ActionRoute[] = [];
 
     constructor(private view, private model?) { }
@@ -106,7 +132,7 @@ declare class System {
     static import(path: string);
 }
 
-function dataReady<T>(data: T | PromiseLike<T>, resolve: (x: T) => any) {
+export function dataReady<T>(data: T | PromiseLike<T>, resolve: (x: T) => any) {
     var promise = data as PromiseLike<T>;
     if (promise && promise.then)
         return promise.then(resolve);
@@ -165,51 +191,25 @@ export function boot(basePath: string, appPath: string, app: any) {
     return router;
 }
 
-class Router {
+export class Router {
     private actions: Observables.Observable<string>;
 
-    constructor(private appPath: string, private init?: string) {
-        this.actions = new Observables.Observable<string>(init);
+    constructor(private appPath: string) {
+        this.actions = new Observables.Observable<string>();
     }
 
-    static getView(ctx: IControllerContext, path: string) {
-        return dataReady(ctx,
-            (controllerContext: any) => {
-                var name = path.slice(1);
-                var childContext = { url: controllerContext.url.child(name) };
-                var result = controllerContext.get(name, childContext);
-
-                if (typeof result === "undefined")
-                    throw { error: "route not found: ", route: name, controllerContext };
-
-                return dataReady(result,
-                    viewResult => ({
-                        url: childContext.url,
-                        map: new Map(),
-                        bind(driver: IDriver) {
-                            return viewResult.bind(driver);
-                        },
-                        get(path: string, viewContext: IViewContext): ViewResult {
-                            return viewResult.get(path, viewContext);
-                        }
-                    }));
-            });
+    static getView(controllerContext: IControllerContext, path: string) {
+        var name = path.slice(1);
+        return dataReady(controllerContext, x => {
+            if (typeof x['then'] === "function")
+                throw Error(`nested Promises are not allowed, path: '${path}'`);
+            return x.get(name);
+        });
     }
 
 
-    start(app, basePath) {
-        var controllerContext = {
-            controller: app,
-            url: new UrlHelper(this),
-            bind() {
-                throw Error("Not supported.");
-            },
-            get(path: string, viewContext: IViewContext): ViewResult {
-                return typeof this.controller[path] === "function"
-                    ? this.controller[path](viewContext)
-                    : System.import(basePath + "views/" + path).then(mod => mod.view(viewContext));
-            }
-        }
+    start(app, basePath: string) {
+        var controllerContext = new ControllerContext(app, basePath, new UrlHelper(this), null);
 
         var scanner = cache(Router.getView);
 
@@ -218,6 +218,8 @@ class Router {
     }
 
     action(actionPath) {
+        if (!actionPath.startsWith('/'))
+            throw Error("path should start with /");
         this.actions.notify(actionPath);
     }
 

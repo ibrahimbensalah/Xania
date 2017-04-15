@@ -33,13 +33,9 @@
     <main class="main">
       @RenderBody()
     </main>
-    
     @Html.Partial("_Aside.cshtml")
-
   </div>
-  <script src="~/jspm_packages/system.js"></script>
-  <script src="~/lib/fetch/fetch.js"></script>
-  
+  @Html.Partial("_MvcScripts")
   @RenderSection("scripts", false)
 </body>
 </html>
