@@ -1,0 +1,13 @@
+﻿.data-grid-cell-content {
+  color: gray;
+}
+.data-grid-cell-content .invoice-number {
+  color: black;
+  margin-right: 10px;
+}
+.data-grid-cell.data-grid-column-description {
+  width: 200px;
+}
+.data-grid-cell.data-grid-column-invoicedate {
+  width: 140px;
+}

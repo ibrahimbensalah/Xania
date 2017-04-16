@@ -39,10 +39,6 @@ class ViewBinding {
     }
 }
 
-export interface IDriver {
-    dispose();
-}
-
 export interface IViewContext {
     url: UrlHelper;
     model?: any;
@@ -51,13 +47,13 @@ export interface IViewContext {
 interface IControllerContext {
     url: UrlHelper,
     get(path: string): IControllerContext;
-    bind(driver: IDriver);
+    bind(driver: Reactive.IDriver);
 }
 
 class ControllerContext {
     constructor(private controller: any, private basePath: string, private url: UrlHelper, private template) { }
 
-    bind(driver: IDriver) {
+    bind(driver: Reactive.IDriver) {
         return this.template.bind(driver);
     }
 
@@ -118,8 +114,25 @@ export class ViewResult {
         return void 0;
     }
 
-    bind(driver) {
-        return new ViewBinding(this.view.bind(driver).update(this.model));
+    bind(driver): ViewBinding {
+        var binding;
+        if (Array.isArray(this.view))
+            binding = new CompositeBinding(driver, this.view.map(x => x.bind(driver).update(this.model)));
+        else
+            binding = this.view.bind(driver).update(this.model);
+
+        return new ViewBinding(binding);
+    }
+}
+
+class CompositeBinding extends Reactive.Binding
+{
+    constructor(driver: Reactive.IDriver, private bindings: any[]) {
+        super(driver);
+        this.childBindings = bindings;
+    }
+
+    render(context, driver) {
     }
 }
 

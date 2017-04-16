@@ -31,18 +31,12 @@ var onSelect = row => {
 
 export function view() {
     return new ViewResult(
-        <div style="height: 95%;" className="row">
+        <div style="height: 100%;" className="row">
             <div className={[expr("currentRow -> 'col-8'"), expr("not currentRow -> 'col-12'")]}>
-                <Section title="Users">
-                    <DataGrid data={expr("await dataSource")} onSelectionChanged={onSelect} >
-                        <TextColumn field="name" display="User name" />
-                        <TextColumn field="emailConfirmed" display="Email confirmed" />
-                    </DataGrid>
-                    <footer style="height: 50px; margin: 0 16px; padding: 0;">
-                        <button className="btn btn-primary" onClick={expr("currentRow <- createNew()")}>
-                            <span className="fa fa-plus"></span> Add New</button>
-                    </footer>
-                </Section>
+                <DataGrid data={expr("await dataSource")} onSelectionChanged={onSelect} >
+                    <TextColumn field="name" display="User name" />
+                    <TextColumn field="emailConfirmed" display="Email confirmed" />
+                </DataGrid>
             </div>
             <With object={expr("currentRow")}>
                 <div className="col-4">

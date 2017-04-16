@@ -32,12 +32,13 @@ div.stack-container section.stack-item .stack-item-content .stack-item-body {
   flex: 1;
   height: 100%;
   overflow: auto;
+  display: flex;
+  flex-direction: column;
 }
 div.stack-container section.stack-item .stack-item-content button {
   display: block;
 }
 div.stack-container section.stack-item:last-child {
   flex: 1;
-  min-width: 80%;
   padding-right: 12px;
 }

@@ -18,7 +18,7 @@
   },
   "include": [
     "wwwroot/src/*.ts",
-    "wwwroot/src/*.tsx",
+    "wwwroot/src/**/*.tsx",
     "wwwroot/diagram/**/*.tsx",
     "wwwroot/layout/**/*.tsx",
     "wwwroot/spec/*Spec.ts",
