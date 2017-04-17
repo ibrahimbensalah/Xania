@@ -11,7 +11,9 @@ export class UrlHelper {
     action(path: string, view?) {
         return event => {
             var action = { path: this.router.goto(this.basePath + path) };
-            window.history.pushState(action, "", action.path);
+            if (action.path) {
+                window.history.pushState(action, "", action.path);
+            }
             event.preventDefault();
         };
     }
@@ -233,7 +235,9 @@ export class Router {
     action(actionPath) {
         if (!actionPath.startsWith('/'))
             throw Error("path should start with /");
-        this.actions.notify(actionPath);
+
+        if (this.actions.valueOf() !== actionPath)
+            this.actions.notify(actionPath);
     }
 
     static fromPopState(appPath: string) {
@@ -256,7 +260,8 @@ export class Router {
     goto(path: string) {
         if (path !== this.actions.valueOf()) {
             this.actions.notify(path);
+            return this.appPath + path;
         }
-        return this.appPath + path;
+        return null;
     }
 }

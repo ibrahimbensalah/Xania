@@ -29,15 +29,15 @@
   color: white;
 }
 .data-grid-row-header {
-  width: 30px;
-  line-height: 30px;
+  width: 34px;
+  line-height: 34px;
   text-align: center;
   font-size: 18px;
 }
 .data-grid-cell {
-  min-height: 30px;
+  min-height: 34px;
   width: 200px;
-  line-height: 30px;
+  line-height: 34px;
 }
 .data-grid-cell-content {
   padding: 0 10px;

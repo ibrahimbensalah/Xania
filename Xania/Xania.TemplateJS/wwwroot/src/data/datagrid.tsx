@@ -33,7 +33,7 @@ export default class DataGrid {
     constructor(private attrs, private columns: IDataColumn[] = []) {
     }
 
-    private onRowClick = (row) => {
+    private activateRow = (row) => {
         if (this.activeRow !== row) {
             this.activeRow = row;
 
@@ -44,6 +44,8 @@ export default class DataGrid {
             }
         }
     };
+
+    private onRowClick = [expr("activateRow row"), this.attrs.url.action("test")];
 
     view(xania) {
         return (
@@ -61,7 +63,8 @@ export default class DataGrid {
                 </div>
                 <div className="data-grid-content" style="padding-top: 0px; ">
                     <Repeat source={expr("for row in data")}>
-                        <div className={["data-grid-row", expr("row = activeRow -> ' data-grid-row-selected'")]} onClick={[expr("onRowClick row"), this.attrs.url.action("test")]}>
+                        <div className={["data-grid-row", expr("row = activeRow -> ' data-grid-row-selected'")]}
+                            onTouchStart={this.onRowClick} onClick={this.onRowClick}>
                             <div role="rowheader" className="data-grid-row-header">
                                 <span className={["fa", expr("row = activeRow -> ' fa-edit'")]}></span>
                             </div>
