@@ -1,5 +1,5 @@
 ﻿
-import xania, { Repeat, With, expr, ModelRepository, Reactive as Re } from "../../src/xania"
+import xania, { If, Repeat, With, expr, ModelRepository, Reactive as Re } from "../../src/xania"
 import { UrlHelper, View, IViewContext } from "../../src/mvc"
 import { Section } from "../layout"
 import DataGrid, { TextColumn } from "../../src/data/datagrid"
@@ -49,17 +49,26 @@ export function view({ url }: IViewContext) {
         }
     }
 
+    function statusTemplate() {
+        var success = expr("row.invoiceDate -> 'success'");
+        var pending = expr("not row.invoiceDate -> 'default'");
+        return (
+            <span className={["badge badge-", success, pending ]}>{[ success, pending ]}</span>
+        );
+    }
+
     return View([
-            <DataGrid data={expr("await dataSource")} onSelectionChanged={onSelectRow}>
-                <TextColumn field="description" template={<span><span className="invoice-number">{expr("row.invoiceNumber")}</span>{expr(
-                    "row.description")}</span>} display="Description" />
-                <TextColumn field="invoiceDate" display="Invoice Date" />
-            </DataGrid>,
-            <footer style="height: 50px; margin: 0 16px; padding: 0;">
-                <button className="btn btn-primary" onClick={url.action("test")}>
-                    <span className="fa fa-plus"></span> Add New</button>
-            </footer>
-        ],
+        <DataGrid data={expr("await dataSource")} onSelectionChanged={onSelectRow}>
+            <TextColumn field="description" template={<span><span className="invoice-number">{expr("row.invoiceNumber")}</span>{expr(
+                "row.description")}</span>} display="Description" />
+            <TextColumn field="invoiceDate" display="Invoice Date" />
+            <TextColumn field="status" template={statusTemplate()} display="Status" />
+        </DataGrid>,
+        <footer style="height: 50px; margin: 0 16px; padding: 0;">
+            <button className="btn btn-primary" onClick={url.action("test")}>
+                <span className="fa fa-plus"></span> Add New</button>
+        </footer>
+    ],
         store
     ).route({
         test: () => View(<div>test</div>)

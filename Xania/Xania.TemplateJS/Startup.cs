@@ -1,11 +1,15 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Routing;
+using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Logging;
 using Xania.DataAccess;
 using Xania.TemplateJS.Controllers;
@@ -32,8 +36,9 @@ namespace Xania.TemplateJS
             services.AddSingleton<IObjectStore<Company>>(new TransientObjectStore<Company>());
             services.AddSingleton<IObjectStore<Invoice>>(new TransientObjectStore<Invoice>()
             {
-                new Invoice() {Description = "invoice 1", InvoiceNumber = "201701"},
-                new Invoice() {Description = "invoice 2", InvoiceNumber = "201702"}
+                new Invoice {Description = "invoice 1", InvoiceNumber = "201701"},
+                new Invoice {Description = "invoice 2", InvoiceNumber = "201702", InvoiceDate = DateTime.Now},
+                new Invoice {Description = "invoice 3", InvoiceNumber = "201703", InvoiceDate = DateTime.Now}
             });
         }
         public IConfigurationRoot Configuration { get; }
@@ -50,33 +55,24 @@ namespace Xania.TemplateJS
             }
 
             app.UseStaticFiles();
+            app.UseStaticFiles(new StaticFileOptions
+            {
+                ServeUnknownFileTypes = true,
+                DefaultContentType = "text/css"
+            });
+
             app.UseMvc(routes =>
             {
                 routes.MapRoute(
+                    name: "boot",
+                    template: "{*appPath:regex(^[a-zA-Z\\/]+$)}",
+                    defaults: new { controller = "Home", action = "Boot" }
+                    );
+
+                routes.MapRoute(
                     name: "default",
                     template: "{controller=Home}/{action=Index}/{id?}");
-            });
 
-            app.Use(async (context, next) =>
-            {
-                // if (!context.Request.Path.Value.EndsWith(".js"))
-                {
-                    var result = GetClientApp(context.Request.Path.Value, "wwwroot");
-                    if (result != null)
-                    {
-                        var fileContent = result.Content
-                            .Replace("[APP]", result.Name)
-                            .Replace("[BASE]", result.Base)
-                            .Replace("[ARGS]", result.Args);
-
-                        context.Response.ContentType = "text/html";
-                        await context.Response.WriteAsync(fileContent);
-
-                        return;
-                    }
-                }
-
-                await next.Invoke();
             });
 
             app.Run(async (context) =>

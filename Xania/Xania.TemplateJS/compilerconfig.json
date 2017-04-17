@@ -12,11 +12,6 @@
     "inputFile": "wwwroot/layout/stack.less"
   },
   {
-    "outputFile": "wwwroot/css/style.css",
-    "inputFile": "wwwroot/css/style.scss",
-    "sourceMap": true
-  },
-  {
     "outputFile": "wwwroot/src/data/datalist.css",
     "inputFile": "wwwroot/src/data/datalist.less"
   },
@@ -27,5 +22,9 @@
   {
     "outputFile": "wwwroot/admin/views/invoices.css",
     "inputFile": "wwwroot/admin/views/invoices.less"
+  },
+  {
+    "outputFile": "wwwroot/css/style.css",
+    "inputFile": "wwwroot/css/style.scss"
   }
 ]

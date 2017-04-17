@@ -6,20 +6,26 @@
 .data-grid-header {
   display: flex;
   width: 100%;
-  min-height: 34px;
+  min-height: 40px;
+  padding: 4px 0;
+  font-weight: bold;
+  font-size: 15px;
+  border-width: 1px 0 2px 0;
+  border-style: solid none;
+  border-color: gray;
 }
 .data-grid-row {
   display: flex;
 }
 .data-grid-row-header {
   width: 30px;
-  line-height: 34px;
+  line-height: 30px;
   text-align: center;
 }
 .data-grid-cell {
-  min-height: 34px;
+  min-height: 30px;
   width: 200px;
-  line-height: 34px;
+  line-height: 30px;
 }
 .data-grid-cell-content {
   padding: 0 10px;

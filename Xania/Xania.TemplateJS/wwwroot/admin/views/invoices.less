@@ -1,17 +1,24 @@
 ﻿.data-grid-cell {
   &-content {
     color: gray;
+
     .invoice-number {
       color: black;
       margin-right: 10px;
     }
   }
 
-  &.data-grid-column-description {
-    width: 200px;
-  }
+  &.data-grid-column {
+    &-description {
+      width: 200px;
+    }
 
-  &.data-grid-column-invoicedate {
-    width: 140px;
+    &-invoicedate {
+      width: 140px;
+    }
+
+    &-status {
+      width: 80px;
+    }
   }
 }

@@ -41,7 +41,7 @@ namespace Xania.TemplateJS.Controllers
 
         public string Description { get; set; }
 
-        public DateTime? InvoiceDate { get; set; } = DateTime.Now;
+        public DateTime? InvoiceDate { get; set; }
 
         public int? CompanyId { get; set; }
 

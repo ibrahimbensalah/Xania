@@ -11,6 +11,9 @@ export default class Xania {
 
             if (child === null || child === void 0)
                 continue;
+            else if (typeof child === "function") {
+                result.push(new Template.CustomTemplate(child));
+            }
             else if (child.bind)
                 result.push(child);
             else if (typeof child === "number" || typeof child === "string" || typeof child.execute === "function") {

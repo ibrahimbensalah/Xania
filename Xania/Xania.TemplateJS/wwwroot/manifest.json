@@ -1,20 +1,16 @@
-﻿{
-  "name": "Xania Admin",
+{
   "short_name": "Xania",
+  "name": "Xania",
   "icons": [
     {
-      "src": "icon-medium.png",
-      "sizes": "192x192"
-    },
-    {
-      "src": "icon-large.png",
-      "sizes": "192x192"
+      "src": "pwa/fireworks-icon192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
     }
   ],
   "theme_color": "#DDF",
   "background_color": "#DFE",
-  "display": "fullscreen",
+  "display": "standalone",
   "orientation": "portrait",
-  "start_url": "/admin/app"
-
+  "start_url": "/admin/app/invoices/?utm_source=homescreen"
 }

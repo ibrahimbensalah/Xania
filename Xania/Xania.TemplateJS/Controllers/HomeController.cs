@@ -18,10 +18,13 @@ namespace Xania.TemplateJS.Controllers
             return View();
         }
 
-        [Route("{*path}")]
-        public IActionResult Boot(string path)
+        public IActionResult Boot(string appPath)
         {
-            return View(GetClientApp(path ?? "admin/app", "wwwroot"));
+            var model = GetClientApp(appPath ?? "admin/app", "wwwroot");
+            if (model == null)
+                return new BadRequestObjectResult("Could not resolve client application: " + appPath);
+
+            return View(model);
         }
 
 

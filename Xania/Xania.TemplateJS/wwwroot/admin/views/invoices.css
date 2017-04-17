@@ -11,3 +11,6 @@
 .data-grid-cell.data-grid-column-invoicedate {
   width: 140px;
 }
+.data-grid-cell.data-grid-column-status {
+  width: 80px;
+}

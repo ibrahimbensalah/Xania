@@ -100,6 +100,10 @@ export module Template {
             this._children.push(node);
         }
     }
+
+    export class CustomTemplate implements INode {
+        constructor(private func) {  }
+    }
 }
 
 export default Template;

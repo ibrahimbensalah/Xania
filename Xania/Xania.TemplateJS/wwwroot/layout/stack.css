@@ -22,7 +22,7 @@ div.stack-container section.stack-item .stack-item-content {
 }
 div.stack-container section.stack-item .stack-item-content .stack-item-header {
   font-size: 16px;
-  padding: 0 0 4px 0px;
+  padding: 0 0 10px 0px;
 }
 div.stack-container section.stack-item .stack-item-content .stack-item-header button.close span {
   pointer-events: none;

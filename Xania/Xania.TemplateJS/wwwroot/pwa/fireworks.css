@@ -1,0 +1,52 @@
+html, body {
+  padding: 0;
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  background: #000;
+  overflow: hidden;
+}
+
+@-moz-keyframes fadeOut {
+	to {
+		opacity: 0;
+	}
+}
+
+@keyframes fadeOut {
+	to {
+		opacity: 0;
+	}
+}
+
+@-webkit-keyframes fadeOut {
+	to {
+		opacity: 0;
+	}
+}
+
+.isPaused {
+	animation-play-state: paused;
+}
+
+main {
+	display: none;
+	text-align: center;
+	font-family: Helvetica, Arial, Sans-Serif;
+}
+
+main h1 {
+    color: white;
+	opacity: 1;
+    -webkit-animation:  fadeOut 7s forwards;
+    animation: fadeOut 7s forwards;
+}
+
+#library {
+  display: none;
+}
+
+canvas {
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+}

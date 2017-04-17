@@ -479,14 +479,11 @@ export module Dom {
             var attrName = this.name;
             var tag = this.tagNode;
             if (newValue === void 0 || newValue === null) {
-                tag[attrName] = void 0;
                 tag.removeAttribute(attrName);
             } else {
                 var attr = document.createAttribute(attrName);
                 attr.value = newValue;
                 tag.setAttributeNode(attr);
-                if (attrName === "value")
-                    tag[attrName] = newValue;
             }
         }
     }
