@@ -16,11 +16,23 @@
 }
 .data-grid-row {
   display: flex;
+  cursor: pointer;
+}
+.data-grid-row .data-grid-cell {
+  pointer-events: none;
+}
+.data-grid-row-selected {
+  background-color: #20a8d8;
+  color: white;
+}
+.data-grid-row-selected .data-grid-cell-content {
+  color: white;
 }
 .data-grid-row-header {
   width: 30px;
   line-height: 30px;
   text-align: center;
+  font-size: 18px;
 }
 .data-grid-cell {
   min-height: 30px;

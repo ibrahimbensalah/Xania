@@ -1,4 +1,5 @@
 ﻿import { Repeat, expr } from "../xania"
+import { UrlHelper } from "../mvc"
 import './datagrid.min.css'
 
 interface IDataColumn {
@@ -27,13 +28,16 @@ export default class DataGrid {
     private activeRow = null;
     private activeRecord = null;
     private onSelectionChanged = null;
+    private url: UrlHelper;
 
     constructor(private attrs, private columns: IDataColumn[] = []) {
     }
 
-    onRowClick = (row) => {
+    private onRowClick = (row) => {
         if (this.activeRow !== row) {
             this.activeRow = row;
+
+            this.url.action("test");
 
             if (this.onSelectionChanged) {
                 this.onSelectionChanged(row, this);
@@ -49,21 +53,22 @@ export default class DataGrid {
 
                     {this.columns.map(column =>
                         <div role="gridcell" className={"data-grid-cell data-grid-column-" + column.name}>
-                            <div className="data-grid-cell-content"><a >{column.display}</a></div>
+                            <div className="data-grid-cell-content"><a >{column.display}</a>
+                            </div>
                         </div>
                     )}
                     <div className="data-grid-header-column" style="flex: 1">&nbsp;</div>
                 </div>
                 <div className="data-grid-content" style="padding-top: 0px; ">
                     <Repeat source={expr("for row in data")}>
-                        <div className="data-grid-row">
-                            <div role="rowheader" className="data-grid-row-header" onClick={expr("onRowClick row")}>
+                        <div className={["data-grid-row", expr("row = activeRow -> ' data-grid-row-selected'")]} onClick={[expr("onRowClick row"), this.attrs.url.action("test")]}>
+                            <div role="rowheader" className="data-grid-row-header">
                                 <span className={["fa", expr("row = activeRow -> ' fa-edit'")]}></span>
-                                <input type="radio" style={expr("row = activeRow -> '; display: none'")} />
                             </div>
                             {this.columns.map(column =>
                                 <div role="gridcell" className={"data-grid-cell data-grid-column-" + column.name}>
-                                    <div className="data-grid-cell-content"><a>{column.template}</a></div>
+                                    <div className="data-grid-cell-content"><a>{column.template}</a>
+                                    </div>
                                 </div>
                             )}
                         </div>

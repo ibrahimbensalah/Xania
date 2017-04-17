@@ -58,7 +58,7 @@ export function view({ url }: IViewContext) {
     }
 
     return View([
-        <DataGrid data={expr("await dataSource")} onSelectionChanged={onSelectRow}>
+        <DataGrid url={ url } data={expr("await dataSource")} onSelectionChanged={onSelectRow}>
             <TextColumn field="description" template={<span><span className="invoice-number">{expr("row.invoiceNumber")}</span>{expr(
                 "row.description")}</span>} display="Description" />
             <TextColumn field="invoiceDate" display="Invoice Date" />

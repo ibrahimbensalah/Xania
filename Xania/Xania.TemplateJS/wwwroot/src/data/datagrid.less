@@ -8,24 +8,36 @@
     width: 100%;
     min-height: 40px;
     padding: 4px 0;
-
     font-weight: bold;
     font-size: 15px;
-
     border-width: 1px 0 2px 0;
     border-style: solid none;
     border-color: gray;
-
   }
 
   &-row {
     display: flex;
+    cursor: pointer;
+
+    .data-grid-cell {
+      pointer-events: none;
+    }
+
+    &-selected {
+      background-color: #20a8d8;
+      color: white;
+
+      .data-grid-cell-content {
+        color: white;
+      }
+    }
   }
 
   &-row-header {
     width: 30px;
     line-height: 30px;
     text-align: center;
+    font-size: 18px;
   }
 
   &-cell {

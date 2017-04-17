@@ -293,38 +293,28 @@ export module Dom {
     }
 
     export class EventBinding extends Re.Binding {
-        private state;
-
         constructor(private tagNode: any, public name, private expr, driver: IDriver) {
             super(driver);
         }
 
-        evaluate(context) {
-            if (typeof this.expr === "function")
-                return this.expr(event, this.context);
-            return this.expr.execute(this,
+        evaluate(expr, context) {
+            if (typeof expr === "function")
+                return expr(event, this.context);
+            return expr.execute(this,
                 [
                     context || {},
                     { value: event },
                     { event: event },
-                    { node: event.target },
-                    { state: this.state || null }
+                    { node: event.target }
                 ]);
         }
 
         fire(event, context = this.context) {
-            var newValue = this.evaluate(context);
 
-            this.state = typeof newValue === "function" ? newValue(event) : newValue;
-
-            if (newValue !== void 0) {
-                var tag = event.target;
-                if (newValue === null) {
-                    tag.removeAttribute("value");
-                } else {
-                    tag.value = newValue;
-                }
-            }
+            if (Array.isArray(this.expr))
+                this.expr.map(x => this.evaluate(x, context));
+            else
+                this.evaluate(this.expr, context);
 
             if (this.context)
                 this.context.refresh();
