@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -64,15 +65,14 @@ namespace Xania.TemplateJS
             app.UseMvc(routes =>
             {
                 routes.MapRoute(
-                    name: "boot",
-                    template: "{*appPath:regex(^[a-zA-Z\\/]+$)}",
-                    defaults: new { controller = "Home", action = "Boot" }
-                    );
-
-                routes.MapRoute(
                     name: "default",
                     template: "{controller=Home}/{action=Index}/{id?}");
 
+                routes.MapRoute(
+                    name: "boot",
+                    template: @"{*appPath}",
+                    defaults: new { controller = "Home", action = "Boot" }
+                    );
             });
 
             app.Run(async (context) =>
@@ -120,6 +120,24 @@ namespace Xania.TemplateJS
                 basePath = app + "/";
             }
             return null;
+        }
+    }
+
+    public class ActionRoute : RouteBase
+    {
+        protected override Task OnRouteMatched(RouteContext context)
+        {
+            throw new NotImplementedException();
+        }
+
+        protected override VirtualPathData OnVirtualPathGenerated(VirtualPathContext context)
+        {
+            throw new NotImplementedException();
+        }
+
+        public ActionRoute(string template, string name, IInlineConstraintResolver constraintResolver, RouteValueDictionary defaults, IDictionary<string, object> constraints, RouteValueDictionary dataTokens) 
+            : base(template, name, constraintResolver, defaults, constraints, dataTokens)
+        {
         }
     }
 

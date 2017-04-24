@@ -8,18 +8,24 @@ export class UrlHelper {
     constructor(public router: Router, private basePath = "/") {
     }
 
-    action(path: string, view?) {
+    action(path: string);
+    action(path): (row: any) => void;
+    action(path: any) {
         return event => {
-            var action = { path: this.router.goto(this.basePath + path) };
-            if (action.path) {
-                window.history.pushState(action, "", action.path);
-            }
             event.preventDefault();
+            this.goto(path);
         };
     }
 
     child(path) {
         return new UrlHelper(this.router, this.basePath + path + "/");
+    }
+
+    goto(path: string) {
+        var action = { path: this.router.action(this.basePath + path) };
+        if (typeof action.path === "string") {
+            window.history.pushState(action, "", action.path);
+        }
     }
 }
 
@@ -53,7 +59,10 @@ interface IControllerContext {
 }
 
 class ControllerContext {
-    constructor(private controller: any, private basePath: string, private url: UrlHelper, private template) { }
+    constructor(private controller: any, private basePath: string, private url: UrlHelper, private template) {
+        if (template !== null && typeof template.bind !== "function")
+            throw Error("Invalid template.");
+    }
 
     bind(driver: Reactive.IDriver) {
         return this.template.bind(driver);
@@ -78,14 +87,25 @@ class ControllerContext {
 }
 
 interface IRoute {
-    execute(context): ViewResult;
+    execute(context, args: any[]): ViewResult;
 }
 
-class ActionRoute implements IRoute {
-    constructor(public path, private action: (context) => ViewResult) { }
+declare type Matcher = string | ((str: string) => any);
 
-    execute(context) {
-        return this.action(context);
+class ActionRoute implements IRoute {
+    constructor(public matcher: Matcher, private action: (context, args: any[]) => ViewResult) { }
+
+    execute(context, args: any[]) {
+        return this.action(context, args);
+    }
+
+    matches(path: string) {
+        var { matcher } = this;
+        if (typeof matcher === "string")
+            return this.matcher === path;
+        else if (typeof matcher === "function")
+            return matcher(path);
+        return null;
     }
 }
 
@@ -104,13 +124,20 @@ export class ViewResult {
         return this;
     }
 
+    mapRoute(matcher: Matcher, handler: (context: IViewContext, args: any[]) => ViewResult) {
+        this.routes.push(new ActionRoute(matcher, handler));
+        return this;
+    }
+
     get(path: string, viewContext: IViewContext): ViewResult {
         var { routes } = this, i = routes.length;
 
         while (i--) {
             var route = routes[i];
-            if (route.path === path) {
-                return route.execute(viewContext);
+            var match = route.matches(path);
+            if (match !== null && match !== undefined) {
+                console.debug("route matched", match);
+                return route.execute(viewContext, match);
             }
         }
         return void 0;
@@ -127,8 +154,7 @@ export class ViewResult {
     }
 }
 
-class CompositeBinding extends Reactive.Binding
-{
+class CompositeBinding extends Reactive.Binding {
     constructor(driver: Reactive.IDriver, private bindings: any[]) {
         super(driver);
         this.childBindings = bindings;
@@ -148,6 +174,9 @@ declare class System {
 }
 
 export function dataReady<T>(data: T | PromiseLike<T>, resolve: (x: T) => any) {
+    if (typeof data === "undefined" || data === null)
+        return data;
+
     var promise = data as PromiseLike<T>;
     if (promise && promise.then)
         return promise.then(resolve);
@@ -232,12 +261,17 @@ export class Router {
             scan(route.match(/\/([^\/]+)/g), scanner, controllerContext));
     }
 
-    action(actionPath) {
+    action(actionPath): string | false {
         if (!actionPath.startsWith('/'))
             throw Error("path should start with /");
 
-        if (this.actions.valueOf() !== actionPath)
+        if (this.actions.valueOf() !== actionPath) {
             this.actions.notify(actionPath);
+
+            return this.appPath + "" + actionPath;
+        }
+
+        return false;
     }
 
     static fromPopState(appPath: string) {
@@ -247,7 +281,7 @@ export class Router {
 
             if (pathname.startsWith(appPath)) {
                 var actionPath = pathname.substring(appPath.length);
-                router.goto(actionPath);
+                router.action(actionPath);
             }
         }
         return router;
@@ -255,13 +289,5 @@ export class Router {
 
     subscribe(observer: Observables.IObserver<string>) {
         return this.actions.subscribe(observer);
-    }
-
-    goto(path: string) {
-        if (path !== this.actions.valueOf()) {
-            this.actions.notify(path);
-            return this.appPath + path;
-        }
-        return null;
     }
 }

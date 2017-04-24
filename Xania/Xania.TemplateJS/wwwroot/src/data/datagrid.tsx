@@ -28,7 +28,6 @@ export default class DataGrid {
     private activeRow = null;
     private activeRecord = null;
     private onSelectionChanged = null;
-    private url: UrlHelper;
 
     constructor(private attrs, private columns: IDataColumn[] = []) {
     }
@@ -37,15 +36,13 @@ export default class DataGrid {
         if (this.activeRow !== row) {
             this.activeRow = row;
 
-            this.url.action("test");
-
             if (this.onSelectionChanged) {
                 this.onSelectionChanged(row, this);
             }
         }
     };
 
-    private onRowClick = [expr("activateRow row"), this.attrs.url.action("test")];
+    private onRowClick = [expr("activateRow row")];
 
     view(xania) {
         return (
