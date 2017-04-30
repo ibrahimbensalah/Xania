@@ -317,7 +317,10 @@ class ListBinding extends Reactive.Binding {
     render(context, driver) {
         var stream;
         var sourceExpr = this.attrs.source;
-        if (!!sourceExpr && !!sourceExpr.execute) {
+
+        if (Array.isArray(sourceExpr)) {
+            stream = sourceExpr;
+        } else if (!!sourceExpr && !!sourceExpr.execute) {
             stream = sourceExpr.execute(this, context);
             if (stream.length === void 0)
                 if (stream.value === null) {
@@ -348,7 +351,7 @@ class ListBinding extends Reactive.Binding {
                 childBinding = new FragmentBinding(this, void 0, this.children);
                 childBindings.push(childBinding);
             }
-            childBinding.update(item);
+            childBinding.update([item, context]);
             mount(childBinding);
             i++;
         }

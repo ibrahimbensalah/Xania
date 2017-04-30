@@ -540,6 +540,8 @@ export module Reactive {
         }
 
         member(target: { get(name: string) }, name) {
+            if (target === null || target === undefined)
+                return target;
             if (target.get) {
                 var value = target.get(name);
                 if (value && value.change)

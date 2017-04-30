@@ -316,8 +316,8 @@ export module Dom {
             else
                 this.evaluate(this.expr, context);
 
-            if (this.context)
-                this.context.refresh();
+            if (context && context.refresh)
+                context.refresh();
         }
 
         render(context, driver) {
@@ -385,7 +385,8 @@ export module Dom {
             if (value && value.set) {
                 value.set(this.tagNode.checked);
 
-                this.context.refresh();
+                if (this.context)
+                    this.context.refresh();
             }
         }
 
@@ -428,7 +429,8 @@ export module Dom {
                 value.set(this.tagNode.value);
             }
 
-            this.context.refresh();
+            if (this.context)
+                this.context.refresh();
         }
 
         render() {

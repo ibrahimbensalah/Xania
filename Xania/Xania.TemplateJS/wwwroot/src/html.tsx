@@ -1,13 +1,13 @@
-﻿import xania, { mount, expr, Repeat, Template, Reactive } from "./xania";
+﻿import xania, { mount, expr, Repeat, List, Template, Reactive } from "./xania";
 import { IDriver } from "./template";
 
-export function TextEditor(attrs) {
+export function TextEditor(attrs: { display; field; placeholder?; }) {
     var id = Math.random();
     return xania.tag("div",
         Object.assign({ "class": "form-group" }, attrs),
         [
-            <label htmlFor={id}>{attrs.display}</label>,
-            <input className="form-control" id={id} type="text" placeholder={attrs.display} name={attrs.field} />
+            <label for={id}>{attrs.display}</label>,
+            <input class="form-control" id={id} type="text" placeholder={attrs.placeholder || attrs.display} name={attrs.field} />
         ]
     );
 }
@@ -51,35 +51,45 @@ export class Select {
     }
 }
 
+
+
+export class DataSource {
+    read() {
+        return [{ display: "Xania", value: 1 }, { display: "Rider International", value: 2 }, { display: "Darwin Recruitment", value: 3 }];
+    }
+}
+
 export class DropDown {
-    constructor(private attrs) { }
+    constructor(private attrs: { dataSource: DataSource }) { }
 
     private expanded: boolean = false;
-    private selected: string = "Default Value";
+    private value: string = "(none)";
 
     private onToggle = () => {
         this.expanded = !this.expanded;
     }
 
-    private selectItem(event, item) {
+    private selectItem(event: Event, item) {
         event.preventDefault();
-        this.selected = item;
+        this.value = item;
         this.expanded = false;
     }
 
     view() {
         return (
-            <div>
-                <label className="form-check-label">Company</label>
-                <div className={["btn-group", expr("expanded -> ' show'")]}>
+            <div style="position: relative">
+                <div>{expr("value")}</div>
+                <div className={[expr("expanded -> ' show'")]}>
                     <button className="btn btn-secondary btn-sm dropdown-toggle"
                         onClick={this.onToggle}
-                        type="button" aria-haspopup="true" aria-expanded={expr("expanded")}>{expr("selected")}</button>
+                        type="button" aria-haspopup="true" aria-expanded={expr("expanded")}>{expr("value")}</button>
                     <div className="dropdown-menu">
-                        <a className="dropdown-item" href="" onClick={expr("selectItem event 'Xania'")}>Xania Software</a>
-                        <a className="dropdown-item" href="" onClick={expr("selectItem event 'Rider International'")}>Rider Internation</a>
-                        <div className="dropdown-divider"></div>
-                        <a className="dropdown-item" href="" onClick={expr("selectItem event 'Darwin Recruitement'")}>Darwin Recruitement</a>
+                        <List source={this.attrs.dataSource.read()}>
+                            <a className="dropdown-item" href=""
+                                onClick={expr("selectItem event value")}>
+                                {expr("display")}
+                            </a>
+                        </List>
                     </div>
                 </div>
             </div>

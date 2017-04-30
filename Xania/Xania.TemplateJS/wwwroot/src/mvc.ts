@@ -5,7 +5,7 @@ import Dom from './dom'
 export class UrlHelper {
     public observers = [];
 
-    constructor(public router: Router, private basePath = "/") {
+    constructor(public router: Router, public basePath = "/") {
     }
 
     action(path: string);
@@ -26,6 +26,10 @@ export class UrlHelper {
         if (typeof action.path === "string") {
             window.history.pushState(action, "", action.path);
         }
+    }
+
+    toString() {
+        return this.basePath;
     }
 }
 
