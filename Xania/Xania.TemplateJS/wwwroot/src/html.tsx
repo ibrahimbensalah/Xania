@@ -1,26 +1,24 @@
-﻿import xania, { mount, expr, Repeat, List, Template, Reactive } from "./xania";
+﻿import xania, { mount, expr, With, Repeat, List, Template, Reactive } from "./xania";
 import { IDriver } from "./template";
 
 export function TextEditor(attrs: { display; field; placeholder?; }) {
     var id = Math.random();
-    return xania.tag("div",
-        Object.assign({ "class": "form-group" }, attrs),
-        [
-            <label for={id}>{attrs.display}</label>,
+    return (
+        <div className="form-group" {...attrs}>
+            <label for={id}>{attrs.display}</label>
             <input class="form-control" id={id} type="text" placeholder={attrs.placeholder || attrs.display} name={attrs.field} />
-        ]
+        </div>
     );
 }
 
 export function BooleanEditor(attrs) {
     var id = Math.random();
-    return xania.tag("div",
-        Object.assign({ "class": "form-check" }, attrs),
-        [
+    return (
+        <div className="form-check" {...attrs}>
             <label className="form-check-label" htmlFor={id}>
                 <input className="form-check-input" id={id} type="checkbox" checked={expr(attrs.field)} /> {attrs.display}
             </label>
-        ]
+        </div>
     );
 }
 
@@ -30,17 +28,17 @@ export class Select {
     private value: string = null;
     private options = [];
 
-    view() {
-        var id = Math.floor(new Date().getTime() + Math.random() * 10000) % 10000000;
-        var onChange = event => {
-            var target = event.target;
+    private onChange = event => {
+        var target = event.target;
+        return this.attrs.onChange(target.value);
+    };
 
-            return this.attrs.onChange(target.value);
-        };
+    view() {
+        const id = Math.floor(new Date().getTime() + Math.random() * 10000) % 10000000;
         return (
             <div className="form-group" >
                 <label htmlFor={id}>{this.attrs.display}</label>
-                <select className="form-control" id={id} onChange={onChange}>
+                <select className="form-control" id={id} onChange={this.onChange}>
                     <option></option>
                     <Repeat source={expr("for option in options")}>
                         <option selected={expr("option.value = value -> 'selected'")} value={expr("option.value")}>{expr("option.text")}</option>
@@ -54,40 +52,52 @@ export class Select {
 
 
 export class DataSource {
+    public selected = "asdfasd";
+
     read() {
         return [{ display: "Xania", value: 1 }, { display: "Rider International", value: 2 }, { display: "Darwin Recruitment", value: 3 }];
     }
+
 }
 
 export class DropDown {
-    constructor(private attrs: { dataSource: DataSource }) { }
+    private data: any[];
+    constructor(private attrs: { dataSource: DataSource }, private children) {
+    }
 
     private expanded: boolean = false;
-    private value: string = "(none)";
+    private value: any = null;
 
     private onToggle = () => {
         this.expanded = !this.expanded;
     }
 
-    private selectItem(event: Event, item) {
+    private selectItem(event: Event, value) {
         event.preventDefault();
-        this.value = item;
+
+        var { data } = this;
+        var i = data.length;
+        while (i--) {
+            if (data[i].value === value) {
+                this.value = data[i];
+            }
+        }
+
         this.expanded = false;
     }
 
     view() {
         return (
             <div style="position: relative">
-                <div>{expr("value")}</div>
                 <div className={[expr("expanded -> ' show'")]}>
-                    <button className="btn btn-secondary btn-sm dropdown-toggle"
-                        onClick={this.onToggle}
-                        type="button" aria-haspopup="true" aria-expanded={expr("expanded")}>{expr("value")}</button>
+                    <button className="btn btn-secondary btn-sm dropdown-toggle" onClick={this.onToggle}
+                        type="button" aria-haspopup="true" aria-expanded={expr("expanded")}>
+                        <With object={expr("value")}>{this.children}</With>
+                    </button>
                     <div className="dropdown-menu">
-                        <List source={this.attrs.dataSource.read()}>
-                            <a className="dropdown-item" href=""
-                                onClick={expr("selectItem event value")}>
-                                {expr("display")}
+                        <List source={this.data = this.attrs.dataSource.read()}>
+                            <a className="dropdown-item" href="" onClick={expr("selectItem event value")}>
+                                { this.children }
                             </a>
                         </List>
                     </div>

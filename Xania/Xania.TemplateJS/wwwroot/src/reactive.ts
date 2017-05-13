@@ -315,40 +315,6 @@ export module Reactive {
         }
     }
 
-    export class Extension {
-
-        constructor(private parent?: { get(name: string); refresh(); }) {
-        }
-
-        set(name: string, value: Value): this {
-            this[name] = value;
-            return this;
-        }
-
-        get(name: string) {
-            var value = this[name];
-
-            if (value === null)
-                return null;
-
-            if (value === void 0) {
-                if (this.parent)
-                    return this.parent.get(name);
-
-                return value;
-            }
-
-            if (value.valueOf() === void 0)
-                return void 0;
-
-            return value;
-        }
-
-        refresh() {
-            this.parent.refresh();
-        }
-    }
-
     export interface IDispatcher {
         dispatch(action: IAction);
     }

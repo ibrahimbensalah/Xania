@@ -300,21 +300,21 @@ export module Dom {
         evaluate(expr, context) {
             if (typeof expr === "function")
                 return expr(event, this.context);
-            return expr.execute(this,
-                [
-                    context || {},
-                    { value: event },
-                    { event: event },
-                    { node: event.target }
-                ]);
+
+
+
+            return expr.execute(this, context);
         }
 
         fire(event, context = this.context) {
 
+            var eventContext = context ? [context] : [];
+            eventContext.push({ value: event, event, node: event.target });
+
             if (Array.isArray(this.expr))
-                this.expr.map(x => this.evaluate(x, context));
+                this.expr.map(x => this.evaluate(x, eventContext));
             else
-                this.evaluate(this.expr, context);
+                this.evaluate(this.expr, eventContext);
 
             if (context && context.refresh)
                 context.refresh();

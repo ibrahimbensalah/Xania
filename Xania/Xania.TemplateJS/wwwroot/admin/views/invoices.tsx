@@ -1,5 +1,5 @@
 ﻿import xania, { expr, ModelRepository, Reactive as Re } from "../../src/xania"
-import { View, IViewContext } from "../../src/mvc"
+import { View, IViewContext, UrlHelper } from "../../src/mvc"
 import DataGrid, { TextColumn } from "../../src/data/datagrid"
 import Html, { DataSource } from '../../src/html'
 import './invoices.css'
@@ -36,7 +36,7 @@ class InvoiceRepository extends ModelRepository {
     }
 }
 
-export function view({ url }: IViewContext) {
+export function view({ url }: { url: UrlHelper}) {
     var controller = new InvoiceRepository();
     var store = new Re.Store(controller);
 
@@ -57,12 +57,10 @@ export function view({ url }: IViewContext) {
         );
     }
 
+    var descriptionTpl = <span><span className="invoice-number">{expr("row.invoiceNumber")}</span>{expr("row.description")}</span>;
     return View([
         <DataGrid data={expr("await dataSource")} onSelectionChanged={onSelectRow}>
-            <TextColumn field="description" template={<span><span className="invoice-number">{expr(
-                "row.invoiceNumber")
-            }</span>{expr(
-                "row.description")}</span>} display="Description" />
+            <TextColumn field="description" template={descriptionTpl} display="Description" />
             <TextColumn field="invoiceDate" display="Invoice Date" />
             <TextColumn field="status" template={statusTemplate()} display="Status" />
         </DataGrid>,
@@ -81,23 +79,18 @@ export function view({ url }: IViewContext) {
 }
 
 function invoiceView({ url }, invoiceId) {
-    var store = new Re.Store({ invoiceNumber: invoiceId, companyId: 1 });
     var companyDs = new DataSource();
+    var store = new Re.Store({ invoiceNumber: invoiceId, company: { display: "default" }, companyDs });
     return View(
         <div className="row no-gutters">
             <form>
-                {Html.TextEditor({ display: "Number", field: "invoiceNumber" })}
-                {Html.TextEditor({ display: "Email", field: "Email", placeholder: "abdellah@morocco.nr1" })}
-                <Html.DropDown dataSource={companyDs} />
+                <Html.TextEditor display="Number" field="invoiceNumber" placeholder="invoice number" />
+                <Html.TextEditor display="Email" field="Email" placeholder="abdellah@morocco.nr1" />
+                <Html.DropDown dataSource={companyDs} value={expr("company")} >
+                    {expr("display")}
+                </Html.DropDown>
+                <div>selected: {expr("company.display")}</div>
             </form>
-            <div className="input-group col-6">
-                <span className="input-group-addon" id="basic-addon3">https://example.com/users/</span>
-                <input type="text" className="form-control" id="basic-url" aria-describedby="basic-addon3" />
-            </div>
-            <div className="input-group col-6">
-                <span className="input-group-addon" id="basic-addon3">https://example.com/users/</span>
-                <input type="text" className="form-control" id="basic-url" aria-describedby="basic-addon3" />
-            </div>
             <div>Date</div>
             <div>Description</div>
             <div>Company</div>
@@ -105,6 +98,7 @@ function invoiceView({ url }, invoiceId) {
                 <header>line numbers</header>
             </div>
         </div>,
-        store
-    );
+        store);
 }
+
+

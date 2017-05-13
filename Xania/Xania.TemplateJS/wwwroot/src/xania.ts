@@ -133,11 +133,22 @@ class ComponentBinding extends Reactive.Binding {
 
     constructor(private component, private props: any, driver) {
         super(driver);
-        this.childBindings = [component.view(Xania).bind(driver)];
+        var view = component.view(Xania).bind(driver);
+        this.childBindings = Array.isArray(view) ? [] : [view];
+    }
+
+    get(name: string) {
+        let { props } = this;
+        if (props.hasOwnProperty(name)) {
+            var expr = props[name];
+            return expr.execute ? expr.execute(this, this.context) : expr;
+        } else {
+            return this.componentStore.get(name);
+        }
     }
 
     updateChildren(context) {
-        super.updateChildren(this.componentStore);
+        super.updateChildren(this);
     }
 
     render(context) {
@@ -152,6 +163,7 @@ class ComponentBinding extends Reactive.Binding {
             }
         }
         this.componentStore.refresh();
+        context.refresh();
     }
 
     dispose() {
@@ -245,7 +257,8 @@ export class WithBinding extends Reactive.Binding {
     }
 
     get(name: string) {
-        return this.object.get(name);
+        var target = this.object;
+        return target.get ? target.get(name) : target[name];
     }
 
     refresh() {
@@ -351,7 +364,7 @@ class ListBinding extends Reactive.Binding {
                 childBinding = new FragmentBinding(this, void 0, this.children);
                 childBindings.push(childBinding);
             }
-            childBinding.update([item, context]);
+            childBinding.update(new Scope([item, context]));
             mount(childBinding);
             i++;
         }

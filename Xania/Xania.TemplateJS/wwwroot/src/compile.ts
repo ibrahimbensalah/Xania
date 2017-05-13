@@ -52,7 +52,7 @@ class Expression {
     execute(binding: IAstVisitor, contexts: any) {
         var { stack } = this;
 
-        var context = Array.isArray(contexts) ? new Scope(binding, contexts) : contexts;
+        var context = Array.isArray(contexts) ? new Scope(contexts) : contexts;
 
         let idx = stack.length;
         while (idx--) {
@@ -99,7 +99,7 @@ class Expression {
                             var result = [];
                             for (var i = 0; i < length; i++) {
                                 var item = binding.member(source, i);
-                                var scope = new Scope(binding, [item, context]);
+                                var scope = new Scope([item, context]);
                                 var b = ast.right.compiled.execute(binding, scope);
                                 if (b)
                                     result.push(item);
@@ -272,19 +272,27 @@ export function parse(expr) {
 }
 
 export class Scope {
-    constructor(private visitor: IAstVisitor, private contexts: any[]) {
+    constructor(private contexts: any[]) {
     }
 
     get(name: string) {
-        var visitor = this.visitor;
-        var contexts = this.contexts;
-        for (var i = 0; i < this.contexts.length; i++) {
-            var value = visitor.member(contexts[i], name);
+        var contexts = this.contexts, length = contexts.length, i = 0;
+        do {
+            var target = this.contexts[i];
+            var value = target.get ? target.get(name) : target[name];
             if (value !== void 0)
                 return value;
-        }
-
+        } while (++i < length)
         return void 0;
+    }
+
+    refresh() {
+        var contexts = this.contexts, i = contexts.length;
+        while (i--) {
+            var ctx = contexts[i];
+            if (ctx.refresh)
+                ctx.refresh();
+        }
     }
 }
 
