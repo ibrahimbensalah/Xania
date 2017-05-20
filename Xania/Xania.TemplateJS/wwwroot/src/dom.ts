@@ -78,6 +78,7 @@ export module Dom {
                             var ev = events[e];
                             if (ev.dom === event.target && ev.eventName === eventName) {
                                 ev.eventBinding.fire(event);
+                                event.preventDefault();
                                 break;
                             }
                         }

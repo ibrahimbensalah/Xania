@@ -87,6 +87,9 @@ class Expression {
                         case "->":
                             source = ast.left.value;
 
+                            if (source === null)
+                                return null;
+
                             if (source === void 0 || !source.valueOf())
                                 return void 0;
 

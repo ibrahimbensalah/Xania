@@ -55,7 +55,7 @@ export class DataSource {
     public selected = "asdfasd";
 
     read() {
-        return [{ display: "Xania", value: 1 }, { display: "Rider International", value: 2 }, { display: "Darwin Recruitment", value: 3 }];
+        return [{ display: "Xania", id: 1 }, { display: "Rider International", id: 2 }, { display: "Darwin Recruitment", id: 3 }];
     }
 
 }
@@ -72,18 +72,15 @@ export class DropDown {
         this.expanded = !this.expanded;
     }
 
-    private selectItem(event: Event, value) {
-        event.preventDefault();
-
+    private selectItem(value) {
         var { data } = this;
+        this.expanded = false;
         var i = data.length;
         while (i--) {
-            if (data[i].value === value) {
-                this.value = data[i];
+            if (data[i].id === value) {
+                return data[i];
             }
         }
-
-        this.expanded = false;
     }
 
     view() {
@@ -96,7 +93,7 @@ export class DropDown {
                     </button>
                     <div className="dropdown-menu">
                         <List source={this.data = this.attrs.dataSource.read()}>
-                            <a className="dropdown-item" href="" onClick={expr("selectItem event value")}>
+                            <a className="dropdown-item" href="" onClick={expr("value <- selectItem id")}>
                                 { this.children }
                             </a>
                         </List>

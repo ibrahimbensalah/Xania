@@ -290,6 +290,10 @@ export module Reactive {
         indexOf(item) {
             return this.current.indexOf(item);
         }
+
+        toString() {
+            return this.current;
+        }
     }
 
     export class AwaitedPromise extends Awaited {
@@ -461,11 +465,14 @@ export module Reactive {
 
         public abstract render?(context, driver): any;
         dispose() {
-            var { childBindings } = this, i = childBindings.length;
-            while (i--) {
-                childBindings[i].dispose();
+            var { childBindings } = this;
+            if (childBindings && Array.isArray(childBindings)) {
+                var i = childBindings.length || 0;
+                while (i--) {
+                    childBindings[i].dispose();
+                }
+                childBindings.length = 0;
             }
-            childBindings.length = 0;
         }
 
 
@@ -502,7 +509,9 @@ export module Reactive {
             if (value === null || value === void 0)
                 return value;
 
-            return value.variable(name, this.context);
+            if (value.variable)
+                return value.variable(name, this.context);
+            return new Variable(name, value, this.context);
         }
 
         member(target: { get(name: string) }, name) {

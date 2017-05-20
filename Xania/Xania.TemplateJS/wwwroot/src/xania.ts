@@ -147,7 +147,7 @@ class ComponentBinding extends Reactive.Binding {
         }
     }
 
-    updateChildren(context) {
+    updateChildren() {
         super.updateChildren(this);
     }
 
@@ -162,22 +162,8 @@ class ComponentBinding extends Reactive.Binding {
                 }
             }
         }
-        this.componentStore.refresh();
-        context.refresh();
+        this.refresh();
     }
-
-    dispose() {
-        var { childBindings } = this;
-        if (childBindings) {
-            var i = childBindings.length || 0;
-            while (i--) {
-                var child: any = childBindings[i];
-                child.dispose();
-            }
-        }
-        // this.binding.dispose();
-    }
-
 
     insert(binding, dom, idx) {
         var offset = 0,
@@ -188,6 +174,12 @@ class ComponentBinding extends Reactive.Binding {
             offset += this.childBindings[i].length;
         }
         this.driver.insert(this, dom, offset + idx);
+    }
+
+    refresh() {
+        this.componentStore.refresh();
+        if (this.context)
+            this.context.refresh();
     }
 }
 

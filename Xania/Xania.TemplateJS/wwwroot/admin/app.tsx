@@ -22,7 +22,7 @@ interface IAppAction {
 }
 
 var actions: IAppAction[] = [
-    { path: "timesheet", display: "Timesheet", icon: "icon-puzzle" },
+    { path: "clock", display: "Clock", icon: "icon-puzzle" },
     { path: "invoices", display: "Invoices" },
     { path: "companies", display: "Companies" },
     { path: "users", display: "Users" },
@@ -46,12 +46,12 @@ export function index() {
     return View(<div>index</div>);
 }
 
-export function timesheet() {
+export function clock() {
     var time = new Observables.Time();
     var toggleTime = () => {
         time.toggle();
     };
-    return View(<div>timesheet {expr("await time")}
+    return View(<div>Clock {expr("await time")}
         <button onClick={toggleTime}>toggle time</button>
         <ClockApp time={expr("await time")} />
     </div>, new Re.Store({ time }));

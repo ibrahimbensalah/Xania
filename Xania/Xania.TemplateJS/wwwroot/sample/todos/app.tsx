@@ -22,10 +22,6 @@ export default class TodoApp {
         this.store.toggleAll();
     }
 
-    onShow = (value) => {
-        this.show = value;
-    }
-
     onResetEditing = (event) => {
         if (event.keyCode === 13)
             this.editingTodo = null;
@@ -63,11 +59,11 @@ export default class TodoApp {
                     <span className="todo-count"><strong>{expr("store.todos where not completed |> count")}</strong> item(s) left</span>
                     <ul className="filters">
                         <li><a href="#" className={expr("show = 'all' -> 'selected'")}
-                            onClick={this.onShow.bind(this, 'all')}>All</a></li>
+                            onClick={expr("show <- 'all'")}>All</a></li>
                         <li><a href="#" className={expr("show = 'active' -> 'selected'")}
-                            onClick={this.onShow.bind(this, 'active')}>Active</a></li>
+                            onClick={expr("show <- 'active'")}>Active</a></li>
                         <li><a href="#" className={expr("show = 'completed' -> 'selected'")}
-                            onClick={this.onShow.bind(this, 'completed')}>Completed</a></li>
+                            onClick={expr("show <- 'completed'")}>Completed</a></li>
                     </ul >
                     <button className={["clear-completed", expr("all active todos -> ' hidden'")]}
                         onClick={() => this.store.removeCompleted()}>Clear completed</button>

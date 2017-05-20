@@ -98,7 +98,8 @@ function invoiceView({ url }, invoiceId) {
                 <header>line numbers</header>
             </div>
         </div>,
-        store);
+        store
+    );
 }
 
 
