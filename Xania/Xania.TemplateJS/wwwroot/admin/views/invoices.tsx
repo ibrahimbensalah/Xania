@@ -79,17 +79,16 @@ export function view({ url }: { url: UrlHelper}) {
 }
 
 function invoiceView({ url }, invoiceId) {
-    var companyDs = new DataSource();
-    var store = new Re.Store({ invoiceNumber: invoiceId, company: { display: "default" }, companyDs });
+    var store = new Re.Store({ invoiceNumber: invoiceId, companyId: 1 });
     return View(
         <div className="row no-gutters">
             <form>
                 <Html.TextEditor display="Number" field="invoiceNumber" placeholder="invoice number" />
                 <Html.TextEditor display="Email" field="Email" placeholder="abdellah@morocco.nr1" />
-                <Html.DropDown dataSource={companyDs} value={expr("company")} >
+                <Html.DropDown dataSource={new DataSource()} value={expr("companyId")} >
                     {expr("display")}
                 </Html.DropDown>
-                <div>selected: {expr("company.display")}</div>
+                <div>selected: {expr("companyId")}</div>
             </form>
             <div>Date</div>
             <div>Description</div>

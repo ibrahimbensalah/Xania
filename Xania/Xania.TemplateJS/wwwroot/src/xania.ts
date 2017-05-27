@@ -237,7 +237,7 @@ export class WithBinding extends Reactive.Binding {
                 });
             } else {
                 while (i--) {
-                    childBindings[i].update(this);
+                    mount(childBindings[i]);
                 }
             }
         } else {

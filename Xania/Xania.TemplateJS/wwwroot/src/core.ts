@@ -125,21 +125,6 @@
         return resolve.call(resolve, data);
     }
 
-    //export function forEach2(data, resolve) {
-    //    if (data === void 0)
-    //        throw new Error("undefined");
-    //    if (data === null)
-    //        return resolve(null);
-
-    //    if (!!data.forEach)
-    //        return data.forEach(resolve);
-
-    //    if (!!data.then)
-    //        return data.then(d => forEach2(d, resolve));
-
-    //    return resolve(data);
-    //}
-
     export function compose(...fns: any[]): Function {
         return function (result) {
             for (var i = fns.length - 1; i > -1; i--) {

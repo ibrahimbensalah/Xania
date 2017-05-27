@@ -52,8 +52,6 @@ export class Select {
 
 
 export class DataSource {
-    public selected = "asdfasd";
-
     read() {
         return [{ display: "Xania", id: 1 }, { display: "Rider International", id: 2 }, { display: "Darwin Recruitment", id: 3 }];
     }
@@ -62,6 +60,7 @@ export class DataSource {
 
 export class DropDown {
     private data: any[];
+
     constructor(private attrs: { dataSource: DataSource }, private children) {
     }
 
@@ -78,21 +77,23 @@ export class DropDown {
         var i = data.length;
         while (i--) {
             if (data[i].id === value) {
-                return data[i];
+                return value;
             }
         }
+        return undefined;
     }
 
     view() {
+        this.data = this.attrs.dataSource.read();
         return (
             <div style="position: relative">
                 <div className={[expr("expanded -> ' show'")]}>
                     <button className="btn btn-secondary btn-sm dropdown-toggle" onClick={this.onToggle}
                         type="button" aria-haspopup="true" aria-expanded={expr("expanded")}>
-                        <With object={expr("value")}>{this.children}</With>
+                        <With object={expr("data where id = value |> single")}>{this.children}</With>
                     </button>
                     <div className="dropdown-menu">
-                        <List source={this.data = this.attrs.dataSource.read()}>
+                        <List source={this.data}>
                             <a className="dropdown-item" href="" onClick={expr("value <- selectItem id")}>
                                 { this.children }
                             </a>

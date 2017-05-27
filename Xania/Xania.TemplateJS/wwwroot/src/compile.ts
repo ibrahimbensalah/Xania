@@ -17,6 +17,10 @@ function empty(list) {
     return list.length === 0;
 }
 
+function single(list) {
+    return list[0];
+}
+
 function not(value) {
     return !value;
 }
@@ -172,6 +176,10 @@ class Expression {
                         case "empty":
                             ast.type = CONST;
                             ast.value = empty;
+                            break;
+                        case "single":
+                            ast.type = CONST;
+                            ast.value = single;
                             break;
                         case "count":
                             ast.type = CONST;

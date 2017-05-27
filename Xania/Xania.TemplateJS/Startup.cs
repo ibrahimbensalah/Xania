@@ -37,9 +37,9 @@ namespace Xania.TemplateJS
             services.AddSingleton<IObjectStore<Company>>(new TransientObjectStore<Company>());
             services.AddSingleton<IObjectStore<Invoice>>(new TransientObjectStore<Invoice>()
             {
-                new Invoice {Description = "invoice 1", InvoiceNumber = "201701"},
-                new Invoice {Description = "invoice 2", InvoiceNumber = "201702", InvoiceDate = DateTime.Now},
-                new Invoice {Description = "invoice 3", InvoiceNumber = "201703", InvoiceDate = DateTime.Now}
+                new Invoice {Description = "invoice 1", InvoiceNumber = "201701", CompanyId = 1 },
+                new Invoice {Description = "invoice 2", InvoiceNumber = "201702", CompanyId = 2, InvoiceDate = DateTime.Now},
+                new Invoice {Description = "invoice 3", InvoiceNumber = "201703", CompanyId = 3, InvoiceDate = DateTime.Now}
             });
         }
         public IConfigurationRoot Configuration { get; }
