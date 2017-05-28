@@ -91,13 +91,13 @@ class ControllerContext {
 }
 
 interface IRoute {
-    execute(context, args: any[]): ViewResult;
+    execute(context, args: any[]): ViewResult | Promise<ViewResult>;
 }
 
 declare type Matcher = string | ((str: string) => any);
 
 class ActionRoute implements IRoute {
-    constructor(public matcher: Matcher, private action: (context, args: any[]) => ViewResult) { }
+    constructor(public matcher: Matcher, private action: (context, args: any[]) => ViewResult | Promise<ViewResult>) { }
 
     execute(context, args: any[]) {
         return this.action(context, args);
@@ -128,13 +128,14 @@ export class ViewResult {
         return this;
     }
 
-    mapRoute(matcher: Matcher, handler: (context: IViewContext, args: any[]) => ViewResult) {
+    mapRoute(matcher: Matcher, handler: (context: IViewContext, args: any[]) => ViewResult | Promise<ViewResult>) {
         this.routes.push(new ActionRoute(matcher, handler));
         return this;
     }
 
-    get(path: string, viewContext: IViewContext): ViewResult {
+    get(path: string, viewContext: IViewContext): ViewResult | Promise<ViewResult> {
         var { routes } = this, i = routes.length;
+        debugger;
 
         while (i--) {
             var route = routes[i];

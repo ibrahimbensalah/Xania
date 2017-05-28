@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Xania.DataAccess;
@@ -21,6 +22,12 @@ namespace Xania.TemplateJS.Controllers
         {
             await _invoices.SaveAsync(x => x.Id == invoice.Id, invoice);
             return null;
+        }
+
+        [HttpPost, Route("{invoiceId:guid}")]
+        public Invoice Get(Guid invoiceId)
+        {
+            return _invoices.SingleOrDefault(e => e.Id == invoiceId);
         }
 
         [HttpPost]

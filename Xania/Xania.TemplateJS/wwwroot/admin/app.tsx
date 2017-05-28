@@ -22,7 +22,7 @@ interface IAppAction {
 }
 
 var actions: IAppAction[] = [
-    { path: "clock", display: "Clock", icon: "icon-puzzle" },
+    { path: "clock", display: "Clock", icon: "icon-clock" },
     { path: "invoices", display: "Invoices" },
     { path: "companies", display: "Companies" },
     { path: "users", display: "Users" },

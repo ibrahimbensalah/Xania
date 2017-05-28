@@ -78,27 +78,43 @@ export function view({ url }: { url: UrlHelper}) {
     }
 }
 
+declare function fetch<T>(url: string, config?): Promise<T>;
+
 function invoiceView({ url }, invoiceId) {
-    var store = new Re.Store({ invoiceNumber: invoiceId, companyId: 1 });
-    return View(
-        <div className="row no-gutters">
-            <form>
-                <Html.TextEditor display="Number" field="invoiceNumber" placeholder="invoice number" />
-                <Html.TextEditor display="Email" field="Email" placeholder="abdellah@morocco.nr1" />
-                <Html.DropDown dataSource={new DataSource()} value={expr("companyId")} >
-                    {expr("display")}
-                </Html.DropDown>
-                <div>selected: {expr("companyId")}</div>
-            </form>
-            <div>Date</div>
-            <div>Description</div>
-            <div>Company</div>
-            <div>
-                <header>line numbers</header>
-            </div>
-        </div>,
-        store
-    );
+    var config = {
+        method: "POST",
+        headers: {
+            'Content-Type': "application/json"
+        }
+    };
+
+    return fetch("/api/invoice/" + invoiceId, config)
+        .then((response: any) => {
+            return response.json();
+        })
+        .then(data => {
+            var store = new Re.Store(data);
+
+            return View(
+                <div className="row no-gutters">
+                    <form>
+                        <Html.TextEditor display="Number" field="invoiceNumber" placeholder="invoice number" />
+                        <Html.TextEditor display="Email" field="Email" placeholder="abdellah@morocco.nr1" />
+                        <Html.DropDown dataSource={new DataSource()} value={expr("companyId")} >
+                            {expr("display")}
+                        </Html.DropDown>
+                        <div>selected: {expr("companyId")}</div>
+                    </form>
+                    <div>Date</div>
+                    <div>Description</div>
+                    <div>Company</div>
+                    <div>
+                        <header>line numbers</header>
+                    </div>
+                </div>,
+                store
+            );
+        });
 }
 
 
