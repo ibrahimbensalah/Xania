@@ -1,10 +1,4 @@
-﻿/*
- * Simple Arithmetics Grammar
- * ==========================
- *
- * Accepts expressions like "2 * (3 + 4)" and computes their value.
- */
-{
+﻿{
 	function plus(x, y) {
 		return y + x;
 	}
@@ -23,6 +17,24 @@
 
 	function or(x, y) {
 		return y || x;
+	}
+
+	function pipe1(x, y) {
+		return x(y);
+	}
+
+	function lazy(expressions) {
+		return { 
+			type: LAZY, 
+			bind: function(compile) {
+				var compiled = expressions.map(compile);
+				return function(binding, contexts) {
+					return function(b) {
+						return b ? compiled[0].execute(binding, contexts) : compiled[1].execute(binding, contexts);
+					}
+				}
+			}
+		}
 	}
 
 	var binaryReducer = function (prev, binder) { 
@@ -44,6 +56,7 @@
 	var PIPE = 11;
 	var COMPOSE = 12;
 	var LAMBDA = 13;
+	var LAZY = 14;
 }
 
 Program
@@ -82,7 +95,7 @@ SelectExpression
   = "select" _ selector:AdditiveExpression { return selector }
 
 PipeExpression
-  = head:EquilityExpression pipes:( _ PipeBinder )* rules:( _ RuleBinder )* {
+  = head:BooleanExpression pipes:( _ PipeBinder )* rules:( _ RuleBinder )* {
 	return rules.reduce(binaryReducer, pipes.reduce(binaryReducer, head));
   }
 
@@ -96,20 +109,23 @@ PipeBinder
      return { op: PIPE, operand }
   }
 
-EquilityExpression
-  = head:AdditiveExpression binders:( _ EquilityBinder )* {
+BooleanExpression
+  = head:AdditiveExpression binders:( _ BooleanBinder )* {
 	return binders.reduce(binaryReducer, head);
   }
 
-EquilityBinder
-  = op:"=" _ expr:MultiplicativeExpression {
+BooleanBinder
+  = op:("=" / "equals") _ expr:MultiplicativeExpression {
 	return { op: equal, operand: expr };
   }
-  / op:"or" _ expr:MultiplicativeExpression {
+  / op:("or" / "||") _ expr:MultiplicativeExpression {
 	return { op: or, operand: expr };
   }
-  / op:"and" _ expr:MultiplicativeExpression {
+  / op:("and" / "&&") _ expr:MultiplicativeExpression {
 	return { op: and, operand: expr };
+  }
+  / op:"?" _ trueExpr:Expression _ ":" _ falseExpr:Expression {
+	return { op: pipe1, operand: lazy([trueExpr, falseExpr]) };
   }
 
 AdditiveExpression
@@ -147,7 +163,7 @@ MultiplicativeBinder
   = op:([\*]) _ operand:(Term / MultiplicativeExpression) {
 	return { op, operand } 
   }
-  / "where" _ operand:EquilityExpression {
+  / "where" _ operand:BooleanExpression {
 	return { op: WHERE, operand } 
   }
 
@@ -179,7 +195,7 @@ ApplicativeExpression
   }
 
 FilterBinder
-  = "where" _ filter:EquilityExpression {
+  = "where" _ filter:BooleanExpression {
 	 return { op: WHERE, operand: filter }
   }
 
@@ -197,7 +213,7 @@ Application
 	}
   
 Keyword
-  = ("select" / "where" / "await" / "or" / "and") & [ \r\n\b]
+  = ("select" / "where" / "await" / "or" / "and" / "equals" / "is" ) & [ \r\n\b]
 
 Identifier
   = !Keyword name:IdentifierName members:( "." IdentifierName)* assign:( _ "<-" _ AdditiveExpression )? {

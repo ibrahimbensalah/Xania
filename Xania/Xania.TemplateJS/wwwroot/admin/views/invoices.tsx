@@ -50,10 +50,9 @@ export function view({ url }: { url: UrlHelper }) {
     }
 
     function statusTemplate() {
-        var success = expr("row.invoiceDate ? 'success' : 'default'");
-        var pending = expr("not row.invoiceDate -> 'default'");
+        var badge = expr("row.invoiceDate ? 'success' : 'default'");
         return (
-            <span className={["badge badge-", success, pending]}>{[success, pending]}</span>
+            <span className={["badge badge-", badge]}>{[badge]}</span>
         );
     }
 

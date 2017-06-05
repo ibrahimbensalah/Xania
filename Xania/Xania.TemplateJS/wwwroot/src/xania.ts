@@ -1,6 +1,7 @@
 ﻿import { Template, IDriver } from "./template"
 import { Dom } from "./dom"
-import compile, { Scope, parse } from "./compile"
+import { Scope } from "./expression"
+import compile, { parse } from "./compile"
 import { Reactive } from "./reactive"
 
 export default class Xania {
