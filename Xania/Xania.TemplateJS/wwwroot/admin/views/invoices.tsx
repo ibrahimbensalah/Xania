@@ -1,4 +1,4 @@
-﻿import xania, { expr, ModelRepository, Reactive as Re } from "../../src/xania"
+﻿import xania, { expr, Repeat, ModelRepository, Reactive as Re } from "../../src/xania"
 import { View, UrlHelper } from "../../src/mvc"
 import DataGrid, { TextColumn } from "../../src/data/datagrid"
 import Html, { DataSource } from '../../src/html'
@@ -104,24 +104,27 @@ function invoiceView({ url }, invoiceId) {
                 });
 
             return View(
-                <div className="row no-gutters">
-                    <form>
-                        <Html.TextEditor display="Number" field="invoiceNumber" placeholder="invoice number" />
-                        <Html.TextEditor display="Description" field="description" placeholder="July 2017" />
+                <div>
+                    <Html.TextEditor display="Number" field="invoiceNumber" placeholder="invoice number" />
+                    <Html.TextEditor display="Description" field="description" placeholder="July 2017" />
+                    <div>
+                        <label>Company</label>
                         <Html.DropDown dataSource={new DataSource()} value={expr("companyId")} >
                             {expr("display")}
                         </Html.DropDown>
-                        <div>selected: {expr("companyId")}</div>
-                    </form>
-                    <div>[ {expr("invoiceNumber")} ]</div>
-                    <div>Description</div>
-                    <div>Company</div>
-                    <div>
-                        <header>line numbers</header>
                     </div>
-                </div>,
+
+                    <DataGrid data={expr("lines")}>
+                        <TextColumn field="description" display="Description" />
+                        <TextColumn field="hourlyRate" display="Hourly Rate" template={<input type="text" name="row.hourlyRate" /> } />
+                        <TextColumn field="hours" display="hours" />
+                    </DataGrid>
+                </div>
+                ,
                 store
-            );
+            ).mapRoute("lines", (context, args) => {
+                return View(<div>lines</div>);
+            });
         });
 }
 

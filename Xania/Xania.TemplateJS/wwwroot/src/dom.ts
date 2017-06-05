@@ -53,6 +53,22 @@ export module Dom {
                 this.target = target;
         }
 
+
+        findEventBinding(target, eventName) {
+            var events = this.events;
+            while (target) {
+                var e = events.length;
+                while (e--) {
+                    var ev = events[e];
+                    if (ev.dom === target && ev.eventName === eventName) {
+                        return ev.eventBinding;
+                    }
+                }
+                target = target.parentNode;
+            }
+            return null;
+        }
+
         on(eventName, dom, eventBinding) {
             var events = this.events,
                 i = events.length,
@@ -69,18 +85,14 @@ export module Dom {
                     }
                 }
             }
+
             if (!eventBound) {
                 this.target.addEventListener(eventName,
                     event => {
-                        var events = this.events;
-                        var e = events.length;
-                        while (e--) {
-                            var ev = events[e];
-                            if (ev.dom === event.target && ev.eventName === eventName) {
-                                ev.eventBinding.fire(event);
-                                event.preventDefault();
-                                break;
-                            }
+                        var eventBinding = this.findEventBinding(event.target, eventName);
+                        if (eventBinding) {
+                            eventBinding.fire(event);
+                            event.preventDefault();
                         }
                     });
             }

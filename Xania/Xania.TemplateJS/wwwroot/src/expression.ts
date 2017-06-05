@@ -44,6 +44,7 @@ var PIPE = 11;
 var COMPOSE = 12;
 var LAMBDA = 13;
 var LAZY = 14;
+var THIS = 15;
 // ReSharper restore InconsistentNaming
 
 class Range {
@@ -230,6 +231,9 @@ export default class Expression {
                         case "or":
                             ast.type = CONST;
                             ast.value = or;
+                            break;
+                        case "this":
+                            ast.type = THIS;
                             break;
                         default:
                             stack.push(ast);

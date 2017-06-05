@@ -18,9 +18,6 @@
   display: flex;
   cursor: pointer;
 }
-.data-grid-row .data-grid-cell {
-  pointer-events: none;
-}
 .data-grid-row-selected {
   background-color: #20a8d8;
   color: white;
