@@ -135,7 +135,6 @@ export class ViewResult {
 
     get(path: string, viewContext: IViewContext): ViewResult | Promise<ViewResult> {
         var { routes } = this, i = routes.length;
-        debugger;
 
         while (i--) {
             var route = routes[i];

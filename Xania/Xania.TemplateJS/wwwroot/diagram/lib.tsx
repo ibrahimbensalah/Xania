@@ -135,10 +135,10 @@ class DraggableBinding extends Dom.TagBinding {
 
             var x = this.evaluateObject(this.props.x);
             var y = this.evaluateObject(this.props.y);
-            if (typeof x.set === "function")
-                x.set(left);
-            if (typeof y.set === "function")
-                y.set(top);
+            if (typeof x.update === "function")
+                x.update(left);
+            if (typeof y.update === "function")
+                y.update(top);
         }
     }
 

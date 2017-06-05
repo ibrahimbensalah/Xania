@@ -22,7 +22,7 @@ export function view() {
     var store = new Re.Store(new CompanyRepository());
 
     var onSelect = row => {
-        store.get("currentRow").set(row);
+        store.get("currentRow").update(row);
         store.refresh();
     }
 

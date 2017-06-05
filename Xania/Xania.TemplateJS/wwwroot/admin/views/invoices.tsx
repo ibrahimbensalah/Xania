@@ -1,5 +1,5 @@
 ﻿import xania, { expr, ModelRepository, Reactive as Re } from "../../src/xania"
-import { View, IViewContext, UrlHelper } from "../../src/mvc"
+import { View, UrlHelper } from "../../src/mvc"
 import DataGrid, { TextColumn } from "../../src/data/datagrid"
 import Html, { DataSource } from '../../src/html'
 import './invoices.css'
@@ -36,13 +36,13 @@ class InvoiceRepository extends ModelRepository {
     }
 }
 
-export function view({ url }: { url: UrlHelper}) {
+export function view({ url }: { url: UrlHelper }) {
     var controller = new InvoiceRepository();
     var store = new Re.Store(controller);
 
     var onSelectRow = row => {
         if (store.get("currentRow").valueOf() !== row) {
-            store.get("currentRow").set(row);
+            store.get("currentRow").update(row);
             store.refresh();
 
             url.goto(row.id);
@@ -50,7 +50,7 @@ export function view({ url }: { url: UrlHelper}) {
     }
 
     function statusTemplate() {
-        var success = expr("row.invoiceDate -> 'success'");
+        var success = expr("row.invoiceDate ? 'success' : 'default'");
         var pending = expr("not row.invoiceDate -> 'default'");
         return (
             <span className={["badge badge-", success, pending]}>{[success, pending]}</span>
@@ -93,19 +93,28 @@ function invoiceView({ url }, invoiceId) {
             return response.json();
         })
         .then(data => {
-            var store = new Re.Store(data);
+            var store = new Re.Store(data)
+                .onChange(() => {
+                    fetch("/api/invoice/" + invoiceId, {
+                        method: 'PUT',
+                        body: JSON.stringify(data),
+                        headers: new Headers({
+                            'Content-Type': 'application/json'
+                        })
+                    });
+                });
 
             return View(
                 <div className="row no-gutters">
                     <form>
                         <Html.TextEditor display="Number" field="invoiceNumber" placeholder="invoice number" />
-                        <Html.TextEditor display="Email" field="Email" placeholder="abdellah@morocco.nr1" />
+                        <Html.TextEditor display="Description" field="description" placeholder="July 2017" />
                         <Html.DropDown dataSource={new DataSource()} value={expr("companyId")} >
                             {expr("display")}
                         </Html.DropDown>
                         <div>selected: {expr("companyId")}</div>
                     </form>
-                    <div>Date</div>
+                    <div>[ {expr("invoiceNumber")} ]</div>
                     <div>Description</div>
                     <div>Company</div>
                     <div>

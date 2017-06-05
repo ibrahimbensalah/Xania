@@ -21,7 +21,7 @@ export module Reactive {
     abstract class Value {
         public properties: IProperty[] = [];
         public variables: Variable[] = [];
-        public value;
+        public value = undefined;
 
         get(propertyName: string): IProperty {
             var properties = this.properties;
@@ -37,8 +37,9 @@ export module Reactive {
             var propertyValue = this.value,
                 initialValue = propertyValue[propertyName];
 
-            if (initialValue === void 0)
+            if (initialValue === void 0) {
                 return void 0;
+            }
 
             if (typeof initialValue === "function") {
                 return initialValue.bind(propertyValue);
@@ -88,6 +89,10 @@ export module Reactive {
             variables.push(newVar);
             return newVar;
         }
+
+        set(name, value) {
+            this.value[name] = value;
+        }
     }
 
     interface IDependency {
@@ -98,7 +103,7 @@ export module Reactive {
         // list of observers to be dispatched on value change
         private actions: IAction[];
 
-        constructor(protected parent: Value, public name) {
+        constructor(protected parent: { get(name: string): any, set(name: string, value: any)}, public name) {
             super();
         }
 
@@ -140,8 +145,8 @@ export module Reactive {
             return true;
         }
 
-        set(value: any) {
-            this.parent.value[this.name] = value;
+        update(value: any) {
+            this.parent.set(this.name, value);
         }
 
         valueOf() {
@@ -324,6 +329,8 @@ export module Reactive {
     }
 
     export class Store extends Value {
+        private observers: ((property) => void)[] = [];
+
         constructor(value: any, private globals: any = {}) {
             super();
             this.value = value;
@@ -371,25 +378,37 @@ export module Reactive {
                         stack[stackLength++] = child;
 
                         if (changed === true) {
-                            const actions = child.actions;
-                            if (actions) {
-                                dirty[dirtyLength++] = actions;
-                            }
+                            dirty[dirtyLength++] = child;
                         }
                     }
                 };
             }
 
             var j = dirtyLength;
+            var observers = this.observers;
             while (j--) {
-                var actions = dirty[j];
-                // notify next
-                var e = actions.length;
-                while (e--) {
-                    var action = actions[e];
-                    action.execute();
+                var property = dirty[j];
+
+                var n = observers.length;
+                while (n--) {
+                    var observer = observers[n];
+                    observer(property);
+                }
+
+                var actions = property.actions; 
+                if (actions) {
+                    var e = actions.length;
+                    while (e--) {
+                        var action = actions[e];
+                        action.execute();
+                    }
                 }
             }
+        }
+
+        onChange(observer: (property) => void): this {
+            this.observers.push(observer);
+            return this;
         }
 
         toString() {

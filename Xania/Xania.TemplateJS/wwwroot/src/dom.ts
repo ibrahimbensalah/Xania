@@ -147,7 +147,6 @@ export module Dom {
 
         constructor(private expr, driver: IDriver) {
             super(driver);
-            this.textNode = (<any>document).createTextNode("");
         }
 
         dispose() {
@@ -159,8 +158,12 @@ export module Dom {
             if (newValue !== this.oldValue) {
                 this.oldValue = newValue;
                 var textNode = this.textNode;
-                textNode.nodeValue = newValue;
-                driver.insert(this, textNode, 0);
+                if (!textNode) {
+                    textNode = this.textNode = (<any>document).createTextNode(newValue);
+                    driver.insert(this, textNode, 0);
+                } else {
+                    textNode.nodeValue = newValue;
+                }
             }
         }
     }
@@ -348,11 +351,11 @@ export module Dom {
             if (fun === "assign") {
                 var arg = args[0];
                 if (arg === null)
-                    args[1].set(null);
+                    args[1].update(null);
                 else {
                     // ReSharper disable once QualifiedExpressionMaybeNull
                     arg = arg.valueOf();
-                    args[1].set(arg.valueOf());
+                    args[1].update(arg.valueOf());
                 }
                 return arg;
             }
@@ -383,8 +386,8 @@ export module Dom {
 
         fire() {
             let value = this.evaluateObject(this.expr);
-            if (value && value.set) {
-                value.set(this.tagNode.checked);
+            if (value && value.update) {
+                value.update(this.tagNode.checked);
 
                 if (this.context)
                     this.context.refresh();
@@ -426,8 +429,8 @@ export module Dom {
 
         fire() {
             let value = this.evaluateObject(this.expr);
-            if (value && value.set) {
-                value.set(this.tagNode.value);
+            if (value && value.update) {
+                value.update(this.tagNode.value);
             }
 
             if (this.context)

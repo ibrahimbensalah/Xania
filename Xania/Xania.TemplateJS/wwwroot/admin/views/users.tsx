@@ -24,7 +24,7 @@ var store = new Re.Store(new UserRepository());
 
 var onSelect = row => {
     if (store.get("currentRow").valueOf() !== row) {
-        store.get("currentRow").set(row);
+        store.get("currentRow").update(row);
         store.refresh();
     }
 }

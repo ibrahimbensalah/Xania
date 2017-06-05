@@ -18,10 +18,17 @@ namespace Xania.TemplateJS.Controllers
         }
 
         [HttpPost]
-        public async Task<User> Add([FromBody]Invoice invoice)
+        public async Task<Invoice> Add([FromBody]Invoice invoice)
         {
             await _invoices.SaveAsync(x => x.Id == invoice.Id, invoice);
             return null;
+        }
+
+        [HttpPut, Route("{invoiceId:guid}")]
+        public async Task<Invoice> Update(Guid invoiceId, [FromBody]Invoice invoice)
+        {
+            await _invoices.SaveAsync(x => x.Id == invoiceId, invoice);
+            return invoice;
         }
 
         [HttpPost, Route("{invoiceId:guid}")]
@@ -39,6 +46,7 @@ namespace Xania.TemplateJS.Controllers
                 { "invoices", _invoices }
             });
         }
+
     }
     public class Invoice
     {
