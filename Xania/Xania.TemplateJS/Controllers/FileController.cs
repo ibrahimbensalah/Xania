@@ -119,6 +119,7 @@ namespace Xania.TemplateJS.Controllers
     public class XaniaConfiguration : IXaniaConfiguration
     {
         public string UploadDir { get; set; }
+        public string ReportingEndPoint { get; set; }
     }
 
     public interface IXaniaConfiguration

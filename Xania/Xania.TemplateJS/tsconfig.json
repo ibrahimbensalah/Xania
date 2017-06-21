@@ -1,6 +1,7 @@
 {
   "compileOnSave": true,
   "compilerOptions": {
+    "allowJs": false,
     "lib": [ "dom", "es6" ],
     "module": "commonjs",
     "noEmitOnError": true,
@@ -12,9 +13,10 @@
     "inlineSources": true,
     "target": "es5",
     "types": [ "jasmine" ],
-//    "outDir": "wwwroot",
+    //    "outDir": "wwwroot",
     "jsx": "react",
-    "jsxFactory": "xania.tag"
+    "jsxFactory": "xania.tag",
+    "moduleResolution": "node"
   },
   "include": [
     "wwwroot/src/*.ts",

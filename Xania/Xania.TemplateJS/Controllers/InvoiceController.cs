@@ -4,37 +4,102 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Xania.DataAccess;
+using Xania.TemplateJS.Reporting;
 
 namespace Xania.TemplateJS.Controllers
 {
     [Route("api/[controller]")]
-    public class InvoiceController
+    public class InvoiceController : Controller
     {
-        private readonly IObjectStore<Invoice> _invoices;
+        private readonly IObjectStore<Invoice> _invoiceStore;
+        private readonly IObjectStore<Company> _companyStore;
 
-        public InvoiceController(IObjectStore<Invoice> invoices)
+        public InvoiceController(IObjectStore<Invoice> invoiceStore, IObjectStore<Company> companyStore)
         {
-            _invoices = invoices;
+            _invoiceStore = invoiceStore;
+            _companyStore = companyStore;
+        }
+
+        [HttpGet, Route("{invoiceId:guid}/pdf")]
+        public IActionResult GeneratePDF(Guid invoiceId)
+        {
+            var invoiceData = GetInvoideReportData(invoiceId);
+            var reportContents = new InvoiceReport().Generate(invoiceData);
+            return File(reportContents, "application/pdf");
+        }
+
+        public InvoiceReportDataTO GetInvoideReportData(Guid invoiceId)
+        {
+            var invoice = _invoiceStore.Single(e => e.Id == invoiceId);
+
+            if (invoice.CompanyId == null || invoice.InvoiceDate == null)
+                throw new InvalidOperationException("invoice is not valid");
+
+            var company = _companyStore.Single(e => e.Id == invoice.CompanyId);
+
+            return new InvoiceReportDataTO
+            {
+                Invoice = new InvoiceTO
+                {
+                    ExpirationDate = invoice.InvoiceDate.Value + TimeSpan.FromDays(30),
+                    InvoiceDate = invoice.InvoiceDate.Value,
+                    InvoiceNumber = invoice.InvoiceNumber,
+                    LineItems = from l in invoice.Lines
+                        select new LineItemTO
+                        {
+                            Count = l.Hours,
+                            Description = l.Description,
+                            Tax = 0.21m,
+                            UnitPrice = l.HourlyRate
+                        },
+                    Description = invoice.Description
+                },
+                Company = new CompanyTO
+                {
+                    Id = 1,
+                    LogoImageId = 1,
+                    AddressLines = new[]
+                    {
+                        "t.n.v " + company.Address.FullName + "\n",
+                        company.Name,
+                        string.Join("\r\n", company.Address.Lines.Where(e => e.Type != AddressType.ZipCode).Select(e => e.Value)),
+                        company.Address.Lines.Where(e => e.Type == AddressType.ZipCode).Select(e => e.Value).SingleOrDefault() + ", "+ company.Address.Location,
+                        "Nederland"
+                    },
+                    Name = company.Name
+                },
+                Sender = new SenderTO
+                {
+                    Name = "Xania Software",
+                    BankAccount = "NL61 INGB 0005 8455 00"
+                }
+            };
         }
 
         [HttpPost]
         public async Task<Invoice> Add([FromBody]Invoice invoice)
         {
-            await _invoices.SaveAsync(x => x.Id == invoice.Id, invoice);
+            if (invoice == null)
+                throw new NullReferenceException();
+
+            await _invoiceStore.SaveAsync(x => x.Id == invoice.Id, invoice);
             return null;
         }
 
         [HttpPut, Route("{invoiceId:guid}")]
         public async Task<Invoice> Update(Guid invoiceId, [FromBody]Invoice invoice)
         {
-            await _invoices.SaveAsync(x => x.Id == invoiceId, invoice);
+            if (invoice == null)
+                throw new NullReferenceException();
+
+            await _invoiceStore.SaveAsync(x => x.Id == invoiceId, invoice);
             return invoice;
         }
 
         [HttpPost, Route("{invoiceId:guid}")]
         public Invoice Get(Guid invoiceId)
         {
-            return _invoices.SingleOrDefault(e => e.Id == invoiceId);
+            return _invoiceStore.SingleOrDefault(e => e.Id == invoiceId);
         }
 
         [HttpPost]
@@ -43,33 +108,9 @@ namespace Xania.TemplateJS.Controllers
         {
             return QueryHelper.accept(ast, new Dictionary<string, object>
             {
-                { "invoices", _invoices }
+                { "invoices", _invoiceStore }
             });
         }
 
-    }
-    public class Invoice
-    {
-        public Guid Id { get; set; } = Guid.NewGuid();
-
-        public string InvoiceNumber { get; set; }
-
-        public string Description { get; set; }
-
-        public DateTime? InvoiceDate { get; set; }
-
-        public int? CompanyId { get; set; }
-
-        public HourDeclaration[] Lines { get; set; } = {
-            new HourDeclaration { Description = "Item 1", HourlyRate = 75, Hours = 120 },
-            new HourDeclaration { Description = "Item 2", HourlyRate = 75, Hours = 20 }
-        };
-    }
-
-    public class HourDeclaration
-    {
-        public string Description { get; set; }
-        public decimal HourlyRate { get; set; }
-        public float Hours { get; set; }
     }
 }

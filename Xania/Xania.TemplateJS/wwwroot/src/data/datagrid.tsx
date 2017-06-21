@@ -30,6 +30,7 @@ export default class DataGrid {
     private onSelectionChanged = null;
 
     constructor(private attrs, private columns: IDataColumn[] = []) {
+        console.debug("datagrid attrs", attrs);
     }
 
     private activateRow = (row) => {
@@ -46,7 +47,7 @@ export default class DataGrid {
 
     view(xania) {
         return (
-            <div className="data-grid" role="grid">
+            <div className="data-grid" role="grid" style={this.attrs.style || ""}>
                 <div className="data-grid-header" style="z-index: 100">
                     <div role="rowheader" className="data-grid-row-header">&nbsp;</div>
 

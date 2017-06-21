@@ -1,4 +1,4 @@
-﻿import xania, { expr, Repeat, ModelRepository, Reactive as Re } from "../../src/xania"
+﻿import xania, { expr, ModelRepository, Reactive as Re } from "../../src/xania"
 import { View, UrlHelper } from "../../src/mvc"
 import DataGrid, { TextColumn } from "../../src/data/datagrid"
 import Html, { DataSource } from '../../src/html'
@@ -58,7 +58,7 @@ export function view({ url }: { url: UrlHelper }) {
 
     var descriptionTpl = <span><span className="invoice-number">{expr("row.invoiceNumber")}</span>{expr("row.description")}</span>;
     return View([
-        <DataGrid data={expr("await dataSource")} onSelectionChanged={onSelectRow}>
+        <DataGrid data={expr("await dataSource")} onSelectionChanged={onSelectRow} style="height: 100%;">
             <TextColumn field="description" template={descriptionTpl} display="Description" />
             <TextColumn field="invoiceDate" display="Invoice Date" />
             <TextColumn field="status" template={statusTemplate()} display="Status" />
@@ -92,7 +92,7 @@ function invoiceView({ url }, invoiceId) {
             return response.json();
         })
         .then(data => {
-            var store = new Re.Store(data)
+            var invoiceStore = new Re.Store(data)
                 .onChange(() => {
                     fetch("/api/invoice/" + invoiceId, {
                         method: 'PUT',
@@ -104,26 +104,36 @@ function invoiceView({ url }, invoiceId) {
                 });
 
             return View(
-                <div>
-                    <Html.TextEditor display="Number" field="invoiceNumber" placeholder="invoice number" />
-                    <Html.TextEditor display="Description" field="description" placeholder="July 2017" />
+                [<div style="height: 100%;">
                     <div>
                         <label>Company</label>
                         <Html.DropDown dataSource={new DataSource()} value={expr("companyId")} >
                             {expr("display")}
                         </Html.DropDown>
                     </div>
+                    <Html.TextEditor display="Number" field="invoiceNumber" placeholder="invoice number" />
+                    <Html.TextEditor display="Description" field="description" placeholder="July 2017" />
 
                     <DataGrid data={expr("lines")}>
-                        <TextColumn field="description" display="Description" />
-                        <TextColumn field="hourlyRate" display="Hourly Rate" template={<input type="text" name="row.hourlyRate" /> } />
-                        <TextColumn field="hours" display="hours" />
+                        <TextColumn field="description" display="Description" template={<input type="text" name="row.description" />} />/>
+                        <TextColumn field="hourlyRate" display="Hourly Rate" template={<input type="text" name="row.hourlyRate" />} />
+                        <TextColumn field="hours" display="hours" template={<input type="text" name="row.hours" />} />
                     </DataGrid>
-                </div>
+                </div>,
+                <footer style="height: 50px; margin: 0 16px; padding: 0;">
+                    <div className="btn-group">
+                        <button className="btn btn-primary" onClick={url.action("report")}>
+                            <span className="fa fa-plus"></span> Preview</button>
+                        <a className="btn btn-default" href={"/api/invoice/" + invoiceId + "/pdf"} >Download</a>
+                    </div>
+                </footer>
+                ]
                 ,
-                store
-            ).mapRoute("lines", (context, args) => {
-                return View(<div>lines</div>);
+                invoiceStore
+            ).mapRoute("report", (context, args) => {
+                return View(
+                    <iframe src={"/api/invoice/" + invoiceId + "/pdf"} width="600px" height="100%"></iframe>,
+                    invoiceStore);
             });
         });
 }

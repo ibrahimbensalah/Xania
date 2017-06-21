@@ -13,8 +13,10 @@ System.config({
   },
 
   map: {
+    "MrRio/jsPDF": "github:MrRio/jsPDF@master",
     "babel": "npm:babel-core@5.8.38",
     "babel-runtime": "npm:babel-runtime@5.8.38",
+    "bpampuch/pdfmake": "github:bpampuch/pdfmake@master",
     "core-js": "npm:core-js@1.2.7",
     "css": "github:systemjs/plugin-css@0.1.32",
     "less": "npm:systemjs-less-plugin@2.0.0",

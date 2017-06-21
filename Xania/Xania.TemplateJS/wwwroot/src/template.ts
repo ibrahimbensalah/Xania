@@ -1,8 +1,6 @@
-﻿import { Core } from "./core"
-
-export interface IDriver {
+﻿export interface IDriver {
     insert?(binding, dom, idx);
-    on(eventName, dom, eventBinding);
+    on?(eventName, dom, eventBinding);
 }
 
 export module Template {

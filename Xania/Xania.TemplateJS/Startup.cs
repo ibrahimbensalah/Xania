@@ -7,13 +7,12 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
-using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Logging;
 using Xania.DataAccess;
 using Xania.TemplateJS.Controllers;
+using Xania.TemplateJS.Reporting;
 
 namespace Xania.TemplateJS
 {
@@ -34,13 +33,59 @@ namespace Xania.TemplateJS
         {
             services.AddMvc();
             services.AddSingleton<IObjectStore<User>>(new TransientObjectStore<User>());
-            services.AddSingleton<IObjectStore<Company>>(new TransientObjectStore<Company>());
-            services.AddSingleton<IObjectStore<Invoice>>(new TransientObjectStore<Invoice>()
+            services.AddSingleton<IObjectStore<Company>>(new TransientObjectStore<Company>
             {
-                new Invoice {Description = "invoice 1", InvoiceNumber = "201701", CompanyId = 1 },
-                new Invoice {Description = "invoice 2", InvoiceNumber = "201702", CompanyId = 2, InvoiceDate = DateTime.Now},
-                new Invoice {Description = "invoice 3", InvoiceNumber = "201703", CompanyId = 3, InvoiceDate = DateTime.Now}
+                new Company
+                {
+                    Address = new Address
+                    {
+                        FullName = "Ibrahim ben Salah", Location = "Amsterdam",
+                        Lines =
+                        {
+                            new AddressLine { Type = AddressType.Street, Value = "Punter 315 "}
+                        }
+                    },
+                    Id = 1,
+                    Name = "Xania Software"
+                },
+                new Company
+                {
+                    Address = new Address
+                    {
+                        FullName = "Edi Gittenberger", Location = "Amsterdam",
+                        Lines =
+                        {
+                            new AddressLine { Type = AddressType.Street, Value = "Sijsjesbergweg 42"},
+                            new AddressLine { Type = AddressType.ZipCode, Value = "1105 AL"}
+                        }
+                    },
+                    Id = 2,
+                    Name = "Rider International BV"
+                },
+                new Company
+                {
+                    Address = new Address
+                    {
+                        FullName = "Jan Piet", Location = "Amsterdam",
+                        Lines =
+                        {
+                            new AddressLine { Type = AddressType.Street, Value = "WTC 123"}
+                        }
+                    },
+                    Id = 3,
+                    Name = "Darwin Recruitement"
+                }
             });
+
+            services.AddSingleton<IObjectStore<Invoice>>(new TransientObjectStore<Invoice>
+            {
+                new Invoice {Id = "invoice 1".ToGuid(), Description = "invoice 1", InvoiceNumber = "201701", CompanyId = 1 },
+                new Invoice {Id = "invoice 2".ToGuid(), Description = "invoice 2", InvoiceNumber = "201702", CompanyId = 2, InvoiceDate = DateTime.Now},
+                new Invoice {Id = "invoice 3".ToGuid(), Description = "invoice 3", InvoiceNumber = "201703", CompanyId = 3, InvoiceDate = DateTime.Now}
+            });
+
+            services.AddOptions();
+            services.Configure<XaniaConfiguration>(Configuration);
         }
         public IConfigurationRoot Configuration { get; }
 

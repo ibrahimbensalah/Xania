@@ -1,9 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Xania.DataAccess;
+using Xania.TemplateJS.Reporting;
 
 namespace Xania.TemplateJS.Controllers
 {
@@ -33,32 +32,5 @@ namespace Xania.TemplateJS.Controllers
                 { "companies", _companies }
             });
         }
-    }
-
-    public class Company
-    {
-        public Guid Id { get; set; } = Guid.NewGuid();
-        public string Name { get; set; }
-        public Address Address { get; set; } = new Address();
-    }
-
-    public class Address
-    {
-        public AddressLine[] Lines { get; set; }
-        public string Location { get; set; }
-        public string FullName { get; set; }
-    }
-
-    public class AddressLine
-    {
-        public AddressType Type { get; set; }
-    }
-
-    public enum AddressType
-    {
-        Street,
-        Location,
-        Phone,
-        Fax
     }
 }

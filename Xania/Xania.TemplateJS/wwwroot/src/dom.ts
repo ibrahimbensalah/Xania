@@ -1,6 +1,6 @@
 ﻿import { Core } from './core'
 import { Reactive as Re } from './reactive'
-import { Template, IDriver } from './template'
+import { Template } from './template'
 
 export module Dom {
 
@@ -28,10 +28,10 @@ export module Dom {
     }
 
     export class DomVisitor {
-        static text(expr, driver: IDriver): TextBinding {
+        static text(expr, driver: Re.IDriver): TextBinding {
             return new TextBinding(expr, driver);
         }
-        static tag(tagName: string, ns: string, attrs, driver: IDriver): TagBinding {
+        static tag(tagName: string, ns: string, attrs, driver: Re.IDriver): TagBinding {
             var tag = new TagBinding(driver, tagName, ns), length = attrs.length;
             for (var i = 0; i < length; i++) {
                 tag.attr(attrs[i].name, attrs[i].tpl);
@@ -44,7 +44,7 @@ export module Dom {
     export class DomDriver {
         private target;
         private domElements = [];
-        private events = [];
+        private events:{eventName: string, eventBinding: any, dom: any }[] = [];
 
         constructor(target) {
             if (typeof target === "string")
@@ -157,7 +157,7 @@ export module Dom {
         public length = 1;
         public oldValue;
 
-        constructor(private expr, driver: IDriver) {
+        constructor(private expr, driver: Re.IDriver) {
             super(driver);
         }
 
@@ -185,7 +185,7 @@ export module Dom {
         public length = 1;
         private domDriver: DomDriver;
 
-        constructor(driver: IDriver, private tagName: string, private ns: string = null) {
+        constructor(driver: Re.IDriver, private tagName: string, private ns: string = null) {
             super(driver);
 
             if (ns === null)
@@ -294,7 +294,7 @@ export module Dom {
         public dom;
         private oldValue;
 
-        constructor(private tagNode: HTMLElement, private expr, driver: IDriver) {
+        constructor(private tagNode: HTMLElement, private expr, driver: Re.IDriver) {
             super(driver);
         }
 
@@ -309,7 +309,7 @@ export module Dom {
     }
 
     export class EventBinding extends Re.Binding {
-        constructor(private tagNode: any, public name, private expr, driver: IDriver) {
+        constructor(private tagNode: any, public name, private expr, driver: Re.IDriver) {
             super(driver);
         }
 
@@ -390,7 +390,7 @@ export module Dom {
     class CheckedBinding extends Re.Binding {
         private oldValue;
 
-        constructor(private tagNode: any, private expr, driver: IDriver) {
+        constructor(private tagNode: any, private expr, driver: Re.IDriver) {
             super(driver);
 
             tagNode.addEventListener("change", this.fire.bind(this));
@@ -433,7 +433,7 @@ export module Dom {
     class ValueBinding extends Re.Binding {
         private oldValue;
 
-        constructor(private tagNode: any, private expr, driver: IDriver) {
+        constructor(private tagNode: any, private expr, driver: Re.IDriver) {
             super(driver);
 
             tagNode.addEventListener("change", this.fire.bind(this));
@@ -467,7 +467,7 @@ export module Dom {
     }
 
     export class AttributeBinding extends Re.Binding {
-        constructor(private tagNode: any, private name, private expr, driver: IDriver) {
+        constructor(private tagNode: any, private name, private expr, driver: Re.IDriver) {
             super(driver);
         }
 
@@ -497,7 +497,7 @@ export module Dom {
     }
 
     export class SelectedBinding extends Re.Binding {
-        constructor(private tagNode: any, private expr, driver: IDriver) {
+        constructor(private tagNode: any, private expr, driver: Re.IDriver) {
             super(driver);
         }
 

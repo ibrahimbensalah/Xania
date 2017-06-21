@@ -1,5 +1,4 @@
 ﻿import { Core } from "./core";
-import { Observables } from './observables'
 
 export module Reactive {
 
@@ -422,10 +421,9 @@ export module Reactive {
         }
     }
 
-
     export interface IDriver {
         insert?(sender: Binding, dom, idx);
-        on(eventName, dom, eventBinding);
+        on?(eventName, dom, eventBinding);
     }
 
     class Variable {
