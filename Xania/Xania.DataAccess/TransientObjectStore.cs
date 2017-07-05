@@ -43,13 +43,14 @@ namespace Xania.DataAccess
             return Task.FromResult(model);
         }
 
-        public Task DeleteAsync(TModel model)
+        public Task DeleteAsync(Expression<Func<TModel, bool>> condition)
         {
-            Items.Remove(model);
+            var compiled = condition.Compile();
+            Items.RemoveAll(m => compiled(m));
             return Task.CompletedTask;
         }
 
-        public Task SaveAsync(Expression<Func<TModel, bool>> condition, TModel newItem)
+        public Task UpdateAsync(Expression<Func<TModel, bool>> condition, TModel newItem)
         {
             var existingItem = Items.SingleOrDefault(condition.Compile());
             if (existingItem != null)

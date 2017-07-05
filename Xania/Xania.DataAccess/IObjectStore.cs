@@ -9,7 +9,7 @@ namespace Xania.DataAccess
     {
         Task<TModel> AddAsync(TModel model);
 
-        Task DeleteAsync(TModel model);
-        Task SaveAsync(Expression<Func<TModel, bool>> condition, TModel user);
+        Task DeleteAsync(Expression<Func<TModel, bool>> condition);
+        Task UpdateAsync(Expression<Func<TModel, bool>> condition, TModel user);
     }
 }

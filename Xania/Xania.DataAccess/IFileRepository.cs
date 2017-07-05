@@ -50,8 +50,8 @@ namespace Xania.DataAccess
 
         public override Task CopyToAsync(Stream output)
         {
-            _documentStore.Read(Folder, ResourceId, s => s.CopyTo(output));
-            return Task.CompletedTask;
+            throw new NotImplementedException();
+            // return _documentStore.ReadAsync(Folder, ResourceId, s => s.CopyTo(output));
         }
     }
 
@@ -92,7 +92,7 @@ namespace Xania.DataAccess
         {
             var metadata = FileMetadata.FromFile(file);
             await _metadataRepository.AddAsync(metadata);
-            await _documentStore.AddAsync(file.Folder, metadata.ResourceId, file.CopyToAsync);
+            // await _documentStore.AddAsync(file.Folder, metadata.ResourceId, file.CopyToAsync);
         }
 
         public IFile Get(string resourceId)

@@ -82,7 +82,7 @@ namespace Xania.TemplateJS.Controllers
             if (invoice == null)
                 throw new NullReferenceException();
 
-            await _invoiceStore.SaveAsync(x => x.Id == invoice.Id, invoice);
+            await _invoiceStore.UpdateAsync(x => x.Id == invoice.Id, invoice);
             return null;
         }
 
@@ -92,7 +92,7 @@ namespace Xania.TemplateJS.Controllers
             if (invoice == null)
                 throw new NullReferenceException();
 
-            await _invoiceStore.SaveAsync(x => x.Id == invoiceId, invoice);
+            await _invoiceStore.UpdateAsync(x => x.Id == invoiceId, invoice);
             return invoice;
         }
 

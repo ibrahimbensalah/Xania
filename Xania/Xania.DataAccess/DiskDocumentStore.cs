@@ -16,7 +16,7 @@ namespace Xania.DataAccess
             _rootDirectory = rootDirectory;
         }
 
-        public Task AddAsync(string folder, string resourceId, Func<Stream, Task> writer)
+        public Task AddAsync(string folder, string resourceId, Action<Stream> copyTo)
         {
             lock (SyncObject)
             {
@@ -24,22 +24,42 @@ namespace Xania.DataAccess
                 var filePath = GetFilePath(folder, resourceId);
                 using (var fileStream = File.OpenWrite(filePath))
                 {
-                    var task = writer(fileStream);
-                    fileStream.Flush();
-
-                    return task;
+                    copyTo(fileStream);
                 }
             }
+
+            return Task.CompletedTask;
         }
 
-        public T Read<T>(string folder, string resourceId, Func<Stream, T> reader)
+        public IDocument Get(string folder, string resourceId)
+        {
+            return new DiskDocument(GetFilePath(folder, resourceId));
+        }
+
+        public Task<T> ReadAsync<T>(string folder, string resourceId, Func<Stream, T> reader)
         {
             lock (SyncObject)
             {
                 using (var stream = File.OpenRead(GetFilePath(folder, resourceId)))
                 {
-                    return reader(stream);
+                    return Task.FromResult(reader(stream));
                 }
+            }
+        }
+
+        public Task UpdateAsync(string folder, string resourceId, Action<Stream> copyTo)
+        {
+            return AddAsync(folder, resourceId, copyTo);
+        }
+
+        public Task DeleteAsync(string folder, string resourceId)
+        {
+            lock (SyncObject)
+            {
+                var filePath = GetFilePath(folder, resourceId);
+                File.Delete(filePath);
+
+                return Task.CompletedTask;
             }
         }
 
@@ -49,6 +69,16 @@ namespace Xania.DataAccess
             Directory.CreateDirectory(dir);
             var filePath = Path.Combine(dir, resourceId + ".xn");
             return filePath;
+        }
+
+        public Stream OpenWrite(string folder, string resourceId)
+        {
+            return File.OpenWrite(GetFilePath(folder, resourceId));
+        }
+
+        public Stream OpenRead(string folder, string resourceId)
+        {
+            return File.OpenRead(GetFilePath(folder, resourceId));
         }
 
         public IEnumerable<string> List(string folder)
@@ -65,81 +95,5 @@ namespace Xania.DataAccess
                     .Select(fileName => new FileInfo(fileName))
                     .Select(file => file.Name.Substring(0, file.Name.Length - ".xn".Length));
         }
-
-        //internal class FileReadStream : Stream
-        //{
-        //    private readonly Stream _inner;
-
-        //    public FileReadStream(Stream inner)
-        //    {
-        //        _inner = inner;
-        //    }
-
-        //    public override void Flush()
-        //    {
-        //        lock (_syncObject)
-        //        {
-        //            _inner.Flush();
-        //        }
-        //    }
-
-        //    public override long Seek(long offset, SeekOrigin origin)
-        //    {
-        //        lock (_syncObject)
-        //        {
-        //            return _inner.Seek(offset, origin);
-        //        }
-        //    }
-
-        //    public override void SetLength(long value)
-        //    {
-        //        lock (_syncObject)
-        //        {
-        //            _inner.SetLength(value);
-        //        }
-        //    }
-
-        //    public override int Read(byte[] buffer, int offset, int count)
-        //    {
-        //        lock (_syncObject)
-        //        {
-        //            return _inner.Read(buffer, offset, count);
-        //        }
-        //    }
-
-        //    public override void Write(byte[] buffer, int offset, int count)
-        //    {
-        //        lock (_syncObject)
-        //        {
-        //            _inner.Write(buffer, offset, count);
-        //        }
-        //    }
-
-        //    public override bool CanRead
-        //    {
-        //        get { return _inner.CanRead; }
-        //    }
-
-        //    public override bool CanSeek
-        //    {
-        //        get { return _inner.CanSeek; }
-        //    }
-
-        //    public override bool CanWrite
-        //    {
-        //        get { return _inner.CanWrite; }
-        //    }
-
-        //    public override long Length
-        //    {
-        //        get { return _inner.Length; }
-        //    }
-
-        //    public override long Position
-        //    {
-        //        get { return _inner.Position; }
-        //        set { _inner.Position = value; }
-        //    }
-        //}
     }
 }
