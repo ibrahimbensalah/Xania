@@ -100,7 +100,11 @@ export module Template {
     }
 
     export class CustomTemplate implements INode {
-        constructor(private func) {  }
+        constructor(private func) { }
+
+        bind(driver) {
+            this.func().bind(driver);
+        }
     }
 }
 

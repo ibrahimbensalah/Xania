@@ -108,7 +108,8 @@ namespace Xania.TemplateJS.Controllers
         {
             return QueryHelper.accept(ast, new Dictionary<string, object>
             {
-                { "invoices", _invoiceStore }
+                { "invoices", _invoiceStore },
+                { "companies", _companyStore }
             });
         }
 

@@ -12,4 +12,12 @@ namespace Xania.DataAccess
         Task DeleteAsync(Expression<Func<TModel, bool>> condition);
         Task UpdateAsync(Expression<Func<TModel, bool>> condition, TModel user);
     }
+
+    public static class ObjectStoreExtensions
+    {
+        public static TModel Add<TModel>(this IObjectStore<TModel> store, TModel model)
+        {
+            return store.AddAsync(model).Result;
+        }
+    }
 }

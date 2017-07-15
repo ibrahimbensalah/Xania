@@ -1,4 +1,4 @@
-﻿import { Repeat, expr } from "../xania"
+﻿import xania, { Repeat, expr } from "../xania"
 import { UrlHelper } from "../mvc"
 import './datagrid.min.css'
 
@@ -23,6 +23,25 @@ export function TextColumn(attrs): IDataColumn {
     };
 }
 
+export function RemoveColumn(attrs): IDataColumn {
+
+    function removeLine(evt, context) {
+        var data: any[] = context.get('data').valueOf();
+        var row = context.get('row').valueOf();
+
+        var idx = data.indexOf(row);
+        console.debug('remove idx', idx);
+        if (idx >= 0)
+            data.splice(idx, 1);
+    }
+
+    return {
+        name: "",
+        template: <a onClick={removeLine}>&times;</a>,
+        display: ""
+    };
+}
+
 export default class DataGrid {
     private data = [];
     private activeRow = null;
@@ -30,7 +49,7 @@ export default class DataGrid {
     private onSelectionChanged = null;
 
     constructor(private attrs, private columns: IDataColumn[] = []) {
-        console.debug("datagrid attrs", attrs);
+        console.debug("datagrid columns", columns);
     }
 
     private activateRow = (row) => {

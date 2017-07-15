@@ -10,7 +10,7 @@
   font-weight: bold;
   font-size: 15px;
   border-width: 1px 0 2px 0;
-  border-style: solid none;
+  border-style: none;
   border-color: gray;
 }
 .data-grid-row {
@@ -40,6 +40,13 @@
   white-space: nowrap;
   text-overflow: ellipsis;
   overflow: hidden;
+  line-height: 34px;
+}
+.data-grid-cell-content input {
+  border: none;
+  background-color: inherit;
+  color: inherit;
+  width: 100%;
 }
 .data-grid-cell-content a {
   white-space: nowrap;

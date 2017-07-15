@@ -1,12 +1,18 @@
 ﻿import xania, { expr, ModelRepository, Reactive as Re } from "../../src/xania"
 import { View, UrlHelper } from "../../src/mvc"
-import DataGrid, { TextColumn } from "../../src/data/datagrid"
+import DataGrid, { RemoveColumn, TextColumn } from "../../src/data/datagrid"
 import Html, { DataSource } from '../../src/html'
 import './invoices.css'
 
 class InvoiceRepository extends ModelRepository {
     constructor() {
-        super("/api/invoice/", "invoices");
+        super("/api/invoice/", "invoices"); // 
+        var query = 
+            ` for i in invoices
+              join c in companies on c.id = i.companyId
+              select { i.id, companyName: c.name }
+            `;
+        // expr(query);
     }
 
     addLine() {
@@ -56,7 +62,7 @@ export function view({ url }: { url: UrlHelper }) {
         );
     }
 
-    var descriptionTpl = <span><span className="invoice-number">{expr("row.invoiceNumber")}</span>{expr("row.description")}</span>;
+    var descriptionTpl = <span><span className="invoice-number">{expr("row.invoiceNumber")}</span>{expr("row.companyId")}</span>;
     return View([
         <DataGrid data={expr("await dataSource")} onSelectionChanged={onSelectRow} style="height: 100%;">
             <TextColumn field="description" template={descriptionTpl} display="Description" />
@@ -103,6 +109,18 @@ function invoiceView({ url }, invoiceId) {
                     });
                 });
 
+            function addLine(evt, context) {
+                context.get('lines').valueOf().push({
+                    description: 'untitled',
+                    hourlyRate: 75,
+                    hours: 8
+                });
+            }
+
+            function removeLine(evt, context) {
+                
+            }
+
             return View(
                 [<div style="height: 100%;">
                     <div>
@@ -115,10 +133,13 @@ function invoiceView({ url }, invoiceId) {
                     <Html.TextEditor display="Description" field="description" placeholder="July 2017" />
 
                     <DataGrid data={expr("lines")}>
-                        <TextColumn field="description" display="Description" template={<input type="text" name="row.description" />} />/>
+                        <TextColumn field="description" display="Description" template={<input type="text" name="row.description" />} />
                         <TextColumn field="hourlyRate" display="Hourly Rate" template={<input type="text" name="row.hourlyRate" />} />
-                        <TextColumn field="hours" display="hours" template={<input type="text" name="row.hours" />} />
+                        <RemoveColumn />
                     </DataGrid>
+                    <div>
+                        <button onClick={addLine}>add</button>
+                    </div>
                 </div>,
                 <footer style="height: 50px; margin: 0 16px; padding: 0;">
                     <div className="btn-group">

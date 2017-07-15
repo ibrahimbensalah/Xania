@@ -39,11 +39,16 @@ namespace Xania.DataAccess
             var stream = new DocumentStream();
             stream.OnComplete += (sender, content) =>
             {
-                GetRecords(folder).Add(new Record
-                {
-                    ResourceId = resourceId,
-                    Content = content
-                });
+                var records = GetRecords(folder);
+                var existing = records.FirstOrDefault(e => e.ResourceId.Equals(resourceId));
+                if (existing != null)
+                    existing.Content = content;
+                else
+                    records.Add(new Record
+                    {
+                        ResourceId = resourceId,
+                        Content = content
+                    });
             };
 
             return stream;
