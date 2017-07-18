@@ -1,156 +1,53 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Dynamic;
-using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Net.Http.Formatting;
 using System.Reflection;
 using System.Reflection.Emit;
-using System.Text;
-using FluentAssertions;
-using Newtonsoft.Json.Linq;
-using NUnit.Framework;
-using Xania.QL.Tests.Properties;
-using Xania.TemplateJS.Reporting;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Query;
+using Xania.QL;
+using Xunit;
 
-namespace Xania.QL.Tests
+namespace XUnitTestProject1
 {
-    public class QueryHelperTests
+    public class UnitTest1
     {
-        private readonly IEnumerable<Invoice> _invoiceStore = new[]
-        {
-            new Invoice {CompanyId = 1, Id = Guid.NewGuid()}
-        };
-
-        private readonly IEnumerable<Company> _companyStore = new[]
-        {
-            new Company {Id = 1, Name = "Xania BV"}
-        };
-
         private readonly QueryHelper _helper = new QueryHelper(new RuntimeReflectionHelper());
 
-        [Test]
-        public void ResourceTest()
+        [Fact]
+        public void Test1()
         {
-            var context = new QueryContext
+            var options = new DbContextOptionsBuilder<TestDbContext>()
+                .UseInMemoryDatabase(databaseName: "Add_writes_to_database")
+                .Options
+                ;
+
+            using (var db = new TestDbContext(options))
             {
-                {"companies", _companyStore.AsQueryable()},
-                {"invoices", _invoiceStore.AsQueryable()}
-            };
-
-            var ast = GetAst(new MemoryStream(Resources.join));
-            var expr = _helper.ToLinq(ast, context);
-            var result = new List<dynamic>(Invoke<IQueryable<dynamic>>(expr));
-
-            var invoice = _invoiceStore.Single();
-            ((Guid)result[0].invoiceId).Should().Be(invoice.Id);
-            ((string)result[0].companyName).Should().Be("Xania BV");
-        }
-
-        [Test]
-        public void JoinTest()
-        {
-            var context = new QueryContext
-            {
-                {"companies", _companyStore.AsQueryable()},
-                {"invoices", _invoiceStore.AsQueryable()}
-            };
-
-            var join = GetJoin(
-                outer: GetQuery("i", GetIdentifier("invoices")),
-                inner: GetQuery("c", GetIdentifier("companies")),
-                conditions: new[]
+                var context = new QueryContext
                 {
-                    GetJoinCondition(GetMember(GetIdentifier("i"), "CompanyId"), GetMember(GetIdentifier("c"), "Id"))
-                });
+                    {"companies", db.Companies},
+                    {"invoices", db.Invoices}
+                };
 
-            var record = GetRecord(
-                GetMemberBind("invoiceId", GetMember(GetIdentifier("i"), "Id")),
-                GetMemberBind("companyName", GetMember(GetIdentifier("c"), "Name")));
-            var ast = GetSelector(join, record);
-            var expr = _helper.ToLinq(ast, context);
-            var result = Invoke<IQueryable<dynamic>>(expr).ToArray();
 
-            var invoice = _invoiceStore.Single();
-            ((Guid)result[0].invoiceId).Should().Be(invoice.Id);
-            ((string)result[0].companyName).Should().Be("Xania BV");
-        }
+                var join = GetJoin(
+                    outer: GetQuery("i", GetIdentifier("invoices")),
+                    inner: GetQuery("c", GetIdentifier("companies")),
+                    conditions: new[]
+                    {
+                        GetJoinCondition(GetMember(GetIdentifier("i"), "CompanyId"), GetMember(GetIdentifier("c"), "Id"))
+                    });
 
-        [Test]
-        public void SelectTest()
-        {
-            var context = new QueryContext
-            {
-                {"companies", new[] {new Company {Id = 1, Name = "Xania"}}.AsQueryable()}
-            };
-
-            var ast = GetSelector(GetQuery("c", GetIdentifier("companies")), GetMember(GetIdentifier("c"), "Name"));
-            var expr = _helper.ToLinq(ast, context);
-            var companies = Invoke<IEnumerable<string>>(expr).ToArray();
-
-            companies[0].Should().Be("Xania");
-        }
-
-        [Test]
-        public void IdentifierTest()
-        {
-            var context = new QueryContext
-            {
-                {"c", new Company {Id = 1, Name = "Xania"}}
-            };
-
-            var expr = _helper.ToLinq(GetIdentifier("c"), context);
-            var company = Invoke<Company>(expr);
-            company.Name.Should().Be("Xania");
-            company.Id.Should().Be(1);
-        }
-
-        [Test]
-        public void MemberTest()
-        {
-            var context = new QueryContext
-            {
-                {"c", new Company {Id = 1, Name = "Xania"}}
-            };
-
-            var expr = _helper.ToLinq(GetMember(GetIdentifier("c"), "Name"), context);
-            var result = Invoke<string>(expr);
-            result.Should().Be("Xania");
-        }
-
-        [Test]
-        public void RecordTest()
-        {
-            var invoiceId = Guid.NewGuid();
-            var context = new QueryContext
-            {
-                {"c", new Company {Id = 1, Name = "Xania"}},
-                {"i", new Invoice {CompanyId = 1, InvoiceNumber = "2017001", Id = invoiceId}}
-            };
-
-            var record = GetRecord(GetMemberBind("invoiceId", GetMember(GetIdentifier("i"), "Id")),
-                GetMemberBind("companyName", GetMember(GetIdentifier("c"), "Name")));
-            var expr = _helper.ToLinq(record, context);
-            var result = Invoke<dynamic>(expr);
-            ((Guid)result.invoiceId).Should().Be(invoiceId);
-            ((string)result.companyName).Should().Be("Xania");
-        }
-
-        [Test]
-        public void ConditionTest()
-        {
-            var context = new QueryContext
-            {
-                {"c", new Company {Id = 1, Name = "Xania"}},
-                {"i", new Invoice {CompanyId = 1, InvoiceNumber = "2017001"}}
-            };
-
-            var equal = GetEqual(GetMember(GetIdentifier("c"), "Id"), GetMember(GetIdentifier("i"), "CompanyId"));
-            var expr = _helper.ToLinq(equal, context);
-            var result = Invoke<bool>(expr);
-            result.Should().BeTrue();
+                var record = GetRecord(
+                    GetMemberBind("invoiceId", GetMember(GetIdentifier("i"), "Id")),
+                    GetMemberBind("companyName", GetMember(GetIdentifier("c"), "Name")));
+                var ast = GetSelector(join, record);
+                var expr = _helper.ToLinq(ast, context);
+                var result = Invoke<IQueryable<dynamic>>(expr).ToArray();
+            }
         }
 
         private object GetJoinCondition(object outerKey, object innerKey)
@@ -200,12 +97,12 @@ namespace Xania.QL.Tests
             return ast;
         }
 
-        private static object GetMember(object target, string member)
+        private static object GetMember(object target, string name)
         {
             dynamic ast = new ExpandoObject();
             ast.type = Token.MEMBER;
             ast.target = target;
-            ast.member = member;
+            ast.name = name;
             return ast;
         }
 
@@ -229,22 +126,32 @@ namespace Xania.QL.Tests
             return ast;
         }
 
-        private static object GetSelector(object source, object selector)
+        private static object GetSelector(object query, object selector)
         {
             dynamic ast = new ExpandoObject();
             ast.type = Token.SELECT;
             ast.selector = selector;
-            ast.source = source;
+            ast.query = query;
             return ast;
         }
 
-        private static dynamic GetAst(Stream memoryStream)
+    }
+
+    public class TestDbContext: DbContext
+    {
+        public TestDbContext(DbContextOptions<TestDbContext> options)
+            : base(options)
         {
-            var formatter = new JsonMediaTypeFormatter();
-            dynamic ast = formatter.ReadFromStream(typeof(object), memoryStream, Encoding.UTF8, null);
-            return ast;
         }
 
+        public DbSet<Person> People { get; set; }
+    }
+
+    public class Person
+    {
+        public int Id { get; set; }
+        public string FirstName { get; set; }
+        public string LastName { get; set; }
     }
 
     internal class RuntimeReflectionHelper : IReflectionHelper

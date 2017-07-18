@@ -6,8 +6,12 @@
       {
         "name": "invoiceId",
         "value": {
-          "type": 3,
-          "name": "i"
+          "type": 4,
+          "target": {
+            "type": 3,
+            "name": "i"
+          },
+          "member": "id"
         }
       },
       {

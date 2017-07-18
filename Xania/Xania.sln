@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.26430.13
+VisualStudioVersion = 15.0.26430.15
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{2E94C4D9-0FA1-4CEC-B1E2-1BD68156A10C}"
 EndProject
@@ -44,7 +44,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Xania.Web", "Xania.Web\Xani
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Xania.DataAccess", "Xania.DataAccess\Xania.DataAccess.csproj", "{6187E3FF-238F-4354-8F05-13DE0D4C7F8D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Xania.QL", "Xania.QL\Xania.QL.csproj", "{95264966-9E27-48AB-B039-198A6F6CAB3C}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Xania.QL", "Xania.QL\Xania.QL.csproj", "{95264966-9E27-48AB-B039-198A6F6CAB3C}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Xania.QL.Tests", "Xania.QL.Tests\Xania.QL.Tests.csproj", "{4207B701-19D0-421E-990C-306C6378FB19}"
 EndProject

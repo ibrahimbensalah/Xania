@@ -8,33 +8,6 @@ import './invoices.css'
 class InvoiceRepository extends ModelRepository {
     constructor() {
         super("/api/invoice/", "invoices"); // 
-        var query = 
-            ` for i in invoices
-              join c in companies on i.companyId = c.id
-              select { invoiceId: i, companyName: c.name }
-            `;
-        var config = {
-            method: "POST",
-            headers: {
-                'Content-Type': "application/json"
-            },
-            body: JSON.stringify(parse(query))
-        };
-
-        fetch("/api/invoice/query", config)
-            .then((response: any) => {
-                return response.json();
-            })
-            .then(data => {
-                console.debug("data", data);
-            });
-
-        try {
-            var ast = parse(query);
-            console.debug("ast", ast);
-        } catch (ex) {
-            console.error(ex);
-        }
     }
 
     addLine() {

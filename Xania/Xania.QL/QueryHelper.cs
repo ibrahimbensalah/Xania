@@ -90,16 +90,17 @@ namespace Xania.QL
                     return context.Get(name);
                 case Token.MEMBER:
                     Expression targetExpr = ToLinq(ast.target, context);
-                    name = (string)ast.name;
+                    name = (string)ast.member;
                     var targetType = targetExpr.Type;
                     var propertyInfo = targetType.GetRuntimeProperties()
                         .SingleOrDefault(e => e.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
                     return Expression.Property(targetExpr, propertyInfo);
                 case Token.RECORD:
                     var fields = new Dictionary<string, Expression>();
-                    for (var i = 0; i < ast.binders.Length; i++)
+                    foreach(var binder in ast.binders)
+                    // for (var i = 0; i < ast.binders.Length; i++)
                     {
-                        var binder = ast.binders[i];
+                        // var binder = ast.binders[i];
                         name = binder.name;
                         var expr = ToLinq(binder.value, context);
                         fields.Add(name, expr);
@@ -126,7 +127,7 @@ namespace Xania.QL
                             throw new InvalidOperationException("unsupported binary operator " + op);
                     }
                 case Token.SELECT:
-                    IQuery query = ToQuery(ast.query, context);
+                    IQuery query = ToQuery(ast.source, context);
                     Expression selectorExpr = ToLinq(ast.selector, new ParameterContext(query.Params));
                     return query.Select(_reflectionHelper, selectorExpr);
                 default:
@@ -148,8 +149,7 @@ namespace Xania.QL
                     Query outerQuery = ToQuery(ast.outer, context);
                     Query innerQuery = ToQuery(ast.inner, context);
 
-                    dynamic[] conditions = ast.conditions;
-                    var condition = conditions.Single();
+                    var condition = ast.conditions[0];
 
                     var outerKeyExpr = ToLinq(condition.outerKey, new ParameterContext(outerQuery.Params));
                     var innerKeyExpr = ToLinq(condition.innerKey, new ParameterContext(innerQuery.Params));
@@ -287,4 +287,20 @@ namespace Xania.QL
         }
     }
 
+
+    public class QueryContext : Dictionary<string, object>, IContext
+    {
+        public QueryContext()
+            : base(StringComparer.OrdinalIgnoreCase)
+        {
+        }
+
+        public Expression Get(string name)
+        {
+            object value;
+            return TryGetValue(name, out value)
+                ? Expression.Constant(value)
+                : throw new KeyNotFoundException(name);
+        }
+    }
 }

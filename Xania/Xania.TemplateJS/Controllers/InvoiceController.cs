@@ -1,7 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Net.Http.Formatting;
+using System.Reflection;
+using System.Reflection.Emit;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Xania.DataAccess;
@@ -114,6 +117,5 @@ namespace Xania.TemplateJS.Controllers
                 { "companies", _companyStore }
             });
         }
-
     }
 }

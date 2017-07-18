@@ -29,7 +29,9 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Content Include="wwwroot\query.html" />
     <Content Include="wwwroot\src\expression.ts" />
+    <Content Include="wwwroot\wasm.html" />
   </ItemGroup>
 
   <ItemGroup>
