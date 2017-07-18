@@ -1,4 +1,5 @@
 ﻿import xania, { expr, ModelRepository, Reactive as Re } from "../../src/xania"
+import { parse } from "../../src/compile"
 import { View, UrlHelper } from "../../src/mvc"
 import DataGrid, { RemoveColumn, TextColumn } from "../../src/data/datagrid"
 import Html, { DataSource } from '../../src/html'
@@ -9,10 +10,31 @@ class InvoiceRepository extends ModelRepository {
         super("/api/invoice/", "invoices"); // 
         var query = 
             ` for i in invoices
-              join c in companies on c.id = i.companyId
-              select { i.id, companyName: c.name }
+              join c in companies on i.companyId = c.id
+              select { invoiceId: i, companyName: c.name }
             `;
-        // expr(query);
+        var config = {
+            method: "POST",
+            headers: {
+                'Content-Type': "application/json"
+            },
+            body: JSON.stringify(parse(query))
+        };
+
+        fetch("/api/invoice/query", config)
+            .then((response: any) => {
+                return response.json();
+            })
+            .then(data => {
+                console.debug("data", data);
+            });
+
+        try {
+            var ast = parse(query);
+            console.debug("ast", ast);
+        } catch (ex) {
+            console.error(ex);
+        }
     }
 
     addLine() {
@@ -134,6 +156,7 @@ function invoiceView({ url }, invoiceId) {
 
                     <DataGrid data={expr("lines")}>
                         <TextColumn field="description" display="Description" template={<input type="text" name="row.description" />} />
+                        <TextColumn field="hours" display="Hours" template={<input type="text" name="row.hours" />} />
                         <TextColumn field="hourlyRate" display="Hourly Rate" template={<input type="text" name="row.hourlyRate" />} />
                         <RemoveColumn />
                     </DataGrid>

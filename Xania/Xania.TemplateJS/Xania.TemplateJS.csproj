@@ -41,6 +41,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Xania.DataAccess\Xania.DataAccess.csproj" />
+    <ProjectReference Include="..\Xania.QL\Xania.QL.csproj" />
   </ItemGroup>
 
   <ItemGroup>

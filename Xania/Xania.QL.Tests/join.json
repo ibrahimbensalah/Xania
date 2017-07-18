@@ -1,0 +1,65 @@
+﻿{
+  "type": 6,
+  "selector": {
+    "type": 16,
+    "binders": [
+      {
+        "name": "invoiceId",
+        "value": {
+          "type": 3,
+          "name": "i"
+        }
+      },
+      {
+        "name": "companyName",
+        "value": {
+          "type": 4,
+          "target": {
+            "type": 3,
+            "name": "c"
+          },
+          "member": "name"
+        }
+      }
+    ]
+  },
+  "source": {
+    "type": 15,
+    "outer": {
+      "type": 2,
+      "param": "i",
+      "source": {
+        "type": 3,
+        "name": "invoices"
+      }
+    },
+    "inner": {
+      "type": 2,
+      "param": "c",
+      "source": {
+        "type": 3,
+        "name": "companies"
+      }
+    },
+    "conditions": [
+      {
+        "outerKey": {
+          "type": 4,
+          "target": {
+            "type": 3,
+            "name": "i"
+          },
+          "member": "companyId"
+        },
+        "innerKey": {
+          "type": 4,
+          "target": {
+            "type": 3,
+            "name": "c"
+          },
+          "member": "id"
+        }
+      }
+    ]
+  }
+}

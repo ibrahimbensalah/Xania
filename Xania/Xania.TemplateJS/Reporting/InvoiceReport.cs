@@ -110,6 +110,7 @@ namespace Xania.TemplateJS.Reporting
             table.AddCell("Uren".Cell(font).Padding(4, 10));
             table.AddCell("Bedrag".Cell(font).Padding(4, 10));
             table.AddCell("BTW".Cell(font).Padding(4, 10));
+            table.SetWidths(new int[] { 100, 50, 50, 50 });
 
             foreach (var lineItem in invoiceLineItems)
             {

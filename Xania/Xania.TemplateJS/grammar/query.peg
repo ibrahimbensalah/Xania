@@ -7,34 +7,21 @@
 		return y - x;
 	}
 
-	function equal(x, y) {
-		return y === x;
-	}
-
-	function and(x, y) {
-		return x && y;
-	}
-
-	function or(x, y) {
-		return y || x;
-	}
-
-	function pipe1(x, y) {
-		return x(y);
-	}
-
-	function lazy(expressions) {
+	function conditional(trueAst, falseAst) {
 		return { 
-			type: LAZY, 
+			type: LAZY,
 			bind: function(compile) {
-				var compiled = expressions.map(compile);
+				var trueExpr = compile(trueAst);
+				var falseExpr = compile(falseAst);
 				return function(binding, contexts) {
 					return function(b) {
-						return b ? compiled[0].execute(binding, contexts) : compiled[1].execute(binding, contexts);
+						return b 
+							? trueExpr.execute(binding, contexts) 
+							: falseExpr.execute(binding, contexts);
 					}
 				}
 			}
-		}
+		};
 	}
 
 	var binaryReducer = function (prev, binder) { 
@@ -43,6 +30,7 @@
 		return { type: BINARY, op: op, left: prev, right: operand };
 	}
 
+	var THIS = 0;
 	var WHERE = 1;
 	var QUERY = 2;
 	var IDENT = 3;
@@ -57,6 +45,12 @@
 	var COMPOSE = 12;
 	var LAMBDA = 13;
 	var LAZY = 14;
+	var JOIN = 15;
+	var RECORD = 16;
+
+	var EQ = 17;
+	var OR = 18;
+	var AND = 19;
 }
 
 Program
@@ -78,11 +72,20 @@ LambdaExpression
 	}
 
 QueryExpression
-	= "for" _ param:IdentifierName _ "in" _ source:MultiplicativeExpression selector:(_ SelectExpression)? {
-		var query = { type: QUERY, param, source }
+	= "for" _ param:IdentifierName _ "in" _ source:MultiplicativeExpression join:(_ JoinExpression)? selector:(_ SelectExpression)? {
+		var query = { type: QUERY, param: param, source: source }
 
 		function reducer(source, predicate) {
 			return { type: WHERE, predicate, source };
+		}
+
+		if (join) {
+			query = {
+				type: JOIN,
+				outer: query,
+				inner: join[1].source,
+				conditions: join[1].conditions
+			};
 		}
 
 		if (selector)
@@ -90,9 +93,33 @@ QueryExpression
 
 		return query;
 	}
+JoinExpression
+  = "join" _ param:IdentifierName _ "in" _ src:MultiplicativeExpression _ "on" _ outerKey:Identifier _ ("=" / "equals") _ innerKey:Identifier {
+	return {
+		source: {
+			type: QUERY,
+			param: param,
+			source: src
+		},
+		conditions: [{ outerKey: outerKey, innerKey: innerKey }]
+	};
+  }
 
 SelectExpression
-  = "select" _ selector:AdditiveExpression { return selector }
+  = "select" _ selector:(AdditiveExpression / RecordExpression) { return selector }
+
+RecordExpression
+  = "{" _ head:PropertyBindExpression tail:(_ "," _ PropertyBindExpression)* _ "}" {
+	return {
+		type: RECORD,
+		binders: [ head ].concat(tail.map(function(item) { return item[3]; }))
+	};
+  }
+
+PropertyBindExpression
+  = name:IdentifierName _ ":" _ value:AdditiveExpression {
+	return { name: name, value: value };
+  }
 
 PipeExpression
   = head:BooleanExpression pipes:( _ PipeBinder )* rules:( _ RuleBinder )* {
@@ -106,7 +133,7 @@ RuleBinder
 
 PipeBinder
   = op:"|>" _ operand:Application {
-     return { op: PIPE, operand }
+     return { op: PIPE, operand: operand }
   }
 
 BooleanExpression
@@ -116,16 +143,16 @@ BooleanExpression
 
 BooleanBinder
   = op:("=" / "equals") _ expr:MultiplicativeExpression {
-	return { op: equal, operand: expr };
+	return { op: EQ, operand: expr };
   }
   / op:("or" / "||") _ expr:MultiplicativeExpression {
-	return { op: or, operand: expr };
+	return { op: OR, operand: expr };
   }
   / op:("and" / "&&") _ expr:MultiplicativeExpression {
-	return { op: and, operand: expr };
+	return { op: AND, operand: expr };
   }
   / op:"?" _ trueExpr:Expression _ ":" _ falseExpr:Expression {
-	return { op: pipe1, operand: lazy([trueExpr, falseExpr]) };
+	return { op: PIPE, operand: conditional(trueExpr, falseExpr) };
   }
 
 AdditiveExpression
@@ -205,26 +232,24 @@ CompositionBinder
   }
 
 Application
-	= fun:Identifier {
-		return fun;
+	= ident:Identifier assign:( _ "<-" _ AdditiveExpression )? {
+		if (!!assign)
+			return { type: BINARY, op: "assign", left: ident, right: assign[3] };
+		return ident;
 	}
 	/ "(" _ op:Operator _ ")" { 
 		return op
 	}
   
 Keyword
-  = ("select" / "where" / "await" / "or" / "and" / "equals" / "is" ) & [ \r\n\b]
+  = ("select" / "where" / "await" / "or" / "and" / "equals" / "is" / "join" / "on" ) & [ \r\n\b]
 
 Identifier
-  = !Keyword name:IdentifierName members:( "." IdentifierName)* assign:( _ "<-" _ AdditiveExpression )? {
+  = !Keyword name:IdentifierName members:( "." IdentifierName)* {
 		var reducer = (prev, next) => { 
-			var member = next[1];
-			return { type: MEMBER, target: prev, member };
+			return { type: MEMBER, target: prev, member: next[1] };
 		};
-		var ident = members.reduce(reducer, { type: IDENT, name });
-		if (!!assign)
-			return { type: BINARY, op: "assign", left: ident, right: assign[3] };
-		return ident;
+		return members.reduce(reducer, { type: IDENT, name });
   }
   
 Operator
@@ -278,6 +303,8 @@ _ = WhiteSpace*
 WhiteSpace "whitespace"
   = "\t"
   / "\v"
+  / "\n"
+  / "\r"
   / "\f"
   / " "
   / "\u00A0"

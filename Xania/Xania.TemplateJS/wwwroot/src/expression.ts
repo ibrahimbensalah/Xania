@@ -17,6 +17,19 @@ function single(list) {
     return list[0];
 }
 
+function equal(x, y) {
+    return y === x;
+}
+
+function and(x, y) {
+    return x && y;
+}
+
+function pipe(x, y) {
+    return x(y);
+}
+
+
 function not(value) {
     return !value;
 }
@@ -30,6 +43,7 @@ function count(list) {
 }
 
 // ReSharper disable InconsistentNaming
+var THIS = 0;
 var WHERE = 1;
 var QUERY = 2;
 var IDENT = 3;
@@ -44,7 +58,11 @@ var PIPE = 11;
 var COMPOSE = 12;
 var LAMBDA = 13;
 var LAZY = 14;
-var THIS = 15;
+var JOIN = 15;
+var RECORD = 16;
+var EQ = 17;
+var OR = 18;
+var AND = 19;
 // ReSharper restore InconsistentNaming
 
 class Range {
@@ -86,7 +104,7 @@ export class Scope {
 }
 
 export default class Expression {
-    constructor(public ast, private stack: any[]) {
+    constructor(public ast, private stack) {
     }
 
     execute(binding: IAstVisitor, contexts: any) {
@@ -193,7 +211,7 @@ export default class Expression {
         return new Expression(ast, queue);
     }
 
-    static compileAst(ast: any, stack: any[]) {
+    static compileAst(ast, stack: any[]) {
         const compile = Expression.compileAst;
         if (typeof ast === "object") {
             switch (ast.type) {
@@ -282,6 +300,21 @@ export default class Expression {
                             stack.push(ast);
                             compile(ast.left, stack);
                             compile(ast.right, stack);
+                            break;
+                        case EQ:
+                            ast.op = equal;
+                            compile(ast.right, stack);
+                            compile(ast.left, stack);
+                            break;
+                        case OR:
+                            ast.op = or;
+                            compile(ast.right, stack);
+                            compile(ast.left, stack);
+                            break;
+                        case AND:
+                            ast.op = and;
+                            compile(ast.right, stack);
+                            compile(ast.left, stack);
                             break;
                         default:
                             compile(ast.right, stack);
