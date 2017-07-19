@@ -31,16 +31,28 @@ namespace Xania.QL.Tests
 
         private readonly QueryHelper _helper = new QueryHelper(new RuntimeReflectionHelper());
 
-        [Test]
-        public void ResourceTest()
+        [TestCase("join")]
+        [TestCase("join2")]
+        public void ResourceTest(string resourceName)
         {
-            var context = new QueryContext
+            var companies = _companyStore.AsQueryable();
+            var invoices = _invoiceStore.AsQueryable();
+
+            var q = invoices.Join(companies, i => i.CompanyId, c1 => c1.Id, (i, c1) => new { i, c1 })
+                .Join(companies, @t => @t.i.CompanyId, c2 => c2.Id, (@t, c2) => new { @t, c2 })
+                .Join(companies, @t => @t.@t.i.CompanyId, c3 => c3.Id,
+                    (@t, c3) => new { @t.@t.i.Id, C1 = @t.@t.c1.Name, C2 = @t.c2.Name, C3 = c3.Name });
+
+            IContext context = new ExpressionContext
             {
-                {"companies", _companyStore.AsQueryable()},
-                {"invoices", _invoiceStore.AsQueryable()}
+                {"companies", Expression.Constant(_companyStore.AsQueryable())},
+                {"invoices", Expression.Constant(_invoiceStore.AsQueryable())}
             };
 
-            var ast = GetAst(new MemoryStream(Resources.join));
+            object obj = Resources.ResourceManager.GetObject(resourceName, Resources.Culture);
+            var data = (byte[])obj;
+            Debug.Assert(data != null, "data != null");
+            var ast = GetAst(new MemoryStream(data));
             var expr = _helper.ToLinq(ast, context);
             var result = new List<dynamic>(Invoke<IQueryable<dynamic>>(expr));
 
@@ -52,10 +64,10 @@ namespace Xania.QL.Tests
         [Test]
         public void JoinTest()
         {
-            var context = new QueryContext
+            var context = new ExpressionContext
             {
-                {"companies", _companyStore.AsQueryable()},
-                {"invoices", _invoiceStore.AsQueryable()}
+                {"companies", Expression.Constant(_companyStore.AsQueryable())},
+                {"invoices", Expression.Constant(_invoiceStore.AsQueryable())}
             };
 
             var join = GetJoin(
@@ -81,9 +93,9 @@ namespace Xania.QL.Tests
         [Test]
         public void SelectTest()
         {
-            var context = new QueryContext
+            var context = new ExpressionContext
             {
-                {"companies", new[] {new Company {Id = 1, Name = "Xania"}}.AsQueryable()}
+                {"companies", Expression.Constant(new[] {new Company {Id = 1, Name = "Xania"}}.AsQueryable())}
             };
 
             var ast = GetSelector(GetQuery("c", GetIdentifier("companies")), GetMember(GetIdentifier("c"), "Name"));
@@ -96,9 +108,9 @@ namespace Xania.QL.Tests
         [Test]
         public void IdentifierTest()
         {
-            var context = new QueryContext
+            var context = new ExpressionContext
             {
-                {"c", new Company {Id = 1, Name = "Xania"}}
+                {"c", Expression.Constant(new Company {Id = 1, Name = "Xania"})}
             };
 
             var expr = _helper.ToLinq(GetIdentifier("c"), context);
@@ -110,9 +122,9 @@ namespace Xania.QL.Tests
         [Test]
         public void MemberTest()
         {
-            var context = new QueryContext
+            var context = new ExpressionContext
             {
-                {"c", new Company {Id = 1, Name = "Xania"}}
+                {"c", Expression.Constant(new Company {Id = 1, Name = "Xania"})}
             };
 
             var expr = _helper.ToLinq(GetMember(GetIdentifier("c"), "Name"), context);
@@ -124,10 +136,10 @@ namespace Xania.QL.Tests
         public void RecordTest()
         {
             var invoiceId = Guid.NewGuid();
-            var context = new QueryContext
+            var context = new ExpressionContext
             {
-                {"c", new Company {Id = 1, Name = "Xania"}},
-                {"i", new Invoice {CompanyId = 1, InvoiceNumber = "2017001", Id = invoiceId}}
+                {"c", Expression.Constant(new Company {Id = 1, Name = "Xania"})},
+                {"i", Expression.Constant(new Invoice {CompanyId = 1, InvoiceNumber = "2017001", Id = invoiceId})}
             };
 
             var record = GetRecord(GetMemberBind("invoiceId", GetMember(GetIdentifier("i"), "Id")),
@@ -141,10 +153,10 @@ namespace Xania.QL.Tests
         [Test]
         public void ConditionTest()
         {
-            var context = new QueryContext
+            var context = new ExpressionContext
             {
-                {"c", new Company {Id = 1, Name = "Xania"}},
-                {"i", new Invoice {CompanyId = 1, InvoiceNumber = "2017001"}}
+                {"c", Expression.Constant(new Company {Id = 1, Name = "Xania"})},
+                {"i", Expression.Constant(new Invoice {CompanyId = 1, InvoiceNumber = "2017001"})}
             };
 
             var equal = GetEqual(GetMember(GetIdentifier("c"), "Id"), GetMember(GetIdentifier("i"), "CompanyId"));
@@ -259,7 +271,7 @@ namespace Xania.QL.Tests
             throw new InvalidOperationException("is not enumerable type " + enumerableType);
         }
 
-        public Type CreateType(IDictionary<string, Type> fields)
+        public TypeInfo CreateType(IDictionary<string, Type> fields)
         {
             TypeBuilder tb = GetTypeBuilder();
             var constructor = tb.DefineDefaultConstructor(MethodAttributes.Public | MethodAttributes.SpecialName |
@@ -284,6 +296,11 @@ namespace Xania.QL.Tests
 
         public MethodInfo GetQueryableJoin(Type outerType, Type innerType, Type keyType, Type resultType)
         {
+            if (outerType == null) throw new ArgumentNullException(nameof(outerType));
+            if (innerType == null) throw new ArgumentNullException(nameof(innerType));
+            if (keyType == null) throw new ArgumentNullException(nameof(keyType));
+            if (resultType == null) throw new ArgumentNullException(nameof(resultType));
+
             // Queryable.Join()
             return typeof(Queryable).GetRuntimeMethods()
                 .Where(e => e.Name.Equals("Join") && e.GetParameters().Length == 5)

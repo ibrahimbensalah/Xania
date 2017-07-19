@@ -32,12 +32,18 @@ namespace Xania.TemplateJS.Controllers
         [Route("")]
         public  Task<object> Index([FromBody]dynamic ast)
         {
+            var companies = _companyStore.AsQueryable();
+            var invoices = _invoiceStore.AsQueryable();
+
+            var q = companies.Join(invoices, c => c.Id, i1 => i1.CompanyId, (c, i1) => new {c, i1})
+                .Join(invoices, @t => @t.c.Id, i2 => i2.CompanyId, (@t, i2) => @t.i1.CompanyId);
+
             return Task.Run(() =>
             {
-                var context = new QueryContext()
+                var context = new ExpressionContext
                 {
-                    { "companies", _companyStore.AsQueryable()},
-                    { "invoices", _invoiceStore.AsQueryable()}
+                    { "companies", Expression.Constant(_companyStore.AsQueryable())},
+                    { "invoices", Expression.Constant(_invoiceStore.AsQueryable())}
                 };
                 var expr = _queryHelper.ToLinq(ast, context);
                 return Expression.Lambda<Func<dynamic>>(expr).Compile().Invoke();
@@ -61,7 +67,7 @@ namespace Xania.TemplateJS.Controllers
         private static readonly IDictionary<TypeDesc, TypeInfo> _anonymousTypes = new Dictionary<TypeDesc, TypeInfo>();
         private static readonly object _lockObject = new object();
 
-        public Type CreateType(IDictionary<string, Type> fields)
+        public TypeInfo CreateType(IDictionary<string, Type> fields)
         {
             lock (_lockObject)
             {

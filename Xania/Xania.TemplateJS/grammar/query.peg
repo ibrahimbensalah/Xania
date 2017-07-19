@@ -72,27 +72,26 @@ LambdaExpression
 	}
 
 QueryExpression
-	= "for" _ param:IdentifierName _ "in" _ source:MultiplicativeExpression join:(_ JoinExpression)? selector:(_ SelectExpression)? {
+	= "for" _ param:IdentifierName _ "in" _ source:MultiplicativeExpression joins:(_ JoinExpression)* selector:(_ SelectExpression)? {
 		var query = { type: QUERY, param: param, source: source }
 
-		function reducer(source, predicate) {
-			return { type: WHERE, predicate, source };
-		}
-
-		if (join) {
-			query = {
+		function joinReducer(outer, join) {
+			return { 
 				type: JOIN,
-				outer: query,
+				outer: outer,
 				inner: join[1].source,
 				conditions: join[1].conditions
 			};
 		}
+
+		query = joins.reduce(joinReducer, query);
 
 		if (selector)
 			return { type: SELECT, selector: selector[1], source: query }
 
 		return query;
 	}
+
 JoinExpression
   = "join" _ param:IdentifierName _ "in" _ src:MultiplicativeExpression _ "on" _ outerKey:Identifier _ ("=" / "equals") _ innerKey:Identifier {
 	return {

@@ -28,6 +28,7 @@
         var query =
             ` for i in invoices
               join c in companies on i.companyId = c.id
+              join c2 in companies on i.companyId = c2.id
               select { 
                     invoiceId: i.id, 
                     invoiceDate: i.invoiceDate, 

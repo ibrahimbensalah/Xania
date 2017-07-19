@@ -82,6 +82,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />
+    <None Include="join2.json" />
     <None Include="join.json" />
     <None Include="packages.config" />
   </ItemGroup>

@@ -69,5 +69,15 @@ namespace Xania.QL.Tests.Properties {
                 return ((byte[])(obj));
             }
         }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Byte[].
+        /// </summary>
+        internal static byte[] join2 {
+            get {
+                object obj = ResourceManager.GetObject("join2", resourceCulture);
+                return ((byte[])(obj));
+            }
+        }
     }
 }
