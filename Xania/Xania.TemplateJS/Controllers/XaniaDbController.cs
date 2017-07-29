@@ -31,13 +31,13 @@ namespace Xania.TemplateJS.Controllers
         {
             return Task.Run(() =>
             {
-                var context = new ExpressionContext
-                {
-                    { "companies", Expression.Constant(_companyStore.AsQueryable())},
-                    { "invoices", Expression.Constant(_invoiceStore.AsQueryable())},
-                    { "now", Expression.Constant(DateTime.Now) },
-                    { "user", Expression.Constant(User) }
-                };
+                var context = new ExpressionContext()
+                    .Add("companies", _companyStore.AsQueryable())
+                    .Add("invoices", _invoiceStore.AsQueryable())
+                    .Add("now", DateTime.Now)
+                    .Add("server", new { host = Request.Host.Value })
+                    .Add("user", User);
+
                 var queryHelper = new QueryHelper(new RuntimeReflectionHelper());
                 return Json(queryHelper.Execute(ast, context));
             });

@@ -52,7 +52,7 @@
         System.import('admin/xaniadb').then(function (db) {
             function debug(x) {
                 console.debug("result: ", x);
-            };
+            }
             function json(response) {
                 return response.json();
             }
@@ -61,8 +61,9 @@
             }
 
             db.ql(query).then(json).then(debug);
-            db.ql(`user.Identity.IsAuthenticated`).then(text).then(debug);
+            db.ql(`user.identity.isauthenticated`).then(text).then(debug);
             db.ql(`now`).then(text).then(debug);
+            db.ql(`server.host`).then(text).then(debug);
         });
     </script>
 </head>

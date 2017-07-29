@@ -95,6 +95,10 @@ namespace Xania.QL
                     var targetType = targetExpr.Type;
                     var propertyInfo = targetType.GetRuntimeProperties()
                         .SingleOrDefault(e => e.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+
+                    if (propertyInfo == null)
+                        throw new NotSupportedException($"Member '{name}' does not exists in {targetType}");
+
                     return Expression.Property(targetExpr, propertyInfo);
                 case Token.RECORD:
                     var fields = new Dictionary<string, Expression>();
@@ -357,33 +361,45 @@ namespace Xania.QL
         }
     }
 
-    public class ExpressionContext : Dictionary<string, Expression>, IContext
+    public class ExpressionContext : IContext
     {
+        private readonly Dictionary<string, Expression> _values = new Dictionary<string, Expression>();
+
         public ExpressionContext(params ParameterExpression[] @params)
         {
             foreach (var p in @params)
-                Add(p.Name, p);
+                _values.Add(p.Name, p);
         }
 
-        public ExpressionContext Add(string name, IQueryable queryable)
+        public ExpressionContext Add(string key, object value)
         {
-            Add(name, Expression.Constant(queryable));
+            _values.Add(key, Expression.Constant(value));
             return this;
         }
 
-        public ExpressionContext Add(string name, IEnumerable enumerable)
+        public ExpressionContext Add(string key, Expression expr)
         {
-            // Add(name, Expression.Constant(new EnumerableQuery(enumerable));
+            _values.Add(key, expr);
             return this;
         }
 
         public Expression Get(string name)
         {
             Expression expr;
-            if (TryGetValue(name, out expr))
+            if (_values.TryGetValue(name, out expr))
                 return expr;
 
             return null;
+        }
+
+        public IEnumerator<KeyValuePair<string, Expression>> GetEnumerator()
+        {
+            return _values.GetEnumerator();
+        }
+
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            return GetEnumerator();
         }
     }
 

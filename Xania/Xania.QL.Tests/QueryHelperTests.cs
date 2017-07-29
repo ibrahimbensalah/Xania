@@ -37,8 +37,8 @@ namespace Xania.QL.Tests
         {
             IContext context = new ExpressionContext
             {
-                {"companies", Expression.Constant(_companyStore.AsQueryable())},
-                {"invoices", Expression.Constant(_invoiceStore.AsQueryable())}
+                {"companies", (_companyStore.AsQueryable())},
+                {"invoices", (_invoiceStore.AsQueryable())}
             };
 
             object obj = Resources.ResourceManager.GetObject(resourceName, Resources.Culture);
@@ -58,8 +58,8 @@ namespace Xania.QL.Tests
         {
             var context = new ExpressionContext
             {
-                {"companies", Expression.Constant(_companyStore.AsQueryable())},
-                {"invoices", Expression.Constant(_invoiceStore.AsQueryable())}
+                {"companies", _companyStore.AsQueryable()},
+                {"invoices", _invoiceStore.AsQueryable()}
             };
 
             var join = GetJoin(
@@ -87,7 +87,7 @@ namespace Xania.QL.Tests
         {
             var context = new ExpressionContext
             {
-                {"companies", Expression.Constant(new[] {new Company {Id = 1, Name = "Xania"}}.AsQueryable())}
+                {"companies", new[] {new Company {Id = 1, Name = "Xania"}}.AsQueryable()}
             };
 
             var ast = GetSelector(GetQuery("c", GetIdentifier("companies")), GetMember(GetIdentifier("c"), "Name"));
@@ -102,7 +102,7 @@ namespace Xania.QL.Tests
         {
             var context = new ExpressionContext
             {
-                {"c", Expression.Constant(new Company {Id = 1, Name = "Xania"})}
+                {"c", new Company {Id = 1, Name = "Xania"}}
             };
 
             var expr = _helper.ToLinq(GetIdentifier("c"), context);
@@ -116,7 +116,7 @@ namespace Xania.QL.Tests
         {
             var context = new ExpressionContext
             {
-                {"c", Expression.Constant(new Company {Id = 1, Name = "Xania"})}
+                {"c", (new Company {Id = 1, Name = "Xania"})}
             };
 
             var expr = _helper.ToLinq(GetMember(GetIdentifier("c"), "Name"), context);
@@ -130,8 +130,8 @@ namespace Xania.QL.Tests
             var invoiceId = Guid.NewGuid();
             var context = new ExpressionContext
             {
-                {"c", Expression.Constant(new Company {Id = 1, Name = "Xania"})},
-                {"i", Expression.Constant(new Invoice {CompanyId = 1, InvoiceNumber = "2017001", Id = invoiceId})}
+                {"c", (new Company {Id = 1, Name = "Xania"})},
+                {"i", (new Invoice {CompanyId = 1, InvoiceNumber = "2017001", Id = invoiceId})}
             };
 
             var record = GetRecord(GetMemberBind("invoiceId", GetMember(GetIdentifier("i"), "Id")),
@@ -147,8 +147,8 @@ namespace Xania.QL.Tests
         {
             var context = new ExpressionContext
             {
-                {"c", Expression.Constant(new Company {Id = 1, Name = "Xania"})},
-                {"i", Expression.Constant(new Invoice {CompanyId = 1, InvoiceNumber = "2017001"})}
+                {"c", new Company {Id = 1, Name = "Xania"}},
+                {"i", new Invoice {CompanyId = 1, InvoiceNumber = "2017001"}}
             };
 
             var equal = GetEqual(GetMember(GetIdentifier("c"), "Id"), GetMember(GetIdentifier("i"), "CompanyId"));
