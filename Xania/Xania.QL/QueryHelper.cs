@@ -189,9 +189,9 @@ namespace Xania.QL
             }
         }
 
-        public dynamic Execute(object ast, ExpressionContext context)
+        public dynamic Execute(object ast, params IContext[] contexts)
         {
-            var expr = ToLinq(ast, context);
+            var expr = ToLinq(ast, new ContextStack (contexts));
             return Expression.Lambda(expr).Compile().DynamicInvoke();
         }
     }
@@ -217,7 +217,7 @@ namespace Xania.QL
         }
 
         public Query(IReflectionHelper reflectionHelper, ParameterExpression elementParam, Expression sourceExpr, Type elementType)
-            : this(reflectionHelper, elementParam, sourceExpr, elementType, new ExpressionContext(elementParam))
+            : this(reflectionHelper, elementParam, sourceExpr, elementType, new QueryContext(elementParam))
         {
         }
 
@@ -334,7 +334,7 @@ namespace Xania.QL
 
             var resultParamExpr = Expression.Parameter(outerResultType);
 
-            var resultContext = new ExpressionContext();
+            var resultContext = new QueryContext();
             var outerPropertyReplacement = Expression.Property(resultParamExpr, "o");
             foreach (var kvp in _outer.CreateContext())
             {
@@ -361,23 +361,23 @@ namespace Xania.QL
         }
     }
 
-    public class ExpressionContext : IContext
+    public class QueryContext : IContext
     {
         private readonly Dictionary<string, Expression> _values = new Dictionary<string, Expression>();
 
-        public ExpressionContext(params ParameterExpression[] @params)
+        public QueryContext(params ParameterExpression[] @params)
         {
             foreach (var p in @params)
                 _values.Add(p.Name, p);
         }
 
-        public ExpressionContext Add(string key, object value)
+        public QueryContext Add(string key, object value)
         {
             _values.Add(key, Expression.Constant(value));
             return this;
         }
 
-        public ExpressionContext Add(string key, Expression expr)
+        public QueryContext Add(string key, Expression expr)
         {
             _values.Add(key, expr);
             return this;

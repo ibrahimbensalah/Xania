@@ -35,7 +35,7 @@ namespace Xania.QL.Tests
         [TestCase("join2")]
         public void ResourceTest(string resourceName)
         {
-            IContext context = new ExpressionContext
+            IContext context = new QueryContext
             {
                 {"companies", (_companyStore.AsQueryable())},
                 {"invoices", (_invoiceStore.AsQueryable())}
@@ -56,7 +56,7 @@ namespace Xania.QL.Tests
         [Test]
         public void JoinTest()
         {
-            var context = new ExpressionContext
+            var context = new QueryContext
             {
                 {"companies", _companyStore.AsQueryable()},
                 {"invoices", _invoiceStore.AsQueryable()}
@@ -85,7 +85,7 @@ namespace Xania.QL.Tests
         [Test]
         public void SelectTest()
         {
-            var context = new ExpressionContext
+            var context = new QueryContext
             {
                 {"companies", new[] {new Company {Id = 1, Name = "Xania"}}.AsQueryable()}
             };
@@ -100,7 +100,7 @@ namespace Xania.QL.Tests
         [Test]
         public void IdentifierTest()
         {
-            var context = new ExpressionContext
+            var context = new QueryContext
             {
                 {"c", new Company {Id = 1, Name = "Xania"}}
             };
@@ -114,7 +114,7 @@ namespace Xania.QL.Tests
         [Test]
         public void MemberTest()
         {
-            var context = new ExpressionContext
+            var context = new QueryContext
             {
                 {"c", (new Company {Id = 1, Name = "Xania"})}
             };
@@ -128,7 +128,7 @@ namespace Xania.QL.Tests
         public void RecordTest()
         {
             var invoiceId = Guid.NewGuid();
-            var context = new ExpressionContext
+            var context = new QueryContext
             {
                 {"c", (new Company {Id = 1, Name = "Xania"})},
                 {"i", (new Invoice {CompanyId = 1, InvoiceNumber = "2017001", Id = invoiceId})}
@@ -145,7 +145,7 @@ namespace Xania.QL.Tests
         [Test]
         public void ConditionTest()
         {
-            var context = new ExpressionContext
+            var context = new QueryContext
             {
                 {"c", new Company {Id = 1, Name = "Xania"}},
                 {"i", new Invoice {CompanyId = 1, InvoiceNumber = "2017001"}}

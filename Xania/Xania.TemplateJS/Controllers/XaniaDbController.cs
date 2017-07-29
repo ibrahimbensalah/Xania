@@ -16,13 +16,13 @@ namespace Xania.TemplateJS.Controllers
     [Route("api/[controller]")]
     public class XaniaDbController: Controller
     {
-        private readonly IObjectStore<Invoice> _invoiceStore;
-        private readonly IObjectStore<Company> _companyStore;
+        private readonly QueryContext _storeContext;
 
         public XaniaDbController(IObjectStore<Invoice> invoiceStore, IObjectStore<Company> companyStore)
         {
-            _invoiceStore = invoiceStore;
-            _companyStore = companyStore;
+            _storeContext = new QueryContext()
+                .Add("companies", companyStore.AsQueryable())
+                .Add("invoices", invoiceStore.AsQueryable());
         }
 
         [HttpPost]
@@ -31,15 +31,13 @@ namespace Xania.TemplateJS.Controllers
         {
             return Task.Run(() =>
             {
-                var context = new ExpressionContext()
-                    .Add("companies", _companyStore.AsQueryable())
-                    .Add("invoices", _invoiceStore.AsQueryable())
+                var requestContext = new QueryContext()
                     .Add("now", DateTime.Now)
                     .Add("server", new { host = Request.Host.Value })
                     .Add("user", User);
 
                 var queryHelper = new QueryHelper(new RuntimeReflectionHelper());
-                return Json(queryHelper.Execute(ast, context));
+                return Json(queryHelper.Execute(ast, _storeContext, requestContext));
             });
         }
     }
