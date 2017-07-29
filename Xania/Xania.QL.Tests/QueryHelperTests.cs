@@ -35,14 +35,6 @@ namespace Xania.QL.Tests
         [TestCase("join2")]
         public void ResourceTest(string resourceName)
         {
-            var companies = _companyStore.AsQueryable();
-            var invoices = _invoiceStore.AsQueryable();
-
-            var q = invoices.Join(companies, i => i.CompanyId, c1 => c1.Id, (i, c1) => new { i, c1 })
-                .Join(companies, @t => @t.i.CompanyId, c2 => c2.Id, (@t, c2) => new { @t, c2 })
-                .Join(companies, @t => @t.@t.i.CompanyId, c3 => c3.Id,
-                    (@t, c3) => new { @t.@t.i.Id, C1 = @t.@t.c1.Name, C2 = @t.c2.Name, C3 = c3.Name });
-
             IContext context = new ExpressionContext
             {
                 {"companies", Expression.Constant(_companyStore.AsQueryable())},

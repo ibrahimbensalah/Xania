@@ -184,97 +184,13 @@ namespace Xania.QL
                     throw new InvalidOperationException();
             }
         }
+
+        public dynamic Execute(object ast, ExpressionContext context)
+        {
+            var expr = ToLinq(ast, context);
+            return Expression.Lambda(expr).Compile().DynamicInvoke();
+        }
     }
-
-    //internal class JoinQuery : IQuery
-    //{
-    //    private readonly IReflectionHelper _reflectionHelper;
-    //    private readonly Query _outerQuery;
-    //    private readonly IQuery _innerQuery;
-    //    private readonly Expression _outerKeyExpr;
-    //    private readonly Expression _innerKeyExpr;
-
-    //    public JoinQuery(IReflectionHelper reflectionHelper, Query outerQuery, IQuery innerQuery, Expression outerKeyExpr, Expression innerKeyExpr)
-    //    {
-    //        _reflectionHelper = reflectionHelper;
-    //        _outerQuery = outerQuery;
-    //        _innerQuery = innerQuery;
-    //        _outerKeyExpr = outerKeyExpr;
-    //        _innerKeyExpr = innerKeyExpr;
-
-    //        var outerContext = _outerQuery.CreateContext();
-    //        var innerContext = _innerQuery.CreateContext();
-
-    //        var unionContext = outerContext.Union(innerContext).ToArray();
-    //        // var elementType = _reflectionHelper.CreateType(unionContext.ToDictionary(kvp => kvp.Key, kvp => kvp.Value.Type));
-
-    //        // Params = _outerQuery.Params.Concat(_innerQuery.Params).ToArray();
-
-    //        // var unionParams = _outerQuery.Params.Concat(_innerQuery.Params).ToArray();
-
-    //        var selectorExpression = GetSelectorLambda(_outerQuery.ElementType, _innerQuery.ElementType);
-
-    //        //var sourceExpr = Select(selectorExpr, @params);
-
-    //        //var typeParam = Expression.Parameter(elementType.AsType(), "t");
-    //        //var outParams = unionParams.Select(p => Expression.Property(typeParam, p.Name));
-    //        var joinMethod = _reflectionHelper.GetQueryableJoin(_outerQuery.ElementType, _innerQuery.ElementType, _outerKeyExpr.Type, selectorExpression.Body.Type);
-    //        var joinExpression = Expression.Call(null, joinMethod,
-    //            _outerQuery.SourceExpr,
-    //            _innerQuery.SourceExpr,
-    //            Expression.Lambda(_outerKeyExpr, _outerQuery.Params),
-    //            Expression.Lambda(Expression.Convert(_innerKeyExpr, _outerKeyExpr.Type), _innerQuery.Params),
-    //            selectorExpression);
-    //    }
-
-    //    private LambdaExpression GetSelectorLambda(Type outerType, Type innerType)
-    //    {
-    //        var @params = new[]
-    //        {
-    //            Expression.Parameter(outerType, "t"),
-    //            Expression.Parameter(innerType, "r")
-    //        };
-    //        var elementType = _reflectionHelper.CreateType(@params.ToDictionary(p => p.Name, p => p.Type));
-
-    //        var selectorExpr = Expression.MemberInit(Expression.New(elementType.AsType()),
-    //            @params.Select(e => Expression.Bind(elementType.DeclaredProperties.Single(x => x.Name.Equals(e.Name)), e))
-    //        );
-    //        return Expression.Lambda(selectorExpr, @params);
-    //    }
-
-    //    private Expression Select(MemberInitExpression selectorExpr, ParameterExpression[] @params)
-    //    {
-    //        var joinMethod = _reflectionHelper.GetQueryableJoin(_outerQuery.ElementType, _innerQuery.ElementType, _outerKeyExpr.Type, selectorExpr.Type);
-    //        return Expression.Call(null, joinMethod,
-    //            _outerQuery.SourceExpr,
-    //            _innerQuery.SourceExpr,
-    //            Expression.Lambda(_outerKeyExpr, _outerQuery.Params),
-    //            Expression.Lambda(Expression.Convert(_innerKeyExpr, _outerKeyExpr.Type), _innerQuery.Params),
-    //            Expression.Lambda(selectorExpr, @params));
-    //    }
-
-    //    // public ParameterExpression[] Params { get; }
-    //    public Type ElementType { get; set; }
-    //    public Expression SourceExpr { get; set; }
-
-    //    public Expression Select(Expression selectorExpr)
-    //    {
-    //        var outerParam = Expression.Parameter(_outerQuery.ElementType, )
-
-    //        var joinMethod = _reflectionHelper.GetQueryableJoin(_outerQuery.ElementType, _innerQuery.ElementType, _outerKeyExpr.Type, selectorExpr.Type);
-    //        return Expression.Call(null, joinMethod, 
-    //            _outerQuery.SourceExpr, 
-    //            _innerQuery.SourceExpr, 
-    //            Expression.Lambda(_outerKeyExpr, _outerQuery.Params),
-    //            Expression.Lambda(Expression.Convert(_innerKeyExpr, _outerKeyExpr.Type), _innerQuery.Params),
-    //            Expression.Lambda(selectorExpr, Params));
-    //    }
-
-    //    public IContext CreateContext()
-    //    {
-    //        return new ExpressionContext(Params);
-    //    }
-    //}
 
     internal interface IQuery
     {
@@ -315,8 +231,13 @@ namespace Xania.QL
 
         public Expression Select(Expression selectorExpr)
         {
-            var selectMethod = _reflectionHelper.GetQueryableSelect(ElementType, selectorExpr.Type);
-            return Expression.Call(selectMethod, SourceExpr, Expression.Lambda(selectorExpr, ElementParam));
+            return Select(Expression.Lambda(selectorExpr, ElementParam));
+        }
+
+        public Expression Select(LambdaExpression selectorExpr)
+        {
+            var selectMethod = _reflectionHelper.GetQueryableSelect(ElementType, selectorExpr.Body.Type);
+            return Expression.Call(selectMethod, SourceExpr, selectorExpr);
         }
 
         public IContext CreateContext()
@@ -352,7 +273,7 @@ namespace Xania.QL
             var context = CreateContext();
             var joinMethod = _reflectionHelper.GetQueryableJoin(_outer.ElementType, _inner.ElementType, _outerKeyExpr.Type, selectorExpr.Type);
             var selectorLambda = Expression.Lambda(
-                ExpressionReplacer.ReplaceParameters(selectorExpr, context),
+                selectorExpr,
                 _outer.ElementParam,
                 _inner.ElementParam
             );
@@ -373,33 +294,61 @@ namespace Xania.QL
 
         public IQuery Join(Query inner, Expression outerKeyExpr, Expression innerKeyExpr)
         {
-            var fields = new Dictionary<string, Type>();
-            fields.Add("o", _outer.ElementType);
-            fields.Add("i", _inner.ElementType);
-            var outerResultTypeInfo = _reflectionHelper.CreateType(fields);
-            var outerResultType = outerResultTypeInfo.AsType();
+            Expression outerSourceExpr;
+            Type outerResultType;
+            {
+                var outerResultTypeInfo = _reflectionHelper.CreateType(new Dictionary<string, Type>
+                {
+                    {"o", _outer.ElementType},
+                    {"i", _inner.ElementType}
+                });
+                outerResultType = outerResultTypeInfo.AsType();
 
-            var outerElementProperty = outerResultTypeInfo.DeclaredProperties.Single(p => p.Name.Equals("o"));
-            var innerElementProperty = outerResultTypeInfo.DeclaredProperties.Single(p => p.Name.Equals("i"));
+                var outerElementProperty = outerResultTypeInfo.DeclaredProperties.Single(p => p.Name.Equals("o"));
+                var innerElementProperty = outerResultTypeInfo.DeclaredProperties.Single(p => p.Name.Equals("i"));
 
-            var outerSelectorExpr = Expression.MemberInit(
-                Expression.New(outerResultType),
-                Expression.Bind(outerElementProperty, _outer.ElementParam),
-                Expression.Bind(innerElementProperty, _inner.ElementParam)
-            );
+                var outerSelectorExpr = Expression.MemberInit(
+                    Expression.New(outerResultType),
+                    Expression.Bind(outerElementProperty, _outer.ElementParam),
+                    Expression.Bind(innerElementProperty, _inner.ElementParam)
+                );
 
-            var outerSourceExpr = _outer.Select(outerSelectorExpr);
+                var joinMethod = _reflectionHelper.GetQueryableJoin(_outer.ElementType, _inner.ElementType,
+                    _outerKeyExpr.Type, outerSelectorExpr.Type);
+
+                outerSourceExpr = Expression.Call(
+                    joinMethod,
+                    _outer.SourceExpr,
+                    _inner.SourceExpr,
+                    Expression.Lambda(_outerKeyExpr, _outer.ElementParam),
+                    Expression.Lambda(Expression.Convert(_innerKeyExpr, _outerKeyExpr.Type), _inner.ElementParam),
+                    Expression.Lambda(outerSelectorExpr, _outer.ElementParam, _inner.ElementParam)
+                );
+            }
+
+            // var outerSourceExpr = _outer.Select(Expression.Lambda(outerSelectorExpr, _outer.ElementParam, _inner.ElementParam));
 
             var resultParamExpr = Expression.Parameter(outerResultType);
 
-            var outerKeyExpr2 = ExpressionReplacer.Replace(outerKeyExpr, _outer.ElementParam, Expression.Property(resultParamExpr, outerElementProperty));
-            var innerKeyExpr2 = ExpressionReplacer.Replace(innerKeyExpr, _inner.ElementParam, Expression.Property(resultParamExpr, innerElementProperty));
+            var resultContext = new ExpressionContext();
+            var outerPropertyReplacement = Expression.Property(resultParamExpr, "o");
+            foreach (var kvp in _outer.CreateContext())
+            {
+                resultContext.Add(kvp.Key, ExpressionReplacer.Replace(kvp.Value, _outer.ElementParam, outerPropertyReplacement));
+            }
 
-            return new Query(_reflectionHelper, resultParamExpr, outerSourceExpr, outerResultType, new ContextStack(_outer.CreateContext(), _inner.CreateContext()))
+            var innerPropertyReplacement = Expression.Property(resultParamExpr, "i");
+            foreach (var kvp in _inner.CreateContext())
+            {
+                resultContext.Add(kvp.Key, ExpressionReplacer.Replace(kvp.Value, _inner.ElementParam, innerPropertyReplacement));
+            }
+
+            return new Query(_reflectionHelper, resultParamExpr, outerSourceExpr, outerResultType, resultContext)
                 .Join(
                     inner,
-                    outerKeyExpr2,
-                    innerKeyExpr2
+                    ExpressionReplacer.Replace(outerKeyExpr, _outer.ElementParam, outerPropertyReplacement),
+//                    ExpressionReplacer.Replace(outerSelectorExpr, resultContext),
+                    innerKeyExpr
                 );
 
             // return outer.Join(inner, outerKeyExpr, innerKeyExpr);
@@ -414,6 +363,18 @@ namespace Xania.QL
         {
             foreach (var p in @params)
                 Add(p.Name, p);
+        }
+
+        public ExpressionContext Add(string name, IQueryable queryable)
+        {
+            Add(name, Expression.Constant(queryable));
+            return this;
+        }
+
+        public ExpressionContext Add(string name, IEnumerable enumerable)
+        {
+            // Add(name, Expression.Constant(new EnumerableQuery(enumerable));
+            return this;
         }
 
         public Expression Get(string name)
@@ -437,9 +398,23 @@ namespace Xania.QL
 
         public Expression Get(string name) =>
             _contexts.Select(t => t.Get(name)).FirstOrDefault(result => result != null);
+
+        public IEnumerator<KeyValuePair<string, Expression>> GetEnumerator()
+        {
+            foreach (var ctx in _contexts)
+            {
+                foreach (var kvp in ctx)
+                    yield return kvp;
+            }
+        }
+
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            return GetEnumerator();
+        }
     }
 
-    public interface IContext
+    public interface IContext: IEnumerable<KeyValuePair<string, Expression>>
     {
         Expression Get(string name);
     }

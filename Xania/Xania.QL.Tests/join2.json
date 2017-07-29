@@ -46,6 +46,17 @@
           },
           "member": "name"
         }
+      },
+      {
+        "name": "companyName2",
+        "value": {
+          "type": 4,
+          "target": {
+            "type": 3,
+            "name": "c2"
+          },
+          "member": "name"
+        }
       }
     ]
   },

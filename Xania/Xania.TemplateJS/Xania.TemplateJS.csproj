@@ -9,13 +9,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Remove="wwwroot\jspm_packages\github\mozilla\pdf.js%401.8.188\**" />
-    <Content Remove="wwwroot\jspm_packages\github\mozilla\pdf.js%401.8.188\**" />
-    <EmbeddedResource Remove="wwwroot\jspm_packages\github\mozilla\pdf.js%401.8.188\**" />
-    <None Remove="wwwroot\jspm_packages\github\mozilla\pdf.js%401.8.188\**" />
-  </ItemGroup>
-
-  <ItemGroup>
     <Content Remove="wwwroot/src\pdf.js" />
   </ItemGroup>
 
@@ -29,6 +22,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Content Include="wwwroot\admin\xaniadb.ts" />
     <Content Include="wwwroot\query.html" />
     <Content Include="wwwroot\src\expression.ts" />
     <Content Include="wwwroot\wasm.html" />

@@ -14,39 +14,32 @@ using Xania.TemplateJS.Reporting;
 namespace Xania.TemplateJS.Controllers
 {
     [Route("api/[controller]")]
-    public class QueryController : Controller
+    public class XaniaDbController: Controller
     {
         private readonly IObjectStore<Invoice> _invoiceStore;
         private readonly IObjectStore<Company> _companyStore;
-        private readonly QueryHelper _queryHelper;
 
-        public QueryController(IObjectStore<Invoice> invoiceStore, IObjectStore<Company> companyStore)
+        public XaniaDbController(IObjectStore<Invoice> invoiceStore, IObjectStore<Company> companyStore)
         {
             _invoiceStore = invoiceStore;
             _companyStore = companyStore;
-            _queryHelper = new QueryHelper(new RuntimeReflectionHelper());
         }
 
         [HttpPost]
-        [HttpGet]
         [Route("")]
-        public  Task<object> Index([FromBody]dynamic ast)
+        public Task<dynamic> Index([FromBody] dynamic ast)
         {
-            var companies = _companyStore.AsQueryable();
-            var invoices = _invoiceStore.AsQueryable();
-
-            var q = companies.Join(invoices, c => c.Id, i1 => i1.CompanyId, (c, i1) => new {c, i1})
-                .Join(invoices, @t => @t.c.Id, i2 => i2.CompanyId, (@t, i2) => @t.i1.CompanyId);
-
             return Task.Run(() =>
             {
                 var context = new ExpressionContext
                 {
                     { "companies", Expression.Constant(_companyStore.AsQueryable())},
-                    { "invoices", Expression.Constant(_invoiceStore.AsQueryable())}
+                    { "invoices", Expression.Constant(_invoiceStore.AsQueryable())},
+                    { "now", Expression.Constant(DateTime.Now) },
+                    { "user", Expression.Constant(User) }
                 };
-                var expr = _queryHelper.ToLinq(ast, context);
-                return Expression.Lambda<Func<dynamic>>(expr).Compile().Invoke();
+                var queryHelper = new QueryHelper(new RuntimeReflectionHelper());
+                return Json(queryHelper.Execute(ast, context));
             });
         }
     }
@@ -78,8 +71,6 @@ namespace Xania.TemplateJS.Controllers
                     return result;
 
                 TypeBuilder tb = GetTypeBuilder();
-                var constructor = tb.DefineDefaultConstructor(MethodAttributes.Public | MethodAttributes.SpecialName |
-                                                              MethodAttributes.RTSpecialName);
 
                 foreach (var kvp in fields)
                     CreateProperty(tb, kvp.Key, kvp.Value);

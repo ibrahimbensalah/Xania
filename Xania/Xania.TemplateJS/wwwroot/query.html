@@ -28,34 +28,41 @@
         var query =
             ` for i in invoices
               join c in companies on i.companyId = c.id
-              join c2 in companies on i.companyId = c2.id
               select { 
                     invoiceId: i.id, 
                     invoiceDate: i.invoiceDate, 
                     invoiceNumber: i.invoiceNumber,
-                    companyName: c.name
+                    companyName : c.name
               }
             `;
-        System.import('src/compile').then(function (compile) {
-            var config = {
-                method: "POST",
-                headers: {
-                    'Content-Type': "application/json"
-                },
-                body: JSON.stringify(compile.parse(query))
-            };
 
-            var start = new Date();
-
+        function measure(xaniaDb, ast) {
             var arr = [];
-            for (var i = 0; i < 1000; i++) {
-                arr.push(fetch("/api/query", config));
+            for (var i = 0; i < 4000; i++) {
+                arr.push(xaniaDb(ast));
             }
-            Promise.all(arr).then(function() {
+            var start = new Date();
+            Promise.all(arr).then(function () {
                 var end = new Date();
 
                 console.log({ start: start, end: end, elapsed: end - start });
             });
+        }
+
+        System.import('admin/xaniadb').then(function (db) {
+            function debug(x) {
+                console.debug("result: ", x);
+            };
+            function json(response) {
+                return response.json();
+            }
+            function text(response) {
+                return response.text();
+            }
+
+            db.ql(query).then(json).then(debug);
+            db.ql(`user.Identity.IsAuthenticated`).then(text).then(debug);
+            db.ql(`now`).then(text).then(debug);
         });
     </script>
 </head>

@@ -12,8 +12,16 @@ namespace Xania.QL
         // except with 'source' parameter replaced with 'target' expression.     
         public static Expression Replace(Expression expression, Expression source, Expression target)
         {
-            return new ReplaceVisitor(source, target)
+            if (source.Type != target.Type)
+                throw new InvalidOperationException(string.Format("Type mismatch {0} != {1}", source.Type.Name, target.Type.Name));
+
+            var result = new ReplaceVisitor(source, target)
                 .VisitAndConvert(expression);
+
+            if (result == source)
+                throw new InvalidOperationException();
+
+            return result;
         }
 
         private class ReplaceVisitor : ExpressionVisitor
