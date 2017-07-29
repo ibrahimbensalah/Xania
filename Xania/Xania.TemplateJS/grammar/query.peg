@@ -51,6 +51,7 @@
 	var EQ = 17;
 	var OR = 18;
 	var AND = 19;
+	var NOT = 20;
 }
 
 Program
@@ -206,6 +207,12 @@ Term
 			expr: expr
 		};
 	}
+  / "not" _ expr:MultiplicativeExpression {
+		return {
+			type: NOT,
+			expr: expr
+		};
+	}
 
 Range
   = "[" _ from:(Term / Identifier) _ ".." _ to:(Term / Identifier) _ "]" {
@@ -241,7 +248,7 @@ Application
 	}
   
 Keyword
-  = ("select" / "where" / "await" / "or" / "and" / "equals" / "is" / "join" / "on" ) & [ \r\n\b]
+  = ("select" / "where" / "await" / "or" / "and" / "not" / "equals" / "is" / "join" / "on" ) & [ \r\n\b]
 
 Identifier
   = !Keyword name:IdentifierName members:( "." IdentifierName)* {

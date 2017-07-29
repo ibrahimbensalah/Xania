@@ -54,16 +54,20 @@
                 console.debug("result: ", x);
             }
             function json(response) {
-                return response.json();
+                if (response.ok)
+                    return response.json();
+                return '<error>';
             }
             function text(response) {
-                return response.text();
+                if (response.ok)
+                    return response.text();
+                return '<error>';
             }
 
             db.ql(query).then(json).then(debug);
-            db.ql(`user.identity.isauthenticated`).then(text).then(debug);
             db.ql(`now`).then(text).then(debug);
             db.ql(`server.host`).then(text).then(debug);
+            db.ql(`not user.identity.isauthenticated`).then(text).then(debug);
         });
     </script>
 </head>

@@ -28,7 +28,8 @@ namespace Xania.QL
         RECORD = 16,
         EQ = 17,
         OR = 18,
-        AND = 19
+        AND = 19,
+        NOT = 20,
     }
 
     public class QueryHelper
@@ -100,6 +101,8 @@ namespace Xania.QL
                         throw new NotSupportedException($"Member '{name}' does not exists in {targetType}");
 
                     return Expression.Property(targetExpr, propertyInfo);
+                case Token.NOT:
+                    return Expression.Not(ToLinq(ast.expr, context));
                 case Token.RECORD:
                     var fields = new Dictionary<string, Expression>();
                     foreach (var binder in ast.binders)

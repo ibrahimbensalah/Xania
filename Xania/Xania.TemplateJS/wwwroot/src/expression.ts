@@ -60,9 +60,11 @@ var LAMBDA = 13;
 var LAZY = 14;
 var JOIN = 15;
 var RECORD = 16;
+
 var EQ = 17;
 var OR = 18;
 var AND = 19;
+var NOT = 20;
 // ReSharper restore InconsistentNaming
 
 class Range {
@@ -193,6 +195,10 @@ export default class Expression {
                     break;
                 case LAZY:
                     ast.value = ast.expr(binding, context);
+                    break;
+                case NOT:
+                    var value = ast.expr.value;
+                    ast.value = !value || !value.valueOf();
                     break;
                 default:
                     throw Error("unsupported ast type " + ast.type);
@@ -329,6 +335,10 @@ export default class Expression {
                     for (let i = 0; i < length; i++) {
                         compile(ast.args[i], stack);
                     }
+                    break;
+                case NOT:
+                    stack.push(ast);
+                    stack.push(ast.expr);
                     break;
                 case LAMBDA:
                     break;

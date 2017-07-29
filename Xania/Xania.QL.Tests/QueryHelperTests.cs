@@ -54,6 +54,18 @@ namespace Xania.QL.Tests
         }
 
         [Test]
+        public void NegationTest()
+        {
+            var context = new QueryContext()
+                .Add("user", new { IsAuthenticated = false });
+
+            var negate = GetNot(GetMember(GetIdentifier("user"), "isAuthenticated"));
+            bool result = _helper.Execute(negate, context);
+
+            result.Should().BeTrue();
+        }
+
+        [Test]
         public void JoinTest()
         {
             var context = new QueryContext
@@ -213,6 +225,22 @@ namespace Xania.QL.Tests
             return ast;
         }
 
+        private object GetApp(object fun, params object[] args)
+        {
+            dynamic ast = new ExpandoObject();
+            ast.type = Token.APP;
+            ast.fun = fun;
+            ast.args = args;
+            return ast;
+        }
+
+        private object GetNot(object expr)
+        {
+            dynamic ast = new ExpandoObject();
+            ast.type = Token.NOT;
+            ast.expr = expr;
+            return ast;
+        }
 
         private static object GetJoin(object outer, object inner, object[] conditions)
         {
