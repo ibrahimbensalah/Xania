@@ -54,6 +54,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{9CB55B1D-E86
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{FB892B2B-5404-457B-AA65-BBB43F0881A0}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Xania.Public", "..\Xania.Public\Xania.Public.csproj", "{1D38F947-32EF-4BE8-B9DD-3643181CA601}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -104,6 +106,10 @@ Global
 		{4207B701-19D0-421E-990C-306C6378FB19}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4207B701-19D0-421E-990C-306C6378FB19}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4207B701-19D0-421E-990C-306C6378FB19}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1D38F947-32EF-4BE8-B9DD-3643181CA601}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1D38F947-32EF-4BE8-B9DD-3643181CA601}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1D38F947-32EF-4BE8-B9DD-3643181CA601}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1D38F947-32EF-4BE8-B9DD-3643181CA601}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
