@@ -7,7 +7,17 @@ import './invoices.css'
 
 class InvoiceRepository extends ModelRepository {
     constructor() {
-        super("/api/invoice/", "invoices"); // 
+        var query =
+            ` for i in invoices
+              join c in companies on i.companyId = c.id
+              select { 
+                    invoiceId: i.id, 
+                    invoiceDate: i.invoiceDate, 
+                    invoiceNumber: i.invoiceNumber,
+                    companyName : c.name
+              }
+            `;
+        super("/api/xaniadb", query); // 
     }
 
     addLine() {
@@ -46,18 +56,18 @@ export function view({ url }: { url: UrlHelper }) {
             store.get("currentRow").update(row);
             store.refresh();
 
-            url.goto(row.id);
+            url.goto(row.invoiceId);
         }
     }
 
     function statusTemplate() {
-        var badge = expr("row.invoiceDate ? 'success' : 'default'");
+        var badge = expr("row.invoiceDate ? 'success' : 'danger'");
         return (
             <span className={["badge badge-", badge]}>{[badge]}</span>
         );
     }
 
-    var descriptionTpl = <span><span className="invoice-number">{expr("row.invoiceNumber")}</span>{expr("row.companyId")}</span>;
+    var descriptionTpl = <span><span className="invoice-number">{expr("row.invoiceNumber")}</span>{expr("row.companyName")}</span>;
     return View([
         <DataGrid data={expr("await dataSource")} onSelectionChanged={onSelectRow} style="height: 100%;">
             <TextColumn field="description" template={descriptionTpl} display="Description" />

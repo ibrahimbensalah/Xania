@@ -628,7 +628,7 @@ export class RemoteDataSource {
             },
             body: JSON.stringify(parse(this.body))
         };
-        return fetch(this.url + "query", config)
+        return fetch(this.url, config)
             .then((response: any) => {
                 return response.json();
             })
