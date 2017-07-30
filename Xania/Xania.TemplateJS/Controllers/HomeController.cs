@@ -2,10 +2,12 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Xania.TemplateJS.Controllers
 {
+    [Authorize]
     public class HomeController : Controller
     {
         public IActionResult Index()
@@ -13,6 +15,7 @@ namespace Xania.TemplateJS.Controllers
             return View();
         }
 
+        [AllowAnonymous]
         public IActionResult Error()
         {
             return View();
@@ -26,7 +29,6 @@ namespace Xania.TemplateJS.Controllers
 
             return View(model);
         }
-
 
         private ClientResult GetClientApp(string pathValue, string baseDirectory)
         {

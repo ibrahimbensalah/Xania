@@ -5,6 +5,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Xania.DataAccess;
 using Xania.QL;
@@ -26,6 +27,7 @@ namespace Xania.TemplateJS.Controllers
 
         [HttpPost]
         [Route("")]
+        [Authorize]
         public Task<dynamic> Index([FromBody] dynamic ast)
         {
             return Task.Run(() =>

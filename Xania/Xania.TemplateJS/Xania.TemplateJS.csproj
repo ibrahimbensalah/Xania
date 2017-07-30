@@ -5,7 +5,9 @@
     <RuntimeIdentifier>win7-x86</RuntimeIdentifier>
     <AssemblyName>Xania.TemplateJS</AssemblyName>
     <PackageId>Xania.TemplateJS</PackageId>
-    <UserSecretsId>aspnet-Xania.TemplateJS-20161219121033</UserSecretsId>
+    <UserSecretsId>aspnet-WebApplication1-60e99684-a172-4ef5-831f-8e5dac3966ce</UserSecretsId>
+    <WebProject_DirectoryAccessLevelKey>0</WebProject_DirectoryAccessLevelKey>
+    <!--<UserSecretsId>aspnet-Xania.TemplateJS-20161219121033</UserSecretsId>-->
   </PropertyGroup>
 
   <ItemGroup>
@@ -52,15 +54,21 @@
     <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="1.1.2" />
     <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="1.1.2" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="1.1.2" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="1.1.2" />
     <PackageReference Include="Microsoft.Extensions.Logging" Version="1.1.2" />
     <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="1.1.2" />
     <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="1.1.2" />
     <PackageReference Include="Newtonsoft.Json.Bson" Version="1.0.1" />
     <PackageReference Include="System.ValueTuple" Version="4.3.0" />
+
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.Cookies" Version="1.1.2" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="1.1.2" />
   </ItemGroup>
 
   <ItemGroup>
     <DotNetCliToolReference Include="BundlerMinifier.Core" Version="2.2.301" />
+    <DotNetCliToolReference Include="Microsoft.Extensions.SecretManager.Tools" Version="1.0.1" />
+    <DotNetCliToolReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Tools" Version="1.0.1" />
   </ItemGroup>
 
   <ItemGroup>

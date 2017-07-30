@@ -626,7 +626,8 @@ export class RemoteDataSource {
             headers: {
                 'Content-Type': "application/json"
             },
-            body: JSON.stringify(parse(this.body))
+            body: JSON.stringify(parse(this.body)),
+            credentials: 'same-origin'
         };
         return fetch(this.url, config)
             .then((response: any) => {

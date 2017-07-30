@@ -6,7 +6,8 @@ function executeQuery(ast) {
         headers: {
             'Content-Type': "application/json"
         },
-        body: JSON.stringify(ast)
+        body: JSON.stringify(ast),
+        credentials: "same-origin"
     };
 
     return fetch("/api/xaniadb", config);

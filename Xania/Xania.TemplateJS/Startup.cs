@@ -3,9 +3,11 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -21,17 +23,33 @@ namespace Xania.TemplateJS
         public Startup(IHostingEnvironment env)
         {
             var builder = new ConfigurationBuilder()
-                .SetBasePath(env.ContentRootPath)
-                .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
-                .AddJsonFile($"appsettings.{env.EnvironmentName}.json", optional: true)
-                .AddEnvironmentVariables();
+                    .SetBasePath(env.ContentRootPath)
+                    .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
+                    .AddJsonFile($"appsettings.{env.EnvironmentName}.json", optional: true);
+
+            if (env.IsDevelopment())
+            {
+                // For more details on using the user secret store see https://go.microsoft.com/fwlink/?LinkID=532709
+                builder.AddUserSecrets<Startup>();
+            }
+
+            builder.AddEnvironmentVariables();
             Configuration = builder.Build();
         }
         // This method gets called by the runtime. Use this method to add services to the container.
         // For more information on how to configure your application, visit http://go.microsoft.com/fwlink/?LinkID=398940
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddMvc();
+            services.AddMvc(options =>
+            {
+
+                options.SslPort = 44368;
+                options.Filters.Add(new RequireHttpsAttribute());
+            });
+
+            services.AddAuthentication(
+                SharedOptions => SharedOptions.SignInScheme = CookieAuthenticationDefaults.AuthenticationScheme);
+
             services.AddSingleton<IObjectStore<User>>(new TransientObjectStore<User>());
             services.AddSingleton<IObjectStore<Company>>(new TransientObjectStore<Company>
             {
@@ -117,6 +135,14 @@ namespace Xania.TemplateJS
                 DefaultContentType = "text/css"
             });
 
+            app.UseCookieAuthentication();
+            app.UseOpenIdConnectAuthentication(new OpenIdConnectOptions
+            {
+                ClientId = Configuration["Authentication:AzureAd:ClientId"],
+                Authority = Configuration["Authentication:AzureAd:AADInstance"] + Configuration["Authentication:AzureAd:TenantId"],
+                CallbackPath = Configuration["Authentication:AzureAd:CallbackPath"]
+            });
+
             app.UseMvc(routes =>
             {
                 routes.MapRoute(
@@ -136,71 +162,5 @@ namespace Xania.TemplateJS
                 await context.Response.WriteAsync("NOT FOUND");
             });
         }
-
-        private AppResult GetClientApp(string pathValue, string baseDirectory)
-        {
-            var parts = pathValue.Split(new[] { '/' }, StringSplitOptions.RemoveEmptyEntries);
-            string basePath = "/";
-            string bootFile = baseDirectory + "/boot.html";
-            for (var i = 0; i < parts.Length; i++)
-            {
-                var part = parts[i];
-                var app = basePath + part;
-
-                var jsExists = File.Exists(baseDirectory + "/" + app + ".js");
-                var dirExists = Directory.Exists(baseDirectory + "/" + app);
-
-                if (jsExists && dirExists)
-                    throw new InvalidOperationException("jsExists && dirExists");
-
-                if (File.Exists(baseDirectory + basePath + "boot.html"))
-                    bootFile = baseDirectory + basePath + "boot.html";
-
-                if (jsExists)
-                {
-                    return new AppResult
-                    {
-                        Content = File.ReadAllText(bootFile),
-                        Base = basePath ?? "",
-                        Name = part,
-                        Args = string.Join("", parts.Skip(i + 1).Select(x => "/" + x))
-                    };
-                }
-
-                if (!dirExists)
-                {
-                    return null;
-                }
-
-                basePath = app + "/";
-            }
-            return null;
-        }
-    }
-
-    public class ActionRoute : RouteBase
-    {
-        protected override Task OnRouteMatched(RouteContext context)
-        {
-            throw new NotImplementedException();
-        }
-
-        protected override VirtualPathData OnVirtualPathGenerated(VirtualPathContext context)
-        {
-            throw new NotImplementedException();
-        }
-
-        public ActionRoute(string template, string name, IInlineConstraintResolver constraintResolver, RouteValueDictionary defaults, IDictionary<string, object> constraints, RouteValueDictionary dataTokens) 
-            : base(template, name, constraintResolver, defaults, constraints, dataTokens)
-        {
-        }
-    }
-
-    internal class AppResult
-    {
-        public string Content { get; set; }
-        public string Name { get; set; }
-        public string Args { get; set; }
-        public string Base { get; set; }
     }
 }
