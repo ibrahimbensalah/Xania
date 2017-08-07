@@ -4,10 +4,12 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -40,15 +42,22 @@ namespace Xania.TemplateJS
         // For more information on how to configure your application, visit http://go.microsoft.com/fwlink/?LinkID=398940
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddMvc(options =>
+
+            if (Configuration["Authentication"] != null)
             {
-
-                options.SslPort = 44368;
-                options.Filters.Add(new RequireHttpsAttribute());
-            });
-
-            services.AddAuthentication(
-                SharedOptions => SharedOptions.SignInScheme = CookieAuthenticationDefaults.AuthenticationScheme);
+                services.AddMvc(options =>
+                {
+                    options.SslPort = 44368;
+                    options.Filters.Add(new RequireHttpsAttribute());
+                });
+                services.AddAuthentication(
+                    SharedOptions => SharedOptions.SignInScheme = CookieAuthenticationDefaults.AuthenticationScheme);
+                services.AddAuthorization();
+            }
+            else
+            {
+                services.AddMvc();
+            }
 
             services.AddSingleton<IObjectStore<User>>(new TransientObjectStore<User>());
             services.AddSingleton<IObjectStore<Company>>(new TransientObjectStore<Company>
@@ -135,13 +144,17 @@ namespace Xania.TemplateJS
                 DefaultContentType = "text/css"
             });
 
-            app.UseCookieAuthentication();
-            app.UseOpenIdConnectAuthentication(new OpenIdConnectOptions
+            if (Configuration["Authentication"] != null)
             {
-                ClientId = Configuration["Authentication:AzureAd:ClientId"],
-                Authority = Configuration["Authentication:AzureAd:AADInstance"] + Configuration["Authentication:AzureAd:TenantId"],
-                CallbackPath = Configuration["Authentication:AzureAd:CallbackPath"]
-            });
+                app.UseCookieAuthentication();
+                app.UseOpenIdConnectAuthentication(new OpenIdConnectOptions
+                {
+                    ClientId = Configuration["Authentication:AzureAd:ClientId"],
+                    Authority = Configuration["Authentication:AzureAd:AADInstance"] +
+                                Configuration["Authentication:AzureAd:TenantId"],
+                    CallbackPath = Configuration["Authentication:AzureAd:CallbackPath"]
+                });
+            }
 
             app.UseMvc(routes =>
             {

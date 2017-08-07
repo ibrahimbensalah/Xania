@@ -27,7 +27,6 @@ namespace Xania.TemplateJS.Controllers
 
         [HttpPost]
         [Route("")]
-        [Authorize]
         public Task<dynamic> Index([FromBody] dynamic ast)
         {
             return Task.Run(() =>
