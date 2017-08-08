@@ -9,8 +9,9 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Xania.Ledger.Domain</RootNamespace>
     <AssemblyName>Xania.Ledger.Domain</AssemblyName>
-    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.6.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -48,7 +49,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Xania.DataAccess\Xania.DataAccess.csproj">
-      <Project>{38105131-F4D3-43FB-90E2-DBCC2155DC47}</Project>
+      <Project>{6187e3ff-238f-4354-8f05-13de0d4c7f8d}</Project>
       <Name>Xania.DataAccess</Name>
     </ProjectReference>
   </ItemGroup>

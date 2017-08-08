@@ -6,7 +6,7 @@ var App;
             this.cases.push(new Case("Test 1"));
         }
         return CaseManager;
-    })();
+    }());
     App.CaseManager = CaseManager;
     var Case = (function () {
         function Case(title) {
@@ -16,16 +16,17 @@ var App;
             this.files = [new File("aanmaning.doc")];
         }
         return Case;
-    })();
+    }());
     var Contact = (function () {
         function Contact() {
         }
         return Contact;
-    })();
+    }());
     var File = (function () {
         function File(name) {
             this.name = name;
         }
         return File;
-    })();
+    }());
 })(App || (App = {}));
+//# sourceMappingURL=app.js.map

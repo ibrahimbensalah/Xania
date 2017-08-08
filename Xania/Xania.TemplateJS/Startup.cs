@@ -42,17 +42,11 @@ namespace Xania.TemplateJS
         // For more information on how to configure your application, visit http://go.microsoft.com/fwlink/?LinkID=398940
         public void ConfigureServices(IServiceCollection services)
         {
-
-            if (Configuration["Authentication"] != null)
+            if (Configuration.GetChildren().Any(e => e.Key.Equals("Authentication")))
             {
-                services.AddMvc(options =>
-                {
-                    options.SslPort = 44368;
-                    options.Filters.Add(new RequireHttpsAttribute());
-                });
+                services.AddMvc(options => options.Filters.Add(new RequireHttpsAttribute()));
                 services.AddAuthentication(
                     SharedOptions => SharedOptions.SignInScheme = CookieAuthenticationDefaults.AuthenticationScheme);
-                services.AddAuthorization();
             }
             else
             {
@@ -144,7 +138,7 @@ namespace Xania.TemplateJS
                 DefaultContentType = "text/css"
             });
 
-            if (Configuration["Authentication"] != null)
+            if (Configuration.GetChildren().Any(e => e.Key.Equals("Authentication")))
             {
                 app.UseCookieAuthentication();
                 app.UseOpenIdConnectAuthentication(new OpenIdConnectOptions

@@ -1,5 +1,33 @@
 //class TemplateEngine {
 //    private static cacheFn: any = {};
+//    static compile(input) {
+//        if (!input || !input.trim()) {
+//            return null;
+//        }
+//        var template = input.replace(/\n/g, "\\\n");
+//        var decl = [];
+//        var returnExpr = template.replace(/@([\w\(\)\.,=!']+)/gim, (a, b) => {
+//            var paramIdx = `arg${decl.length}`;
+//            decl.push(b);
+//            return `"+${paramIdx}+"`;
+//        });
+//        if (returnExpr === '"+arg0+"') {
+//            if (!TemplateEngine.cacheFn[input]) {
+//                const functionBody = `with(m) {return ${decl[0]};}`;
+//                TemplateEngine.cacheFn[input] = new Function("m", functionBody);
+//            }
+//            return TemplateEngine.cacheFn[input];
+//        } else if (decl.length > 0) {
+//            var params = decl.map((v, i) => `var arg${i} = ${v}`).join(";");
+//            if (!TemplateEngine.cacheFn[input]) {
+//                const functionBody = `with(m) {${params};return "${returnExpr}"}`;
+//                TemplateEngine.cacheFn[input] = new Function("m", functionBody);
+//            }
+//            return TemplateEngine.cacheFn[input];
+//        }
+//        return () => returnExpr;
+//    }
+//}
 var Ast;
 (function (Ast) {
     var Const = (function () {
@@ -11,7 +39,7 @@ var Ast;
         };
         Const.prototype.app = function () { throw new Error("app on const is not supported"); };
         return Const;
-    })();
+    }());
     var Ident = (function () {
         function Ident(id) {
             this.id = id;
@@ -23,7 +51,7 @@ var Ast;
             return new App(this, args);
         };
         return Ident;
-    })();
+    }());
     var Member = (function () {
         function Member(targetExpr, memberExpr) {
             this.targetExpr = targetExpr;
@@ -43,7 +71,7 @@ var Ast;
             return new App(this, args);
         };
         return Member;
-    })();
+    }());
     var App = (function () {
         function App(targetExpr, args) {
             this.targetExpr = targetExpr;
@@ -62,7 +90,7 @@ var Ast;
             return new App(this.targetExpr, this.args.concat(args));
         };
         return App;
-    })();
+    }());
     var Unit = (function () {
         function Unit() {
         }
@@ -70,9 +98,9 @@ var Ast;
             return undefined;
         };
         Unit.prototype.app = function () { throw new Error("app on unit is not supported"); };
-        Unit.instance = new Unit();
         return Unit;
-    })();
+    }());
+    Unit.instance = new Unit();
     var Not = (function () {
         function Not(expr) {
             this.expr = expr;
@@ -84,7 +112,7 @@ var Ast;
             return new Not(this.expr.app(args));
         };
         return Not;
-    })();
+    }());
     var Query = (function () {
         function Query(varName, sourceExpr, selectorExpr) {
             this.varName = varName;
@@ -104,6 +132,7 @@ var Ast;
             return collection;
         };
         Query.prototype.app = function () { throw new Error("app on query is not supported"); };
+        // static assign = (<any>Object).assign;
         Query.prototype.assign = function (target) {
             var args = [];
             for (var _i = 1; _i < arguments.length; _i++) {
@@ -120,7 +149,7 @@ var Ast;
             return target;
         };
         return Query;
-    })();
+    }());
     var Template = (function () {
         function Template(parts) {
             this.parts = parts;
@@ -147,21 +176,34 @@ var Ast;
             }
         };
         return Template;
-    })();
+    }());
     var Compiler = (function () {
         function Compiler() {
             this.patterns = {
                 string1: /^"(?:(?:\\\n|\\"|[^"\n]))*?"/g,
-                string2: /^'(?:(?:\\\n|\\'|[^'\n]))*?'/g,
-                whitespace: /^\s+/g,
+                string2: /^'(?:(?:\\\n|\\'|[^'\n]))*?'/g
+                //, comment1: /\/\*[\s\S]*?\*\//
+                //, comment2: /\/\/.*?\n/
+                ,
+                whitespace: /^\s+/g
+                // , keyword: /\b(?:var|let|for|if|else|in|class|function|return|with|case|break|switch|export|new|while|do|throw|catch)\b/
+                // , regexp: /^\/(?:(?:\\\/|[^\n\/]))*?\//g
+                ,
                 ident: /^[a-zA-Z_\$][a-zA-Z_\$0-9]*\b/g,
                 number: /^\d+(?:\.\d+)?(?:e[+-]?\d+)?/g,
-                boolean: /^(?:true|false)/g,
+                boolean: /^(?:true|false)/g
+                // , parens: /^[\(\)]/g
+                ,
                 lparen: /^\s*\(\s*/g,
                 rparen: /^\s*\)\s*/g,
                 lbrack: /^\s*\[\s*/g,
-                rbrack: /^\s*\]\s*/g,
-                navigate: /^\s*\.\s*/g,
+                rbrack: /^\s*\]\s*/g
+                //, curly: /^[{}]/g
+                //, square: /^[\[\]]/g
+                ,
+                navigate: /^\s*\.\s*/g
+                // , punct: /^[;.:\?\^%<>=!&|+\-,~]/g
+                ,
                 pipe1: /^\|>/g,
                 pipe2: /^\|\|>/g,
                 select: /^->/g,
@@ -220,6 +262,7 @@ var Ast;
             while (this.parsePattern("navigate", stream)) {
                 this.ws(stream);
                 var member = this.parsePattern("ident", stream);
+                // const member = this.parseMember(stream);
                 if (!!member)
                     ident = new Member(ident, member);
                 else
@@ -341,7 +384,7 @@ var Ast;
             return tpl.execute.bind(tpl);
         };
         return Compiler;
-    })();
+    }());
     Ast.Compiler = Compiler;
 })(Ast || (Ast = {}));
 var Fun;
@@ -383,6 +426,7 @@ var Fun;
             return !list && list.reduce(fn, initialValue);
         };
         return List;
-    })();
+    }());
     Fun.List = List;
 })(Fun || (Fun = {}));
+//# sourceMappingURL=fun.js.map
