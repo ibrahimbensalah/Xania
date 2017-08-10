@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<package>
+  <metadata>
+    <id>$id$</id>
+    <version>$version$</version>
+    <title>$title$</title>
+    <authors>Ibrahim ben Salah</authors>
+    <owners>Xania Software</owners>
+    <projectUrl>https://github.com/ibrahimbensalah/Xania.DbMigrator</projectUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>Database First Migration Tool</description>
+    <copyright>Copyright 2017</copyright>
+    <tags>db database migrations upgrade</tags>
+    <dependencies>
+        <dependency id="FluentCommandLineParser" version="[1.4.3, 2)" />
+        <dependency id="Microsoft.SqlServer.DacFx.x64" version="[130.3485.1, 131)" />
+    </dependencies>
+  </metadata>
+  <files>
+    <file src="bin\DebugNet45\Xania.*" target="lib\net45" />
+  </files>
+</package>
