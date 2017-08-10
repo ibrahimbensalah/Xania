@@ -3,8 +3,8 @@
     "windowsAuthentication": false,
     "anonymousAuthentication": true,
     "iisExpress": {
-      "applicationUrl": "https://localhost:44368/admin/app",
-      "sslPort": 44368
+      "applicationUrl": "http://localhost:9880/admin/app",
+      "sslPort": 0
     }
   },
   "profiles": {
@@ -14,13 +14,14 @@
         "ASPNETCORE_ENVIRONMENT": "Development"
       }
     },
-    "WebApplication1": {
+    "XaniaPortal": {
       "commandName": "Project",
       "launchBrowser": true,
       "launchUrl": "http://localhost:5000",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
-      }
+      },
+      "applicationUrl": "http://localhost:9880"
     }
   }
 }

@@ -7,7 +7,7 @@ var Todo = (function () {
         this.completed = !this.completed;
     };
     return Todo;
-})();
+}());
 var TodoStore = (function () {
     function TodoStore() {
         this.todos = [];
@@ -31,7 +31,7 @@ var TodoStore = (function () {
             console.error("todo not found", todo);
     };
     return TodoStore;
-})();
+}());
 var TodoApp = (function () {
     function TodoApp() {
         this.store = new TodoStore();
@@ -47,7 +47,7 @@ var TodoApp = (function () {
         }
     };
     return TodoApp;
-})();
+}());
 var State = (function () {
     function State(value) {
         this.value = value;
@@ -62,4 +62,5 @@ var State = (function () {
         return this.value;
     };
     return State;
-})();
+}());
+//# sourceMappingURL=todomvc.js.map

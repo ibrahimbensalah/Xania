@@ -1,9 +1,13 @@
-var __extends = (this && this.__extends) || function (d, b) {
-    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
-    function __() { this.constructor = d; }
-    __.prototype = b.prototype;
-    d.prototype = new __();
-};
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = Object.setPrototypeOf ||
+        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+    return function (d, b) {
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
 var TextTemplate = (function () {
     function TextTemplate(tpl) {
         this.tpl = tpl;
@@ -23,9 +27,10 @@ var TextTemplate = (function () {
         return [];
     };
     return TextTemplate;
-})();
+}());
 var ContentTemplate = (function () {
     function ContentTemplate() {
+        // ReSharper disable once InconsistentNaming
         this._children = [];
     }
     ContentTemplate.prototype.bind = function (model, idx) {
@@ -39,12 +44,13 @@ var ContentTemplate = (function () {
         return this;
     };
     return ContentTemplate;
-})();
+}());
 var TagTemplate = (function () {
     function TagTemplate(name) {
         this.name = name;
         this.attributes = new Map();
         this.events = new Map();
+        // ReSharper disable once InconsistentNaming
         this._children = [];
     }
     TagTemplate.prototype.children = function () {
@@ -119,7 +125,7 @@ var TagTemplate = (function () {
         return result;
     };
     return TagTemplate;
-})();
+}());
 var SelectManyExpression = (function () {
     function SelectManyExpression(varName, viewModel, collectionExpr, loader) {
         this.varName = varName;
@@ -151,6 +157,7 @@ var SelectManyExpression = (function () {
         if (loader === void 0) { loader = function (t) { return window[t]; }; }
         var m = expr.match(/^(\w+)(\s*:\s*(\w+))?\s+of\s+((\w+)\s*:\s*)?(.*)$/i);
         if (!!m) {
+            // ReSharper disable once UnusedLocals
             var varName = m[1], itemType = m[3], directive = m[5], collectionExpr = m[6];
             var viewModel = loader(itemType);
             return new SelectManyExpression(varName, viewModel, collectionExpr, loader);
@@ -161,7 +168,7 @@ var SelectManyExpression = (function () {
         return Array.isArray(obj) ? obj : [obj];
     };
     return SelectManyExpression;
-})();
+}());
 var Value = (function () {
     function Value(obj) {
         this.obj = obj;
@@ -170,7 +177,7 @@ var Value = (function () {
         return this.obj;
     };
     return Value;
-})();
+}());
 var Xania = (function () {
     function Xania() {
     }
@@ -214,6 +221,7 @@ var Xania = (function () {
         else {
             fn.call(this, data, 0, [data]);
         }
+        // ReSharper disable once NotAllPathsReturnValue
     };
     Xania.collect = function (fn, data) {
         if (Array.isArray(data)) {
@@ -236,10 +244,11 @@ var Xania = (function () {
     Xania.compose = function () {
         var fns = [];
         for (var _i = 0; _i < arguments.length; _i++) {
-            fns[_i - 0] = arguments[_i];
+            fns[_i] = arguments[_i];
         }
         return function (result) {
             for (var i = fns.length - 1; i > -1; i--) {
+                // ReSharper disable once SuspiciousThisUsage
                 result = fns[i].call(this, result);
             }
             return result;
@@ -263,6 +272,7 @@ var Xania = (function () {
         return Xania.partialFunc.bind({ context: this, func: func, baseArgs: baseArgs });
     };
     Xania.observe = function (target, observer) {
+        // ReSharper disable once InconsistentNaming
         if (!target)
             return target;
         if (target.isSpy) {
@@ -280,6 +290,7 @@ var Xania = (function () {
         }
     };
     Xania.observeArray = function (arr, observer) {
+        // ReSharper disable once InconsistentNaming
         return Xania.proxy(arr, {
             get: function (target, property) {
                 switch (property) {
@@ -367,6 +378,7 @@ var Xania = (function () {
                     case "constructor":
                         return object.constructor;
                     default:
+                        // ReSharper disable once SuspiciousThisUsage
                         return Xania.observeProperty(object, property, observer);
                 }
             },
@@ -404,6 +416,17 @@ var Xania = (function () {
     Xania.shallow = function (obj) {
         return Xania.assign({}, obj);
     };
+    //static assign(target, ...args) {
+    //    for (var i = 0; i < args.length; i++) {
+    //        const object = args[i];
+    //        for (let prop in object) {
+    //            if (object.hasOwnProperty(prop)) {
+    //                target[prop] = object[prop];
+    //            }
+    //        }
+    //    }
+    //    return target;
+    //}
     Xania.proxy = function (target, config) {
         if (typeof window["Proxy"] === "undefined")
             throw new Error("Browser is not supported");
@@ -426,9 +449,9 @@ var Xania = (function () {
         else
             return id;
     };
-    Xania.assign = Object.assign;
     return Xania;
-})();
+}());
+Xania.assign = Object.assign;
 var Router = (function () {
     function Router() {
         this.currentAction = null;
@@ -439,7 +462,7 @@ var Router = (function () {
         return this.currentAction = name;
     };
     return Router;
-})();
+}());
 var Binding = (function () {
     function Binding(context) {
         this.context = context;
@@ -451,7 +474,7 @@ var Binding = (function () {
     Binding.prototype.destroy = function () { throw new Error("Not implemented"); };
     Binding.prototype.render = function (context) { throw new Error("Not implemented"); };
     return Binding;
-})();
+}());
 var Observer = (function () {
     function Observer() {
         this.subscriptions = new Map();
@@ -512,7 +535,11 @@ var Observer = (function () {
         for (var _i = 2; _i < arguments.length; _i++) {
             additionalArgs[_i - 2] = arguments[_i];
         }
-        var observer = this, observable, updateArgs;
+        var observer = this, 
+        // ReSharper disable once JoinDeclarationAndInitializerJs
+        observable, 
+        // ReSharper disable once JoinDeclarationAndInitializerJs
+        updateArgs;
         var subscription = {
             parent: undefined,
             children: new Set(),
@@ -530,7 +557,7 @@ var Observer = (function () {
             subscribe: function () {
                 var args = [];
                 for (var _i = 0; _i < arguments.length; _i++) {
-                    args[_i - 0] = arguments[_i];
+                    args[_i] = arguments[_i];
                 }
                 return observer.subscribe.apply(observer, args);
             },
@@ -559,6 +586,7 @@ var Observer = (function () {
         return subscription;
     };
     Observer.prototype.setRead = function (obj, property) {
+        // ignore
     };
     Observer.prototype.setChange = function (obj, property) {
         var _this = this;
@@ -574,10 +602,12 @@ var Observer = (function () {
     };
     Observer.prototype.update = function () {
         if (this.dirty.size > 0) {
+            // window.requestAnimationFrame(() => {
             this.dirty.forEach(function (subscriber) {
                 subscriber.notify();
             });
             this.dirty.clear();
+            // });
         }
     };
     Object.defineProperty(Observer.prototype, "size", {
@@ -596,25 +626,27 @@ var Observer = (function () {
         configurable: true
     });
     return Observer;
-})();
+}());
 var ContentBinding = (function (_super) {
     __extends(ContentBinding, _super);
     function ContentBinding(tpl, context) {
-        _super.call(this, context);
-        this.tpl = tpl;
-        this.dom = document.createDocumentFragment();
+        var _this = _super.call(this, context) || this;
+        _this.tpl = tpl;
+        _this.dom = document.createDocumentFragment();
+        return _this;
     }
     ContentBinding.prototype.render = function (context) {
         return this.dom;
     };
     return ContentBinding;
-})(Binding);
+}(Binding));
 var TextBinding = (function (_super) {
     __extends(TextBinding, _super);
     function TextBinding(tpl, context) {
-        _super.call(this, context);
-        this.tpl = tpl;
-        this.dom = document.createTextNode("");
+        var _this = _super.call(this, context) || this;
+        _this.tpl = tpl;
+        _this.dom = document.createTextNode("");
+        return _this;
     }
     TextBinding.prototype.update = function (context) {
         this.dom.textContent = this.tpl.execute(context);
@@ -629,15 +661,16 @@ var TextBinding = (function (_super) {
         this.dom.textContent = this.tpl.execute(context);
     };
     return TextBinding;
-})(Binding);
+}(Binding));
 var TagBinding = (function (_super) {
     __extends(TagBinding, _super);
     function TagBinding(tpl, context) {
-        _super.call(this, context);
-        this.tpl = tpl;
-        this.children = [];
-        this.dom = document.createElement(tpl.name);
-        this.dom.attributes["__binding"] = this;
+        var _this = _super.call(this, context) || this;
+        _this.tpl = tpl;
+        _this.children = [];
+        _this.dom = document.createElement(tpl.name);
+        _this.dom.attributes["__binding"] = _this;
+        return _this;
     }
     TagBinding.prototype.render = function (context) {
         var tpl = this.tpl;
@@ -678,7 +711,7 @@ var TagBinding = (function (_super) {
         this.destroyed = true;
     };
     return TagBinding;
-})(Binding);
+}(Binding));
 var Binder = (function () {
     function Binder(model, target) {
         if (target === void 0) { target = null; }
@@ -700,11 +733,12 @@ var Binder = (function () {
                 var link = document.createElement('link');
                 link.rel = 'import';
                 link.href = templateUrl;
-                link.setAttribute('async', '');
+                link.setAttribute('async', ''); // make it async!
                 link.onload = function (e) {
                     var link = e.target;
                     resolve.call(binder, link.import);
                 };
+                // link.onerror = function(e) {...};
                 document.head.appendChild(link);
             }
         };
@@ -726,6 +760,7 @@ var Binder = (function () {
         else {
             var tpl = this.compile(attr.value);
             tagElement.attr(name, tpl || attr.value);
+            // conventions
             if (!!tagElement.name.match(/^input$/i) && !!attr.name.match(/^name$/i) && !tagElement.hasAttribute("value")) {
                 var valueAccessor = this.compile("{{ " + attr.value + " }}");
                 tagElement.attr("value", valueAccessor);
@@ -769,6 +804,7 @@ var Binder = (function () {
                         .then(function (model) {
                         if (model === null || model === undefined)
                             return [];
+                        // model = Xania.unwrap(model);
                         return visitArray(Array.isArray(model) ? model : [model]);
                     });
                 }
@@ -869,4 +905,6 @@ var Binder = (function () {
         });
     };
     return Binder;
-})();
+}());
+// ReSharper restore InconsistentNaming 
+//# sourceMappingURL=core.js.map
