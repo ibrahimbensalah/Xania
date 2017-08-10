@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.Linq;
 using Xania.DataAccess;
 using Xania.Ledger.Domain.Models;
@@ -28,11 +29,7 @@ namespace Xania.Ledger.Domain.Services
 
         public Attachment CreateAttachment(string name, Stream contentStream)
         {
-            return new Attachment
-            {
-                ResourceId = _documentStore.Add("attachments", contentStream),
-                Name = name
-            };
+            throw new NotImplementedException();
         }
     }
 }

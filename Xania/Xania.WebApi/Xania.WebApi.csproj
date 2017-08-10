@@ -108,6 +108,10 @@
     <Folder Include="Models\" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\Xania.DataAccess\Xania.DataAccess.csproj">
+      <Project>{6187e3ff-238f-4354-8f05-13de0d4c7f8d}</Project>
+      <Name>Xania.DataAccess</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Xania.Ledger.Domain\Xania.Ledger.Domain.csproj">
       <Project>{09403585-214B-4B80-BF3F-47B24C5AB70E}</Project>
       <Name>Xania.Ledger.Domain</Name>

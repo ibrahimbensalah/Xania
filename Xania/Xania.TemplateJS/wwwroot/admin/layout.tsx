@@ -1,4 +1,6 @@
-﻿import xania, { If } from "../src/xania"
+﻿import xania, { If, Repeat, expr } from "../src/xania"
+import Html from '../src/html'
+import { StackContainer } from "../layout/stack"
 
 export function Section(attrs, children) {
     return (
@@ -14,3 +16,19 @@ export function Section(attrs, children) {
     );
 }
 
+var layout = source => (
+    <StackContainer className="stack-container">
+        <Repeat param="vw" source={source}>
+            <section className="stack-item">
+                <div className="stack-item-content">
+                    <header className="stack-item-header">Header 1</header>
+                    <div className="stack-item-body">
+                        <Html.Partial template={expr("await vw")} />
+                    </div>
+                </div>
+            </section>
+        </Repeat>
+    </StackContainer>
+) as { bind };
+
+export default layout;

@@ -26,7 +26,9 @@
     <Content Include="css\logo.png" />
     <Content Include="css\office.jpg" />
     <Content Include="index.html" />
-    <Content Include="web.config" />
+    <Content Include="web.config">
+      <SubType>Designer</SubType>
+    </Content>
   </ItemGroup>
   <ItemGroup>
     <TypeScriptCompile Include="src\app.ts" />

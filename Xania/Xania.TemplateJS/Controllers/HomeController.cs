@@ -20,16 +20,33 @@ namespace Xania.TemplateJS.Controllers
             return View();
         }
 
+        [HttpGet]
+        public IActionResult Login()
+        {
+            var model = ClientResult.GetClientApp("home/login", "wwwroot");
+            return View("Boot", model);
+        }
+
+
+        [Authorize]
         public IActionResult Boot(string appPath)
         {
-            var model = GetClientApp(appPath ?? "admin/app", "wwwroot");
+            var model = ClientResult.GetClientApp(appPath ?? "admin/app", "wwwroot");
             if (model == null)
                 return new BadRequestObjectResult("Could not resolve client application: " + appPath);
 
             return View(model);
         }
+    }
 
-        private ClientResult GetClientApp(string pathValue, string baseDirectory)
+    public class ClientResult
+    {
+        public string Base { get; set; }
+        public string Name { get; set; }
+        public IEnumerable<string> Args { get; set; }
+
+
+        public static ClientResult GetClientApp(string pathValue, string baseDirectory)
         {
             var parts = pathValue.Split(new[] { '/' }, StringSplitOptions.RemoveEmptyEntries);
             string basePath = "/";
@@ -64,12 +81,5 @@ namespace Xania.TemplateJS.Controllers
             }
             return null;
         }
-    }
-
-    public class ClientResult
-    {
-        public string Base { get; set; }
-        public string Name { get; set; }
-        public IEnumerable<string> Args { get; set; }
     }
 }

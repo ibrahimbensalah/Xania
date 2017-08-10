@@ -230,11 +230,12 @@ export function boot(basePath: string, appPath: string, app: any) {
             .update(store)
     );
 
-    mount(app.menu({
-        url: new UrlHelper(router),
-        // html: new HtmlHelper(System),
-        driver: new Dom.DomDriver('.main-menu')
-    }));
+    if (app.menu)
+        mount(app.menu({
+            url: new UrlHelper(router),
+            // html: new HtmlHelper(System),
+            driver: new Dom.DomDriver('.main-menu')
+        }));
 
     return router;
 }

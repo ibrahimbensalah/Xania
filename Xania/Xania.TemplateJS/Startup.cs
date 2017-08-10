@@ -149,6 +149,15 @@ namespace Xania.TemplateJS
                     CallbackPath = Configuration["Authentication:AzureAd:CallbackPath"]
                 });
             }
+            else
+            {
+                app.UseCookieAuthentication(new CookieAuthenticationOptions
+                {
+                    AutomaticAuthenticate = true,
+                    AutomaticChallenge = true,
+                    LoginPath = "/home/login",
+                });
+            }
 
             app.UseMvc(routes =>
             {

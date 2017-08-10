@@ -33,7 +33,7 @@ namespace Xania.WebApi
                         UploadDir = GetUploadDir()
                     })
                     .Register(new DiskDocumentStore(GetUploadDir()))
-                    .Register(typeof(BsonObjectStore<>), new ConstructorArgs(null, "bson"))
+                    // .Register(typeof(BsonObjectStore<>), new ConstructorArgs(null, "bson"))
                     .Register<FileRepository>()
             };
 

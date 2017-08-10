@@ -5,8 +5,6 @@ using System.Data.SqlClient;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Resources;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Xml;
 using Microsoft.SqlServer.Dac;
@@ -33,6 +31,25 @@ namespace Xania.DbMigrator
             foreach (var type in assembly.GetTypes().Where(t => typeof(IDbMigration).IsAssignableFrom(t)))
             {
                 yield return Activator.CreateInstance(type) as IDbMigration;
+            }
+
+            foreach (var resourcePath in assembly.GetManifestResourceNames())
+            {
+                var parts = resourcePath.Split('.').Reverse().ToArray();
+
+                if (parts.Length < 3 || !string.Equals(parts[0], "sql"))
+                    continue;
+
+                if (string.Equals(parts[2], "Migrations"))
+                {
+                    var stream = assembly.GetManifestResourceStream(resourcePath);
+                    if (stream != null)
+                        using (var reader = new StreamReader(stream))
+                        {
+                            var script = new TransactSql(reader.ReadToEnd());
+                            yield return new TransactSqlMigration(parts[1].ToLowerInvariant(), script);
+                        }
+                }
             }
         }
 
@@ -127,20 +144,7 @@ namespace Xania.DbMigrator
             }
 
         }
-
-        public static IEnumerable<IDbMigration> GetResources(Assembly assembly, string prefix)
-        {
-            foreach (var resourceName in assembly.GetManifestResourceNames())
-            {
-                if (resourceName.EndsWith(".sql", StringComparison.OrdinalIgnoreCase) &&
-                    resourceName.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
-                {
-                    var id = resourceName.Substring(prefix.Length + 1);
-                    yield return DbMigration2.FromResource(id, assembly, resourceName);
-                }
-            }
-        }
-
+        
         private static async Task UpgradeAsync(string connectionString, IEnumerable<IDbMigration> upgradeScripts)
         {
             var pendingMigrations = await GetPendingMigrationsAsync(connectionString, upgradeScripts.OrderBy(x => x.Id));
@@ -240,6 +244,24 @@ namespace Xania.DbMigrator
         private static T Identity<T>(T e)
         {
             return e;
+        }
+    }
+
+    internal class TransactSqlMigration : IDbMigration
+    {
+        private readonly TransactSql _script;
+
+        public TransactSqlMigration(string id, TransactSql script)
+        {
+            _script = script;
+            Id = id;
+        }
+
+        public string Id { get; }
+
+        public Task<string> ExecuteAsync(SqlConnection conn, SqlTransaction trans)
+        {
+            return _script.ExecuteAsync(conn, trans);
         }
     }
 }

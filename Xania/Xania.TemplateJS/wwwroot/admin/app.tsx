@@ -1,13 +1,12 @@
-﻿import xania, { Repeat, expr, Reactive as Re, Template } from "../src/xania"
-import Html from '../src/html'
-import { UrlHelper, View, ViewResult, IViewContext } from "../src/mvc"
+﻿import xania, { expr, Reactive as Re, Template } from "../src/xania"
+import { UrlHelper, View } from "../src/mvc"
 import './admin.css'
 import { Observables } from "../src/observables";
 import { ClockApp } from '../sample/clock/app'
 import TodoApp from "../sample/todos/app";
 import Lib = require("../diagram/lib");
 import BallsApp from "../sample/balls/app";
-import { StackContainer } from "../layout/stack"
+import defaultLayout from "./layout";
 
 export function menu({ driver, html, url }) {
     return mainMenu(url)
@@ -111,17 +110,4 @@ function todos() {
     );
 }
 
-export var layout = source => (
-    <StackContainer className="stack-container">
-        <Repeat param="vw" source={ source }>
-            <section className="stack-item">
-                <div className="stack-item-content">
-                    <header className="stack-item-header">Header 1</header>
-                    <div className="stack-item-body">
-                        <Html.Partial template={expr("await vw")} />
-                    </div>
-                </div>
-            </section>
-        </Repeat>
-    </StackContainer>
-);
+export var layout = defaultLayout;

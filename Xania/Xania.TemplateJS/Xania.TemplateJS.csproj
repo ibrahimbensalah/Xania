@@ -25,6 +25,7 @@
 
   <ItemGroup>
     <Content Include="wwwroot\admin\xaniadb.ts" />
+    <Content Include="wwwroot\home\login.tsx" />
     <Content Include="wwwroot\query.html" />
     <Content Include="wwwroot\src\expression.ts" />
     <Content Include="wwwroot\wasm.html" />
