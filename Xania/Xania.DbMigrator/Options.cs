@@ -126,8 +126,10 @@ namespace Xania.DbMigrator
         None = 0,
         BackUp = 1,
         Upgrade = 2,
-        Default = 3,
-        Restore = 4,
-        All = 7
+        Validate = 4,
+        Default = 7,
+        Publish = 8,
+        Restore = 16,
+        All = 15
     }
 }

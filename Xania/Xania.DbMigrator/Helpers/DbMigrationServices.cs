@@ -45,14 +45,22 @@ namespace Xania.DbMigrator.Helpers
             dbServices.ImportBacpac(BacPackage.Load(bacpacFileName), _databaseName);
         }
 
-        public void ExportBacpac(string bacpacFileName)
+        public void ExportBacpac(string bacpacFile)
         {
             Console.WriteLine($@"Generating backup....");
 
             var dbServices = new DacServices(_masterConnectionString);
-            dbServices.ExportBacpac(bacpacFileName, _databaseName);
+            dbServices.ExportBacpac(bacpacFile, _databaseName);
         }
 
+        public void PublishDacpac(string dacpacFile)
+        {
+            Console.WriteLine($@"Publish dacpac file: {dacpacFile}");
 
+            var dbServices = new DacServices(_masterConnectionString);
+            dbServices.Publish(DacPackage.Load(dacpacFile), _databaseName, new PublishOptions
+            {
+            });
+        }
     }
 }

@@ -1,12 +1,10 @@
-﻿using System;
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using System.Data.SqlClient;
 using System.IO;
 using System.Linq;
-using System.Reflection;
 using System.Resources;
 using System.Text;
-using System.Threading.Tasks;using Xania.DbMigrator;
+using System.Threading.Tasks;
 using Xania.DbMigrator.Helpers;
 
 namespace Xania.DbMigrator
@@ -55,52 +53,6 @@ namespace Xania.DbMigrator
                 builder.AppendLine(t.Result);
 
             return Task.FromResult(builder.ToString());
-        }
-    }
-
-    public class DbMigration2: IDbMigration
-    {
-        private readonly Func<Task<string>> _readerFactory;
-
-        public DbMigration2(string id, Func<Task<string>> readerFactory)
-        {
-            Id = id;
-            _readerFactory = readerFactory;
-        }
-
-        public string Id { get; }
-
-        private Task<string> GetContentAsync()
-        {
-            return _readerFactory();
-        }
-
-        public async Task<string> ExecuteAsync(SqlConnection conn, SqlTransaction scriptTrans)
-        {
-            var content = await GetContentAsync();
-            Console.WriteLine(@"Execute migration script [{0}]", Id);
-            Console.WriteLine(content);
-            await new TransactSql(content).ExecuteAsync(conn, scriptTrans);
-
-            return content;
-        }
-
-        public static IDbMigration FromResource(string id, Assembly assembly, string resourceName)
-        {
-            return new DbMigration2(id, () =>
-            {
-                using (var resourceStream = assembly.GetManifestResourceStream(resourceName))
-                {
-                    if (resourceStream == null)
-                        throw new MissingManifestResourceException();
-
-                    using (var reader = new StreamReader(resourceStream))
-                    {
-                        return reader.ReadToEndAsync();
-                    }
-                }
-            });
-
         }
     }
 }

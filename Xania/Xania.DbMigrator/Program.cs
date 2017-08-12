@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Reflection;
 
 namespace Xania.DbMigrator
@@ -29,6 +30,10 @@ namespace Xania.DbMigrator
                     }
                 }
             }
+            if (options.Action?.HasFlag(ActionType.Validate) == true)
+                Runner.ValidateDac(options);
+            if (options.Action?.HasFlag(ActionType.Publish) == true)
+                Runner.PublishDac(options);
             if (options.Action?.HasFlag(ActionType.Restore) == true)
                 Runner.RestoreAsync(options).Wait();
         }

@@ -17,7 +17,7 @@ namespace Xania.DbMigrator
     {
         public static void BackUp(Options options)
         {
-            var bacPacFile = options.BacPacFile ?? "RiderCoreDb.bacpac";
+            var bacPacFile = options.BacPacFile ?? "Xania.DbMigrator.bacpac";
             new DbMigrationServices(options.ConnectionString).ExportBacpac(bacPacFile);
         }
 
@@ -58,12 +58,11 @@ namespace Xania.DbMigrator
             InitAsync(options.ConnectionString).Wait();
 
             UpgradeAsync(options.ConnectionString, upgradeScripts).Wait();
-            ValidateDac(options.DacPacFile, options.ConnectionString);
         }
 
         public static Task RestoreAsync(Options options)
         {
-            var bacPacFile = options.BacPacFile ?? "RiderCoreDb.bacpac";
+            var bacPacFile = options.BacPacFile ?? "Xania.DbMigrator.bacpac";
             return new DbMigrationServices(options.ConnectionString).ImportBacpac(bacPacFile);
         }
 
@@ -82,6 +81,11 @@ namespace Xania.DbMigrator
                 conn.Close();
                 return pendingMigrations;
             }
+        }
+
+        public static bool ValidateDac(Options options)
+        {
+            return ValidateDac(options.DacPacFile, options.ConnectionString);
         }
 
         private static bool ValidateDac(string dacpacPath, string targetConnectionString)
@@ -132,6 +136,14 @@ namespace Xania.DbMigrator
             return true;
         }
 
+        public static void PublishDac(Options options)
+        {
+            if (string.IsNullOrEmpty(options.DacPacFile))
+                Console.Error.WriteLine("Publishing requires dacpac to be specified");
+            else
+                new DbMigrationServices(options.ConnectionString).PublishDacpac(options.DacPacFile);
+        }
+
         private static async Task InitAsync(string connectionString)
         {
             using (var sql = new SqlConnection(connectionString))
@@ -144,7 +156,7 @@ namespace Xania.DbMigrator
             }
 
         }
-        
+
         private static async Task UpgradeAsync(string connectionString, IEnumerable<IDbMigration> upgradeScripts)
         {
             var pendingMigrations = await GetPendingMigrationsAsync(connectionString, upgradeScripts.OrderBy(x => x.Id));
