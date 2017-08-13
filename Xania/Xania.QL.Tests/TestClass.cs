@@ -10,14 +10,14 @@ namespace Xania.QL.Tests
         [Test]
         public void BindTest()
         {
-            var getPerson = Operation.From<string, Person>(GetPerson);
+            var getPerson = new Func<string, Person>(GetPerson);
 
-            var age = "Ibrahim" |
+            var age =
                 from x in getPerson
                 from y in Validate(x)
                 select GetAge(y);
 
-            age.Should().BeAssignableTo<IFailure>()
+            age("ibrahim").Should().BeAssignableTo<IFailure>()
                 .Which.Message.Should().Be("Validation error");
         }
 
@@ -25,7 +25,7 @@ namespace Xania.QL.Tests
 
         public int GetAge(Person p) => p.Age;
 
-        public Result<Person> GetPerson(string firstName) => Result.Success(new Person { FirstName = firstName, Age = 36 });
+        public Person GetPerson(string firstName) => new Person { FirstName = firstName, Age = 36 };
 
     }
 

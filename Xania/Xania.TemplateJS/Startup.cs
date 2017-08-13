@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Security.Claims;
+using System.Security.Principal;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
@@ -157,6 +159,39 @@ namespace Xania.TemplateJS
                     AutomaticChallenge = true,
                     LoginPath = "/home/login",
                 });
+
+                //app.Map("/home/login", a =>
+                //{
+                //    a.Use(async (context, next) =>
+                //    {
+                //        var request = context.Request;
+                //        var contentType = request.ContentType;
+                //        if (request.Method.Equals("POST", StringComparison.OrdinalIgnoreCase) && contentType != null)
+                //        {
+                //            var userName = request.Form["userName"];
+                //            var returnUrl = request.Query["ReturnUrl"];
+
+                //            if (string.IsNullOrEmpty(userName))
+                //            {
+                //                var identity =
+                //                    new GenericIdentity(userName,
+                //                        CookieAuthenticationDefaults
+                //                            .AuthenticationScheme); // new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+
+                //                await context.Authentication.SignInAsync(
+                //                    CookieAuthenticationDefaults.AuthenticationScheme,
+                //                    new ClaimsPrincipal(identity));
+
+                //                context.Response.Redirect(returnUrl);
+                //                return;
+                //                // return Redirect(returnUrl ?? "~/admin/app");
+                //                // await next.Invoke(); // WriteAsync("Hello, World!");
+                //            }
+                //        }
+
+                //        await next.Invoke(); // WriteAsync("Hello, World!");
+                //    });
+                //});
             }
 
             app.UseMvc(routes =>

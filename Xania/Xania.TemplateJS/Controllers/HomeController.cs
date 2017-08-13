@@ -2,6 +2,10 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Security.Claims;
+using System.Security.Principal;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -25,6 +29,19 @@ namespace Xania.TemplateJS.Controllers
         {
             var model = ClientResult.GetClientApp("home/login", "wwwroot");
             return View("Boot", model);
+        }
+
+        [HttpPost]
+        public IActionResult Login(string userName, string returnUrl)
+        {
+            // var claims = new[] { new Claim("name", userName), new Claim(ClaimTypes.Role, "Admin") };
+            var identity = new GenericIdentity(userName, CookieAuthenticationDefaults.AuthenticationScheme); // new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+
+            HttpContext.Authentication.SignInAsync(
+                CookieAuthenticationDefaults.AuthenticationScheme,
+                new ClaimsPrincipal(identity));
+
+            return Redirect(returnUrl ?? "~/admin/app");
         }
 
 

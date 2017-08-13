@@ -5,15 +5,14 @@ import Html from "../src/html"
 
 export function index() {
     return View(
-        <div>
+        <form method="post">
             <Html.TextEditor field="userName" display="User Name" />
-            <Html.TextEditor field="password" display="Password" />
             <div class="btn-group">
-                <button class="btn-primary">Login</button>
+                <button class="btn-primary" type="submit">Login</button>
                 &nbsp;
                 <a href="#forgot">Wachtwoord vergeten</a>
             </div>
-        </div>
+        </form>
     );
 }
 

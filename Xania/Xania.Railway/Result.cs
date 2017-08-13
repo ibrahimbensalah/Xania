@@ -80,22 +80,4 @@ namespace Xania.Railway
             return new Result<T>.Failure(message);
         }
     }
-
-    public static class Operation
-    {
-        public static Operation<TSuccess, TSuccess> From<TSuccess>(Func<TSuccess, Result<TSuccess>> func)
-        {
-            return Operation<TSuccess, TSuccess>.Init(func);
-        }
-
-        public static Operation<TSuccess, TSuccess> From<TSuccess>(Func<TSuccess, TSuccess> func)
-        {
-            return Operation<TSuccess, TSuccess>.Init(t => Result.Success(func(t)));
-        }
-
-        public static Operation<U, TSuccess> From<U, TSuccess>(Func<U, IMonad<TSuccess>> func)
-        {
-            return Operation<U, TSuccess>.Init(func);
-        }
-    }
 }
