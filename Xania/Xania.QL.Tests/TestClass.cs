@@ -1,3 +1,4 @@
+using System;
 using FluentAssertions;
 using NUnit.Framework;
 using Xania.Railway;
@@ -20,11 +21,27 @@ namespace Xania.QL.Tests
                 .Which.Message.Should().Be("Validation error");
         }
 
-        public Result<Person> Validate(Person p) => Result.Failure<Person>("Validation error");
+        public ValidationError<Person> Validate(Person p) => new ValidationError<Person>("Validation error");
 
         public int GetAge(Person p) => p.Age;
 
         public Result<Person> GetPerson(string firstName) => Result.Success(new Person { FirstName = firstName, Age = 36 });
 
+    }
+
+    public class ValidationError<T>: IMonad<T>, IFailure
+    {
+        public ValidationError(string message)
+        {
+            this.Message = message;
+        }
+
+        public IMonad<U> Map<U>(Func<T, IMonad<U>> func)
+        {
+            return new ValidationError<U>(this.Message);
+        }
+
+        public string Message { get; }
+        public Exception Exception { get; }
     }
 }
