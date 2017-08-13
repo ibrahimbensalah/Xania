@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<package>
+  <metadata>
+    <id>Railway.NET</id>
+    <version>$version$</version>
+    <title>$title$</title>
+    <authors>Ibrahim ben Salah</authors>
+    <owners>Xania Software</owners>
+    <projectUrl>https://github.com/ibrahimbensalah/Xania/Xania.Railway</projectUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>Objects and utilities and with the help of LINQ to elegantly support railway oriented programming</description>
+    <copyright>Copyright 2017</copyright>
+    <tags>railway oriented programming rop .net</tags>
+    <dependencies>
+    </dependencies>
+  </metadata>
+  <files>
+    <file src="bin\DebugNet40\Xania.*" target="lib\net40" />
+  </files>
+</package>

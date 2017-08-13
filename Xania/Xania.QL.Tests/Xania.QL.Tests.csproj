@@ -72,6 +72,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Person.cs" />
     <Compile Include="QueryHelperTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Properties\Resources.Designer.cs">
@@ -79,6 +80,7 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
+    <Compile Include="TestClass.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />
@@ -102,6 +104,10 @@
     <ProjectReference Include="..\Xania.QL\Xania.QL.csproj">
       <Project>{95264966-9e27-48ab-b039-198a6f6cab3c}</Project>
       <Name>Xania.QL</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Xania.Railway\Xania.Railway.csproj">
+      <Project>{CC0DFB66-FDD9-4AF5-BBBE-293CE326630C}</Project>
+      <Name>Xania.Railway</Name>
     </ProjectReference>
     <ProjectReference Include="..\Xania.TemplateJS\Xania.TemplateJS.csproj">
       <Project>{660FE6B8-1FCE-43B4-AC80-107A323CD73C}</Project>
