@@ -43,7 +43,8 @@
   <ItemGroup>
     <Compile Include="ISuccessResult.cs" />
     <Compile Include="IFailure.cs" />
-    <Compile Include="Operation.cs" />
+    <Compile Include="MonadExtensions.cs" />
+    <Compile Include="IMonad.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Result.cs" />
   </ItemGroup>

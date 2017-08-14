@@ -2,82 +2,72 @@ using System;
 
 namespace Xania.Railway
 {
-    /// <summary>
-    /// Result monad
-    /// </summary>
-    /// <typeparam name="TSuccess"></typeparam>
-    public abstract class Result<TSuccess>: IMonad<TSuccess>
+    public class SuccessResult<TSuccess> : IMonad<TSuccess>, ISuccessResult<TSuccess>
     {
-        public class SuccessResult : Result<TSuccess>, ISuccessResult<TSuccess>
+        public TSuccess Value { get; }
+
+        public SuccessResult(TSuccess value)
         {
-            public TSuccess Value { get; }
+            Value = value;
+        }
 
-            public SuccessResult(TSuccess value)
+        public IMonad<U> Bind<U>(Func<TSuccess, IMonad<U>> next)
+        {
+            try
             {
-                this.Value = value;
+                return next(Value);
             }
-
-            public override IMonad<U> Map<U>(Func<TSuccess, IMonad<U>> next)
+            catch (Exception ex)
             {
-                try
-                {
-                    return next(Value);
-                }
-                catch (Exception ex)
-                {
-                    return new Result<U>.Failure(ex);
-                }
-            }
-
-            public override IMonad<U> Map<U>(Func<TSuccess, U> next)
-            {
-                return Result.Success(next(Value));
+                return new Failure<U>(ex);
             }
         }
 
-        public class Failure : Result<TSuccess>, IFailure
+        public IMonad<U> Map<U>(Func<TSuccess, U> next)
         {
-            public string Message { get; }
-
-            public Exception Exception { get; }
-
-            public Failure(string message)
-            {
-                Message = message;
-            }
-
-            public Failure(Exception exception)
-                : this(exception.Message)
-            {
-                Exception = exception;
-            }
-
-            public override IMonad<U> Map<U>(Func<TSuccess, IMonad<U>> next)
-            {
-                return Result.Failure<U>(this.Message);
-            }
-
-            public override IMonad<U> Map<U>(Func<TSuccess, U> next)
-            {
-                return Result.Failure<U>(this.Message);
-            }
+            return Result.Success(next(Value));
         }
-
-        public abstract IMonad<U> Map<U>(Func<TSuccess, IMonad<U>> next);
-
-        public abstract IMonad<U> Map<U>(Func<TSuccess, U> next);
     }
+
+    public class Failure<TSuccess> : IMonad<TSuccess>, IFailure
+    {
+        public string Message { get; }
+
+        public Exception Exception { get; }
+
+        public Failure(string message)
+        {
+            Message = message;
+        }
+
+        public Failure(Exception exception)
+            : this(exception.Message)
+        {
+            Exception = exception;
+        }
+
+        public IMonad<U> Bind<U>(Func<TSuccess, IMonad<U>> next)
+        {
+            return Result.Failure<U>(this.Message);
+        }
+
+        public IMonad<U> Map<U>(Func<TSuccess, U> next)
+        {
+            return Result.Failure<U>(this.Message);
+        }
+    }
+
 
     public static class Result
     {
-        public static Result<T>.SuccessResult Success<T>(T value)
+        public static SuccessResult<T> Success<T>(T value)
         {
-            return new Result<T>.SuccessResult(value);
+            return new SuccessResult<T>(value);
         }
 
-        public static Result<T>.Failure Failure<T>(string message)
+        public static Failure<T> Failure<T>(string message)
         {
-            return new Result<T>.Failure(message);
+            return new Failure<T>(message);
         }
     }
 }
