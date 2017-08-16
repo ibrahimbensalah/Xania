@@ -4051,15 +4051,15 @@
     ]
   },
   "packageFolders": {
-    "C:\\Users\\Ibrahim\\.nuget\\packages\\": {}
+    "C:\\Users\\ib\\.nuget\\packages\\": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\dev\\github\\Xania\\Xania\\Xania.QL\\Xania.QL.csproj",
+      "projectUniqueName": "C:\\Users\\ib\\Documents\\GitHub\\Xania\\Xania\\Xania.QL\\Xania.QL.csproj",
       "projectName": "Xania.QL",
-      "projectPath": "C:\\dev\\github\\Xania\\Xania\\Xania.QL\\Xania.QL.csproj",
-      "outputPath": "C:\\dev\\github\\Xania\\Xania\\Xania.QL\\obj\\",
+      "projectPath": "C:\\Users\\ib\\Documents\\GitHub\\Xania\\Xania\\Xania.QL\\Xania.QL.csproj",
+      "outputPath": "C:\\Users\\ib\\Documents\\GitHub\\Xania\\Xania\\Xania.QL\\obj\\",
       "projectStyle": "PackageReference",
       "originalTargetFrameworks": [
         "netstandard1.4"

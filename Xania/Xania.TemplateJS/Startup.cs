@@ -160,37 +160,9 @@ namespace Xania.TemplateJS
                     LoginPath = "/home/login",
                 });
 
+                app.UseMiddleware<DevelopmentAuthenticationMiddleware>();
                 //app.Map("/home/login", a =>
                 //{
-                //    a.Use(async (context, next) =>
-                //    {
-                //        var request = context.Request;
-                //        var contentType = request.ContentType;
-                //        if (request.Method.Equals("POST", StringComparison.OrdinalIgnoreCase) && contentType != null)
-                //        {
-                //            var userName = request.Form["userName"];
-                //            var returnUrl = request.Query["ReturnUrl"];
-
-                //            if (string.IsNullOrEmpty(userName))
-                //            {
-                //                var identity =
-                //                    new GenericIdentity(userName,
-                //                        CookieAuthenticationDefaults
-                //                            .AuthenticationScheme); // new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
-
-                //                await context.Authentication.SignInAsync(
-                //                    CookieAuthenticationDefaults.AuthenticationScheme,
-                //                    new ClaimsPrincipal(identity));
-
-                //                context.Response.Redirect(returnUrl);
-                //                return;
-                //                // return Redirect(returnUrl ?? "~/admin/app");
-                //                // await next.Invoke(); // WriteAsync("Hello, World!");
-                //            }
-                //        }
-
-                //        await next.Invoke(); // WriteAsync("Hello, World!");
-                //    });
                 //});
             }
 
@@ -212,6 +184,43 @@ namespace Xania.TemplateJS
                 context.Response.StatusCode = 404;
                 await context.Response.WriteAsync("NOT FOUND");
             });
+        }
+    }
+
+    public class DevelopmentAuthenticationMiddleware
+    {
+        private readonly RequestDelegate _next;
+
+        public DevelopmentAuthenticationMiddleware(RequestDelegate next)
+        {
+            _next = next;
+        }
+
+        public async Task Invoke(HttpContext context)
+        {
+            var request = context.Request;
+            var contentType = request.ContentType;
+            if (request.Method.Equals("POST", StringComparison.OrdinalIgnoreCase) && contentType != null)
+            {
+                var userName = request.Form["userName"];
+                var returnUrl = request.Query["ReturnUrl"];
+
+                if (!string.IsNullOrEmpty(userName))
+                {
+                    var identity =
+                        new GenericIdentity(userName,
+                            CookieAuthenticationDefaults
+                                .AuthenticationScheme); // new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+
+                    await context.Authentication.SignInAsync(
+                        CookieAuthenticationDefaults.AuthenticationScheme,
+                        new ClaimsPrincipal(identity));
+
+                    context.Response.Redirect(returnUrl);
+                    return;
+                }
+            }
+            await _next.Invoke(context);
         }
     }
 }
