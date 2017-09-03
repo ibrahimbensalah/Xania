@@ -273,7 +273,7 @@ namespace Xania.QL.Tests
         private static dynamic GetAst(Stream memoryStream)
         {
             var formatter = new JsonMediaTypeFormatter();
-            dynamic ast = formatter.ReadFromStream(typeof(object), memoryStream, Encoding.UTF8, null);
+            dynamic ast = formatter.ReadFromStreamAsync(typeof(object), memoryStream, null, null).Result;
             return ast;
         }
 
