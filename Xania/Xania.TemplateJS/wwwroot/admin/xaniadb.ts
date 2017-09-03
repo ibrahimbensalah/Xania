@@ -1,7 +1,7 @@
 ﻿import { parse } from "../src/compile"
 
 function executeQuery(ast) {
-    var config = {
+    var init: RequestInit = {
         method: "POST",
         headers: {
             'Content-Type': "application/json"
@@ -10,7 +10,7 @@ function executeQuery(ast) {
         credentials: "same-origin"
     };
 
-    return fetch("/api/xaniadb", config);
+    return fetch("/api/xaniadb", init);
 }
 
 function ql(query) {

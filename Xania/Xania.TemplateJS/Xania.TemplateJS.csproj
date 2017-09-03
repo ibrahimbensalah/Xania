@@ -7,12 +7,9 @@
     <PackageId>Xania.TemplateJS</PackageId>
     <UserSecretsId>aspnet-WebApplication1-60e99684-a172-4ef5-831f-8e5dac3966ce</UserSecretsId>
     <WebProject_DirectoryAccessLevelKey>0</WebProject_DirectoryAccessLevelKey>
+    <TypeScriptToolsVersion>2.3</TypeScriptToolsVersion>
     <!--<UserSecretsId>aspnet-Xania.TemplateJS-20161219121033</UserSecretsId>-->
   </PropertyGroup>
-
-  <ItemGroup>
-    <Content Remove="wwwroot/src\pdf.js" />
-  </ItemGroup>
 
   <ItemGroup>
     <None Remove="Properties\PublishProfiles\TemplateJS - Web Deploy.pubxml" />
@@ -21,14 +18,6 @@
     <None Remove="Reporting\blue.PNG" />
     <None Remove="Reporting\logo.PNG" />
     <None Remove="Reporting\roboto.regular.ttf" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Content Include="wwwroot\admin\xaniadb.ts" />
-    <Content Include="wwwroot\home\login.tsx" />
-    <Content Include="wwwroot\query.html" />
-    <Content Include="wwwroot\src\expression.ts" />
-    <Content Include="wwwroot\wasm.html" />
   </ItemGroup>
 
   <ItemGroup>

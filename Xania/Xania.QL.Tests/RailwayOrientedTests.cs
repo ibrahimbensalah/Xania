@@ -31,16 +31,9 @@ namespace Xania.QL.Tests
             Message = message;
         }
 
-        public IMonad<U> Map<U>(Func<T, U> _)
-        {
-            return new ValidationError<U>(Message);
-        }
-
-        public IMonad<U> Bind<U>(Func<T, IMonad<U>> _)
-        {
-            return new ValidationError<U>(this.Message);
-        }
-
         public string Message { get; }
+
+        public IMonad<U> Map<U>(Func<T, U> _) => new ValidationError<U>(Message);
+        public IMonad<U> Bind<U>(Func<T, IMonad<U>> _) => new ValidationError<U>(Message);
     }
 }

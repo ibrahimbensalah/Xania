@@ -12,7 +12,7 @@ namespace Xania.DataAccess.Tests
     public class BsonRepositoryTests
     {
         [Test]
-        public void test()
+        public void Test()
         {
             Console.WriteLine("test 1");
             AddModelTest();
