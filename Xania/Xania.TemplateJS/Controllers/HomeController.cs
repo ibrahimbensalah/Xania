@@ -31,7 +31,7 @@ namespace Xania.TemplateJS.Controllers
             return View("Boot", model);
         }
 
-        [Authorize]
+        // [Authorize]
         public IActionResult Boot(string appPath)
         {
             var model = ClientResult.GetClientApp(appPath ?? "admin/app", "wwwroot");
@@ -58,7 +58,7 @@ namespace Xania.TemplateJS.Controllers
                 var part = parts[i];
                 var app = basePath + part;
 
-                var jsExists = System.IO.File.Exists(baseDirectory + "/" + app + ".js");
+                var jsExists = System.IO.File.Exists(baseDirectory + app + ".js");
                 var dirExists = Directory.Exists(baseDirectory + "/" + app);
 
                 if (jsExists && dirExists)

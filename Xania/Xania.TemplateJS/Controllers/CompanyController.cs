@@ -2,8 +2,8 @@
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Xania.DataAccess;
+using Xania.Models;
 using Xania.QL;
-using Xania.TemplateJS.Reporting;
 
 namespace Xania.TemplateJS.Controllers
 {

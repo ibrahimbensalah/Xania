@@ -14,6 +14,7 @@ using Newtonsoft.Json.Linq;
 using NUnit.Framework;
 using Xania.QL.Tests.Properties;
 using Xania.TemplateJS.Reporting;
+using Xania.Models;
 
 namespace Xania.QL.Tests
 {

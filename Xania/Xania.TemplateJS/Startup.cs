@@ -5,7 +5,9 @@ using System.Linq;
 using System.Security.Claims;
 using System.Security.Principal;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -17,8 +19,10 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Xania.DataAccess;
+using Xania.Models;
 using Xania.TemplateJS.Controllers;
 using Xania.TemplateJS.Reporting;
+
 
 namespace Xania.TemplateJS
 {
@@ -47,8 +51,27 @@ namespace Xania.TemplateJS
             if (Configuration.GetChildren().Any(e => e.Key.Equals("Authentication")))
             {
                 services.AddMvc(options => options.Filters.Add(new RequireHttpsAttribute()));
-                services.AddAuthentication(
-                    SharedOptions => SharedOptions.SignInScheme = CookieAuthenticationDefaults.AuthenticationScheme);
+
+                services.AddAuthentication(o => {
+                    o.DefaultChallengeScheme = OpenIdConnectDefaults.AuthenticationScheme;
+                    o.DefaultSignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+                    o.DefaultAuthenticateScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+                });
+
+                // app.UseCookieAuthentication();
+                //app.UseOpenIdConnectAuthentication(new OpenIdConnectOptions
+                //{
+                //    ClientId = Configuration["Authentication:AzureAd:ClientId"],
+                //    Authority = Configuration["Authentication:AzureAd:AADInstance"] +
+                //                Configuration["Authentication:AzureAd:TenantId"],
+                //    CallbackPath = Configuration["Authentication:AzureAd:CallbackPath"]
+                //});
+                services.AddAuthentication();
+                //services.AddOpenIdConnectionAuthentication(o =>
+                //{
+                //    o.ClientId = Configuration["Authentication:AzureAd:ClientId"];
+                //    o.ClientSecret = Configuration["oidc:clientsecret"];
+                //});
             }
             else
             {
@@ -140,30 +163,14 @@ namespace Xania.TemplateJS
                 DefaultContentType = "text/css"
             });
 
-            if (Configuration.GetChildren().Any(e => e.Key.Equals("Authentication")))
+            app.UseAuthentication();
+            if (!Configuration.GetChildren().Any(e => e.Key.Equals("Authentication")))
             {
-                app.UseCookieAuthentication();
-                app.UseOpenIdConnectAuthentication(new OpenIdConnectOptions
-                {
-                    ClientId = Configuration["Authentication:AzureAd:ClientId"],
-                    Authority = Configuration["Authentication:AzureAd:AADInstance"] +
-                                Configuration["Authentication:AzureAd:TenantId"],
-                    CallbackPath = Configuration["Authentication:AzureAd:CallbackPath"]
-                });
+                app.UseAuthentication();
             }
             else
             {
-                app.UseCookieAuthentication(new CookieAuthenticationOptions
-                {
-                    AutomaticAuthenticate = true,
-                    AutomaticChallenge = true,
-                    LoginPath = "/home/login",
-                });
-
                 app.UseMiddleware<DevelopmentAuthenticationMiddleware>();
-                //app.Map("/home/login", a =>
-                //{
-                //});
             }
 
             app.UseMvc(routes =>
