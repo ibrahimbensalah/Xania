@@ -235,18 +235,21 @@ _Pvt_Extensions
 
 # FAKE - F# Make
 .fake/
-/Xania/Xania.Web
-/Xania/Xania.Ledger.WebApi/App_Data
-/Xania/Xania.Web/App_Data
-/Xania/Xania.WebApi/App_Data
-/Xania/Unify-v1.9.4
-/Xania/products-WB0412697.zip
-/Xania/Xania.TemplateJS/obj
-/Xania/Xania.TemplateJS/wwwroot/lib
-/Xania/Xania.TemplateJS/wwwroot/**/*.js
-/Xania/Xania.AdminUI/wwwroot/lib
-/Xania/Xania.AdminUI/.bowerrc
-/Xania/Xania.Reporting/obj
-/Xania/Xania.Reporting/obj
-/Xania/Xania.Domain/obj
-/Xania/Xania.DataAccess/obj
+
+/Xania
+/Xania.Web/App_Data
+/Xania.Ledger.WebApi/App_Data
+/Xania.WebApi/App_Data
+/Unify-v1.9.4
+/products-WB0412697.zip
+/Xania.TemplateJS/obj
+/Xania.TemplateJS/wwwroot/lib
+/Xania.TemplateJS/wwwroot/**/*.js
+/Xania.AdminUI/wwwroot/lib
+/Xania.Reporting/obj
+/Xania.Reporting/obj
+/Xania.Domain/obj
+/Xania.DataAccess/obj
+
+
+**/*.map

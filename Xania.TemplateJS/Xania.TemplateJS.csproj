@@ -1,0 +1,99 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net462</TargetFramework>
+    <RuntimeIdentifier>win7-x86</RuntimeIdentifier>
+    <AssemblyName>Xania.TemplateJS</AssemblyName>
+    <PackageId>Xania.TemplateJS</PackageId>
+    <UserSecretsId>aspnet-WebApplication1-60e99684-a172-4ef5-831f-8e5dac3966ce</UserSecretsId>
+    <WebProject_DirectoryAccessLevelKey>0</WebProject_DirectoryAccessLevelKey>
+    <TypeScriptToolsVersion>2.3</TypeScriptToolsVersion>
+    <!--<UserSecretsId>aspnet-Xania.TemplateJS-20161219121033</UserSecretsId>-->
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="bundleconfig.*" />
+    <None Include="compilerconfig.*" />
+    <None Include="package.*" />
+    <None Include="packages.*" />
+    <None Include="grammar\peg.json" />
+    <None Include="wwwroot\**\*.ts" />
+    <None Include="wwwroot\**\*.tsx" />
+    <None Include="wwwroot\**\*.less" />
+    <None Include="tsconfig.*" />
+    <None Include="bower.json" />
+    <None Include="wwwroot\test\**\*.*" />
+    <None Include="wwwroot\spec\**\*.*" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Remove="bundleconfig.*" />
+    <Content Remove="compilerconfig.*" />
+    <Content Remove="package.*" />
+    <Content Remove="packages.*" />
+    <Content Remove="grammar\peg.json" />
+    <Content Remove="wwwroot\**\*.ts" />
+    <Content Remove="wwwroot\**\*.tsx" />
+    <Content Remove="wwwroot\**\*.less" />
+    <Content Remove="tsconfig.*" />
+    <Content Remove="bower.json" />
+    <Content Remove="wwwroot\test\**\*.*" />
+    <Content Remove="wwwroot\spec\**\*.*" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Remove="Properties\PublishProfiles\TemplateJS - Web Deploy.pubxml" />
+    <None Remove="Properties\PublishProfiles\xaniajs - FTP.pubxml" /> 
+    <None Remove="Properties\PublishProfiles\XaniaJS - Web Deploy.pubxml" />
+    <None Remove="Reporting\blue.PNG" />
+    <None Remove="Reporting\logo.PNG" />
+    <None Remove="Reporting\roboto.regular.ttf" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Xania.DataAccess\Xania.DataAccess.csproj" />
+    <ProjectReference Include="..\Xania.Models\Xania.Models.csproj" />
+    <ProjectReference Include="..\Xania.QL\Xania.QL.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="iTextSharp" Version="5.5.12" />
+    <PackageReference Include="Microsoft.AspNet.WebApi.Client" Version="5.2.3" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc" Version="2.0.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Routing" Version="2.0.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Diagnostics" Version="2.0.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Server.IISIntegration" Version="2.0.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Server.Kestrel" Version="2.0.0" />
+    <PackageReference Include="Microsoft.AspNetCore.StaticFiles" Version="2.0.0" />
+    <PackageReference Include="Microsoft.CSharp" Version="4.4.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="2.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="2.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="2.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="2.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="2.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="2.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="2.0.0" />
+    <PackageReference Include="Newtonsoft.Json.Bson" Version="1.0.1" />
+    <PackageReference Include="System.ValueTuple" Version="4.4.0" />
+
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.Cookies" Version="2.0.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="2.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <DotNetCliToolReference Include="BundlerMinifier.Core" Version="2.2.301" />
+    <DotNetCliToolReference Include="Microsoft.Extensions.SecretManager.Tools" Version="1.0.1" />
+    <DotNetCliToolReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Tools" Version="1.0.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Reporting\blue.PNG" />
+    <EmbeddedResource Include="Reporting\logo.PNG" />
+    <EmbeddedResource Include="Reporting\roboto.regular.ttf" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Properties\PublishProfiles\" />
+  </ItemGroup>
+
+</Project>
