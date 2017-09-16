@@ -3,8 +3,6 @@
   flex-flow: nowrap;
   display: flex;
   height: 100%;
-  width: 100%;
-  overflow: auto;
 }
 div.stack-container section.stack-item {
   height: 100%;
