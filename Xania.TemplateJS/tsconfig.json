@@ -11,7 +11,7 @@
     // "sourceRoot": "",
     //"inlineSourceMap": true,
     //"inlineSources": true,
-    "target": "es5",
+    "target": "es6",
     "types": [ "jasmine" ],
     //    "outDir": "wwwroot",
     "jsx": "react",

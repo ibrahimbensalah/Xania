@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Security.Claims;
 using System.Security.Principal;
@@ -8,13 +6,10 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Authorization;
-using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -50,28 +45,15 @@ namespace Xania.TemplateJS
         {
             if (Configuration.GetChildren().Any(e => e.Key.Equals("Authentication")))
             {
+                services.AddAuthentication(sharedOptions =>
+                    {
+                        sharedOptions.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+                        sharedOptions.DefaultChallengeScheme = OpenIdConnectDefaults.AuthenticationScheme;
+                    })
+                    .AddAzureAd(options => Configuration.Bind("Authentication:Microsoft", options))
+                    .AddCookie();
+
                 services.AddMvc(options => options.Filters.Add(new RequireHttpsAttribute()));
-
-                services.AddAuthentication(o => {
-                    o.DefaultChallengeScheme = OpenIdConnectDefaults.AuthenticationScheme;
-                    o.DefaultSignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-                    o.DefaultAuthenticateScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-                });
-
-                // app.UseCookieAuthentication();
-                //app.UseOpenIdConnectAuthentication(new OpenIdConnectOptions
-                //{
-                //    ClientId = Configuration["Authentication:AzureAd:ClientId"],
-                //    Authority = Configuration["Authentication:AzureAd:AADInstance"] +
-                //                Configuration["Authentication:AzureAd:TenantId"],
-                //    CallbackPath = Configuration["Authentication:AzureAd:CallbackPath"]
-                //});
-                services.AddAuthentication();
-                //services.AddOpenIdConnectionAuthentication(o =>
-                //{
-                //    o.ClientId = Configuration["Authentication:AzureAd:ClientId"];
-                //    o.ClientSecret = Configuration["oidc:clientsecret"];
-                //});
             }
             else
             {
@@ -122,8 +104,7 @@ namespace Xania.TemplateJS
                     Name = "Darwin Recruitement"
                 }
             });
-
-            IObjectStore<Invoice> store = new DocumentObjectStore<Invoice>(new MemoryDocumentStore())
+            services.AddSingleton<IObjectStore<Invoice>>(new DocumentObjectStore<Invoice>(new MemoryDocumentStore())
             {
                 new Invoice
                 {
@@ -137,8 +118,7 @@ namespace Xania.TemplateJS
                 {
                     Id = "invoice 3".ToGuid(), Description = "invoice 3", InvoiceNumber = "201703", CompanyId = 3, InvoiceDate = DateTime.Now
                 }
-            };
-            services.AddSingleton<IObjectStore<Invoice>>(store);
+            });
 
             services.AddOptions();
             services.Configure<XaniaConfiguration>(Configuration);
@@ -164,14 +144,6 @@ namespace Xania.TemplateJS
             });
 
             app.UseAuthentication();
-            if (!Configuration.GetChildren().Any(e => e.Key.Equals("Authentication")))
-            {
-                app.UseAuthentication();
-            }
-            else
-            {
-                app.UseMiddleware<DevelopmentAuthenticationMiddleware>();
-            }
 
             app.UseMvc(routes =>
             {
@@ -219,7 +191,7 @@ namespace Xania.TemplateJS
                             CookieAuthenticationDefaults
                                 .AuthenticationScheme); // new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
 
-                    await context.Authentication.SignInAsync(
+                    await context.SignInAsync(
                         CookieAuthenticationDefaults.AuthenticationScheme,
                         new ClaimsPrincipal(identity));
 

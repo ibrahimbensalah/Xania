@@ -10,7 +10,6 @@ namespace Xania.TemplateJS
         {
             var host = new WebHostBuilder()
                 .UseKestrel()
-                .UseWebRoot("wwwroot")
                 .UseContentRoot(Directory.GetCurrentDirectory())
                 .UseIISIntegration()
                 .UseStartup<Startup>()

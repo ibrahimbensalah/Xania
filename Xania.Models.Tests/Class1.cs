@@ -15,7 +15,11 @@ namespace Xania.Models.Tests
         {
             using (var db = new XaniaDataContext())
             {
-                db.Main();
+                var collection = db.Store<Invoice>();
+                foreach (var m in collection)
+                {
+                    Console.WriteLine($"{m.Id} {m.Lines[0].Description}");
+                }
             }
         }
     }

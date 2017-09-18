@@ -5,32 +5,32 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Xania.TemplateJS.Controllers
 {
+    [Route("[controller]/[action]")]
     public class AccountController : Controller
     {
-        //
-        // GET: /Account/SignIn
         [HttpGet]
         public IActionResult SignIn()
         {
-            return Challenge(new AuthenticationProperties { RedirectUri = "/" }, OpenIdConnectDefaults.AuthenticationScheme);
+            var redirectUrl = Url.Action(nameof(HomeController.Index), "Home");
+            return Challenge(
+                new AuthenticationProperties { RedirectUri = redirectUrl },
+                OpenIdConnectDefaults.AuthenticationScheme);
         }
 
-        //
-        // GET: /Account/SignOut
         [HttpGet]
         public IActionResult SignOut()
         {
             var callbackUrl = Url.Action(nameof(SignedOut), "Account", values: null, protocol: Request.Scheme);
-            return SignOut(new AuthenticationProperties { RedirectUri = callbackUrl },
-                CookieAuthenticationDefaults.AuthenticationScheme, OpenIdConnectDefaults.AuthenticationScheme);
+            return SignOut(
+                new AuthenticationProperties { RedirectUri = callbackUrl },
+                CookieAuthenticationDefaults.AuthenticationScheme,
+                OpenIdConnectDefaults.AuthenticationScheme);
         }
 
-        //
-        // GET: /Account/SignedOut
         [HttpGet]
         public IActionResult SignedOut()
         {
-            if (HttpContext.User.Identity.IsAuthenticated)
+            if (User.Identity.IsAuthenticated)
             {
                 // Redirect to home page if the user is authenticated.
                 return RedirectToAction(nameof(HomeController.Index), "Home");
@@ -39,8 +39,6 @@ namespace Xania.TemplateJS.Controllers
             return View();
         }
 
-        //
-        // GET: /Account/AccessDenied
         [HttpGet]
         public IActionResult AccessDenied()
         {

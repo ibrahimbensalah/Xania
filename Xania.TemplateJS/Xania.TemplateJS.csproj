@@ -7,7 +7,7 @@
     <PackageId>Xania.TemplateJS</PackageId>
     <UserSecretsId>aspnet-WebApplication1-60e99684-a172-4ef5-831f-8e5dac3966ce</UserSecretsId>
     <WebProject_DirectoryAccessLevelKey>0</WebProject_DirectoryAccessLevelKey>
-    <TypeScriptToolsVersion>2.3</TypeScriptToolsVersion>
+    <TypeScriptToolsVersion>2.5</TypeScriptToolsVersion>
     <!--<UserSecretsId>aspnet-Xania.TemplateJS-20161219121033</UserSecretsId>-->
   </PropertyGroup>
 
@@ -59,6 +59,7 @@
   <ItemGroup>
     <PackageReference Include="iTextSharp" Version="5.5.12" />
     <PackageReference Include="Microsoft.AspNet.WebApi.Client" Version="5.2.3" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.MicrosoftAccount" Version="2.0.0" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc" Version="2.0.0" />
     <PackageReference Include="Microsoft.AspNetCore.Routing" Version="2.0.0" />
     <PackageReference Include="Microsoft.AspNetCore.Diagnostics" Version="2.0.0" />

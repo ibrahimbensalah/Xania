@@ -15,7 +15,7 @@
         onError?();
     }
 
-    export class Observable<T> implements IObserver<T> {
+    export class Observable<T> {
 
         public subscriptions: ISubscription[] = [];
         public current: T;
