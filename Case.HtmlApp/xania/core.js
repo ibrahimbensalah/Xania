@@ -30,6 +30,7 @@ var TextTemplate = (function () {
 }());
 var ContentTemplate = (function () {
     function ContentTemplate() {
+        // ReSharper disable once InconsistentNaming
         this._children = [];
     }
     ContentTemplate.prototype.bind = function (model, idx) {
@@ -49,6 +50,7 @@ var TagTemplate = (function () {
         this.name = name;
         this.attributes = new Map();
         this.events = new Map();
+        // ReSharper disable once InconsistentNaming
         this._children = [];
     }
     TagTemplate.prototype.children = function () {
@@ -155,6 +157,7 @@ var SelectManyExpression = (function () {
         if (loader === void 0) { loader = function (t) { return window[t]; }; }
         var m = expr.match(/^(\w+)(\s*:\s*(\w+))?\s+of\s+((\w+)\s*:\s*)?(.*)$/i);
         if (!!m) {
+            // ReSharper disable once UnusedLocals
             var varName = m[1], itemType = m[3], directive = m[5], collectionExpr = m[6];
             var viewModel = loader(itemType);
             return new SelectManyExpression(varName, viewModel, collectionExpr, loader);
@@ -218,6 +221,7 @@ var Xania = (function () {
         else {
             fn.call(this, data, 0, [data]);
         }
+        // ReSharper disable once NotAllPathsReturnValue
     };
     Xania.collect = function (fn, data) {
         if (Array.isArray(data)) {
@@ -244,6 +248,7 @@ var Xania = (function () {
         }
         return function (result) {
             for (var i = fns.length - 1; i > -1; i--) {
+                // ReSharper disable once SuspiciousThisUsage
                 result = fns[i].call(this, result);
             }
             return result;
@@ -267,6 +272,7 @@ var Xania = (function () {
         return Xania.partialFunc.bind({ context: this, func: func, baseArgs: baseArgs });
     };
     Xania.observe = function (target, observer) {
+        // ReSharper disable once InconsistentNaming
         if (!target)
             return target;
         if (target.isSpy) {
@@ -284,6 +290,7 @@ var Xania = (function () {
         }
     };
     Xania.observeArray = function (arr, observer) {
+        // ReSharper disable once InconsistentNaming
         return Xania.proxy(arr, {
             get: function (target, property) {
                 switch (property) {
@@ -371,6 +378,7 @@ var Xania = (function () {
                     case "constructor":
                         return object.constructor;
                     default:
+                        // ReSharper disable once SuspiciousThisUsage
                         return Xania.observeProperty(object, property, observer);
                 }
             },
@@ -408,6 +416,17 @@ var Xania = (function () {
     Xania.shallow = function (obj) {
         return Xania.assign({}, obj);
     };
+    //static assign(target, ...args) {
+    //    for (var i = 0; i < args.length; i++) {
+    //        const object = args[i];
+    //        for (let prop in object) {
+    //            if (object.hasOwnProperty(prop)) {
+    //                target[prop] = object[prop];
+    //            }
+    //        }
+    //    }
+    //    return target;
+    //}
     Xania.proxy = function (target, config) {
         if (typeof window["Proxy"] === "undefined")
             throw new Error("Browser is not supported");
@@ -430,9 +449,9 @@ var Xania = (function () {
         else
             return id;
     };
-    Xania.assign = Object.assign;
     return Xania;
 }());
+Xania.assign = Object.assign;
 var Router = (function () {
     function Router() {
         this.currentAction = null;
@@ -516,7 +535,11 @@ var Observer = (function () {
         for (var _i = 2; _i < arguments.length; _i++) {
             additionalArgs[_i - 2] = arguments[_i];
         }
-        var observer = this, observable, updateArgs;
+        var observer = this, 
+        // ReSharper disable once JoinDeclarationAndInitializerJs
+        observable, 
+        // ReSharper disable once JoinDeclarationAndInitializerJs
+        updateArgs;
         var subscription = {
             parent: undefined,
             children: new Set(),
@@ -563,6 +586,7 @@ var Observer = (function () {
         return subscription;
     };
     Observer.prototype.setRead = function (obj, property) {
+        // ignore
     };
     Observer.prototype.setChange = function (obj, property) {
         var _this = this;
@@ -578,10 +602,12 @@ var Observer = (function () {
     };
     Observer.prototype.update = function () {
         if (this.dirty.size > 0) {
+            // window.requestAnimationFrame(() => {
             this.dirty.forEach(function (subscriber) {
                 subscriber.notify();
             });
             this.dirty.clear();
+            // });
         }
     };
     Object.defineProperty(Observer.prototype, "size", {
@@ -707,11 +733,12 @@ var Binder = (function () {
                 var link = document.createElement('link');
                 link.rel = 'import';
                 link.href = templateUrl;
-                link.setAttribute('async', '');
+                link.setAttribute('async', ''); // make it async!
                 link.onload = function (e) {
                     var link = e.target;
                     resolve.call(binder, link.import);
                 };
+                // link.onerror = function(e) {...};
                 document.head.appendChild(link);
             }
         };
@@ -733,6 +760,7 @@ var Binder = (function () {
         else {
             var tpl = this.compile(attr.value);
             tagElement.attr(name, tpl || attr.value);
+            // conventions
             if (!!tagElement.name.match(/^input$/i) && !!attr.name.match(/^name$/i) && !tagElement.hasAttribute("value")) {
                 var valueAccessor = this.compile("{{ " + attr.value + " }}");
                 tagElement.attr("value", valueAccessor);
@@ -776,6 +804,7 @@ var Binder = (function () {
                         .then(function (model) {
                         if (model === null || model === undefined)
                             return [];
+                        // model = Xania.unwrap(model);
                         return visitArray(Array.isArray(model) ? model : [model]);
                     });
                 }
@@ -877,3 +906,5 @@ var Binder = (function () {
     };
     return Binder;
 }());
+// ReSharper restore InconsistentNaming 
+//# sourceMappingURL=core.js.map

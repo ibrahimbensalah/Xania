@@ -15,15 +15,10 @@ namespace Xania.DbMigrator
 {
     public class Runner
     {
-        public static void BackUp(Options options)
+        public static void BackUp(string bacpacFile, string connectionString)
         {
-            var bacPacFile = options.BacPacFile ?? "Xania.DbMigrator.bacpac";
-            new DbMigrationServices(options.ConnectionString).ExportBacpac(bacPacFile);
-        }
-
-        public static void Upgrade(Options options, Assembly assembly)
-        {
-            Upgrade(options, GetDbMigrations(assembly));
+            var bacPacFile = bacpacFile ?? "Xania.DbMigrator.bacpac";
+            new DbMigrationServices(connectionString).ExportBacpac(bacPacFile);
         }
 
         private static IEnumerable<IDbMigration> GetDbMigrations(Assembly assembly)
@@ -53,17 +48,10 @@ namespace Xania.DbMigrator
             }
         }
 
-        public static void Upgrade(Options options, IEnumerable<IDbMigration> upgradeScripts)
+        public static Task RestoreAsync(string bacpacFile, string connectionString)
         {
-            InitAsync(options.ConnectionString).Wait();
-
-            UpgradeAsync(options.ConnectionString, upgradeScripts).Wait();
-        }
-
-        public static Task RestoreAsync(Options options)
-        {
-            var bacPacFile = options.BacPacFile ?? "Xania.DbMigrator.bacpac";
-            return new DbMigrationServices(options.ConnectionString).ImportBacpac(bacPacFile);
+            var bacPacFile = bacpacFile ?? "Xania.DbMigrator.bacpac";
+            return new DbMigrationServices(connectionString).ImportBacpac(bacPacFile);
         }
 
         private static async Task<IList<IDbMigration>> GetPendingMigrationsAsync(string connectionString, IEnumerable<IDbMigration> scripts)
@@ -83,12 +71,7 @@ namespace Xania.DbMigrator
             }
         }
 
-        public static bool ValidateDac(Options options)
-        {
-            return ValidateDac(options.DacPacFile, options.ConnectionString);
-        }
-
-        private static bool ValidateDac(string dacpacPath, string targetConnectionString)
+        public static bool ValidateDac(string dacpacPath, string targetConnectionString)
         {
             if (string.IsNullOrEmpty(dacpacPath))
                 return true;
@@ -136,12 +119,12 @@ namespace Xania.DbMigrator
             return true;
         }
 
-        public static void PublishDac(Options options)
+        public static void PublishDac(string dacpacFile, string connectionString)
         {
-            if (string.IsNullOrEmpty(options.DacPacFile))
+            if (string.IsNullOrEmpty(dacpacFile))
                 Console.Error.WriteLine("Publishing requires dacpac to be specified");
             else
-                new DbMigrationServices(options.ConnectionString).PublishDacpac(options.DacPacFile);
+                new DbMigrationServices(connectionString).PublishDacpac(dacpacFile);
         }
 
         private static async Task InitAsync(string connectionString)
@@ -155,6 +138,18 @@ namespace Xania.DbMigrator
                 initTrans.Commit();
             }
 
+        }
+
+        public static void Upgrade(string connectionString, Assembly assembly)
+        {
+            Upgrade(connectionString, GetDbMigrations(assembly));
+        }
+
+        public static void Upgrade(string connectionString, IEnumerable<IDbMigration> upgradeScripts)
+        {
+            InitAsync(connectionString).Wait();
+
+            UpgradeAsync(connectionString, upgradeScripts).Wait();
         }
 
         private static async Task UpgradeAsync(string connectionString, IEnumerable<IDbMigration> upgradeScripts)
