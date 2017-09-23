@@ -108,15 +108,15 @@ namespace Xania.TemplateJS
             {
                 new Invoice
                 {
-                    Id = "invoice 1".ToGuid(), Description = "invoice 1", InvoiceNumber = "201701", CompanyId = 1
+                    Description = "invoice 1", InvoiceNumber = "201701", CompanyId = 1
                 },
                 new Invoice
                 {
-                    Id = "invoice 2".ToGuid(), Description = "invoice 2", InvoiceNumber = "201702", CompanyId = 2, InvoiceDate = DateTime.Now
+                    Description = "invoice 2", InvoiceNumber = "201702", CompanyId = 2, InvoiceDate = DateTime.Now
                 },
                 new Invoice
                 {
-                    Id = "invoice 3".ToGuid(), Description = "invoice 3", InvoiceNumber = "201703", CompanyId = 3, InvoiceDate = DateTime.Now
+                    Description = "invoice 3", InvoiceNumber = "201703", CompanyId = 3, InvoiceDate = DateTime.Now
                 }
             });
 

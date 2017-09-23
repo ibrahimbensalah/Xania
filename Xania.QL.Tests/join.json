@@ -4,14 +4,14 @@
     "type": 16,
     "binders": [
       {
-        "name": "invoiceId",
+        "name": "invoiceNumber",
         "value": {
           "type": 4,
           "target": {
             "type": 3,
             "name": "i"
           },
-          "member": "id"
+          "member": "invoiceNumber"
         }
       },
       {
@@ -61,7 +61,7 @@
             "type": 3,
             "name": "c"
           },
-          "member": "id"
+          "member": "invoiceNumber"
         }
       }
     ]

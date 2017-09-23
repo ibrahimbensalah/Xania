@@ -26,17 +26,17 @@ namespace Xania.TemplateJS.Controllers
             _companyStore = companyStore;
         }
 
-        [HttpGet, Route("{invoiceId:guid}/pdf")]
-        public IActionResult GeneratePDF(Guid invoiceId)
+        [HttpGet, Route("{invoiceNumber}/pdf")]
+        public IActionResult GeneratePDF(string invoiceNumber)
         {
-            var invoiceData = GetInvoideReportData(invoiceId);
+            var invoiceData = GetInvoideReportData(invoiceNumber);
             var reportContents = new InvoiceReport().Generate(invoiceData);
             return File(reportContents, "application/pdf");
         }
 
-        public InvoiceReportDataTO GetInvoideReportData(Guid invoiceId)
+        public InvoiceReportDataTO GetInvoideReportData(string invoiceNumber)
         {
-            var invoice = _invoiceStore.Single(e => e.Id == invoiceId);
+            var invoice = _invoiceStore.Single(e => e.InvoiceNumber.Equals(invoiceNumber, StringComparison.OrdinalIgnoreCase));
 
             if (invoice.CompanyId == null || invoice.InvoiceDate == null)
                 throw new InvalidOperationException("invoice is not valid");
@@ -88,24 +88,24 @@ namespace Xania.TemplateJS.Controllers
             if (invoice == null)
                 throw new NullReferenceException();
 
-            await _invoiceStore.UpdateAsync(x => x.Id == invoice.Id, invoice);
+            await _invoiceStore.AddAsync(invoice);
             return null;
         }
 
-        [HttpPut, Route("{invoiceId:guid}")]
-        public async Task<Invoice> Update(Guid invoiceId, [FromBody]Invoice invoice)
+        [HttpPut, Route("{invoiceNumber}")]
+        public async Task<Invoice> Update(string invoiceNumber, [FromBody]Invoice invoice)
         {
             if (invoice == null)
                 throw new NullReferenceException();
 
-            await _invoiceStore.UpdateAsync(x => x.Id == invoiceId, invoice);
+            await _invoiceStore.UpdateAsync(x => x.InvoiceNumber.Equals(invoiceNumber, StringComparison.OrdinalIgnoreCase), invoice);
             return invoice;
         }
 
-        [HttpPost, Route("{invoiceId:guid}")]
-        public Invoice Get(Guid invoiceId)
+        [HttpPost, Route("{invoiceNumber}")]
+        public Invoice Get(string invoiceNumber)
         {
-            return _invoiceStore.SingleOrDefault(e => e.Id == invoiceId);
+            return _invoiceStore.SingleOrDefault(x => x.InvoiceNumber.Equals(invoiceNumber, StringComparison.OrdinalIgnoreCase));
         }
 
         [HttpPost]

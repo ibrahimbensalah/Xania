@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
@@ -82,5 +83,9 @@ namespace Xania.DataAccess
         {
             return GetEnumerator();
         }
+
+        public Type ElementType { get; } = typeof(TModel);
+        public Expression Expression { get; }
+        public IQueryProvider Provider { get; }
     }
 }

@@ -5,8 +5,6 @@ namespace Xania.Models
 {
     public class Invoice
     {
-        public Guid Id { get; set; }
-
         public string InvoiceNumber { get; set; }
 
         public string Description { get; set; }

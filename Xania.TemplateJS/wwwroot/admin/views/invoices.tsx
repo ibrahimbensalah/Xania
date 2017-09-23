@@ -11,7 +11,6 @@ class InvoiceRepository extends ModelRepository {
             ` for i in invoices
               join c in companies on i.companyId = c.id
               select { 
-                    invoiceId: i.id, 
                     invoiceDate: i.invoiceDate, 
                     invoiceNumber: i.invoiceNumber,
                     companyName : c.name
@@ -56,7 +55,7 @@ export function view({ url }: { url: UrlHelper }) {
             store.get("currentRow").update(row);
             store.refresh();
 
-            url.goto(row.invoiceId);
+            url.goto(row.invoiceNumber);
         }
     }
 
@@ -90,7 +89,7 @@ export function view({ url }: { url: UrlHelper }) {
 
 declare function fetch<T>(url: string, config?): Promise<T>;
 
-function invoiceView({ url }, invoiceId) {
+function invoiceView({ url }, invoiceNumber) {
     var config = {
         method: "POST",
         headers: {
@@ -98,14 +97,14 @@ function invoiceView({ url }, invoiceId) {
         }
     };
 
-    return fetch("/api/invoice/" + invoiceId, config)
+    return fetch("/api/invoice/" + invoiceNumber, config)
         .then((response: any) => {
             return response.json();
         })
         .then(data => {
             var invoiceStore = new Re.Store(data)
                 .onChange(() => {
-                    fetch("/api/invoice/" + invoiceId, {
+                    fetch("/api/invoice/" + invoiceNumber, {
                         method: 'PUT',
                         body: JSON.stringify(data),
                         headers: new Headers({
@@ -151,7 +150,7 @@ function invoiceView({ url }, invoiceId) {
                     <div className="btn-group">
                         <button className="btn btn-primary" onClick={url.action("report")}>
                             <span className="fa fa-plus"></span> Preview</button>
-                        <a className="btn btn-default" href={"/api/invoice/" + invoiceId + "/pdf"} >Download</a>
+                        <a className="btn btn-default" href={"/api/invoice/" + invoiceNumber + "/pdf"} >Download</a>
                     </div>
                 </footer>
                 ]
@@ -159,7 +158,7 @@ function invoiceView({ url }, invoiceId) {
                 invoiceStore
             ).mapRoute("report", (context, args) => {
                 return View(
-                    <iframe src={"/api/invoice/" + invoiceId + "/pdf"} width="600px" height="100%"></iframe>,
+                    <iframe src={"/api/invoice/" + invoiceNumber + "/pdf"} width="600px" height="100%"></iframe>,
                     invoiceStore);
             });
         });

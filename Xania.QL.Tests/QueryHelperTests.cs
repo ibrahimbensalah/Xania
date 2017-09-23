@@ -22,7 +22,7 @@ namespace Xania.QL.Tests
     {
         private readonly IEnumerable<Invoice> _invoiceStore = new[]
         {
-            new Invoice {CompanyId = 1, Id = Guid.NewGuid()}
+            new Invoice {CompanyId = 1}
         };
 
         private readonly IEnumerable<Company> _companyStore = new[]
@@ -42,15 +42,14 @@ namespace Xania.QL.Tests
                 {"invoices", (_invoiceStore.AsQueryable())}
             };
 
-            object obj = Resources.ResourceManager.GetObject(resourceName, Resources.Culture);
-            var data = (byte[])obj;
+            var data = (byte[])Resources.ResourceManager.GetObject(resourceName, Resources.Culture);
             Debug.Assert(data != null, "data != null");
             var ast = GetAst(new MemoryStream(data));
             var expr = _helper.ToLinq(ast, context);
             var result = new List<dynamic>(Invoke<IQueryable<dynamic>>(expr));
 
             var invoice = _invoiceStore.Single();
-            ((Guid)result[0].invoiceId).Should().Be(invoice.Id);
+            ((string)result[0].invoiceNumber).Should().Be(invoice.InvoiceNumber);
             ((string)result[0].companyName).Should().Be("Xania BV");
         }
 
@@ -91,7 +90,7 @@ namespace Xania.QL.Tests
             var result = Invoke<IQueryable<dynamic>>(expr).ToArray();
 
             var invoice = _invoiceStore.Single();
-            ((Guid)result[0].invoiceId).Should().Be(invoice.Id);
+            ((string)result[0].invoiceNumber).Should().Be(invoice.InvoiceNumber);
             ((string)result[0].companyName).Should().Be("Xania BV");
         }
 
@@ -140,18 +139,17 @@ namespace Xania.QL.Tests
         [Test]
         public void RecordTest()
         {
-            var invoiceId = Guid.NewGuid();
             var context = new QueryContext
             {
                 {"c", (new Company {Id = 1, Name = "Xania"})},
-                {"i", (new Invoice {CompanyId = 1, InvoiceNumber = "2017001", Id = invoiceId})}
+                {"i", (new Invoice {CompanyId = 1, InvoiceNumber = "2017001"})}
             };
 
             var record = GetRecord(GetMemberBind("invoiceId", GetMember(GetIdentifier("i"), "Id")),
                 GetMemberBind("companyName", GetMember(GetIdentifier("c"), "Name")));
             var expr = _helper.ToLinq(record, context);
             var result = Invoke<dynamic>(expr);
-            ((Guid)result.invoiceId).Should().Be(invoiceId);
+            ((string)result.invoiceNumber).Should().Be("2017001");
             ((string)result.companyName).Should().Be("Xania");
         }
 

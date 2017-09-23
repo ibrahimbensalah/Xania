@@ -4,17 +4,6 @@
     "type": 16,
     "binders": [
       {
-        "name": "invoiceId",
-        "value": {
-          "type": 4,
-          "target": {
-            "type": 3,
-            "name": "i"
-          },
-          "member": "id"
-        }
-      },
-      {
         "name": "invoiceDate",
         "value": {
           "type": 4,
@@ -96,7 +85,7 @@
               "type": 3,
               "name": "c"
             },
-            "member": "id"
+            "member": "invoiceNumber"
           }
         }
       ]
@@ -125,7 +114,7 @@
             "type": 3,
             "name": "c2"
           },
-          "member": "id"
+          "member": "invoiceNumber"
         }
       }
     ]

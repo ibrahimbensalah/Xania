@@ -24,8 +24,7 @@ namespace Xania.Data.DocumentDB
 
         public IEnumerator<T> GetEnumerator()
         {
-            var collectionUri = UriFactory.CreateDocumentCollectionUri(nameof(XaniaDataContext), $"{typeof(T).Name}Collection");
-            return client.CreateDocumentQuery<T>(collectionUri).GetEnumerator();
+            return Query().GetEnumerator();
         }
 
         IEnumerator IEnumerable.GetEnumerator()
@@ -33,19 +32,43 @@ namespace Xania.Data.DocumentDB
             return GetEnumerator();
         }
 
-        public Task<T> AddAsync(T model)
+        public async Task<T> AddAsync(T model)
         {
-            throw new NotImplementedException();
+            var collectionUri = UriFactory.CreateDocumentCollectionUri(nameof(XaniaDataContext), $"{typeof(T).Name}Collection");
+            var response = await client.UpsertDocumentAsync(collectionUri, new Document { Model = model }, new RequestOptions());
+            return model;
         }
 
-        public Task DeleteAsync(Expression<Func<T, bool>> condition)
+        public async Task UpdateAsync(Expression<Func<T, bool>> condition, T model)
         {
-            throw new NotImplementedException();
+            var collectionUri = UriFactory.CreateDocumentCollectionUri(nameof(XaniaDataContext), $"{typeof(T).Name}Collection");
+            var response = client.CreateDocumentQuery<Document>(collectionUri).Where(e => e.Model != null).Take(1).ToArray().Single();
+
+            response.Model = model;
+            await client.UpsertDocumentAsync(collectionUri, response, new RequestOptions());
         }
 
-        public Task UpdateAsync(Expression<Func<T, bool>> condition, T user)
+        public async Task DeleteAsync(Expression<Func<T, bool>> condition)
         {
-            throw new NotImplementedException();
+            var collectionUri = UriFactory.CreateDocumentCollectionUri(nameof(XaniaDataContext), $"{typeof(T).Name}Collection");
+            foreach (var resource in client.CreateDocumentQuery<Document>(collectionUri))
+            {
+                var documentUri = UriFactory.CreateDocumentUri(nameof(XaniaDataContext), $"{typeof(T).Name}Collection", resource.Id);
+                await client.DeleteDocumentAsync(documentUri);
+            }
+        }
+
+        public IQueryable<T> Query()
+        {
+            var collectionUri = UriFactory.CreateDocumentCollectionUri(nameof(XaniaDataContext), $"{typeof(T).Name}Collection");
+            return client.CreateDocumentQuery<Document>(collectionUri).Select(e => e.Model);
+        }
+
+        public class Document
+        {
+            [Newtonsoft.Json.JsonProperty("id")]
+            public string Id { get; set; } = Guid.NewGuid().ToString("D");
+            public T Model { get; set; }
         }
     }
 
@@ -85,8 +108,6 @@ namespace Xania.Data.DocumentDB
         private async Task<string> CreateDocument(string databaseName, string collectionName, Invoice content)
         {
             // var documentUri = UriFactory.CreateDocumentUri(databaseName, collectionName, content.Id.ToString("N"));
-            content.Id = Guid.NewGuid();
-            Console.WriteLine(content.Id);
             var collectionUri = UriFactory.CreateDocumentCollectionUri(databaseName, collectionName);
             var response = await this.client.UpsertDocumentAsync(collectionUri, content);
             Console.WriteLine("Response Id {0}", response.Resource.Id);
@@ -97,7 +118,7 @@ namespace Xania.Data.DocumentDB
         {
             try
             {
-                GetStartedDemo().Wait();
+                GetStartedDemo().Wait();        
             }
             catch (DocumentClientException de)
             {
