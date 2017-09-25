@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.26730.15
+VisualStudioVersion = 15.0.26730.16
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{2E94C4D9-0FA1-4CEC-B1E2-1BD68156A10C}"
 EndProject
@@ -72,6 +72,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{301598A6-066
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Xania.Models.Tests", "Xania.Models.Tests\Xania.Models.Tests.csproj", "{CB0370E3-3625-47B2-84AA-F66DDE4CDDA5}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Xania.DbMigrator.Core", "Xania.DbMigrator.Core\Xania.DbMigrator.Core.csproj", "{7F99D4F6-DEF4-4688-B857-54C29928884F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -138,6 +140,10 @@ Global
 		{CB0370E3-3625-47B2-84AA-F66DDE4CDDA5}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{CB0370E3-3625-47B2-84AA-F66DDE4CDDA5}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{CB0370E3-3625-47B2-84AA-F66DDE4CDDA5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7F99D4F6-DEF4-4688-B857-54C29928884F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7F99D4F6-DEF4-4688-B857-54C29928884F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7F99D4F6-DEF4-4688-B857-54C29928884F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7F99D4F6-DEF4-4688-B857-54C29928884F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -168,6 +174,7 @@ Global
 		{4169C0CA-A080-4E8B-B8CC-AC0025769A2D} = {FFFFD82F-50A8-4307-BBF9-88307A61FE37}
 		{301598A6-066F-4DA3-96EF-2083B462938A} = {FFFFD82F-50A8-4307-BBF9-88307A61FE37}
 		{CB0370E3-3625-47B2-84AA-F66DDE4CDDA5} = {4169C0CA-A080-4E8B-B8CC-AC0025769A2D}
+		{7F99D4F6-DEF4-4688-B857-54C29928884F} = {28A40CA8-4BF6-4A6D-A517-8B1D2D91336B}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {8F4FAC4E-FF7F-4A0F-9F2D-40599DDE98BC}

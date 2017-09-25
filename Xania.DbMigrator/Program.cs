@@ -6,6 +6,14 @@ namespace Xania.DbMigrator
 {
     class Program
     {
+        /// <summary>
+        /// dbmigrator validate dacpacPath
+        /// dbmigrator upgrade dacpac
+        /// dbmigrator restore dacpac
+        /// dbmigrator publish dacpac
+        /// dbmigrator backup 
+        /// </summary>
+        /// <param name="args"></param>
         static void Main(string[] args)
         {
             var options = Options.FromArgs(args);
@@ -13,12 +21,12 @@ namespace Xania.DbMigrator
             Console.WriteLine($@"Action {options.Action}");
 
             if (options.Action?.HasFlag(ActionType.BackUp) == true)
-                Runner.BackUp(options);
+                Runner.BackUp(options.BacPacFile, options.ConnectionString);
             if (options.Action?.HasFlag(ActionType.Upgrade) == true)
             {
                 try
                 {
-                    Runner.Upgrade(options, Assembly.LoadFrom(options.Library));
+                    Runner.Upgrade(options.ConnectionString, Assembly.LoadFrom(options.Library));
                 }
                 catch (Exception ex)
                 {
@@ -26,16 +34,16 @@ namespace Xania.DbMigrator
                     {
                         Console.Error.WriteLine(ex.Message);
                         Console.WriteLine(ex);
-                        Runner.RestoreAsync(options).Wait();
+                        Runner.RestoreAsync(options.BacPacFile, options.ConnectionString).Wait();
                     }
                 }
             }
             if (options.Action?.HasFlag(ActionType.Validate) == true)
-                Runner.ValidateDac(options);
+                Runner.ValidateDac(options.DacPacFile, options.ConnectionString);
             if (options.Action?.HasFlag(ActionType.Publish) == true)
-                Runner.PublishDac(options);
+                Runner.PublishDac(options.DacPacFile, options.ConnectionString);
             if (options.Action?.HasFlag(ActionType.Restore) == true)
-                Runner.RestoreAsync(options).Wait();
+                Runner.RestoreAsync(options.BacPacFile, options.ConnectionString).Wait();
         }
     }
 }
