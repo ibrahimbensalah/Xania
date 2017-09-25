@@ -22,12 +22,12 @@ namespace Xania.QL.Tests
     {
         private readonly IEnumerable<Invoice> _invoiceStore = new[]
         {
-            new Invoice {CompanyId = 1}
+            new Invoice {CompanyId = 1.ToGuid()}
         };
 
         private readonly IEnumerable<Company> _companyStore = new[]
         {
-            new Company {Id = 1, Name = "Xania BV"}
+            new Company {Id = 1.ToGuid(), Name = "Xania BV"}
         };
 
         private readonly QueryHelper _helper = new QueryHelper(new RuntimeReflectionHelper());
@@ -99,7 +99,7 @@ namespace Xania.QL.Tests
         {
             var context = new QueryContext
             {
-                {"companies", new[] {new Company {Id = 1, Name = "Xania"}}.AsQueryable()}
+                {"companies", new[] {new Company {Id = 1.ToGuid(), Name = "Xania"}}.AsQueryable()}
             };
 
             var ast = GetSelector(GetQuery("c", GetIdentifier("companies")), GetMember(GetIdentifier("c"), "Name"));
@@ -114,13 +114,13 @@ namespace Xania.QL.Tests
         {
             var context = new QueryContext
             {
-                {"c", new Company {Id = 1, Name = "Xania"}}
+                {"c", new Company {Id = 1.ToGuid(), Name = "Xania"}}
             };
 
             var expr = _helper.ToLinq(GetIdentifier("c"), context);
             var company = Invoke<Company>(expr);
             company.Name.Should().Be("Xania");
-            company.Id.Should().Be(1);
+            company.Id.Should().Be(1.ToGuid());
         }
 
         [Test]
@@ -128,7 +128,7 @@ namespace Xania.QL.Tests
         {
             var context = new QueryContext
             {
-                {"c", (new Company {Id = 1, Name = "Xania"})}
+                {"c", (new Company {Id = 1.ToGuid(), Name = "Xania"})}
             };
 
             var expr = _helper.ToLinq(GetMember(GetIdentifier("c"), "Name"), context);
@@ -141,8 +141,8 @@ namespace Xania.QL.Tests
         {
             var context = new QueryContext
             {
-                {"c", (new Company {Id = 1, Name = "Xania"})},
-                {"i", (new Invoice {CompanyId = 1, InvoiceNumber = "2017001"})}
+                {"c", (new Company {Id = 1.ToGuid(), Name = "Xania"})},
+                {"i", (new Invoice {CompanyId = 1.ToGuid(), InvoiceNumber = "2017001"})}
             };
 
             var record = GetRecord(GetMemberBind("invoiceId", GetMember(GetIdentifier("i"), "Id")),
@@ -158,8 +158,8 @@ namespace Xania.QL.Tests
         {
             var context = new QueryContext
             {
-                {"c", new Company {Id = 1, Name = "Xania"}},
-                {"i", new Invoice {CompanyId = 1, InvoiceNumber = "2017001"}}
+                {"c", new Company {Id = 1.ToGuid(), Name = "Xania"}},
+                {"i", new Invoice {CompanyId = 1.ToGuid(), InvoiceNumber = "2017001"}}
             };
 
             var equal = GetEqual(GetMember(GetIdentifier("c"), "Id"), GetMember(GetIdentifier("i"), "CompanyId"));

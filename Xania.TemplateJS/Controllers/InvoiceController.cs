@@ -98,7 +98,7 @@ namespace Xania.TemplateJS.Controllers
             if (invoice == null)
                 throw new NullReferenceException();
 
-            await _invoiceStore.UpdateAsync(x => x.InvoiceNumber.Equals(invoiceNumber, StringComparison.OrdinalIgnoreCase), invoice);
+            await _invoiceStore.UpdateAsync(invoice);
             return invoice;
         }
 

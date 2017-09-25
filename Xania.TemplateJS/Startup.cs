@@ -73,7 +73,7 @@ namespace Xania.TemplateJS
                             new AddressLine { Type = AddressType.Street, Value = "Punter 315 "}
                         }
                     },
-                    Id = 1,
+                    Id = "1".ToGuid(),
                     Name = "Xania Software"
                 },
                 new Company
@@ -87,7 +87,7 @@ namespace Xania.TemplateJS
                             new AddressLine { Type = AddressType.ZipCode, Value = "1105 AL"}
                         }
                     },
-                    Id = 2,
+                    Id = "2".ToGuid(),
                     Name = "Rider International BV"
                 },
                 new Company
@@ -100,7 +100,7 @@ namespace Xania.TemplateJS
                             new AddressLine { Type = AddressType.Street, Value = "WTC 123"}
                         }
                     },
-                    Id = 3,
+                    Id = "3".ToGuid(),
                     Name = "Darwin Recruitement"
                 }
             });
@@ -108,15 +108,15 @@ namespace Xania.TemplateJS
             {
                 new Invoice
                 {
-                    Description = "invoice 1", InvoiceNumber = "201701", CompanyId = 1
+                    Description = "invoice 1", InvoiceNumber = "201701", CompanyId = 1.ToGuid()
                 },
                 new Invoice
                 {
-                    Description = "invoice 2", InvoiceNumber = "201702", CompanyId = 2, InvoiceDate = DateTime.Now
+                    Description = "invoice 2", InvoiceNumber = "201702", CompanyId = 2.ToGuid(), InvoiceDate = DateTime.Now
                 },
                 new Invoice
                 {
-                    Description = "invoice 3", InvoiceNumber = "201703", CompanyId = 3, InvoiceDate = DateTime.Now
+                    Description = "invoice 3", InvoiceNumber = "201703", CompanyId = 3.ToGuid(), InvoiceDate = DateTime.Now
                 }
             });
 

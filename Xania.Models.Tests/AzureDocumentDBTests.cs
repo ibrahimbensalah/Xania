@@ -26,9 +26,10 @@ namespace Xania.Models.Tests
                 {
                     Console.WriteLine($"{m.InvoiceNumber} {m.Lines[0].Description}");
                     m.Description = "test item 2";
-                    store.UpdateAsync(e => e.InvoiceNumber.Equals(m.InvoiceNumber, StringComparison.OrdinalIgnoreCase), m).Wait();
+                    store.UpdateAsync(m).Wait();
                 }
 
+                store.DeleteAsync(_ => true).Wait();
             }
         }
     }

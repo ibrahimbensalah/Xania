@@ -11,7 +11,7 @@ namespace Xania.Models
 
         public DateTime? InvoiceDate { get; set; }
 
-        public int? CompanyId { get; set; }
+        public Guid CompanyId { get; set; }
 
         public bool IsClosed { get; set; }
 

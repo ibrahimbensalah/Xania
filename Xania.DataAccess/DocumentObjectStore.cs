@@ -28,7 +28,7 @@ namespace Xania.DataAccess
 
         public Task<TModel> AddAsync(TModel model)
         {
-            var resourceId = Guid.NewGuid().ToString("N").ToLowerInvariant();
+            var resourceId = GetResourceId(model);
             Serialize(model, _documentStore.OpenWrite(DocumentFolder, resourceId));
             return Task.FromResult(model);
         }
@@ -63,20 +63,17 @@ namespace Xania.DataAccess
             }
         }
 
-        public Task UpdateAsync(Expression<Func<TModel, bool>> condition, TModel user)
+        public Task UpdateAsync(TModel model)
         {
-            var compiled = condition.Compile();
-
-            foreach (var resourceId in _documentStore.List(DocumentFolder))
-            {
-                var model = Deserialize(_documentStore.OpenRead(DocumentFolder, resourceId));
-                if (compiled(model))
-                {
-                    Serialize(user, _documentStore.OpenWrite(DocumentFolder, resourceId));
-                }
-            }
+            var resourceId = GetResourceId(model);
+            Serialize(model, _documentStore.OpenWrite(DocumentFolder, resourceId));
 
             return Task.CompletedTask;
+        }
+
+        private string GetResourceId(TModel model)
+        {
+            throw new NotImplementedException();
         }
 
         IEnumerator IEnumerable.GetEnumerator()
@@ -84,8 +81,5 @@ namespace Xania.DataAccess
             return GetEnumerator();
         }
 
-        public Type ElementType { get; } = typeof(TModel);
-        public Expression Expression { get; }
-        public IQueryProvider Provider { get; }
     }
 }

@@ -1,89 +1,23 @@
 ﻿using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Linq.Expressions;
 using System.Threading.Tasks;
-using System.Net;
 using Microsoft.Azure.Documents;
 using Microsoft.Azure.Documents.Client;
-using Xania.DataAccess;
 using Xania.Models;
 
 namespace Xania.Data.DocumentDB
 {
-    public class AzureDocumentStore<T> : IObjectStore<T>
-    {
-        private readonly DocumentClient client;
-
-        public AzureDocumentStore(DocumentClient client)
-        {
-            this.client = client;
-        }
-
-        public IEnumerator<T> GetEnumerator()
-        {
-            return Query().GetEnumerator();
-        }
-
-        IEnumerator IEnumerable.GetEnumerator()
-        {
-            return GetEnumerator();
-        }
-
-        public async Task<T> AddAsync(T model)
-        {
-            var collectionUri = UriFactory.CreateDocumentCollectionUri(nameof(XaniaDataContext), $"{typeof(T).Name}Collection");
-            var response = await client.UpsertDocumentAsync(collectionUri, new Document { Model = model }, new RequestOptions());
-            return model;
-        }
-
-        public async Task UpdateAsync(Expression<Func<T, bool>> condition, T model)
-        {
-            var collectionUri = UriFactory.CreateDocumentCollectionUri(nameof(XaniaDataContext), $"{typeof(T).Name}Collection");
-            var response = client.CreateDocumentQuery<Document>(collectionUri).Where(e => e.Model != null).Take(1).ToArray().Single();
-
-            response.Model = model;
-            await client.UpsertDocumentAsync(collectionUri, response, new RequestOptions());
-        }
-
-        public async Task DeleteAsync(Expression<Func<T, bool>> condition)
-        {
-            var collectionUri = UriFactory.CreateDocumentCollectionUri(nameof(XaniaDataContext), $"{typeof(T).Name}Collection");
-            foreach (var resource in client.CreateDocumentQuery<Document>(collectionUri))
-            {
-                var documentUri = UriFactory.CreateDocumentUri(nameof(XaniaDataContext), $"{typeof(T).Name}Collection", resource.Id);
-                await client.DeleteDocumentAsync(documentUri);
-            }
-        }
-
-        public IQueryable<T> Query()
-        {
-            var collectionUri = UriFactory.CreateDocumentCollectionUri(nameof(XaniaDataContext), $"{typeof(T).Name}Collection");
-            return client.CreateDocumentQuery<Document>(collectionUri).Select(e => e.Model);
-        }
-
-        public class Document
-        {
-            [Newtonsoft.Json.JsonProperty("id")]
-            public string Id { get; set; } = Guid.NewGuid().ToString("D");
-            public T Model { get; set; }
-        }
-    }
-
     public class XaniaDataContext : IDisposable
     {
         private const string EndpointUrl = "https://xania-sql.documents.azure.com:443/";
         private const string PrimaryKey = "xiq9QJQ2naMaqrkbWlu5yxL8N3PTIST0dJuwjHqsei1psDvdGGWfEsGO9I0dP3HuJvXbMXjle4galX0VrcV0FA==";
         private DocumentClient client;
 
-        public AzureDocumentStore<T> Store<T>()
+        public AzureObjectStore<T> Store<T>()
         {
-            return new AzureDocumentStore<T>(new DocumentClient(new Uri(EndpointUrl), PrimaryKey));
+            return new AzureObjectStore<T>(new DocumentClient(new Uri(EndpointUrl), PrimaryKey));
         }
 
-        private async Task<AzureDocumentStore<Invoice>> GetStartedDemo()
+        private async Task<AzureObjectStore<Invoice>> GetStartedDemo()
         {
             client = new DocumentClient(new Uri(EndpointUrl), PrimaryKey);
             await client.CreateDatabaseIfNotExistsAsync(new Database { Id = nameof(XaniaDataContext) });
@@ -96,7 +30,7 @@ namespace Xania.Data.DocumentDB
             var resourceId = await CreateDocument(nameof(XaniaDataContext), "InvoiceCollection", new Invoice { });
             await DeleteDocument(nameof(XaniaDataContext), "InvoiceCollection", resourceId);
 
-            return new AzureDocumentStore<Invoice>(client);
+            return new AzureObjectStore<Invoice>(client);
         }
 
         private async Task DeleteDocument(string databaseName, string collectionName, string resourceId)
@@ -140,5 +74,4 @@ namespace Xania.Data.DocumentDB
         {
         }
     }
-
 }
