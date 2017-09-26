@@ -75,14 +75,14 @@ export default class Xania {
             return tag;
         } else if (typeof element === "function") {
             if (element.prototype.bind) {
-                return Reflect.construct(element, [attributes, childNodes]);
+                return <Template.INode>Reflect.construct(element, [attributes, childNodes]);
             } else if (element.prototype.view) {
                 return Component(Reflect.construct(element, [attributes, childNodes]), attributes);
             } else {
                 var view = element(attributes, childNodes);
                 if (!view)
                     throw new Error("Failed to load view");
-                return view;
+                return <Template.INode>view;
             }
         } else {
             throw Error("tag unresolved");
@@ -178,9 +178,19 @@ class ComponentBinding extends Reactive.Binding {
     }
 
     refresh() {
+        var { context } = this;
         this.componentStore.refresh();
-        if (this.context)
-            this.context.refresh();
+        if (context) {
+            if (Array.isArray(context)) {
+                var i = context.length;
+                while (i--) {
+                    var x = context[i];
+                    if (x && x.refresh)
+                        x.refresh();
+                }
+            } else
+                context.refresh();
+        }
     }
 }
 
@@ -326,7 +336,7 @@ class ListBinding extends Reactive.Binding {
 
         if (Array.isArray(sourceExpr)) {
             stream = sourceExpr;
-        } else if (!!sourceExpr && !!sourceExpr.execute) {
+        } else if (sourceExpr && sourceExpr.execute) {
             stream = sourceExpr.execute(this, context);
             if (stream.length === void 0)
                 if (stream.value === null) {
@@ -634,6 +644,7 @@ export class RemoteDataSource {
                 return response.json();
             })
             .then(data => {
+                debugger;
                 this.object = data;
                 for (var i = 0; i < this.observers.length; i++) {
                     this.observers[i].onNext(this.object);

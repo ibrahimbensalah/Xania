@@ -10,9 +10,13 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Azure.Documents.Client;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Serialization;
+using Xania.Data.DocumentDB;
 using Xania.DataAccess;
 using Xania.Models;
 using Xania.TemplateJS.Controllers;
@@ -104,21 +108,16 @@ namespace Xania.TemplateJS
                     Name = "Darwin Recruitement"
                 }
             });
-            services.AddSingleton<IObjectStore<Invoice>>(new DocumentObjectStore<Invoice>(new MemoryDocumentStore())
+
+
+            var endpointUrl = "https://xania-sql.documents.azure.com:443/";
+            var primaryKey =  Configuration["xaniadb-primarykey"];
+
+            services.AddSingleton(new DocumentClient(new Uri(endpointUrl), primaryKey, new JsonSerializerSettings
             {
-                new Invoice
-                {
-                    Description = "invoice 1", InvoiceNumber = "201701", CompanyId = 1.ToGuid()
-                },
-                new Invoice
-                {
-                    Description = "invoice 2", InvoiceNumber = "201702", CompanyId = 2.ToGuid(), InvoiceDate = DateTime.Now
-                },
-                new Invoice
-                {
-                    Description = "invoice 3", InvoiceNumber = "201703", CompanyId = 3.ToGuid(), InvoiceDate = DateTime.Now
-                }
-            });
+                ContractResolver = new CamelCasePropertyNamesContractResolver()
+            }));
+            services.AddTransient<IObjectStore<Invoice>, AzureObjectStore<Invoice>>();
 
             services.AddOptions();
             services.Configure<XaniaConfiguration>(Configuration);

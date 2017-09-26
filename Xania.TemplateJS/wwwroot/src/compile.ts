@@ -5,7 +5,9 @@ declare function require(module: string);
 var peg = require("../lib/xania/query.peg");
 
 export default function compile(expr) {
-    return Expression.compile(peg.parse(expr));
+    var result = Expression.compile(peg.parse(expr));
+    result['$debugView'] = expr;
+    return result;
 }
 
 export function parse(expr) {

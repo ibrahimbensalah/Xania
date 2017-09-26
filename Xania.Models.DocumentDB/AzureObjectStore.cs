@@ -31,7 +31,8 @@ namespace Xania.Data.DocumentDB
 
         public async Task<T> AddAsync(T model)
         {
-            var collectionUri = UriFactory.CreateDocumentCollectionUri(nameof(XaniaDataContext), $"{typeof(T).Name}Collection");
+            var collectionUri =
+                UriFactory.CreateDocumentCollectionUri(nameof(XaniaDataContext), $"{typeof(T).Name}Collection");
             var response = await client.UpsertDocumentAsync(collectionUri, model, new RequestOptions());
             return model;
         }
@@ -47,14 +48,16 @@ namespace Xania.Data.DocumentDB
             var collectionUri = UriFactory.CreateDocumentCollectionUri(nameof(XaniaDataContext), $"{typeof(T).Name}Collection");
             foreach (var resource in client.CreateDocumentQuery<dynamic>(collectionUri))
             {
-                var documentUri = UriFactory.CreateDocumentUri(nameof(XaniaDataContext), $"{typeof(T).Name}Collection", resource.id);
+                var documentUri = UriFactory.CreateDocumentUri(nameof(XaniaDataContext),
+                    $"{typeof(T).Name}Collection", resource.id);
                 await client.DeleteDocumentAsync(documentUri);
             }
         }
 
         public IQueryable<T> Query()
         {
-            var collectionUri = UriFactory.CreateDocumentCollectionUri(nameof(XaniaDataContext), $"{typeof(T).Name}Collection");
+            var collectionUri =
+                UriFactory.CreateDocumentCollectionUri(nameof(XaniaDataContext), $"{typeof(T).Name}Collection");
             return client.CreateDocumentQuery<T>(collectionUri);
         }
 

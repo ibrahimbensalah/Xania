@@ -59,9 +59,9 @@ export class DataSource {
 }
 
 export class DropDown {
-    private data: any[];
+    private data;
 
-    constructor(private attrs: { dataSource: DataSource }, private children) {
+    constructor(private attrs: { data }, private children) {
     }
 
     private expanded: boolean = false;
@@ -71,8 +71,7 @@ export class DropDown {
         this.expanded = !this.expanded;
     }
 
-    private selectItem(value) {
-        var { data } = this;
+    private selectItem(data, value) {
         this.expanded = false;
         var i = data.length;
         while (i--) {
@@ -84,7 +83,6 @@ export class DropDown {
     }
 
     view() {
-        this.data = this.attrs.dataSource.read();
         return (
             <div style="position: relative">
                 <div className={[expr("expanded -> ' show'")]}>
@@ -93,8 +91,8 @@ export class DropDown {
                         <With object={expr("data where id = value |> single")}>{this.children}</With>
                     </button>
                     <div className="dropdown-menu">
-                        <List source={this.data}>
-                            <a className="dropdown-item" href="" onClick={expr("value <- selectItem id")}>
+                        <List source={expr('data')}>
+                            <a className="dropdown-item" href="" onClick={expr("value <- selectItem data id")}>
                                 { this.children }
                             </a>
                         </List>

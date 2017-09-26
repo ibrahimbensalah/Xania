@@ -1,9 +1,9 @@
-﻿import xania, { expr, ModelRepository, Reactive as Re } from "../../src/xania"
-import { parse } from "../../src/compile"
+﻿import xania, { expr, ModelRepository, Reactive as Re, RemoteDataSource } from "../../src/xania"
 import { View, UrlHelper } from "../../src/mvc"
 import DataGrid, { RemoveColumn, TextColumn } from "../../src/data/datagrid"
-import Html, { DataSource } from '../../src/html'
+import Html from '../../src/html'
 import './invoices.css'
+import {parse} from "../../src/compile";
 
 class InvoiceRepository extends ModelRepository {
     constructor() {
@@ -89,6 +89,8 @@ export function view({ url }: { url: UrlHelper }) {
 
 declare function fetch<T>(url: string, config?): Promise<T>;
 
+var companiesDS = new RemoteDataSource("/api/xaniadb", 'for c in companies select { id: c.id, display: c.name }');
+
 function invoiceView({ url }, invoiceNumber) {
     var config = {
         method: "POST",
@@ -121,15 +123,11 @@ function invoiceView({ url }, invoiceNumber) {
                 });
             }
 
-            function removeLine(evt, context) {
-                
-            }
-
             return View(
                 [<div style="height: 100%;">
                     <div>
                         <label>Company</label>
-                        <Html.DropDown dataSource={new DataSource()} value={expr("companyId")} >
+                        <Html.DropDown data={expr('await companiesDS')} value={expr("companyId")} >
                             {expr("display")}
                         </Html.DropDown>
                     </div>
@@ -155,7 +153,7 @@ function invoiceView({ url }, invoiceNumber) {
                 </footer>
                 ]
                 ,
-                invoiceStore
+                [invoiceStore, { companiesDS }]
             ).mapRoute("report", (context, args) => {
                 return View(
                     <iframe src={"/api/invoice/" + invoiceNumber + "/pdf"} width="600px" height="100%"></iframe>,

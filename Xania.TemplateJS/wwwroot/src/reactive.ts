@@ -57,8 +57,9 @@ export module Reactive {
                 property.length = initialValue.length;
                 return property;
             } else if (initialValue && initialValue.subscribe) {
-                const property = new AwaitableProperty(parent, name);
+                const property = new ObservableProperty(parent, name);
                 property.value = initialValue;
+                property.awaited = new AwaitedObservable(initialValue);
                 return property;
             } else {
                 const property = new ObjectProperty(parent, name);
@@ -208,14 +209,47 @@ export module Reactive {
         }
     }
 
-    class AwaitableProperty extends ObjectProperty {
+    //class AwaitableProperty extends ObjectProperty {
+    //    get length() {
+    //        if (Array.isArray(this.value))
+    //            return this.value.length;
+    //        return 0;
+    //    }
+
+    //    refresh(parentValue) {
+    //        if (super.refresh(parentValue)) {
+    //            if (this.awaited) {
+    //                this.awaited.dispose();
+    //                delete this.awaited;
+    //            }
+    //            return true;
+    //        }
+    //        return false;
+    //    }
+
+    //    public awaited: AwaitedObservable;
+    //    await() {
+    //        if (!this.awaited) {
+    //            this.awaited = new AwaitedObservable(this.value);
+    //        }
+    //        return this.awaited;
+    //    }
+
+    //    subscribe() {
+    //        return this.value.subscribe.apply(arguments);
+    //    }
+    //}
+
+    class ObservableProperty extends ObjectProperty {
+        public awaited;
+
         get length() {
             if (Array.isArray(this.value))
                 return this.value.length;
             return 0;
         }
 
-        refresh(parentValue) {
+        refresh(parentValue): boolean {
             if (super.refresh(parentValue)) {
                 if (this.awaited) {
                     this.awaited.dispose();
@@ -226,12 +260,9 @@ export module Reactive {
             return false;
         }
 
-        public awaited: AwaitedObservable;
-        await() {
-            if (!this.awaited) {
-                this.awaited = new AwaitedObservable(this.value);
-            }
-            return this.awaited;
+        subscribe() {
+            var { value } = this;
+            return value.subscribe.apply(value, arguments);
         }
     }
 
@@ -387,6 +418,7 @@ export module Reactive {
             var observers = this.observers;
             while (j--) {
                 var property = dirty[j];
+                console.debug('dirty: ', { name: property.name, actions: property.actions});
 
                 var n = observers.length;
                 while (n--) {
@@ -441,6 +473,31 @@ export module Reactive {
         }
     }
 
+    export class Scope {
+        constructor(private contexts: any[]) {
+        }
+
+        get(name: string) {
+            var contexts = this.contexts, length = contexts.length, i = 0;
+            do {
+                var target = this.contexts[i];
+                var value = target.get ? target.get(name) : target[name];
+                if (value !== void 0)
+                    return value;
+            } while (++i < length)
+            return void 0;
+        }
+
+        refresh() {
+            var contexts = this.contexts, i = contexts.length;
+            while (i--) {
+                var ctx = contexts[i];
+                if (ctx.refresh)
+                    ctx.refresh();
+            }
+        }
+    }
+
     export abstract class Binding {
         public context;
         public length;
@@ -459,7 +516,7 @@ export module Reactive {
         }
 
         update(context): this {
-            this.context = context;
+            this.context = Array.isArray(context) ? new Scope(context) : context;
             this.updateChildren(context);
             return this;
         }
@@ -577,18 +634,22 @@ export module Reactive {
 
         await(value) {
             if (!value.awaited) {
-                var observable = value.valueOf();
+                var observable = value;
                 if (observable.then)
                     value.awaited = new AwaitedPromise(value);
                 else if (typeof observable.subscribe === "function")
                     value.awaited = new AwaitedObservable(observable);
-                else
+                else {
+                    debugger;
                     return value;
+                }
             }
 
             this.observe(value.awaited);
             return value.awaited;
         }
+
+
 
         evaluateText(parts, context = this.context): any {
             if (parts.execute) {
