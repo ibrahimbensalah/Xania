@@ -134,10 +134,10 @@ function invoiceView({ url }, invoiceNumber) {
                     <Html.TextEditor display="Number" field="invoiceNumber" placeholder="invoice number" />
                     <Html.TextEditor display="Description" field="description" placeholder="July 2017" />
 
-                    <DataGrid data={expr("lines")}>
+                    <DataGrid data={expr("lines")} >
                         <TextColumn field="description" display="Description" template={<input type="text" name="row.description" />} />
                         <TextColumn field="hours" display="Hours" template={<input type="text" name="row.hours" />} />
-                        <TextColumn field="hourlyRate" display="Hourly Rate" template={<input type="text" name="row.hourlyRate" />} />
+                        <TextColumn field="hourlyRate" display="Rate" template={<input type="text" name="row.hourlyRate" />} />
                         <RemoveColumn />
                     </DataGrid>
                     <div>

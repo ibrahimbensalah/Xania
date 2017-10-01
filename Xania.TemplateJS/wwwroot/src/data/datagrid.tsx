@@ -1,4 +1,4 @@
-﻿import xania, { Repeat, expr } from "../xania"
+﻿import xania, { List, Repeat, expr } from "../xania"
 import { UrlHelper } from "../mvc"
 import './datagrid.min.css'
 
@@ -78,8 +78,8 @@ export default class DataGrid {
                     )}
                     <div className="data-grid-header-column" style="flex: 1">&nbsp;</div>
                 </div>
-                <div className="data-grid-content" style="padding-top: 0px; ">
-                    <Repeat source={expr("for row in data")}>
+                <div className="data-grid-content" style="padding-top: 0px;">
+                    <List source={expr("for row in data")}>
                         <div className={["data-grid-row", expr("row = activeRow -> ' data-grid-row-selected'")]}
                             onTouchStart={this.onRowClick} onClick={this.onRowClick}>
                             <div role="rowheader" className="data-grid-row-header">
@@ -92,7 +92,7 @@ export default class DataGrid {
                                 </div>
                             )}
                         </div>
-                    </Repeat>
+                    </List>
                 </div>
             </div>
         );

@@ -1,55 +1,60 @@
 ﻿@stack-item-padding: 12px;
 
-div.stack-container {
-  flex-direction: row;
-  flex-flow: nowrap;
-  display: flex;
-  height: 100%;
-
-  section.stack-item {
+div.stack-viewport {
     height: 100%;
-    padding: @stack-item-padding 0 @stack-item-padding @stack-item-padding;
+}
+div.stack-container {
+    height: 100%;
+    padding: 0px;
+    width: 100%;
+    white-space: nowrap;
+    display: table;
 
-    .stack-item-content {
-      background-color: white;
-      box-shadow: rgba(0, 0, 0, 0.4) 1px 1px 4px;
-      height: 100%;
-      padding: 10px 10px 10px;
-      min-width: 200px;
-      text-align: left;
-      display: flex;
-      flex-direction: column;
-
-      .stack-item-header {
-        font-size: 13px;
-        padding: 0 0 10px 0px;
-        text-transform: uppercase;
-        font-weight: 700;
-        color: rgba(0, 0, 0, 0.4);
-
-        button.close span {
-          pointer-events: none;
-          font-size: larger;
-        }
-      }
-
-      .stack-item-body {
-        flex: 1;
+    section.stack-item {
+        display: table-cell;
         height: 100%;
-        overflow: auto;
-        display: flex;
-        flex-direction: column;
-      }
+        padding: @stack-item-padding 0 @stack-item-padding @stack-item-padding;
+
+        .stack-item-content {
+            background-color: white;
+            box-shadow: rgba(0, 0, 0, 0.4) 1px 1px 4px;
+            height: 100%;
+            padding: 10px 10px 10px;
+            min-width: 200px;
+            text-align: left;
+            display: flex;
+            flex-direction: column;
+
+            .stack-item-header {
+                font-size: 13px;
+                padding: 0 0 10px 0px;
+                text-transform: uppercase;
+                font-weight: 700;
+                color: rgba(0, 0, 0, 0.4);
+
+                button.close span {
+                    pointer-events: none;
+                    font-size: larger;
+                }
+            }
+
+            .stack-item-body {
+                flex: 1;
+                height: 100%;
+                overflow: auto;
+                display: flex;
+                flex-direction: column;
+            }
 
 
-      button {
-        display: block;
-      }
+            button {
+                display: block;
+            }
+        }
     }
-  }
 
-  section.stack-item:last-child {
-    flex: 1;
-    padding-right: @stack-item-padding;
-  }
+    section.stack-item:last-child {
+        width: 100%;
+        padding-right: @stack-item-padding;
+    }
 }

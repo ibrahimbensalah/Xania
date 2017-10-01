@@ -17,18 +17,20 @@ export function Section(attrs, children) {
 }
 
 var layout = source => (
-    <StackContainer className="stack-container">
-        <Repeat param="vw" source={source}>
-            <section className="stack-item">
-                <div className="stack-item-content">
-                    <header className="stack-item-header">Header 1</header>
-                    <div className="stack-item-body">
-                        <Html.Partial template={expr("await vw")} />
+    <div class="stack-viewport">
+        <StackContainer className="stack-container">
+            <Repeat param="vw" source={source}>
+                <section className="stack-item">
+                    <div className="stack-item-content">
+                        <header className="stack-item-header">Header 1</header>
+                        <div className="stack-item-body">
+                            <Html.Partial template={expr("await vw")} />
+                        </div>
                     </div>
-                </div>
-            </section>
-        </Repeat>
-    </StackContainer>
+                </section>
+            </Repeat>
+        </StackContainer>
+    </div>
 ) as { bind };
 
 export default layout;

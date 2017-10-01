@@ -644,7 +644,6 @@ export class RemoteDataSource {
                 return response.json();
             })
             .then(data => {
-                debugger;
                 this.object = data;
                 for (var i = 0; i < this.observers.length; i++) {
                     this.observers[i].onNext(this.object);

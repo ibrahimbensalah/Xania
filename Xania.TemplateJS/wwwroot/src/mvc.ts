@@ -1,5 +1,5 @@
 ﻿import { Observables } from "./observables"
-import xania, { expr, mount, Repeat, Reactive } from './xania'
+import { expr, mount, Reactive } from './xania'
 import Dom from './dom'
 
 export class UrlHelper {
