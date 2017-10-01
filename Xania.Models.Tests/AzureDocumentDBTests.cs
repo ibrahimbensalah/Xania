@@ -41,12 +41,14 @@ namespace Xania.Models.Tests
                 var invoiceStore = db.Store<Invoice>();
                 invoiceStore.AddAsync(new Invoice
                 {
+                    Id = ToGuid(4),
                     Description = "invoice 1",
                     InvoiceNumber = "201701",
                     CompanyId = ToGuid(1)
                 }).Wait();
                 invoiceStore.AddAsync(new Invoice
                 {
+                    Id = ToGuid(5),
                     Description = "invoice 2",
                     InvoiceNumber = "201702",
                     CompanyId = ToGuid(2),
@@ -54,6 +56,7 @@ namespace Xania.Models.Tests
                 }).Wait();
                 invoiceStore.AddAsync(new Invoice
                 {
+                    Id = ToGuid(6),
                     Description = "invoice 3",
                     InvoiceNumber = "201703",
                     CompanyId = ToGuid(3),

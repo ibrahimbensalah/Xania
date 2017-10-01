@@ -1,10 +1,8 @@
 ﻿using System;
-using System.Threading.Tasks;
 using Microsoft.Azure.Documents;
 using Microsoft.Azure.Documents.Client;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
-using Xania.Models;
 
 namespace Xania.Data.DocumentDB
 {
@@ -12,11 +10,14 @@ namespace Xania.Data.DocumentDB
     {
         public XaniaDataContext(string endpointUrl, string primaryKey)
         {
-            this.Client = new Lazy<DocumentClient>(() => new DocumentClient(new Uri(endpointUrl), primaryKey,
-                new JsonSerializerSettings
-                {
-                    ContractResolver = new CamelCasePropertyNamesContractResolver()
-                }));
+            var connectionPolicy = new ConnectionPolicy {ConnectionMode = ConnectionMode.Direct, ConnectionProtocol = Protocol.Tcp};
+            var settings = new JsonSerializerSettings
+            {
+                ContractResolver = new CamelCasePropertyNamesContractResolver()
+            };
+
+            Client = new Lazy<DocumentClient>(() =>
+                new DocumentClient(new Uri(endpointUrl), primaryKey, settings, connectionPolicy));
         }
 
         public Lazy<DocumentClient> Client { get; set; }

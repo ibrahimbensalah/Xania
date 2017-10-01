@@ -640,7 +640,6 @@ export module Reactive {
                 else if (typeof observable.subscribe === "function")
                     value.awaited = new AwaitedObservable(observable);
                 else {
-                    debugger;
                     return value;
                 }
             }

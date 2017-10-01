@@ -3,7 +3,7 @@ import { View, UrlHelper } from "../../src/mvc"
 import DataGrid, { RemoveColumn, TextColumn } from "../../src/data/datagrid"
 import Html from '../../src/html'
 import './invoices.css'
-import {parse} from "../../src/compile";
+import { parse } from "../../src/compile";
 
 class InvoiceRepository extends ModelRepository {
     constructor() {
@@ -46,6 +46,9 @@ class InvoiceRepository extends ModelRepository {
     }
 }
 
+var guid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+var any = path => path;
+
 export function view({ url }: { url: UrlHelper }) {
     var controller = new InvoiceRepository();
     var store = new Re.Store(controller);
@@ -66,7 +69,8 @@ export function view({ url }: { url: UrlHelper }) {
         );
     }
 
-    var descriptionTpl = <span><span className="invoice-number">{expr("row.invoiceNumber")}</span>{expr("row.companyName")}</span>;
+    var descriptionTpl = <span><span className="invoice-number">{expr("row.invoiceNumber")}</span>{
+        expr("row.companyName")}</span>;
     return View([
         <DataGrid data={expr("await dataSource")} onSelectionChanged={onSelectRow} style="height: 100%;">
             <TextColumn field="description" template={descriptionTpl} display="Description" />
@@ -74,24 +78,21 @@ export function view({ url }: { url: UrlHelper }) {
             <TextColumn field="status" template={statusTemplate()} display="Status" />
         </DataGrid>,
         <footer style="height: 50px; margin: 0 16px; padding: 0;">
-            <button className="btn btn-primary" onClick={url.action("test")}>
+            <button className="btn btn-primary" onClick={url.action("new")}>
                 <span className="fa fa-plus"></span> Add New</button>
         </footer>
-    ], store
+    ],
+        store
     ).route({
-        test: () => View(<div>test</div>)
-    }).mapRoute(guid, invoiceView);
-
-    function guid(str: string) {
-        return str;
-    }
+        new: ctx => invoiceView(ctx, { companyId: null, invoiceNumber: null, lines: [] })
+    }).mapRoute(loadInvoice, (ctx, promise: any) => promise.then(data => invoiceView(ctx, data)));
 }
 
 declare function fetch<T>(url: string, config?): Promise<T>;
 
 var companiesDS = new RemoteDataSource("/api/xaniadb", 'for c in companies select { id: c.id, display: c.name }');
 
-function invoiceView({ url }, invoiceNumber) {
+function loadInvoice(invoiceNumber) {
     var config = {
         method: "POST",
         headers: {
@@ -102,64 +103,65 @@ function invoiceView({ url }, invoiceNumber) {
     return fetch("/api/invoice/" + invoiceNumber, config)
         .then((response: any) => {
             return response.json();
-        })
-        .then(data => {
-            var invoiceStore = new Re.Store(data)
-                .onChange(() => {
-                    fetch("/api/invoice/" + invoiceNumber, {
-                        method: 'PUT',
-                        body: JSON.stringify(data),
-                        headers: new Headers({
-                            'Content-Type': 'application/json'
-                        })
-                    });
-                });
+        });
+}
 
-            function addLine(evt, context) {
-                context.get('lines').valueOf().push({
-                    description: 'untitled',
-                    hourlyRate: 75,
-                    hours: 8
-                });
-            }
-
-            return View(
-                [<div style="height: 100%;">
-                    <div>
-                        <label>Company</label>
-                        <Html.DropDown data={expr('await companiesDS')} value={expr("companyId")} >
-                            {expr("display")}
-                        </Html.DropDown>
-                    </div>
-                    <Html.TextEditor display="Number" field="invoiceNumber" placeholder="invoice number" />
-                    <Html.TextEditor display="Description" field="description" placeholder="July 2017" />
-
-                    <DataGrid data={expr("lines")} >
-                        <TextColumn field="description" display="Description" template={<input type="text" name="row.description" />} />
-                        <TextColumn field="hours" display="Hours" template={<input type="text" name="row.hours" />} />
-                        <TextColumn field="hourlyRate" display="Rate" template={<input type="text" name="row.hourlyRate" />} />
-                        <RemoveColumn />
-                    </DataGrid>
-                    <div>
-                        <button onClick={addLine}>add</button>
-                    </div>
-                </div>,
-                <footer style="height: 50px; margin: 0 16px; padding: 0;">
-                    <div className="btn-group">
-                        <button className="btn btn-primary" onClick={url.action("report")}>
-                            <span className="fa fa-plus"></span> Preview</button>
-                        <a className="btn btn-default" href={"/api/invoice/" + invoiceNumber + "/pdf"} >Download</a>
-                    </div>
-                </footer>
-                ]
-                ,
-                [invoiceStore, { companiesDS }]
-            ).mapRoute("report", (context, args) => {
-                return View(
-                    <iframe src={"/api/invoice/" + invoiceNumber + "/pdf"} width="600px" height="100%"></iframe>,
-                    invoiceStore);
+function invoiceView({ url }, invoice) {
+    var invoiceStore = new Re.Store(invoice)
+        .onChange(() => {
+            fetch("/api/invoice/" + invoice.invoiceNumber, {
+                method: 'PUT',
+                body: JSON.stringify(invoice),
+                headers: new Headers({
+                    'Content-Type': 'application/json'
+                })
             });
         });
+
+    function addLine(evt, context) {
+        context.get('lines').valueOf().push({
+            description: 'untitled',
+            hourlyRate: 75,
+            hours: 8
+        });
+    }
+
+    return View(
+        [<div style="height: 100%;">
+            <div>
+                <label>Company</label>
+                <Html.DropDown data={expr('await companiesDS')} value={expr("companyId")} >
+                    {expr("display")}
+                </Html.DropDown>
+            </div>
+            <Html.TextEditor display="Number" field="invoiceNumber" placeholder="invoice number" />
+            <Html.TextEditor display="Description" field="description" placeholder="July 2017" />
+
+            <DataGrid data={expr("lines")} >
+                <TextColumn field="description" display="Description" template={<input type="text" name="row.description" />} />
+                <TextColumn field="hours" display="Hours" template={<input type="text" name="row.hours" />} />
+                <TextColumn field="hourlyRate" display="Rate" template={<input type="text" name="row.hourlyRate" />} />
+                <RemoveColumn />
+            </DataGrid>
+            <div>
+                <button onClick={addLine}>add</button>
+            </div>
+        </div>,
+        <footer style="height: 50px; margin: 0 16px; padding: 0;">
+            <div className="btn-group">
+                <button className="btn btn-primary" onClick={url.action("report")}>
+                    <span className="fa fa-plus"></span> Preview</button>
+                <a className="btn btn-default" href={"/api/invoice/" + invoice.invoiceNumber + "/pdf"} >Download</a>
+            </div>
+        </footer>
+        ]
+        ,
+        [invoiceStore, { companiesDS }]
+    ).mapRoute("report", (context, args) => {
+        return View(
+            <iframe src={"/api/invoice/" + invoice.invoiceNumber + "/pdf"} width="600px" height="100%"></iframe>,
+            invoiceStore);
+    });
 }
 
 

@@ -82,7 +82,7 @@ class ControllerContext {
         else if (typeof this.controller.get === "function") {
             viewResult = this.controller.get(path, childContext);
         } else {
-            viewResult = System.import(this.basePath + "views/" + path).then(mod => mod.view(childContext));
+            viewResult = System["import"](this.basePath + "views/" + path).then(mod => mod.view(childContext));
         }
 
         return dataReady(viewResult,
@@ -94,7 +94,7 @@ interface IRoute {
     execute(context, args: any[]): ViewResult | Promise<ViewResult>;
 }
 
-declare type Matcher = string | ((str: string) => any);
+declare type Matcher = string | ((str: string) => any) | RegExp;
 
 class ActionRoute implements IRoute {
     constructor(public matcher: Matcher, private action: (context, args: any[]) => ViewResult | Promise<ViewResult>) { }
@@ -106,9 +106,11 @@ class ActionRoute implements IRoute {
     matches(path: string) {
         var { matcher } = this;
         if (typeof matcher === "string")
-            return this.matcher === path;
+            return this.matcher === path ? path : null;
         else if (typeof matcher === "function")
             return matcher(path);
+        else if (matcher instanceof RegExp)
+            return matcher.test(path) ? path : null;
         return null;
     }
 }
@@ -134,9 +136,9 @@ export class ViewResult {
     }
 
     get(path: string, viewContext: IViewContext): ViewResult | Promise<ViewResult> {
-        var { routes } = this, i = routes.length;
+        var { routes } = this;
 
-        while (i--) {
+        for(var i=0 ; i<routes.length ; i++) {
             var route = routes[i];
             var match = route.matches(path);
             if (match !== null && match !== undefined) {
@@ -174,7 +176,6 @@ export function View(view, model?) {
 }
 
 declare class System {
-    static import(path: string);
 }
 
 export function dataReady<T>(data: T | PromiseLike<T>, resolve: (x: T) => any) {
