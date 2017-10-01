@@ -29,26 +29,27 @@ namespace Xania.TemplateJS.Controllers
         [HttpGet, Route("{invoiceNumber}/pdf")]
         public IActionResult GeneratePDF(string invoiceNumber)
         {
-            var invoiceData = GetInvoideReportData(invoiceNumber);
+            var invoiceData = GetInvoiceReportData(invoiceNumber);
             var reportContents = new InvoiceReport().Generate(invoiceData);
             return File(reportContents, "application/pdf");
         }
 
-        public InvoiceReportDataTO GetInvoideReportData(string invoiceNumber)
+        public InvoiceReportDataTO GetInvoiceReportData(string invoiceNumber)
         {
             var invoice = _invoiceStore.Single(e => e.InvoiceNumber.Equals(invoiceNumber, StringComparison.OrdinalIgnoreCase));
 
-            if (invoice.CompanyId == null || invoice.InvoiceDate == null)
+            if (invoice.CompanyId == null)
                 throw new InvalidOperationException("invoice is not valid");
 
             var company = _companyStore.Single(e => e.Id == invoice.CompanyId);
+            var invoiceDate = invoice.InvoiceDate ?? DateTime.UtcNow;
 
             return new InvoiceReportDataTO
             {
                 Invoice = new InvoiceTO
                 {
-                    ExpirationDate = invoice.InvoiceDate.Value + TimeSpan.FromDays(30),
-                    InvoiceDate = invoice.InvoiceDate.Value,
+                    ExpirationDate = invoiceDate + TimeSpan.FromDays(30),
+                    InvoiceDate = invoiceDate,
                     InvoiceNumber = invoice.InvoiceNumber,
                     LineItems = from l in invoice.Lines
                         select new LineItemTO
@@ -108,6 +109,15 @@ namespace Xania.TemplateJS.Controllers
             return 
                 _invoiceStore.FirstOrDefault(x => string.Equals(x.InvoiceNumber, invoiceNumber, StringComparison.OrdinalIgnoreCase))
                 ;
+        }
+
+        [HttpPut, Route("{invoiceNumber}/close")]
+        public async Task<Invoice> Close(string invoiceNumber, [FromBody]Invoice invoice)
+        {
+            invoice.InvoiceDate = DateTime.UtcNow;
+            await _invoiceStore.UpdateAsync(invoice);
+
+            return invoice;
         }
 
         [HttpPost]

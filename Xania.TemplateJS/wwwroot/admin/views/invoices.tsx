@@ -1,4 +1,4 @@
-﻿import xania, { expr, ModelRepository, Reactive as Re, RemoteDataSource } from "../../src/xania"
+﻿import xania, { If, expr, ModelRepository, Reactive as Re, RemoteDataSource } from "../../src/xania"
 import { View, UrlHelper } from "../../src/mvc"
 import DataGrid, { RemoveColumn, TextColumn } from "../../src/data/datagrid"
 import Html from '../../src/html'
@@ -106,6 +106,16 @@ function loadInvoice(invoiceNumber) {
         });
 }
 
+function put(url, body) {
+    return fetch(url, {
+        method: "PUT",
+        body: JSON.stringify(body),
+        headers: {
+            'Content-Type': "application/json"
+        }
+    });
+}
+
 function invoiceView({ url }, invoice) {
     var invoiceStore = new Re.Store(invoice)
         .onChange(() => {
@@ -126,10 +136,21 @@ function invoiceView({ url }, invoice) {
         });
     }
 
+    var closeInvoice = () => {
+        invoiceStore.set('invoiceDate', new Date());
+    };
+
+    //var closeInvoice = () => put('/api/invoice/' + invoice.invoiceNumber + '/close', invoice).then((resp: any) => {
+    //    resp.json().then(data => {
+    //        invoiceStore.value = data;
+    //        invoiceStore.refresh();
+    //    });
+    //});
+
     return View(
         [<div style="height: 100%;">
             <div>
-                <label>Company</label>
+                <label>Company ({expr("invoiceDate")})</label>
                 <Html.DropDown data={expr('await companiesDS')} value={expr("companyId")} >
                     {expr("display")}
                 </Html.DropDown>
@@ -149,6 +170,9 @@ function invoiceView({ url }, invoice) {
         </div>,
         <footer style="height: 50px; margin: 0 16px; padding: 0;">
             <div className="btn-group">
+                <If expr={expr("not invoiceDate")}>
+                    <button className="btn btn-flat" onClick={closeInvoice}>Close</button>
+                </If>
                 <button className="btn btn-primary" onClick={url.action("report")}>
                     <span className="fa fa-plus"></span> Preview</button>
                 <a className="btn btn-default" href={"/api/invoice/" + invoice.invoiceNumber + "/pdf"} >Download</a>

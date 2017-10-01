@@ -21,9 +21,9 @@ namespace Xania.TemplateJS.Reporting
     {
         public string InvoiceNumber { get; set; }
 
-        public DateTime ExpirationDate { get; set; }
+        public DateTimeOffset ExpirationDate { get; set; }
 
-        public DateTime InvoiceDate { get; set; }
+        public DateTimeOffset InvoiceDate { get; set; }
 
         public decimal TotalTax { get { return LineItems.Sum(e => (decimal)e.Count * e.UnitPrice * e.Tax); } }
 
@@ -41,9 +41,9 @@ namespace Xania.TemplateJS.Reporting
 
         public string InvoiceNumber { get; set; }
 
-        public DateTime InvoiceDate { get; set; }
+        public DateTimeOffset InvoiceDate { get; set; }
 
-        public DateTime ExpirationDate { get; set; }
+        public DateTimeOffset ExpirationDate { get; set; }
 
         public string CompanyName { get; set; }
     }

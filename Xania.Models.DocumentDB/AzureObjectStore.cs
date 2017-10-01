@@ -41,9 +41,9 @@ namespace Xania.Data.DocumentDB
             return model;
         }
 
-        public async Task UpdateAsync(T model)
+        public Task UpdateAsync(T model)
         {
-            await client.UpsertDocumentAsync(DocumentCollectionUri, model, new RequestOptions());
+            return client.UpsertDocumentAsync(DocumentCollectionUri, model, new RequestOptions());
         }
 
         public async Task DeleteAsync(Expression<Func<T, bool>> condition)

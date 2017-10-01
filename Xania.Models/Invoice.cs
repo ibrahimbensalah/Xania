@@ -10,9 +10,9 @@ namespace Xania.Models
 
         public string Description { get; set; }
 
-        public DateTime? InvoiceDate { get; set; }
+        public DateTimeOffset? InvoiceDate { get; set; }
 
-        public Guid CompanyId { get; set; }
+        public Guid? CompanyId { get; set; }
 
         public bool IsClosed { get; set; }
 
