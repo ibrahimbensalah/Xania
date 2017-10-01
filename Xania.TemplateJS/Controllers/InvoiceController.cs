@@ -105,7 +105,7 @@ namespace Xania.TemplateJS.Controllers
         [HttpPost, Route("{invoiceNumber}")]
         public Invoice Get(string invoiceNumber)
         {
-            return _invoiceStore.SingleOrDefault(x => x.InvoiceNumber.Equals(invoiceNumber, StringComparison.OrdinalIgnoreCase));
+            return _invoiceStore.FirstOrDefault(x => x.InvoiceNumber.Equals(invoiceNumber, StringComparison.OrdinalIgnoreCase));
         }
 
         [HttpPost]

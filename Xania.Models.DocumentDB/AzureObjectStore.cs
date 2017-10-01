@@ -12,10 +12,16 @@ namespace Xania.Data.DocumentDB
 {
     public class AzureObjectStore<T> : IObjectStore<T>
     {
+        private readonly string _databaseId;
+        private readonly string _collectionId;
         private readonly DocumentClient client;
+        public Uri DocumentCollectionUri => UriFactory.CreateDocumentCollectionUri(_databaseId, _collectionId);
 
-        public AzureObjectStore(DocumentClient client)
+        public AzureObjectStore(string databaseId, string collectionId, DocumentClient client)
         {
+            _databaseId = databaseId;
+            _collectionId = collectionId;
+
             this.client = client;
         }
 
@@ -31,34 +37,27 @@ namespace Xania.Data.DocumentDB
 
         public async Task<T> AddAsync(T model)
         {
-            var collectionUri =
-                UriFactory.CreateDocumentCollectionUri(nameof(XaniaDataContext), $"{typeof(T).Name}Collection");
-            var response = await client.UpsertDocumentAsync(collectionUri, model, new RequestOptions());
+            var response = await client.UpsertDocumentAsync(DocumentCollectionUri, model, new RequestOptions());
             return model;
         }
 
         public async Task UpdateAsync(T model)
         {
-            var collectionUri = UriFactory.CreateDocumentCollectionUri(nameof(XaniaDataContext), $"{typeof(T).Name}Collection");
-            await client.UpsertDocumentAsync(collectionUri, model, new RequestOptions());
+            await client.UpsertDocumentAsync(DocumentCollectionUri, model, new RequestOptions());
         }
 
         public async Task DeleteAsync(Expression<Func<T, bool>> condition)
         {
-            var collectionUri = UriFactory.CreateDocumentCollectionUri(nameof(XaniaDataContext), $"{typeof(T).Name}Collection");
-            foreach (var resource in client.CreateDocumentQuery<dynamic>(collectionUri))
+            foreach (var resource in client.CreateDocumentQuery<dynamic>(DocumentCollectionUri))
             {
-                var documentUri = UriFactory.CreateDocumentUri(nameof(XaniaDataContext),
-                    $"{typeof(T).Name}Collection", resource.id);
+                var documentUri = UriFactory.CreateDocumentUri(_databaseId, _collectionId, resource.id);
                 await client.DeleteDocumentAsync(documentUri);
             }
         }
 
         public IQueryable<T> Query()
         {
-            var collectionUri =
-                UriFactory.CreateDocumentCollectionUri(nameof(XaniaDataContext), $"{typeof(T).Name}Collection");
-            return client.CreateDocumentQuery<T>(collectionUri);
+            return client.CreateDocumentQuery<T>(DocumentCollectionUri);
         }
 
         private class Document

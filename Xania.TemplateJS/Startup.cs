@@ -65,59 +65,15 @@ namespace Xania.TemplateJS
             }
 
             services.AddSingleton<IObjectStore<User>>(new TransientObjectStore<User>());
-            services.AddSingleton<IObjectStore<Company>>(new TransientObjectStore<Company>
-            {
-                new Company
-                {
-                    Address = new Address
-                    {
-                        FullName = "Ibrahim ben Salah", Location = "Amsterdam",
-                        Lines =
-                        {
-                            new AddressLine { Type = AddressType.Street, Value = "Punter 315 "}
-                        }
-                    },
-                    Id = "1".ToGuid(),
-                    Name = "Xania Software"
-                },
-                new Company
-                {
-                    Address = new Address
-                    {
-                        FullName = "Edi Gittenberger", Location = "Amsterdam",
-                        Lines =
-                        {
-                            new AddressLine { Type = AddressType.Street, Value = "Sijsjesbergweg 42"},
-                            new AddressLine { Type = AddressType.ZipCode, Value = "1105 AL"}
-                        }
-                    },
-                    Id = "2".ToGuid(),
-                    Name = "Rider International BV"
-                },
-                new Company
-                {
-                    Address = new Address
-                    {
-                        FullName = "Jan Piet", Location = "Amsterdam",
-                        Lines =
-                        {
-                            new AddressLine { Type = AddressType.Street, Value = "WTC 123"}
-                        }
-                    },
-                    Id = "3".ToGuid(),
-                    Name = "Darwin Recruitement"
-                }
-            });
-
 
             var endpointUrl = "https://xania-sql.documents.azure.com:443/";
             var primaryKey =  Configuration["xaniadb-primarykey"];
 
-            services.AddSingleton(new DocumentClient(new Uri(endpointUrl), primaryKey, new JsonSerializerSettings
-            {
-                ContractResolver = new CamelCasePropertyNamesContractResolver()
-            }));
-            services.AddTransient<IObjectStore<Invoice>, AzureObjectStore<Invoice>>();
+            var dataContext  = new XaniaDataContext(endpointUrl, primaryKey);
+            services.AddSingleton(dataContext);
+            
+            services.AddTransient<IObjectStore<Invoice>>(ctx => dataContext.Store<Invoice>());
+            services.AddTransient<IObjectStore<Company>>(ctx => dataContext.Store<Company>());
 
             services.AddOptions();
             services.Configure<XaniaConfiguration>(Configuration);

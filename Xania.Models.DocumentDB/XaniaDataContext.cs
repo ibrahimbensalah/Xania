@@ -10,12 +10,9 @@ namespace Xania.Data.DocumentDB
 {
     public class XaniaDataContext : IDisposable
     {
-        private const string EndpointUrl = "https://xania-sql.documents.azure.com:443/";
-        private const string PrimaryKey = "xiq9QJQ2naMaqrkbWlu5yxL8N3PTIST0dJuwjHqsei1psDvdGGWfEsGO9I0dP3HuJvXbMXjle4galX0VrcV0FA==";
-
-        public XaniaDataContext()
+        public XaniaDataContext(string endpointUrl, string primaryKey)
         {
-            this.Client = new Lazy<DocumentClient>(() => new DocumentClient(new Uri(EndpointUrl), PrimaryKey,
+            this.Client = new Lazy<DocumentClient>(() => new DocumentClient(new Uri(endpointUrl), primaryKey,
                 new JsonSerializerSettings
                 {
                     ContractResolver = new CamelCasePropertyNamesContractResolver()
@@ -26,29 +23,32 @@ namespace Xania.Data.DocumentDB
 
         public AzureObjectStore<T> Store<T>()
         {
-            return new AzureObjectStore<T>(this.Client.Value);
+            this.Client.Value.CreateDocumentCollectionIfNotExistsAsync(UriFactory.CreateDatabaseUri(nameof(XaniaDataContext)),
+                new DocumentCollection { Id = $"{typeof(T).Name}Collection" }).Wait();
+
+            return new AzureObjectStore<T>(nameof(XaniaDataContext), $"{typeof(T).Name}Collection", this.Client.Value);
         }
 
-        public void Main()
-        {
-            try
-            {
-            }
-            catch (DocumentClientException de)
-            {
-                Exception baseException = de.GetBaseException();
-                Console.WriteLine("{0} error occurred: {1}, Message: {2}", de.StatusCode, de.Message, baseException.Message);
-            }
-            catch (Exception e)
-            {
-                Exception baseException = e.GetBaseException();
-                Console.WriteLine("Error: {0}, Message: {1}", e.Message, baseException.Message);
-            }
-            finally
-            {
-                Console.WriteLine("End of demo, press any key to exit.");
-            }
-        }
+        //public void Main()
+        //{
+        //    try
+        //    {
+        //    }
+        //    catch (DocumentClientException de)
+        //    {
+        //        Exception baseException = de.GetBaseException();
+        //        Console.WriteLine("{0} error occurred: {1}, Message: {2}", de.StatusCode, de.Message, baseException.Message);
+        //    }
+        //    catch (Exception e)
+        //    {
+        //        Exception baseException = e.GetBaseException();
+        //        Console.WriteLine("Error: {0}, Message: {1}", e.Message, baseException.Message);
+        //    }
+        //    finally
+        //    {
+        //        Console.WriteLine("End of demo, press any key to exit.");
+        //    }
+        //}
 
         void IDisposable.Dispose()
         {
