@@ -30,7 +30,7 @@ var actions: IAppAction[] = [
     { path: "hierachical", display: "Hierarchical url", icon: "icon-speedometer" }
 ];
 
-var mainMenu: (url: UrlHelper) => Template.INode = (url: UrlHelper) =>
+var mainMenu: (url: UrlHelper) => any = (url: UrlHelper) =>
     <ul className="nav">
         <li className="nav-title">
             Demos
@@ -39,6 +39,9 @@ var mainMenu: (url: UrlHelper) => Template.INode = (url: UrlHelper) =>
             <li className="nav-item">
                 <a className="nav-link" href="" onClick={url.action(x.path)}><i className={x.icon || "icon-star"}></i> {x.display || x.path}</a>
             </li>))}
+        <li className="nav-item">
+            <a className="nav-link" href="/sample/dbmon/index.html" ><i className="icon-star"></i> dbmon</a>
+        </li>
     </ul>;
 
 export function index() {

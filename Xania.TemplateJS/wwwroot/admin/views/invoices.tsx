@@ -45,9 +45,6 @@ class InvoiceRepository extends ModelRepository {
     }
 }
 
-var guid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-var any = path => path;
-
 export function view({ url }: { url: UrlHelper }) {
     var controller = new InvoiceRepository();
     var store = new Re.Store(controller);
@@ -62,9 +59,10 @@ export function view({ url }: { url: UrlHelper }) {
     }
 
     function statusTemplate() {
-        var badge = expr("row.invoiceDate ? 'success' : 'danger'");
+        var badge = expr("row.invoiceDate ? 'success' : 'default'");
+        var text = expr("row.invoiceDate ? 'closed' : 'open'");
         return (
-            <span className={["badge badge-", badge]}>{[badge]}</span>
+            <span style="width: 45px" className={["badge badge-", badge]}>{[text]}</span>
         );
     }
 
@@ -165,44 +163,45 @@ function invoiceView({ url }, invoice) {
     //});
 
     return View(
-        [<div style="height: 100%;">
-            <div>
-                <label>Company ({expr("invoiceDate")})</label>
-                <Html.DropDown data={expr('await companiesDS')} value={expr("companyId")} >
-                    {expr("display")}
-                </Html.DropDown>
-            </div>
-            <Html.TextEditor display="Number" field="invoiceNumber" placeholder="invoice number" />
-            <Html.TextEditor display="Description" field="description" placeholder="July 2017" />
+        [
+            <div style="height: 100%;">
+                <div>
+                    <label>Company</label>
+                    <Html.DropDown data={expr('await companiesDS')} value={expr("companyId")}>
+                        {expr("display")}
+                    </Html.DropDown>
+                </div>
+                <Html.TextEditor display="Number" field="invoiceNumber" placeholder="invoice number" />
+                <Html.TextEditor display="Description" field="description" placeholder="July 2017" />
 
-            <DataGrid data={expr("lines")} >
-                <TextColumn field="description" display="Description" template={<input type="text" name="row.description" />} />
-                <TextColumn field="hours" display="Hours" template={<input type="text" name="row.hours" />} />
-                <TextColumn field="hourlyRate" display="Rate" template={<input type="text" name="row.hourlyRate" />} />
-                <RemoveColumn />
-            </DataGrid>
-            <div>
-                <button onClick={addLine}>add</button>
-            </div>
-        </div>,
-        <footer style="height: 50px; margin: 0 16px; padding: 0;">
-            <div className="btn-group">
-                <If expr={expr("not invoiceDate")}>
-                    <button className="btn btn-flat" onClick={closeInvoice}>Close</button>
-                </If>
-                <button className="btn btn-primary" onClick={url.action("report")}>
-                    <span className="fa fa-plus"></span> Preview</button>
-                <a className="btn btn-default" href={"/api/invoice/" + invoice.invoiceNumber + "/pdf"} >Download</a>
-            </div>
-        </footer>
-        ]
-        ,
+                <DataGrid data={expr("lines")}>
+                    <TextColumn field="description" display="Description" template={<input type="text" name="row.description" />} />
+                    <TextColumn field="hours" display="Hours" template={<input type="text" name="row.hours" />} />
+                    <TextColumn field="hourlyRate" display="Rate" template={<input type="text" name="row.hourlyRate" />} />
+                    <RemoveColumn />
+                </DataGrid>
+                <div>
+                    <button onClick={addLine}>add</button>
+                </div>
+            </div>,
+            <footer style="height: 50px; margin: 0 16px; padding: 0;">
+                <div className="btn-group">
+                    <If expr={expr("not invoiceDate")}>
+                        <button className="btn btn-flat" onClick={closeInvoice}>Close</button>
+                    </If>
+                    <button className="btn btn-primary" onClick={url.action("report")}>
+                        <span className="fa fa-plus"></span> Preview</button>
+                    <a className="btn btn-flat" href={"/api/invoice/" + invoice.invoiceNumber + "/pdf"}>Download</a>
+                </div>
+            </footer>
+        ],
         [invoiceStore, { companiesDS }]
-    ).mapRoute("report", (context, args) => {
-        return View(
-            <iframe src={"/api/invoice/" + invoice.invoiceNumber + "/pdf"} width="600px" height="100%"></iframe>,
-            invoiceStore);
-    });
+    ).mapRoute("report",
+        () => {
+            return View(
+                <iframe src={"/api/invoice/" + invoice.invoiceNumber + "/pdf"} width="600px" height="100%"></iframe>,
+                invoiceStore);
+        });
 }
 
 
