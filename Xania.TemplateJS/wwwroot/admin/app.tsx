@@ -4,7 +4,7 @@ import './admin.css'
 import { Observables } from "../src/observables";
 import { ClockApp } from '../sample/clock/app'
 import TodoApp from "../sample/todos/app";
-import Lib = require("../diagram/lib");
+import { GraphApp } from "../diagram/lib";
 import BallsApp from "../sample/balls/app";
 import defaultLayout from "./layout";
 
@@ -57,7 +57,7 @@ export function clock() {
 }
 
 export function graph() {
-    return View(<Lib.GraphApp />, new Re.Store({}));
+    return View(<GraphApp />, new Re.Store({}));
 }
 
 export function balls() {

@@ -109,7 +109,7 @@ export default class Expression {
     constructor(public ast, private stack) {
     }
 
-    execute(binding: IAstVisitor, contexts: any) {
+    execute(contexts: any, binding: IAstVisitor) {
         var { stack } = this;
 
         var context = Array.isArray(contexts) ? new Scope(contexts) : contexts;
@@ -153,7 +153,7 @@ export default class Expression {
                             if (source === void 0 || !source.valueOf())
                                 return void 0;
 
-                            ast.value = ast.right.compiled.execute(binding, context);
+                            ast.value = ast.right.compiled.execute(context, binding);
                             break;
                         case "where":
                         case WHERE:
@@ -163,7 +163,7 @@ export default class Expression {
                             for (var i = 0; i < length; i++) {
                                 var item = binding.member(source, i);
                                 var scope = new Scope([item, context]);
-                                var b = ast.right.compiled.execute(binding, scope);
+                                var b = ast.right.compiled.execute(scope, binding);
                                 if (b)
                                     result.push(item);
                             }

@@ -319,7 +319,7 @@ export module Dom {
 
 
 
-            return expr.execute(this, context);
+            return expr.execute(context, this);
         }
 
         fire(event, context = this.context) {

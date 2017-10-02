@@ -142,7 +142,7 @@ class ComponentBinding extends Reactive.Binding {
         let { props } = this;
         if (props.hasOwnProperty(name)) {
             var expr = props[name];
-            return expr.execute ? expr.execute(this, this.context) : expr;
+            return expr.execute ? expr.execute(this.context, this) : expr;
         } else {
             return this.componentStore.get(name);
         }
@@ -157,7 +157,7 @@ class ComponentBinding extends Reactive.Binding {
         for (let prop in props) {
             if (props.hasOwnProperty(prop)) {
                 var expr = props[prop];
-                var sourceValue = expr.execute ? expr.execute(this, context) : expr;
+                var sourceValue = expr.execute ? expr.execute(context, this) : expr;
                 if (sourceValue) {
                     this.component[prop] = sourceValue.valueOf();
                 }
@@ -337,7 +337,7 @@ class ListBinding extends Reactive.Binding {
         if (Array.isArray(sourceExpr)) {
             stream = sourceExpr;
         } else if (sourceExpr && sourceExpr.execute) {
-            stream = sourceExpr.execute(this, context);
+            stream = sourceExpr.execute(context, this);
             if (stream.length === void 0)
                 if (stream.value === null) {
                     stream = [];
@@ -438,7 +438,7 @@ class RepeatBinding extends Reactive.Binding {
     render(context, driver) {
         var stream;
         if (!!this.expr && !!this.expr.execute) {
-            stream = this.expr.execute(this, context);
+            stream = this.expr.execute(context, this);
             if (stream.length === void 0)
                 if (stream.value === null) {
                     stream = [];

@@ -49,7 +49,6 @@ export default class DataGrid {
     private onSelectionChanged = null;
 
     constructor(private attrs, private columns: IDataColumn[] = []) {
-        console.debug("datagrid columns", columns);
     }
 
     private activateRow = (row) => {

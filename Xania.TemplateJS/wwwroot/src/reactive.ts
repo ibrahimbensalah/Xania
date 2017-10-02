@@ -652,7 +652,7 @@ export module Reactive {
 
         evaluateText(parts, context = this.context): any {
             if (parts.execute) {
-                let result = parts.execute(this, context);
+                let result = parts.execute(context, this);
                 return result && result.toString();
             } else if (Array.isArray(parts)) {
                 var stack = parts.slice(0).reverse();
@@ -663,7 +663,7 @@ export module Reactive {
                     if (cur === void 0 || cur === null) {
                         // skip 
                     } else if (cur.execute) {
-                        stack.push(cur.execute(this, context));
+                        stack.push(cur.execute(context, this));
                     } else if (Array.isArray(cur)) {
                         var i = cur.length;
                         while (i--) {
@@ -686,7 +686,7 @@ export module Reactive {
             if (!expr)
                 return expr;
             else if (expr.execute)
-                return expr.execute(this, context);
+                return expr.execute(context, this);
             else if (Array.isArray(expr)) {
                 return expr.map(x => this.evaluateObject(x, context));
             }
