@@ -1,5 +1,6 @@
 ﻿div.stack-viewport {
   height: 100%;
+  -webkit-overflow-scrolling: touch;
 }
 div.stack-container {
   height: 100%;

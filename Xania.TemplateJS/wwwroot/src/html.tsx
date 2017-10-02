@@ -150,7 +150,7 @@ class PartialBinding extends Reactive.Binding {
             for (var i = 0; i < childBindings.length; i++) {
                 if (childBindings[i] === fragment)
                     break;
-                offset += childBindings[i].length;
+                offset += childBindings[i].length || 0;
             }
             this.driver.insert(this, dom, offset + idx);
         }

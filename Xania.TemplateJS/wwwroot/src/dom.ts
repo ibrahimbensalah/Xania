@@ -271,7 +271,7 @@ export module Dom {
             for (var i = 0; i < length; i++) {
                 if (this.childBindings[i] === binding)
                     break;
-                offset += this.childBindings[i].length;
+                offset += this.childBindings[i].length || 0;
             }
             return this.domDriver.insert(this, dom, offset + idx);
         }
