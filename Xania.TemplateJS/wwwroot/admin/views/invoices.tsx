@@ -3,7 +3,6 @@ import { View, UrlHelper } from "../../src/mvc"
 import DataGrid, { RemoveColumn, TextColumn } from "../../src/data/datagrid"
 import Html from '../../src/html'
 import './invoices.css'
-import { parse } from "../../src/compile";
 
 class InvoiceRepository extends ModelRepository {
     constructor() {
@@ -69,20 +68,35 @@ export function view({ url }: { url: UrlHelper }) {
         );
     }
 
+    function formatDate(raw) {
+        var date = new Date(raw);
+        var monthNames = [
+            "Jan", "Feb", "Mar",
+            "April", "May", "Jun", "Jul",
+            "Aug", "Sep", "Oct",
+            "Nov", "Dec"
+        ];
+
+        var day = date.getDate();
+        var monthIndex = date.getMonth();
+        var year = date.getFullYear();
+
+        return `${day}  ${monthNames[monthIndex]} ${year}`;
+    }
+
     var descriptionTpl = <span><span className="invoice-number">{expr("row.invoiceNumber")}</span>{
         expr("row.companyName")}</span>;
     return View([
         <DataGrid data={expr("await dataSource")} onSelectionChanged={onSelectRow} style="height: 100%;">
             <TextColumn field="description" template={descriptionTpl} display="Description" />
-            <TextColumn field="invoiceDate" display="Invoice Date" />
+            <TextColumn field="invoiceDate" template={expr("formatDate row.invoiceDate")} display="Invoice Date" />
             <TextColumn field="status" template={statusTemplate()} display="Status" />
         </DataGrid>,
         <footer style="height: 50px; margin: 0 16px; padding: 0;">
             <button className="btn btn-primary" onClick={url.action("new")}>
                 <span className="fa fa-plus"></span> Add New</button>
         </footer>
-    ],
-        store
+    ], [store, { formatDate }]
     ).route({
         new: ctx => invoiceView(ctx, { companyId: null, invoiceNumber: null, lines: [] })
     }).mapRoute(loadInvoice, (ctx, promise: any) => promise.then(data => invoiceView(ctx, data)));

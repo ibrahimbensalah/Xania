@@ -13,7 +13,8 @@ export default class Xania {
             if (child === null || child === void 0)
                 continue;
             else if (typeof child === "function") {
-                result.push(new Template.CustomTemplate(child));
+                result.push(Xania.tag(child, {}));
+                // result.push(new Template.CustomTemplate(child()));
             }
             else if (child.bind)
                 result.push(child);
@@ -74,9 +75,9 @@ export default class Xania {
             }
             return tag;
         } else if (typeof element === "function") {
-            if (element.prototype.bind) {
+            if (element.prototype && element.prototype.bind) {
                 return <Template.INode>Reflect.construct(element, [attributes, childNodes]);
-            } else if (element.prototype.view) {
+            } else if (element.prototype && element.prototype.view) {
                 return Component(Reflect.construct(element, [attributes, childNodes]), attributes);
             } else {
                 var view = element(attributes, childNodes);
@@ -144,7 +145,8 @@ class ComponentBinding extends Reactive.Binding {
             var expr = props[name];
             return expr.execute ? expr.execute(this.context, this) : expr;
         } else {
-            return this.componentStore.get(name);
+            var result = this.componentStore.get(name);
+            return result === undefined ? this.context.get(name) : result;
         }
     }
 

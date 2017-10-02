@@ -418,8 +418,6 @@ export module Reactive {
             var observers = this.observers;
             while (j--) {
                 var property = dirty[j];
-                console.debug('dirty: ', { name: property.name, actions: property.actions});
-
                 var n = observers.length;
                 while (n--) {
                     var observer = observers[n];
