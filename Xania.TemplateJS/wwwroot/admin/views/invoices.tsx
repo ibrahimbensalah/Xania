@@ -86,20 +86,23 @@ export function view({ url }: { url: UrlHelper }) {
 
     var descriptionTpl = <span><span className="invoice-number">{expr("row.invoiceNumber")}</span>{
         expr("row.companyName")}</span>;
-    return View([
-        <DataGrid data={expr("await dataSource")} onSelectionChanged={onSelectRow} style="height: 100%;">
-            <TextColumn field="description" template={descriptionTpl} display="Description" />
-            <TextColumn field="invoiceDate" template={expr("formatDate row.invoiceDate")} display="Invoice Date" />
-            <TextColumn field="status" template={statusTemplate()} display="Status" />
-        </DataGrid>,
-        <footer style="height: 50px; margin: 0 16px; padding: 0;">
-            <button className="btn btn-primary" onClick={url.action("new")}>
-                <span className="fa fa-plus"></span> Add New</button>
-        </footer>
-    ], [store, { formatDate }]
-    ).route({
-        new: ctx => invoiceView(ctx, { companyId: null, invoiceNumber: null, lines: [] })
-    }).mapRoute(loadInvoice, (ctx, promise: any) => promise.then(data => invoiceView(ctx, data)));
+    var view = View([
+            <DataGrid data={expr("await dataSource")} onSelectionChanged={onSelectRow} style="height: 100%;">
+                <TextColumn field="description" template={descriptionTpl} display="Description" />
+                <TextColumn field="invoiceDate" template={expr("formatDate row.invoiceDate")} display="Invoice Date" />
+                <TextColumn field="status" template={statusTemplate()} display="Status" />
+            </DataGrid>,
+            <div>{expr("await url.childPath")}</div>,
+            <footer style="height: 50px; margin: 0 16px; padding: 0;">
+                <button className="btn btn-primary" onClick={url.action("new")}>
+                    <span className="fa fa-plus"></span> Add New</button>
+            </footer>
+        ],
+        [store, { formatDate, url }]
+    );
+    view.mapRoute("new", ctx => invoiceView(ctx, { companyId: null, invoiceNumber: null, lines: [] }));
+    view.mapRoute(loadInvoice, (ctx, promise: any) => promise.then(data => invoiceView(ctx, data)));
+    return view;
 }
 
 declare function fetch<T>(url: string, config?): Promise<T>;

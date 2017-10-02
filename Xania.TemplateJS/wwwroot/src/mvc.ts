@@ -4,6 +4,7 @@ import Dom from './dom'
 
 export class UrlHelper {
     public observers = [];
+    private childPath = new Observables.Observable();
 
     constructor(public router: Router, public basePath = "/") {
     }
@@ -25,6 +26,7 @@ export class UrlHelper {
         var action = { path: this.router.action(this.basePath + path) };
         if (typeof action.path === "string") {
             window.history.pushState(action, "", action.path);
+            this.childPath.notify(path);
         }
     }
 
@@ -35,6 +37,10 @@ export class UrlHelper {
 
 class ViewBinding {
     constructor(private binding) {
+    }
+
+    get length() {
+        return this.binding.length;
     }
 
     execute() {
@@ -167,6 +173,17 @@ class CompositeBinding extends Reactive.Binding {
     }
 
     render(context, driver) {
+    }
+
+    get length() {
+        var { childBindings } = this, result = 0;
+        if (childBindings) {
+            let i = childBindings.length || 0;
+            while (i--) {
+                result += childBindings[i].length;
+            }
+        }
+        return result;
     }
 }
 

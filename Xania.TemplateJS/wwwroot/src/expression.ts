@@ -106,12 +106,21 @@ export class Scope {
 }
 
 export default class Expression {
-    constructor(public ast, private stack) {
+    constructor(public ast, private stack, private context) {
     }
 
     execute(contexts: any, binding: IAstVisitor) {
         var { stack } = this;
 
+        var local = this.context;
+        if (local) {
+            if (Array.isArray(contexts))
+                contexts = contexts.concat([local]);
+            else if (contexts)
+                contexts = [contexts, local];
+            else
+                contexts = local;
+        }
         var context = Array.isArray(contexts) ? new Scope(contexts) : contexts;
 
         let idx = stack.length;
@@ -211,10 +220,10 @@ export default class Expression {
         return this.ast.value;
     }
 
-    static compile(ast) {
+    static compile(ast, context = null) {
         var queue = [];
         Expression.compileAst(ast, queue);
-        return new Expression(ast, queue);
+        return new Expression(ast, queue, context);
     }
 
     static compileAst(ast, stack: any[]) {

@@ -283,8 +283,8 @@ export function If(attrs, children: Template.INode[]) {
     }
 }
 
-export function expr(code: string) {
-    return compile(code);
+export function expr(code: string, context = null) {
+    return compile(code, context);
 }
 
 export class RepeatTemplate<T> implements Template.INode {

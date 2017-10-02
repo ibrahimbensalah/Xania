@@ -267,11 +267,13 @@ export module Dom {
         //}
 
         insert(binding, dom, idx) {
-            var offset = 0, length = this.childBindings.length;
+            var { childBindings } = this;
+            var offset = 0, length = childBindings.length;
             for (var i = 0; i < length; i++) {
-                if (this.childBindings[i] === binding)
+                var b = childBindings[i];
+                if (b === binding)
                     break;
-                offset += this.childBindings[i].length || 0;
+                offset += typeof b.length === 'number' ? b.length : 1;
             }
             return this.domDriver.insert(this, dom, offset + idx);
         }

@@ -148,9 +148,10 @@ class PartialBinding extends Reactive.Binding {
         if (this.driver) {
             var offset = 0, { childBindings } = this;
             for (var i = 0; i < childBindings.length; i++) {
-                if (childBindings[i] === fragment)
+                var b = childBindings[i];
+                if (b === fragment)
                     break;
-                offset += childBindings[i].length || 0;
+                offset += typeof b.length == 'number' ? b.length : 1;
             }
             this.driver.insert(this, dom, offset + idx);
         }
