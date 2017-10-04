@@ -27,6 +27,8 @@ export default class Xania {
                 }
             } else if (typeof child.view === "function") {
                 result.push(Component(child, []));
+            } else if (child instanceof Promise) {
+                result.push(PromiseTemplate(child));
             } else {
                 result.push(child);
             }
@@ -117,6 +119,45 @@ export function mount(root: IBinding) {
                 stack.push(children[i]);
             }
         }
+    }
+
+}
+
+function PromiseTemplate<T>(promise: Promise<T>) {
+    return {
+        promise,
+        bind(driver: IDriver) {
+            return new PromiseBinding(driver, this.promise);
+        }
+    }
+}
+
+class PromiseBinding extends Reactive.Binding {
+    constructor(driver: IDriver, private promise) {
+        super(driver);
+    }
+
+    execute() {
+        this.promise.then(template => {
+            var { context, childBindings } = this;
+            var child = template.bind(this).update(context);
+            mount(child);
+            childBindings.push(child);
+        });
+
+        return void 0;
+    }
+
+    render() {
+        // noop
+    }
+
+    insert(sender, dom, idx) {
+        return this.driver.insert(this, dom, idx);
+    }
+
+    on(eventName, dom, eventBinding) {
+        this.driver.on(eventName, dom, eventBinding);
     }
 
 }

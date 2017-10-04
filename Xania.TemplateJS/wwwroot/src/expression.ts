@@ -3,7 +3,7 @@
     select(source, selector);
     query(param, source);
     member(target, name);
-    app(fun, args: any[]);
+    app(fun, args: any[], context?);
     extend(name: string, value: any);
     await(observable);
     const(value);
@@ -199,8 +199,9 @@ export default class Expression {
                     if (fun === void 0) {
                         console.error("could not resolve expression, " + JSON.stringify(ast.fun));
                         return void 0;
-                    } else
-                        ast.value = binding.app(fun.valueOf(), args);
+                    } else {
+                        ast.value = binding.app(fun.valueOf(), args, ast.fun.target && ast.fun.target.value);
+                    }
                     break;
                 case LAZY:
                     ast.value = ast.expr(binding, context);

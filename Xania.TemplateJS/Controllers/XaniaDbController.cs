@@ -22,7 +22,20 @@ namespace Xania.TemplateJS.Controllers
         {
             _storeContext = new QueryContext()
                 .Add("companies", companyStore.AsQueryable())
-                .Add("invoices", invoiceStore.AsQueryable());
+                .Add("invoices", invoiceStore.AsQueryable())
+                .Add("menuItems", GetMenuItems());
+        }
+
+        private MenuItem[] GetMenuItems()
+        {
+            return new[]
+            {
+                new MenuItem {Path = "clock", Display = "Clock"},
+                new MenuItem {Path = "invoices", Display = "Invoices"},
+                new MenuItem {Path = "graph", Display = "Graph"},
+                new MenuItem {Path = "balls", Display = "Balls"},
+                new MenuItem {Path = "hierachical", Display = "Hiararchical urls"}
+            };
         }
 
         [HttpPost]
@@ -41,6 +54,12 @@ namespace Xania.TemplateJS.Controllers
                 return Json(queryHelper.Execute(ast, _storeContext, requestContext));
             });
         }
+    }
+
+    internal class MenuItem
+    {
+        public string Display { get; set; }
+        public string Path { get; set; }
     }
 
     internal class RuntimeReflectionHelper : IReflectionHelper

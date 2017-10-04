@@ -361,7 +361,7 @@ export module Dom {
             return value;
         }
 
-        app(fun, args: any[]) {
+        app(fun, args: any[], context?) {
             if (fun === "assign") {
                 var arg = args[0];
                 if (arg === null)
@@ -375,7 +375,7 @@ export module Dom {
             }
 
             if (args)
-                return fun.apply(null, args.map(EventBinding.valueOf));
+                return fun.apply(context, args.map(EventBinding.valueOf));
             else
                 return fun();
         }

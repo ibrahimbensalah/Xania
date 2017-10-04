@@ -1,4 +1,4 @@
-﻿import xania, { expr, Reactive as Re, Template } from "../src/xania"
+﻿import xania, { RemoteDataSource, List, expr, Reactive as Re } from "../src/xania"
 import { UrlHelper, View } from "../src/mvc"
 import './admin.css'
 import { Observables } from "../src/observables";
@@ -7,6 +7,7 @@ import TodoApp from "../sample/todos/app";
 import { GraphApp } from "../diagram/lib";
 import BallsApp from "../sample/balls/app";
 import defaultLayout from "./layout";
+import { parse } from "../src/compile";
 
 export function menu({ driver, html, url }) {
     return mainMenu(url)
@@ -20,27 +21,45 @@ interface IAppAction {
     icon?: string;
 }
 
+declare function fetch<T>(url: string, config?): Promise<T>;
+
 var actions: IAppAction[] = [
-    { path: "clock", display: "Clock", icon: "icon-clock" },
-    { path: "invoices", display: "Invoices" },
     { path: "companies", display: "Companies" },
-    { path: "users", display: "Users" },
-    { path: "graph", display: "Graph" },
-    { path: "balls", display: "Balls" },
-    { path: "hierachical", display: "Hierarchical url", icon: "icon-speedometer" }
+    { path: "users", display: "Users" }
 ];
+
+function menuItems() {
+    var config = {
+        method: "POST",
+        headers: { 'Content-Type': "application/json" },
+        body: JSON.stringify (parse("menuItems")),
+        credentials: 'same-origin'
+    };
+
+    return fetch('/api/xaniadb', config)
+        .then((response: any) => {
+            return response.json();
+        });
+}
 
 var mainMenu: (url: UrlHelper) => any = (url: UrlHelper) =>
     <ul className="nav">
         <li className="nav-title">
             Demos
         </li>
+        {menuItems().then(items => (
+            <List source={items}>
+                <li className="nav-item">
+                    <a className="nav-link" href="" onClick={expr("url.goto path", { url })}><i className={"icon-star"}></i> {expr("display")}</a>
+                </li>
+            </List>
+        ))}
         {actions.map(x => (
             <li className="nav-item">
                 <a className="nav-link" href="" onClick={url.action(x.path)}><i className={x.icon || "icon-star"}></i> {x.display || x.path}</a>
             </li>))}
         <li className="nav-item">
-            <a className="nav-link" href="/sample/dbmon/index.html" ><i className="icon-star"></i> dbmon</a>
+            <a className="nav-link" href="/sample/dbmon/index.html"><i className="icon-star"></i> dbmon</a>
         </li>
     </ul>;
 
