@@ -182,11 +182,12 @@ class ComponentBinding extends Reactive.Binding {
 
     get(name: string) {
         let { props } = this;
+        var result;
         if (props.hasOwnProperty(name)) {
             var expr = props[name];
-            return expr.execute ? expr.execute(this.context, this) : expr;
+            return expr.execute ? expr.execute([this.context, this.componentStore], this) : expr;
         } else {
-            var result = this.componentStore.get(name);
+            result = this.componentStore.get(name);
             return result === undefined ? this.context.get(name) : result;
         }
     }
@@ -433,6 +434,39 @@ class ListBinding extends Reactive.Binding {
     }
 }
 
+export function FixedArray(attrs, children) {
+    return {
+        bind(driver) {
+            var binding = new ArrayBinding(driver, attrs.source);
+            for (var i = 0; i < attrs.length; i++)
+                binding.childBindings.push(children[0].bind(driver));
+
+            return binding;
+        }
+    }
+}
+
+export class ArrayBinding extends Reactive.Binding {
+    constructor(driver, private sourceExpr) {
+        super(driver);
+    }
+
+    updateChildren(context) {
+        var { sourceExpr, childBindings, driver } = this;
+        if (childBindings) {
+            let i = childBindings.length || 0;
+            var stream = sourceExpr.execute(context, this),
+                streamLength = stream.length;
+            while (i--) {
+                childBindings[i].update(stream.get(i));
+            }
+        }
+    }
+
+    render(context) {
+    }
+}
+
 class RepeatBinding extends Reactive.Binding {
     get length() {
         var total = 0, length = this.childBindings.length;
@@ -664,6 +698,25 @@ export class Fragment {
 }
 
 declare function fetch<T>(url: string, config?): Promise<T>;
+
+export class RemoteStore {
+    constructor(private url: string = "/api/xaniadb") {
+    }
+    execute(query: string) {
+        var config = {
+            method: "POST",
+            headers: {
+                'Content-Type': "application/json"
+            },
+            body: JSON.stringify(parse(query)),
+            credentials: 'same-origin'
+        };
+        return fetch(this.url, config)
+            .then((response: any) => {
+                return response.json();
+            });
+    }
+}
 
 export class RemoteDataSource {
     private observers = [];

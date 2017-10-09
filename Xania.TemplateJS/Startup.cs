@@ -74,6 +74,8 @@ namespace Xania.TemplateJS
             
             services.AddTransient<IObjectStore<Invoice>>(ctx => dataContext.Store<Invoice>());
             services.AddTransient<IObjectStore<Company>>(ctx => dataContext.Store<Company>());
+            services.AddTransient<IObjectStore<TimeDeclaration>>(ctx => dataContext.Store<TimeDeclaration>());
+            services.AddTransient<IObjectStore<TimeSheet>>(ctx => dataContext.Store<TimeSheet>());
 
             services.AddOptions();
             services.Configure<XaniaConfiguration>(Configuration);

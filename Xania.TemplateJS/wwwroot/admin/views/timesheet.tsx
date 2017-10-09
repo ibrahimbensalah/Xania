@@ -1,47 +1,31 @@
-﻿import xania, { If, expr, ModelRepository, Reactive as Re, RemoteDataSource } from "../../src/xania"
+﻿import xania, { If, expr, List, ModelRepository, Reactive as Re, RemoteDataSource, RemoteStore } from "../../src/xania"
 import { View, UrlHelper } from "../../src/mvc"
 import DataGrid, { RemoveColumn, TextColumn } from "../../src/data/datagrid"
 import Html from '../../src/html'
 import './invoices.css'
 import { parse } from "../../src/compile";
 
-class InvoiceRepository extends ModelRepository {
+class TimeSheetRepository extends ModelRepository {
     constructor() {
         var query =
-            ` for i in invoices
-              join c in companies on i.companyId = c.id
+            ` for d in declarations
+              join c in companies on d.companyId = c.id
               select { 
-                    invoiceDate: i.invoiceDate, 
-                    invoiceNumber: i.invoiceNumber,
-                    companyName : c.name
+                    id: d.id,
+                    companyName : c.name,
+                    companyId: c.id,
+                    timeSpan: d.timeSpan,
+                    date: d.date
               }
             `;
         super("/api/xaniadb", query);
     }
 
-    addLine() {
-        this.currentRow.lines.push({
-            description: "new line",
-            hours: null,
-            hourlyRate: null
-        });
-    }
-
-    removeLine(event, line) {
-        var idx = this.currentRow.lines.indexOf(line);
-        if (idx >= 0) {
-            this.currentRow.lines.splice(idx, 1);
-        }
-
-        event.preventDefault();
-    }
-
     createNew() {
         return {
-            description: null,
-            companyId: null,
-            invoiceNumber: null,
-            lines: []
+            date: new Date(),
+            timeSpan: "08:00",
+            companyName: "Software Development"
         };
     }
 }
@@ -50,7 +34,7 @@ var guid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]
 var any = path => path;
 
 export function view({ url }: { url: UrlHelper }) {
-    var controller = new InvoiceRepository();
+    var controller = new TimeSheetRepository();
     var store = new Re.Store(controller);
 
     var onSelectRow = row => {
@@ -58,25 +42,66 @@ export function view({ url }: { url: UrlHelper }) {
             store.get("currentRow").update(row);
             store.refresh();
 
-            url.goto(row.invoiceNumber);
+            url.goto(row.id);
         }
     }
 
     function statusTemplate() {
-        var badge = expr("row.invoiceDate ? 'success' : 'danger'");
+        var badge = expr("row.date ? 'success' : 'danger'");
         return (
             <span className={["badge badge-", badge]}>{[badge]}</span>
         );
     }
 
+    function formatDate(raw) {
+        var date = new Date(raw);
+        var monthNames = [
+            "Jan", "Feb", "Mar",
+            "April", "May", "Jun", "Jul",
+            "Aug", "Sep", "Oct",
+            "Nov", "Dec"
+        ];
+
+        var day = date.getDate();
+        var monthIndex = date.getMonth();
+        var year = date.getFullYear();
+
+        return `${day} ${monthNames[monthIndex]} ${year}`;
+    }
+
+    function parseDate(value) {
+        return value.target.value;
+    }
+
+    /**
+     * List.map createStore
+     * @param row
+     */
+    function mapData(row) {
+        return row.map(d => new Re.Store(d).onChange(i => {
+            put('/api/timedeclaration', d);
+        }));
+    }
+
     var descriptionTpl = <span><span className="invoice-number">{expr("row.invoiceNumber")}</span>{
         expr("row.companyName")}</span>;
     return View([
-        <DataGrid data={expr("await dataSource")} onSelectionChanged={onSelectRow} style="height: 100%;">
-            <TextColumn field="description" template={descriptionTpl} display="Description" />
-            <TextColumn field="invoiceDate" display="Invoice Date" />
-            <TextColumn field="status" template={statusTemplate()} display="Status" />
-        </DataGrid>,
+        <table>
+            <List source={expr("await dataSource |> mapData", { mapData })}>
+                <tr>
+                    <td><input class="form-control" type="text"
+                        placeholder="Date" name="date"
+                        onChange={expr("date <- parseDate value", { parseDate })}
+                        value={expr("formatDate date", { formatDate })} /></td>
+                    <td><input class="form-control" type="text"
+                            placeholder="Time"
+                            value={expr("timeSpan")} /></td>
+                    <td><Html.DropDown data={expr('await companiesDS', { companiesDS })} value={expr("companyId")} >
+                        {expr("display")}
+                    </Html.DropDown></td>
+                </tr>
+            </List>
+        </table>,
         <footer style="height: 50px; margin: 0 16px; padding: 0;">
             <button className="btn btn-primary" onClick={url.action("new")}>
                 <span className="fa fa-plus"></span> Add New</button>
@@ -84,26 +109,26 @@ export function view({ url }: { url: UrlHelper }) {
     ],
         store
     ).route({
-        new: ctx => invoiceView(ctx, { companyId: null, invoiceNumber: null, lines: [] })
-    }).mapRoute(loadInvoice, (ctx, promise: any) => promise.then(data => invoiceView(ctx, data)));
+        new: ctx => timesheetView(ctx, {
+            companyId: null,
+            date: new Date(),
+            timeSpan: "08:00",
+            companyName: "Software Development"
+        })
+    }).mapRoute(loadTimesheet, (ctx, promise: any) => promise.then(data => timesheetView(ctx, data)));
 }
 
 declare function fetch<T>(url: string, config?): Promise<T>;
 
 var companiesDS = new RemoteDataSource("/api/xaniadb", 'for c in companies select { id: c.id, display: c.name }');
 
-function loadInvoice(invoiceNumber) {
-    var config = {
-        method: "POST",
+function loadTimesheet(id) {
+    return fetch("/api/TimeDeclaration/" + id, {
+        method: "GET",
         headers: {
             'Content-Type': "application/json"
         }
-    };
-
-    return fetch("/api/invoice/" + invoiceNumber, config)
-        .then((response: any) => {
-            return response.json();
-        });
+    }).then((response: any) => response.json());
 }
 
 function put(url, body) {
@@ -116,12 +141,12 @@ function put(url, body) {
     });
 }
 
-function invoiceView({ url }, invoice) {
-    var invoiceStore = new Re.Store(invoice)
+function timesheetView({ url }, timeDeclaration) {
+    var timesheetStore = new Re.Store(timeDeclaration)
         .onChange(() => {
-            fetch("/api/invoice/" + invoice.invoiceNumber, {
+            fetch("/api/timedeclaration/", {
                 method: 'PUT',
-                body: JSON.stringify(invoice),
+                body: JSON.stringify(timeDeclaration),
                 headers: new Headers({
                     'Content-Type': 'application/json'
                 })
@@ -136,56 +161,22 @@ function invoiceView({ url }, invoice) {
         });
     }
 
-    var closeInvoice = () => {
-        invoiceStore.set('invoiceDate', new Date());
-    };
-
-    //var closeInvoice = () => put('/api/invoice/' + invoice.invoiceNumber + '/close', invoice).then((resp: any) => {
-    //    resp.json().then(data => {
-    //        invoiceStore.value = data;
-    //        invoiceStore.refresh();
-    //    });
-    //});
-
-    return View(
-        [<div style="height: 100%;">
+    return View([
+        <div style="height: 100%;">
             <div>
-                <label>Company ({expr("invoiceDate")})</label>
-                <Html.DropDown data={expr('await companiesDS')} value={expr("companyId")} >
+                <label>Company</label>
+                <Html.DropDown data={expr('await companiesDS')} value={expr("companyId")}>
                     {expr("display")}
                 </Html.DropDown>
             </div>
-            <Html.TextEditor display="Number" field="invoiceNumber" placeholder="invoice number" />
+            <Html.TextEditor display="Date" field="date" placeholder="Date" />
             <Html.TextEditor display="Description" field="description" placeholder="July 2017" />
-
-            <DataGrid data={expr("lines")} >
-                <TextColumn field="description" display="Description" template={<input type="text" name="row.description" />} />
-                <TextColumn field="hours" display="Hours" template={<input type="text" name="row.hours" />} />
-                <TextColumn field="hourlyRate" display="Rate" template={<input type="text" name="row.hourlyRate" />} />
-                <RemoveColumn />
-            </DataGrid>
+            <Html.TextEditor display="Time" field="timeSpan" placeholder="08:00" />
             <div>
                 <button onClick={addLine}>add</button>
             </div>
         </div>,
-        <footer style="height: 50px; margin: 0 16px; padding: 0;">
-            <div className="btn-group">
-                <If expr={expr("not invoiceDate")}>
-                    <button className="btn btn-flat" onClick={closeInvoice}>Close</button>
-                </If>
-                <button className="btn btn-primary" onClick={url.action("report")}>
-                    <span className="fa fa-plus"></span> Preview</button>
-                <a className="btn btn-default" href={"/api/invoice/" + invoice.invoiceNumber + "/pdf"} >Download</a>
-            </div>
-        </footer>
-        ]
-        ,
-        [invoiceStore, { companiesDS }]
-    ).mapRoute("report", (context, args) => {
-        return View(
-            <iframe src={"/api/invoice/" + invoice.invoiceNumber + "/pdf"} width="600px" height="100%"></iframe>,
-            invoiceStore);
-    });
+    ], [timesheetStore, { companiesDS }]);
 }
 
 

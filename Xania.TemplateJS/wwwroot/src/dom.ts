@@ -363,6 +363,11 @@ export module Dom {
 
         app(fun, args: any[], context?) {
             if (fun === "assign") {
+                if (typeof args[1].update !== 'function') {
+                    console.error("Object is not mutable", args[1]);
+                    return void 0;
+                }
+
                 var arg = args[0];
                 if (arg === null)
                     args[1].update(null);
