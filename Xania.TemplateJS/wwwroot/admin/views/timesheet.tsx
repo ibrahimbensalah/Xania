@@ -8,14 +8,10 @@ import { parse } from "../../src/compile";
 class TimeSheetRepository extends ModelRepository {
     constructor() {
         var query =
-            ` for d in declarations
-              join c in companies on d.companyId = c.id
+            ` for c in companies
               select { 
-                    id: d.id,
                     companyName : c.name,
-                    companyId: c.id,
-                    timeSpan: d.timeSpan,
-                    date: d.date
+                    companyId: c.id
               }
             `;
         super("/api/xaniadb", query);
@@ -30,10 +26,38 @@ class TimeSheetRepository extends ModelRepository {
     }
 }
 
-var guid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+var guid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 var any = path => path;
 
 export function view({ url }: { url: UrlHelper }) {
+    var remote = new RemoteStore("/api/xaniadb");
+    var view = View(
+        <ul class="list-group">
+            <List source={expr("await companies", { companies: remote.execute("companies") })}>
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <a href="" onClick={expr("url.goto id", { url })}>{expr("name")}</a>
+                    <span class="badge badge-default badge-pill">>></span>
+                </li>
+            </List>
+        </ul>,
+        <footer style="height: 50px; margin: 0 16px; padding: 0;">
+            <div className="btn-group">
+                <button className="btn btn-block" onClick={url.action("report")}>Preview</button>
+                <button className="btn btn-primary" onClick={url.action("new")}>
+                    <span className="fa fa-plus"></span> Add New</button>
+            </div>
+        </footer>
+    );
+
+    view.mapRoute(guid, (ctx, companyId) => viewTimeSheet(ctx));
+
+    return view;
+}
+
+export function viewTimeSheet({ url }: { url: UrlHelper }) {
+    var declarations = new RemoteStore("/api/xaniadb").execute(
+        `for d in declarations select d`
+    );
     var controller = new TimeSheetRepository();
     var store = new Re.Store(controller);
 
@@ -87,15 +111,12 @@ export function view({ url }: { url: UrlHelper }) {
         expr("row.companyName")}</span>;
     return View([
         <table>
-            <List source={expr("await dataSource |> mapData", { mapData })}>
+            <List source={expr("await declarations |> mapData", { declarations, mapData })}>
                 <tr>
                     <td><input class="form-control" type="text" style="width: 120px" placeholder="Date" name="date"
                         onChange={expr("date <- parseDate value", { parseDate })}
                         value={expr("formatDate date", { formatDate })} /></td>
                     <td><input class="form-control" type="text" placeholder="Time" value={expr("timeSpan")} style="width: 90px" /></td>
-                    <td><Html.DropDown data={expr('await companiesDS', { companiesDS })} value={expr("companyId")} >
-                        {expr("display")}
-                    </Html.DropDown></td>
                 </tr>
             </List>
         </table>,
