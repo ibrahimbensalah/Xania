@@ -44,7 +44,7 @@ export module Dom {
     export class DomDriver {
         private target;
         private domElements = [];
-        private events:{eventName: string, eventBinding: any, dom: any }[] = [];
+        private events: { eventName: string, eventBinding: any, dom: any }[] = [];
 
         constructor(target) {
             if (typeof target === "string")
@@ -319,8 +319,6 @@ export module Dom {
             if (typeof expr === "function")
                 return expr(event, this.context);
 
-
-
             return expr.execute(context, this);
         }
 
@@ -329,34 +327,23 @@ export module Dom {
             var eventContext = context ? [context] : [];
             eventContext.push({ value: event, event, node: event.target });
 
+            var promises;
             if (Array.isArray(this.expr))
-                this.expr.map(x => this.evaluate(x, eventContext));
+                promises = this.expr.map(x => this.evaluate(x, eventContext));
             else
-                this.evaluate(this.expr, eventContext);
+                promises = [ this.evaluate(this.expr, eventContext) ];
 
             if (context && context.refresh)
-                context.refresh();
+                Promise.all(promises).then(() => {
+                    context.refresh();
+                });
+
         }
 
         render(context, driver) {
             driver.on(this.name, this.tagNode, this);
         }
 
-        extend() {
-            throw Error("Not implemented yet.");
-        }
-        where(source, predicate) {
-            throw Error("Not implemented yet.");
-        }
-        select(source, selector) {
-            throw Error("Not implemented yet.");
-        }
-        query(param, source) {
-            throw Error("Not implemented yet.");
-        }
-        await(observable) {
-            throw Error("Not implemented yet.");
-        }
         const(value) {
             return value;
         }

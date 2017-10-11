@@ -71,7 +71,16 @@ export class DropDown {
         this.expanded = !this.expanded;
     }
 
+    private expand = () => {
+        this.expanded = true;
+    }
+
+    private hide = () => {
+        this.expanded = false;
+    }
+
     private selectItem(data, value) {
+        console.log("selectItem", { data, value });
         this.expanded = false;
         var i = data.length;
         while (i--) {
@@ -83,10 +92,19 @@ export class DropDown {
     }
 
     view() {
-        return (
+        var delay = (f, time) => {
+            return () => new Promise(resolve => {
+                setTimeout(() => {
+                    f();
+                    resolve();
+                }, time);
+            });
+        }
+
+        return(
             <div style="position: relative">
                 <div className={[expr("expanded -> ' show'")]}>
-                    <button className="btn btn-secondary btn-sm dropdown-toggle" onClick={this.onToggle}
+                    <button className="btn btn-secondary btn-sm dropdown-toggle" onFocusIn={this.expand} onFocusOut={delay(this.hide, 100)}
                         type="button" aria-haspopup="true" aria-expanded={expr("expanded")}>
                         <With object={expr("data where id = value |> single")}>{this.children}</With>
                     </button>

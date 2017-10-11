@@ -89,13 +89,10 @@ export function view({ url }: { url: UrlHelper }) {
         <table>
             <List source={expr("await dataSource |> mapData", { mapData })}>
                 <tr>
-                    <td><input class="form-control" type="text"
-                        placeholder="Date" name="date"
+                    <td><input class="form-control" type="text" style="width: 120px" placeholder="Date" name="date"
                         onChange={expr("date <- parseDate value", { parseDate })}
                         value={expr("formatDate date", { formatDate })} /></td>
-                    <td><input class="form-control" type="text"
-                            placeholder="Time"
-                            value={expr("timeSpan")} /></td>
+                    <td><input class="form-control" type="text" placeholder="Time" value={expr("timeSpan")} style="width: 90px" /></td>
                     <td><Html.DropDown data={expr('await companiesDS', { companiesDS })} value={expr("companyId")} >
                         {expr("display")}
                     </Html.DropDown></td>
@@ -103,12 +100,15 @@ export function view({ url }: { url: UrlHelper }) {
             </List>
         </table>,
         <footer style="height: 50px; margin: 0 16px; padding: 0;">
-            <button className="btn btn-primary" onClick={url.action("new")}>
-                <span className="fa fa-plus"></span> Add New</button>
+            <div className="btn-group">
+                <button className="btn btn-block" onClick={url.action("report")}>Preview</button>
+                <button className="btn btn-primary" onClick={url.action("new")}>
+                    <span className="fa fa-plus"></span> Add New</button>
+            </div>
         </footer>
-    ],
-        store
+    ], store
     ).route({
+        report: reportView,
         new: ctx => timesheetView(ctx, {
             companyId: null,
             date: new Date(),
@@ -175,8 +175,13 @@ function timesheetView({ url }, timeDeclaration) {
             <div>
                 <button onClick={addLine}>add</button>
             </div>
-        </div>,
+        </div>
     ], [timesheetStore, { companiesDS }]);
 }
 
 
+function reportView() {
+    return View(
+        <div>report</div>
+    );
+}
