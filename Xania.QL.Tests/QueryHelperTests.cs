@@ -42,15 +42,21 @@ namespace Xania.QL.Tests
                 {"invoices", (_invoiceStore.AsQueryable())}
             };
 
-            var data = (byte[])Resources.ResourceManager.GetObject(resourceName, Resources.Culture);
-            Debug.Assert(data != null, "data != null");
-            var ast = GetAst(new MemoryStream(data));
+            var ast = GetAstFromResource(resourceName);
             var expr = _helper.ToLinq(ast, context);
             var result = new List<dynamic>(Invoke<IQueryable<dynamic>>(expr));
 
             var invoice = _invoiceStore.Single();
             ((string)result[0].invoiceNumber).Should().Be(invoice.InvoiceNumber);
             ((string)result[0].companyName).Should().Be("Xania BV");
+        }
+
+        private static dynamic GetAstFromResource(string resourceName)
+        {
+            var data = (byte[]) Resources.ResourceManager.GetObject(resourceName, Resources.Culture);
+            Debug.Assert(data != null, "data != null");
+            var ast = GetAst(new MemoryStream(data), Encoding.Default);
+            return ast;
         }
 
         [Test]
@@ -168,6 +174,43 @@ namespace Xania.QL.Tests
             result.Should().BeTrue();
         }
 
+        [Test]
+        public void WhereTest()
+        {
+            var companies = new[]
+            {
+                new Company {Id = 1.ToGuid(), Name = "Xania"},
+                new Company {Id = 2.ToGuid(), Name = "Rider"},
+                new Company {Id = 3.ToGuid(), Name = "Rabo"}
+            };
+            var context = new QueryContext
+            {
+                {"companies", companies.AsQueryable()}
+            };
+
+            var ast = GetAstFromResource("where");
+            var linq = _helper.ToLinq(ast, context);
+            IQueryable<Company> result = Invoke<IQueryable<Company>>(linq);
+            result.Count().Should().Be(1);
+        }
+
+        private object GetConst(object value)
+        {
+            dynamic ast = new ExpandoObject();
+            ast.type = Token.CONST;
+            ast.value = value;
+            return ast;
+        }
+
+        private object GetWhere(object left, object right)
+        {
+            dynamic ast = new ExpandoObject();
+            ast.type = Token.WHERE;
+            ast.left = left;
+            ast.right = right;
+            return ast;
+        }
+
         private object GetJoinCondition(object outerKey, object innerKey)
         {
             dynamic ast = new ExpandoObject();
@@ -269,10 +312,10 @@ namespace Xania.QL.Tests
             return ast;
         }
 
-        private static dynamic GetAst(Stream memoryStream)
+        private static dynamic GetAst(Stream memoryStream, Encoding encoding)
         {
             var formatter = new JsonMediaTypeFormatter();
-            dynamic ast = formatter.ReadFromStreamAsync(typeof(object), memoryStream, null, null).Result;
+            dynamic ast = formatter.ReadFromStream(typeof(object), memoryStream, encoding, null);
             return ast;
         }
 
@@ -310,6 +353,16 @@ namespace Xania.QL.Tests
                 .GetRuntimeMethods()
                 .Where(e => e.Name.Equals("Select"))
                 .Select(e => e.MakeGenericMethod(elementType, resultType))
+                .Single(e => e.GetParameters().Any(p => p.ParameterType == expressionType));
+        }
+
+        public MethodInfo GetQueryableWhere(Type elementType)
+        {
+            var expressionType = typeof(Expression<>).MakeGenericType(typeof(Func<,>).MakeGenericType(elementType, typeof(bool)));
+            return typeof(Queryable)
+                .GetRuntimeMethods()
+                .Where(e => e.Name.Equals("Where"))
+                .Select(e => e.MakeGenericMethod(elementType))
                 .Single(e => e.GetParameters().Any(p => p.ParameterType == expressionType));
         }
 

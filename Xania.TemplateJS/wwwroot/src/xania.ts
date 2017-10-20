@@ -382,7 +382,9 @@ class ListBinding extends Reactive.Binding {
             stream = sourceExpr;
         } else if (sourceExpr && sourceExpr.execute) {
             stream = sourceExpr.execute(context, this);
-            if (stream.length === void 0)
+            if (stream === void 0 || stream === null)
+                stream = [];
+            else if (stream.length === void 0)
                 if (stream.value === null) {
                     stream = [];
                 } else {

@@ -133,6 +133,16 @@ namespace Xania.TemplateJS.Controllers
                 .Single(e => e.GetParameters().Any(p => p.ParameterType == expressionType));
         }
 
+        public MethodInfo GetQueryableWhere(Type elementType)
+        {
+            var expressionType = typeof(Expression<>).MakeGenericType(typeof(Func<,>).MakeGenericType(elementType, typeof(bool)));
+            return typeof(Queryable)
+                .GetRuntimeMethods()
+                .Where(e => e.Name.Equals("Where"))
+                .Select(e => e.MakeGenericMethod(elementType))
+                .Single(e => e.GetParameters().Any(p => p.ParameterType == expressionType));
+        }
+
         public MethodInfo GetQueryableJoin(Type outerType, Type innerType, Type keyType, Type resultType)
         {
             return typeof(Queryable).GetRuntimeMethods()

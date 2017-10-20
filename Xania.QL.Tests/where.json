@@ -1,0 +1,20 @@
+﻿{
+  "type": 9,
+  "op": 1,
+  "left": {
+    "type": 3,
+    "name": "companies"
+  },
+  "right": {
+    "type": 9,
+    "op": 17,
+    "left": {
+      "type": 3,
+      "name": "name"
+    },
+    "right": {
+      "type": 7,
+      "value": "Xania"
+    }
+  }
+}

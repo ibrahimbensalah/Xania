@@ -86,6 +86,7 @@
     <None Include="join2.json" />
     <None Include="join.json" />
     <None Include="packages.config" />
+    <None Include="where.json" />
   </ItemGroup>
   <ItemGroup>
     <BootstrapperPackage Include=".NETFramework,Version=v4.5.2">

@@ -26,7 +26,7 @@ class TimeSheetRepository extends ModelRepository {
     }
 }
 
-var guid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+var guid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 var any = path => path;
 
 export function view({ url }: { url: UrlHelper }) {
@@ -49,14 +49,14 @@ export function view({ url }: { url: UrlHelper }) {
         </footer>
     );
 
-    view.mapRoute(guid, (ctx, companyId) => viewTimeSheet(ctx));
+    view.mapRoute(guid, (ctx, companyId) => viewTimeSheet(ctx, companyId));
 
     return view;
 }
 
-export function viewTimeSheet({ url }: { url: UrlHelper }) {
+export function viewTimeSheet({ url }: { url: UrlHelper }, companyId) {
     var declarations = new RemoteStore("/api/xaniadb").execute(
-        `for d in declarations select d`
+        `declarations where companyId = '${companyId}'`
     );
     var controller = new TimeSheetRepository();
     var store = new Re.Store(controller);
