@@ -97,6 +97,20 @@ export function viewTimeSheet({ url }: { url: UrlHelper }, companyId) {
         return value.target.value;
     }
 
+    var groupBy = (xs, keyProp) => xs.reduce((rv, x) => {
+        var key = typeof keyProp === "function" ? keyProp(x) : x[keyProp];
+        var i = rv.length;
+        while (i--) {
+            const r = rv[i];
+            if (r.key === key) {
+                r.items.push(x);
+                return rv;
+            }
+        }
+        rv.push({ key, items: [x] });
+        return rv;
+    }, []);
+
     /**
      * List.map createStore
      * @param row
@@ -107,17 +121,22 @@ export function viewTimeSheet({ url }: { url: UrlHelper }, companyId) {
         }));
     }
 
+    function groupData(row) {
+        return groupBy(row, x => new Date(x.date).toDateString());
+    }
+
     var descriptionTpl = <span><span className="invoice-number">{expr("row.invoiceNumber")}</span>{
         expr("row.companyName")}</span>;
     return View([
         <table>
-            <List source={expr("await declarations |> mapData", { declarations, mapData })}>
-                <tr>
-                    <td><input class="form-control" type="text" style="width: 120px" placeholder="Date" name="date"
-                        onChange={expr("date <- parseDate value", { parseDate })}
-                        value={expr("formatDate date", { formatDate })} /></td>
-                    <td><input class="form-control" type="text" placeholder="Time" value={expr("timeSpan")} style="width: 90px" /></td>
-                </tr>
+            <List source={expr("await declarations |> groupData", { declarations, groupData })}>
+                <tr><td><label>{expr("key")}</label></td></tr>
+                <List source={expr("items |> mapData", { mapData })}>
+                    <tr>
+                        <td><input class="form-control" type="text" placeholder="Time" value={expr("timeSpan")} style="width: 90px" /></td>
+                        <td><input class="form-control" type="text" placeholder="Description" value={expr("description")} style="width: 200px" /></td>
+                    </tr>
+                </List>
             </List>
         </table>,
         <footer style="height: 50px; margin: 0 16px; padding: 0;">
