@@ -88,7 +88,7 @@ export class Scope {
         var contexts = this.contexts, length = contexts.length, i = 0;
         do {
             var target = this.contexts[i];
-            var value = target.get ? target.get(name) : target[name];
+            var value = target && (target.get ? target.get(name) : target[name]);
             if (value !== void 0)
                 return value;
         } while (++i < length)
@@ -107,6 +107,46 @@ export class Scope {
 
 export default class Expression {
     constructor(public ast, private stack, private context) {
+    }
+
+    static member(target: { get(name: string) }, name, binding) {
+        if (target === null || target === undefined)
+            return target;
+        if (target.get) {
+            var value = target.get(name);
+            if (value && value.change)
+                value.change(binding);
+
+            return value;
+        }
+        return target[name];
+    }
+
+    static app(fun, args: any[], context) {
+        var xs = [], length = args.length;
+        for (var i = 0; i < length; i++) {
+            var arg = args[i];
+            if (arg && arg.valueOf) {
+                var x = arg.valueOf();
+                if (x === void 0)
+                    return void 0;
+                xs.push(x);
+            } else {
+                xs.push(arg);
+            }
+        }
+
+        if (fun === "+") {
+            return xs[1] + xs[0];
+        } else if (fun === "-") {
+            return xs[1] - xs[0];
+        } else if (fun === "*") {
+            return xs[1] * xs[0];
+        } else if (fun === "assign") {
+            throw new Error("assignment is only allow in EventBinding");
+        }
+
+        return fun.apply(context, xs);
     }
 
     execute(contexts: any, binding: IAstVisitor) {
@@ -128,7 +168,7 @@ export default class Expression {
             var ast = stack[idx];
             switch (ast.type) {
                 case IDENT:
-                    ast.value = binding.member(context, ast.name);
+                    ast.value = Expression.member(context, ast.name, binding);
                     break;
                 case QUERY:
                     ast.value = binding.query(ast.param, ast.source.value);
@@ -138,7 +178,7 @@ export default class Expression {
                 case MEMBER:
                     var target = ast.target.value;
                     var name = ast.member.value || ast.member;
-                    ast.value = binding.member(target, name);
+                    ast.value = Expression.member(target, name, binding);
                     break;
                 case AWAIT:
                     ast.value = binding.await(ast.expr.value);
@@ -170,7 +210,7 @@ export default class Expression {
                             let length = source.length;
                             var result = [];
                             for (var i = 0; i < length; i++) {
-                                var item = binding.member(source, i);
+                                var item = Expression.member(source, i, binding);
                                 var scope = new Scope([item, context]);
                                 var b = ast.right.compiled.execute(scope, binding);
                                 if (b)
@@ -181,7 +221,7 @@ export default class Expression {
                         default:
                             var left = ast.left.value;
                             var right = ast.right.value;
-                            ast.value = binding.app(ast.op, [right, left]);
+                            ast.value = Expression.app(ast.op, [right, left], binding);
                             break;
                     }
                     break;
@@ -200,7 +240,7 @@ export default class Expression {
                         console.error("could not resolve expression, " + JSON.stringify(ast.fun));
                         return void 0;
                     } else {
-                        ast.value = binding.app(fun.valueOf(), args, ast.fun.target && ast.fun.target.value);
+                        ast.value = Expression.app(fun.valueOf(), args, ast.fun.target && ast.fun.target.value);
                     }
                     break;
                 case LAZY:

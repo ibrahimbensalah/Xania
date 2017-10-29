@@ -188,7 +188,7 @@ class ComponentBinding extends Reactive.Binding {
             return expr.execute ? expr.execute([this.context, this.componentStore], this) : expr;
         } else {
             result = this.componentStore.get(name);
-            return result === undefined ? this.context.get(name) : result;
+            return result === undefined && this.context && this.context.get ? this.context.get(name) : result;
         }
     }
 
@@ -232,7 +232,7 @@ class ComponentBinding extends Reactive.Binding {
                     if (x && x.refresh)
                         x.refresh();
                 }
-            } else
+            } else 
                 context.refresh();
         }
     }

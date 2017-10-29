@@ -14,6 +14,9 @@
 .data-grid-cell.data-grid-column-status {
   width: 80px;
 }
+.data-grid-cell.data-grid-column-name {
+  width: 220px;
+}
 .dropdown-toggle:focus {
   color: red;
 }

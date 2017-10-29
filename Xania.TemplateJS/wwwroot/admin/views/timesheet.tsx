@@ -31,15 +31,10 @@ var any = path => path;
 
 export function view({ url }: { url: UrlHelper }) {
     var remote = new RemoteStore("/api/xaniadb");
-    var view = View(
-        <ul class="list-group">
-            <List source={expr("await companies", { companies: remote.execute("companies") })}>
-                <li class="list-group-item d-flex justify-content-between align-items-center">
-                    <a href="" onClick={expr("url.goto id", { url })}>{expr("name")}</a>
-                    <span class="badge badge-default badge-pill">>></span>
-                </li>
-            </List>
-        </ul>,
+    var view = View([
+        <DataGrid data={expr("await companies", { companies: remote.execute("companies") })} onSelectionChanged={expr("url.goto id", { url })} >
+            <TextColumn field="name" template={<span>{expr("row.name")}</span>} display="Company" />
+        </DataGrid>,
         <footer style="height: 50px; margin: 0 16px; padding: 0;">
             <div className="btn-group">
                 <button className="btn btn-block" onClick={url.action("report")}>Preview</button>
@@ -47,7 +42,7 @@ export function view({ url }: { url: UrlHelper }) {
                     <span className="fa fa-plus"></span> Add New</button>
             </div>
         </footer>
-    );
+    ]);
 
     view.mapRoute(guid, (ctx, companyId) => viewTimeSheet(ctx, companyId));
 

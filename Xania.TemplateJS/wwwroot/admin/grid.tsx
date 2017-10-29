@@ -91,11 +91,15 @@ export default class DataGrid {
     }
 
     onRowClick = (row) => {
+        debugger;
         if (this.activeRow !== row) {
             this.activeRow = row;
 
             if (this.onSelectionChanged) {
-                this.onSelectionChanged(row, this);
+                if (this.onSelectionChanged.execute) {
+                    this.onSelectionChanged.execute(row, this);
+                } else
+                    this.onSelectionChanged(row, this);
             }
         }
     };

@@ -155,7 +155,7 @@ export module Dom {
     export class TextBinding extends Re.Binding implements IDomBinding {
         public textNode;
         public length = 1;
-        public oldValue;
+        // public oldValue;
 
         constructor(private expr, driver: Re.IDriver) {
             super(driver);
@@ -166,15 +166,18 @@ export module Dom {
         }
 
         render(context, driver: IDOMDriver) {
-            const newValue = this.evaluateText(this.expr);
-            if (newValue !== this.oldValue) {
-                this.oldValue = newValue;
+            var { expr } = this;
+            var typeOfExpr = typeof expr;
+            const newValue = typeOfExpr === "string" || typeOfExpr === "undefined" ? expr : this.evaluateText(expr);
+            // if (newValue !== this.oldValue)
+            {
+                // this.oldValue = newValue;
                 var textNode = this.textNode;
-                if (!textNode) {
+                if (textNode) {
+                    textNode.nodeValue = newValue;
+                } else {
                     textNode = this.textNode = (<any>document).createTextNode(newValue);
                     driver.insert(this, textNode, 0);
-                } else {
-                    textNode.nodeValue = newValue;
                 }
             }
         }
@@ -294,7 +297,7 @@ export module Dom {
 
     export class ClassBinding extends Re.Binding {
         public dom;
-        private oldValue;
+        // private oldValue;
 
         constructor(private tagNode: HTMLElement, private expr, driver: Re.IDriver) {
             super(driver);
@@ -303,10 +306,10 @@ export module Dom {
         render() {
             var newValue = this.evaluateText(this.expr);
 
-            if (newValue !== this.oldValue) {
-                this.oldValue = newValue;
+            // if (newValue !== this.oldValue) {
+                // this.oldValue = newValue;
                 this.tagNode.className = newValue;
-            }
+            // }
         }
     }
 
@@ -430,10 +433,10 @@ export module Dom {
         constructor(private tagNode: any, private expr, driver: Re.IDriver) {
             super(driver);
 
-            tagNode.addEventListener("change", this.fire.bind(this));
+            tagNode.addEventListener("change", this.fire);
         }
 
-        fire() {
+        private fire = () => {
             let value = this.evaluateObject(this.expr);
             if (value && value.update) {
                 value.update(this.tagNode.value);

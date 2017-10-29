@@ -57,6 +57,8 @@ export default class DataGrid {
 
             if (this.onSelectionChanged) {
                 this.onSelectionChanged(row, this);
+            } else if (this.attrs.onSelectionChanged) {
+                this.attrs.onSelectionChanged.execute([row, this], this);
             }
         }
     };

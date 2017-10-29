@@ -30,25 +30,72 @@ export function run(target: Node) {
 
 }
 
+var once = (property: string) => ({
+    execute(context: Re.Store) {
+        var parts = property.split(".");
+        var result = context.get(parts[0]);
+        var i = 0;
+        while (++i < parts.length) {
+            result = result.get(parts[i]);
+        }
+        return result;
+    }
+});
+
+var value = (property: string) => ({
+    execute(context: Re.Store) {
+        var parts = property.split(".");
+        var result = context.value[parts[0]];
+        var i = 0;
+        while (++i < parts.length) {
+            result = result.get[parts[i]];
+        }
+        return result.valueOf();
+    }
+});
+
+var property = (name: string) => {
+    var parts = name.split(".");
+    if (parts.length === 1)
+        return ({
+            execute(context: Re.Store, binding: Re.Binding) {
+                var result = context.get(name);
+                result.change(binding);
+                return result.valueOf();
+            }
+        });
+    return ({
+        execute(context: Re.Store, binding: Re.Binding) {
+            var result = context.get(parts[0]);
+            var i = 0;
+            while (++i < parts.length) {
+                result = result.get(parts[i]);
+            }
+            result.change(binding);
+            return result.valueOf();
+        }
+    });
+};
+
 var dbmon: any = (
     <table clazz="table table-striped latest-data">
         <tbody>
-            <Arr source={expr("databases")} length={100}>
+            <Arr source={once("databases")} length={100}>
                 <tr>
                     <td className="dbname">
-                        {expr("dbname")}
+                        {property("dbname")}
                     </td>
                     <td className="query-count">
-                        <span className={expr("lastSample.countClassName")}>
-                            {expr("lastSample.nbQueries")}
+                        <span className={property("lastSample.countClassName")}>
+                            {property("lastSample.nbQueries")}
                         </span>
                     </td>
-                    <Arr source={expr("lastSample.topFiveQueries")} length={5} >
-                        <td className={expr("elapsedClassName")}>
-                            {expr("formatElapsed")}
+                    <Arr source={once("lastSample.topFiveQueries")} length={5} >
+                        <td className={property("elapsedClassName")}>
+                            {property("formatElapsed")}
                             <div className="popover left">
                                 <div className="popover-content">
-                                    {expr("query")}
+                                    {property("query")}
                                 </div>
                                 <div className="arrow"></div>
                             </div>

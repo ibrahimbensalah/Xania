@@ -103,17 +103,26 @@ export module Reactive {
         // list of observers to be dispatched on value change
         private actions: IAction[];
 
-        constructor(protected parent: { get(name: string): any, set(name: string, value: any)}, public name) {
+        constructor(protected parent: { get(name: string): any, set(name: string, value: any) }, public name) {
             super();
         }
 
-        get(name: string) {
-            var result = super.get(name);
+        get(propertyName: string) {
+            var properties = this.properties;
+            var i = properties.length;
+            while (i--) {
+                var prop = properties[i];
+                if (prop.name === propertyName) {
+                    return prop;
+                }
+            }
+
+            var result = super.get(propertyName);
             if (result !== void 0) {
                 return result;
             }
 
-            return this.parent.get(name);
+            return this.parent.get(propertyName);
         }
 
         change(action: IAction): this | boolean {
@@ -390,7 +399,7 @@ export module Reactive {
             return void 0;
         }
 
-        refresh(mutable = true) {
+        refresh() {
             var stack: { properties, value }[] = [this];
             var stackLength: number = 1;
             var dirty: any[] = [];
@@ -404,12 +413,10 @@ export module Reactive {
                 while (i--) {
                     var child = properties[i];
                     var changed = child.refresh(parentValue);
-                    if (mutable || changed) {
-                        stack[stackLength++] = child;
+                    stack[stackLength++] = child;
 
-                        if (changed === true) {
-                            dirty[dirtyLength++] = child;
-                        }
+                    if (child.actions && changed) {
+                        dirty[dirtyLength++] = child;
                     }
                 };
             }
@@ -424,13 +431,11 @@ export module Reactive {
                     observer(property);
                 }
 
-                var actions = property.actions; 
-                if (actions) {
-                    var e = actions.length;
-                    while (e--) {
-                        var action = actions[e];
-                        action.execute();
-                    }
+                var actions = property.actions;
+                var e = actions.length;
+                while (e--) {
+                    var action = actions[e];
+                    action.execute();
                 }
             }
         }
@@ -586,46 +591,6 @@ export module Reactive {
             return new Variable(name, value, this.context);
         }
 
-        member(target: { get(name: string) }, name) {
-            if (target === null || target === undefined)
-                return target;
-            if (target.get) {
-                var value = target.get(name);
-                if (value && value.change)
-                    value.change(this);
-
-                return value;
-            }
-            return target[name];
-        }
-
-        app(fun, args: any[]) {
-            var xs = [], length = args.length;
-            for (var i = 0; i < length; i++) {
-                var arg = args[i];
-                if (arg && arg.valueOf) {
-                    var x = arg.valueOf();
-                    if (x === void 0)
-                        return void 0;
-                    xs.push(x);
-                } else {
-                    xs.push(arg);
-                }
-            }
-
-            if (fun === "+") {
-                return xs[1] + xs[0];
-            } else if (fun === "-") {
-                return xs[1] - xs[0];
-            } else if (fun === "*") {
-                return xs[1] * xs[0];
-            } else if (fun === "assign") {
-                throw new Error("assignment is only allow in EventBinding");
-            }
-
-            return fun.apply(null, xs);
-        }
-
         const(value) {
             return value;
         }
@@ -677,7 +642,7 @@ export module Reactive {
                 return parts;
             } else {
                 return parts.toString();
-            } 
+            }
         }
 
         evaluateObject(expr, context = this.context): any {
