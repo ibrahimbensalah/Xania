@@ -34,14 +34,7 @@ export function view({ url }: { url: UrlHelper }) {
     var view = View([
         <DataGrid data={expr("await companies", { companies: remote.execute("companies") })} onSelectionChanged={expr("url.goto id", { url })} >
             <TextColumn field="name" template={<span>{expr("row.name")}</span>} display="Company" />
-        </DataGrid>,
-        <footer style="height: 50px; margin: 0 16px; padding: 0;">
-            <div className="btn-group">
-                <button className="btn btn-block" onClick={url.action("report")}>Preview</button>
-                <button className="btn btn-primary" onClick={url.action("new")}>
-                    <span className="fa fa-plus"></span> Add New</button>
-            </div>
-        </footer>
+        </DataGrid>
     ]);
 
     view.mapRoute(guid, (ctx, companyId) => viewTimeSheet(ctx, companyId));
@@ -117,30 +110,50 @@ export function viewTimeSheet({ url }: { url: UrlHelper }, companyId) {
     }
 
     function groupData(row) {
-        return groupBy(row, x => new Date(x.date).toDateString());
+        return groupBy(row, x => new Date(x.date).getUTCFullYear()).map(g => {
+            return {
+                key: g.key,
+                items: groupBy(g.items, x => new Date(x.date).getUTCMonth())
+                    .map(j => {
+                        return {
+                            key: j.key,
+                            items: groupBy(j.items, y => new Date(y.date).getUTCDate())
+                                .sort((a, b) => {
+                                    return a.key > b.key ? 1 : -1;
+                                })
+                        }
+                    })
+            }
+        });
     }
 
     var descriptionTpl = <span><span className="invoice-number">{expr("row.invoiceNumber")}</span>{
         expr("row.companyName")}</span>;
     return View([
-        <table>
+        <div>
             <List source={expr("await declarations |> groupData", { declarations, groupData })}>
-                <tr><td><label>{expr("key")}</label></td></tr>
-                <List source={expr("items |> mapData", { mapData })}>
-                    <tr>
-                        <td><input class="form-control" type="text" placeholder="Time" value={expr("timeSpan")} style="width: 90px" /></td>
-                        <td><input class="form-control" type="text" placeholder="Description" value={expr("description")} style="width: 200px" /></td>
-                    </tr>
-                </List>
+                <div style="float: left; height: auto; overflow: auto; clear: both;"><label style="line-height: 30px;">{expr("key")}</label></div>
+                <div style="float: left;">
+                    <List source={expr("items")}>
+                        <div style="float: left; overflow: auto; clear: both;"><label style="line-height: 30px; margin: 0 10px;">{expr("key + 1")}</label></div>
+                        <div style="float: left;">
+                            <List source={expr("items")}>
+                                <div style="overflow: auto; float: left; clear: both;"><label style="line-height: 30px; margin: 0 4px; width: 60px; font-weight: bold;">day {expr("key + 1")}</label></div>
+                                <div style="float: left;">
+                                    <List source={expr("items |> mapData", { mapData })}>
+                                        <div class="input-group">
+                                            <input class="form-control" type="text" placeholder="Time" value={expr("timeSpan")} style="width: 90px" />
+                                            <input class="form-control" type="text" placeholder="Description" value={expr("description")} style="width: 200px" />
+                                            <a href="" style="padding: 3px; font-weight: bold; color: red; display: block">&times;</a>
+                                        </div>
+                                    </List>
+                                </div>
+                            </List>
+                        </div>
+                    </List>
+                </div>
             </List>
-        </table>,
-        <footer style="height: 50px; margin: 0 16px; padding: 0;">
-            <div className="btn-group">
-                <button className="btn btn-block" onClick={url.action("report")}>Preview</button>
-                <button className="btn btn-primary" onClick={url.action("new")}>
-                    <span className="fa fa-plus"></span> Add New</button>
-            </div>
-        </footer>
+        </div>
     ], store
     ).route({
         report: reportView,

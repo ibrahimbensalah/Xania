@@ -148,7 +148,7 @@ export class ViewResult {
             var route = routes[i];
             var match = route.matches(path);
             if (match !== null && match !== undefined) {
-                console.debug("route matched", match);
+                // console.debug("route matched", match);
                 return route.execute(viewContext, match);
             }
         }
