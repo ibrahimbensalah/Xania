@@ -325,6 +325,10 @@ export function If(attrs, children: Template.INode[]) {
     }
 }
 
+export function call(f: (obj) => any, code: string) {
+    return expr("f (" + code + ")", { f });
+}
+
 export function expr(code: string, context = null) {
     return compile(code, context);
 }

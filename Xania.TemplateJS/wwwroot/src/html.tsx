@@ -1,4 +1,4 @@
-﻿import xania, { mount, expr, With, Repeat, List, Template, Reactive } from "./xania";
+﻿import xania, { mount, expr, call, With, Repeat, List, Template, Reactive } from "./xania";
 import { IDriver } from "./template";
 
 export function TextEditor(attrs: { display; field; placeholder?; }) {
@@ -71,6 +71,19 @@ export class DropDown {
         this.expanded = !this.expanded;
     }
 
+    private select = (code) => {
+        var getter = expr(code);
+        var target = expr("value");
+        return {
+            execute(context, binding) {
+                var property = target.execute(context, binding);
+                var newValue = getter.execute(context, binding);
+                property.update(newValue);
+                return newValue;
+            }
+        }
+    }
+
     private expand = () => {
         this.expanded = true;
     }
@@ -110,7 +123,7 @@ export class DropDown {
                     </button>
                     <div className="dropdown-menu">
                         <List source={expr('data')}>
-                            <a className="dropdown-item" href="" onClick={expr("value <- selectItem data id")}>
+                            <a className="dropdown-item" href="" onClick={this.select("selectItem data id")}>
                                 { this.children }
                             </a>
                         </List>

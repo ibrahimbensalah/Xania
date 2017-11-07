@@ -48,10 +48,13 @@ namespace Xania.Data.DocumentDB
 
         public async Task DeleteAsync(Expression<Func<T, bool>> condition)
         {
-            foreach (var resource in client.CreateDocumentQuery<dynamic>(DocumentCollectionUri))
+            var conditionFunc = condition.Compile();
+            foreach (var resource in client.CreateDocumentQuery<Document>(DocumentCollectionUri))
             {
-                var documentUri = UriFactory.CreateDocumentUri(_databaseId, _collectionId, resource.id);
-                await client.DeleteDocumentAsync(documentUri);
+                var documentUri = UriFactory.CreateDocumentUri(_databaseId, _collectionId, resource.Id);
+                var doc = await client.ReadDocumentAsync<T>(documentUri);
+                if (conditionFunc(doc))
+                    await client.DeleteDocumentAsync(documentUri);
             }
         }
 

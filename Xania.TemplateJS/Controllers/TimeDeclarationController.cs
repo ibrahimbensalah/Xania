@@ -42,5 +42,12 @@ namespace Xania.TemplateJS.Controllers
         {
             return Task.FromResult(_declarationStore.SingleOrDefault(e => e.Id == id));
         }
+
+        [HttpDelete]
+        [Route("{id}")]
+        public Task Delete(Guid id)
+        {
+            return _declarationStore.DeleteAsync(e => e.Id == id);
+        }
     }
 }

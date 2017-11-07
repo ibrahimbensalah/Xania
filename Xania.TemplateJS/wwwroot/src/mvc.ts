@@ -4,7 +4,7 @@ import Dom from './dom'
 
 export class UrlHelper {
     public observers = [];
-    private childPath = new Observables.Observable();
+    // private childPath = new Observables.Observable();
 
     constructor(public router: Router, public basePath = "/") {
     }
@@ -26,7 +26,14 @@ export class UrlHelper {
         var action = { path: this.router.action(this.basePath + path) };
         if (typeof action.path === "string") {
             window.history.pushState(action, "", action.path);
-            this.childPath.notify(path);
+            // this.childPath.notify(path);
+        }
+    }
+
+    pop() {
+        var action = { path: this.router.action(this.basePath) };
+        if (typeof action.path === "string") {
+            window.history.pushState(action, "", action.path);
         }
     }
 
