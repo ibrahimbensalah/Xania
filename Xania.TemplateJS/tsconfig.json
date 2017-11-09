@@ -30,5 +30,8 @@
     "wwwroot/admin/**/*.tsx",
     "wwwroot/home/**/*.ts",
     "wwwroot/home/**/*.tsx"
+  ],
+  "exclude": [
+    "wwwroot/xania"
   ]
 }

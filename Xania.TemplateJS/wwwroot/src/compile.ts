@@ -1,8 +1,8 @@
 ﻿import Expression from "./expression"
+import peg from "../xania/query.peg";
 
 declare function require(module: string);
 
-var peg = require("../lib/xania/query.peg");
 
 export default function compile(expr, context = null) {
     var result = Expression.compile(peg.parse(expr), context);

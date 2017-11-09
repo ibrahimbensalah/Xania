@@ -34,7 +34,9 @@ export module Dom {
         static tag(tagName: string, ns: string, attrs, driver: Re.IDriver): TagBinding {
             var tag = new TagBinding(driver, tagName, ns), length = attrs.length;
             for (var i = 0; i < length; i++) {
-                tag.attr(attrs[i].name, attrs[i].tpl);
+                var { name, tpl } = attrs[i];
+                if (typeof tpl !== "undefined")
+                    tag.attr(name, tpl);
             }
 
             return tag;

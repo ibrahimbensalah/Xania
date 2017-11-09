@@ -5,33 +5,33 @@
   "devDependencies": {
     "@types/core-js": "",
     "@types/jasmine": "^2.5.38",
-    "jspm": "^0.16.52",
+    "jspm": "^0.16.53",
     "pegjs": "0.10.0",
-    "phantomjs": "2.1.7"
+    "phantomjs": "2.1.7",
+    "typescript": "^2.6.1"
   },
   "dependencies": {
     "css-loader": "0.26.1"
   },
   "scripts": {
-    "query": "pegjs -o ./wwwroot/lib/xania/query.peg.js --optimize speed ./grammar/query.peg"
+    "query": "pegjs -o ./wwwroot/xania/query.peg.js --optimize speed ./grammar/query.peg"
   },
   "jspm": {
     "directories": {
-      "baseURL": "wwwroot",
-      "packages": "wwwroot/jspm"
+      "baseURL": "wwwroot"
     },
     "dependencies": {
-      "MrRio/jsPDF": "github:MrRio/jsPDF@master",
-      "bpampuch/pdfmake": "github:bpampuch/pdfmake@master",
-      "css": "github:systemjs/plugin-css@^0.1.32",
-      "less": "npm:systemjs-less-plugin@^2.0.0",
-      "ts": "github:frankwallis/plugin-typescript@^7.0.6"
+      "css": "github:systemjs/plugin-css@^0.1.36",
+      "fetch": "github:github/fetch@^2.0.3",
+      "fontawesome": "npm:fontawesome@^4.7.2",
+      "less": "npm:systemjs-less-plugin@^2.2.2",
+      "ts": "github:frankwallis/plugin-typescript@^7.1.1"
     },
     "devDependencies": {
       "babel": "npm:babel-core@^5.8.24",
       "babel-runtime": "npm:babel-runtime@^5.8.24",
       "core-js": "npm:core-js@^1.1.4",
-      "typescript": "npm:typescript@^2.0.7"
+      "typescript": "npm:typescript@^2.6.1"
     }
   }
 }

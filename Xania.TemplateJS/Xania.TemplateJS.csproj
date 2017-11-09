@@ -21,7 +21,6 @@
     <None Include="wwwroot\**\*.tsx" />
     <None Include="wwwroot\**\*.less" />
     <None Include="tsconfig.*" />
-    <None Include="bower.json" />
     <None Include="wwwroot\test\**\*.*" />
     <None Include="wwwroot\spec\**\*.*" />
   </ItemGroup>
@@ -36,7 +35,6 @@
     <Content Remove="wwwroot\**\*.tsx" />
     <Content Remove="wwwroot\**\*.less" />
     <Content Remove="tsconfig.*" />
-    <Content Remove="bower.json" />
     <Content Remove="wwwroot\test\**\*.*" />
     <Content Remove="wwwroot\spec\**\*.*" />
   </ItemGroup>
@@ -48,6 +46,11 @@
     <None Remove="Reporting\blue.PNG" />
     <None Remove="Reporting\logo.PNG" />
     <None Remove="Reporting\roboto.regular.ttf" />
+    <None Remove="wwwroot\xania\query.peg.ts" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="wwwroot\xania\query.peg.ts" />
   </ItemGroup>
 
   <ItemGroup>

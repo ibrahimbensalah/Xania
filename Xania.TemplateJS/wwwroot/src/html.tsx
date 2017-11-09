@@ -1,12 +1,12 @@
 ﻿import xania, { mount, expr, call, With, Repeat, List, Template, Reactive } from "./xania";
 import { IDriver } from "./template";
 
-export function TextEditor(attrs: { display; field; placeholder?; }) {
+export function TextEditor(attrs: { display; field; placeholder?; value?; }) {
     var id = Math.random();
     return (
         <div className="form-group" {...attrs}>
             <label for={id}>{attrs.display}</label>
-            <input class="form-control" id={id} type="text" placeholder={attrs.placeholder || attrs.display} name={attrs.field} />
+            <input class="form-control" id={id} type="text" placeholder={attrs.placeholder || attrs.display} value={attrs.value} />
         </div>
     );
 }

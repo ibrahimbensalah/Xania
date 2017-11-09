@@ -20,6 +20,47 @@ class TimeSheetRepository extends ModelRepository {
 
 var guid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 var any = path => path;
+var formatters = {
+    timeSpan: {
+        parse(str) {
+            return str;
+        },
+        format(obj) {
+            var str = obj.toString();
+            var matches = /(\d{2}:\d{2}):\d{2}/.exec(str);
+            return matches ? matches[1] : str;
+        }
+    },
+    dateTime: {
+        parse(str) {
+            return new Date(str);
+        },
+        format(date) {
+            return date.toDateString();
+        }
+    }
+}
+function format(expr, formatter) {
+    return {
+        execute(context, binding) {
+            return {
+                inner: expr.execute(context, binding),
+                toString() {
+                    return formatter.format(this.inner && this.inner.valueOf());
+                },
+                update(value) {
+                    this.inner.update(formatter.parse(value));
+                }
+            }
+        }
+    }
+}
+function timeSpan(code: string) {
+    return format(expr(code), formatters.timeSpan);
+}
+function dateTime(code: string) {
+    return format(expr(code), formatters.dateTime);
+}
 
 export function view({ url }: { url: UrlHelper }) {
     var remote = new RemoteStore("/api/xaniadb");
@@ -81,37 +122,6 @@ export function viewTimeSheet({ url }: { url: UrlHelper }, companyId) {
         });
     }
 
-    var formatters = {
-        timeSpan: {
-            parse(str) {
-                return str;
-            },
-            format(obj) {
-                var str = obj.toString();
-                var matches = /(\d{2}:\d{2}):\d{2}/.exec(str);
-                return matches ? matches[1] : str;
-            }
-        }
-    }
-    function format(expr, formatter) {
-        return {
-            execute(context, binding) {
-                return {
-                    inner: expr.execute(context, binding),
-                    toString() {
-                        return formatter.format(this.inner);
-                    },
-                    update(value) {
-                        this.inner.update(formatter.parse(value));
-                    }
-                }
-            }
-        }
-    }
-    function timeSpan(code: string) {
-        return format(expr(code), formatters.timeSpan);
-    }
-
     function deleteTimeDeclaration(id) {
         rest.delete('/api/timedeclaration/' + id).then(() => declarations.reload());
     }
@@ -136,18 +146,21 @@ export function viewTimeSheet({ url }: { url: UrlHelper }, companyId) {
     return View([
         <div>
             <List source={expr("await declarations |> groupData", { declarations, groupData })}>
-                <div style="float: left; height: auto; overflow: auto; clear: both;"><label style="line-height: 30px;">{
-                    expr("key")}</label>
+                <div style="float: left; height: auto; overflow: auto; clear: both;">
+                    <label style="line-height: 30px;">
+                        {expr("key")}</label>
                 </div>
                 <div style="float: left;">
                     <List source={expr("items")}>
-                        <div style="float: left; overflow: auto; clear: both;"><label style="line-height: 30px; margin: 0 10px;">{
-                            expr("key + 1")}</label>
+                        <div style="float: left; overflow: auto; clear: both;">
+                            <label style="width: 20px; line-height: 30px; margin: 0 10px; text-align: center;">
+                                {expr("key + 1")}</label>
                         </div>
                         <div style="float: left;">
                             <List source={expr("items")}>
-                                <div style="overflow: auto; float: left; clear: both;"><label style="line-height: 30px; margin: 0 4px; width: 60px; font-weight: bold;">day {
-                                    expr("key + 1")}</label>
+                                <div style="overflow: auto; float: left; clear: both;">
+                                    <label style="line-height: 30px; margin: 0 4px; width: 20px; font-weight: bold; text-align: center; margin-right: 10px;">
+                                        {expr("key + 1")}</label>
                                 </div>
                                 <div style="float: left;">
                                     <List source={expr("items |> mapData", { mapData })}>
@@ -227,6 +240,17 @@ function timesheetView({ url }, repository: { save(item); create(): any }) {
     var td = repository.create();
     var timesheetStore = new Re.Store(td);
 
+    var myFormatter = {
+        parse(str: string) {
+            return str && new Date(str);
+        },
+        format(date) {
+            return date.toLocaleDateString();
+        }
+    };
+
+    var dateTime = (code: string) => format(expr(code), myFormatter);
+
     return View([
         <div style="height: 100%;">
             <div>
@@ -235,9 +259,9 @@ function timesheetView({ url }, repository: { save(item); create(): any }) {
                     {expr("display")}
                 </Html.DropDown>
             </div>
-            <Html.TextEditor display="Date" field="date" placeholder="Date" />
-            <Html.TextEditor display="Description" field="description" placeholder="Desc.." />
-            <Html.TextEditor display="Time" field="timeSpan" placeholder="08:00" />
+            <Html.TextEditor display="Date" placeholder="Date" value={dateTime("date")} />
+            <Html.TextEditor display="Description" field="description" placeholder="Desc.." value={expr("description")} />
+            <Html.TextEditor display="Time" field="timeSpan" placeholder="08:00" value={timeSpan("timeSpan")} />
             <button class="btn btn-primary" onClick={repository.save.bind(repository, td)}>Save</button>
         </div>
     ], timesheetStore);
