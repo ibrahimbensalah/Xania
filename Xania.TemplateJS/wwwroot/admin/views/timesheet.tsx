@@ -1,4 +1,4 @@
-﻿import xania, { call, expr, List, ModelRepository, Reactive as Re, RemoteDataSource, RemoteStore } from "../../src/xania"
+﻿import xania, { subscribe, call, expr, List, ModelRepository, Reactive as Re, RemoteDataSource, RemoteStore } from "../../src/xania"
 import { View, UrlHelper } from "../../src/mvc"
 import DataGrid, { TextColumn } from "../../src/data/datagrid"
 import Html from '../../src/html'
@@ -255,7 +255,7 @@ function timesheetView({ url }, repository: { save(item); create(): any }) {
         <div style="height: 100%;">
             <div>
                 <label>Company</label>
-                <Html.DropDown data={expr('await ds', { ds: companiesDS })} value={expr("companyId")}>
+                <Html.DropDown data={subscribe(companiesDS)} value={expr("companyId")}>
                     {expr("display")}
                 </Html.DropDown>
             </div>

@@ -329,6 +329,10 @@ export function call(f: (obj) => any, code: string) {
     return expr("f (" + code + ")", { f });
 }
 
+export function subscribe(observable) {
+    return expr("await observable", { observable });
+}
+
 export function expr(code: string, context = null) {
     return compile(code, context);
 }
