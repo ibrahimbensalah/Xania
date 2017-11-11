@@ -11,7 +11,7 @@
         var actionPath = '@(Model.Args.Any() ? string.Join("", Model.Args.Select(x => "/" + x)) : "/index")';
 
         function importModule(path) {
-            return System.import(path);
+            return System['import'](path);
         }
 
         function load(names, callback) {

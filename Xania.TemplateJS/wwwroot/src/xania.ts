@@ -232,7 +232,7 @@ class ComponentBinding extends Reactive.Binding {
                     if (x && x.refresh)
                         x.refresh();
                 }
-            } else 
+            } else if (typeof context.refresh === 'function')
                 context.refresh();
         }
     }

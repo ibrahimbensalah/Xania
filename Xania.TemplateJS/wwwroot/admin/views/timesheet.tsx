@@ -68,7 +68,7 @@ export function view({ url }: { url: UrlHelper }) {
         <DataGrid data={expr("await companies", { companies: remote.execute("companies") })} onSelectionChanged={expr("url.goto id", { url })} >
             <TextColumn field="name" template={<span>{expr("row.name")}</span>} display="Company" />
         </DataGrid>
-    ]);
+    ], { title: "Companies"});
 
     view.mapRoute(guid, (ctx, companyId) => viewTimeSheet(ctx, companyId));
 
@@ -185,11 +185,11 @@ export function viewTimeSheet({ url }: { url: UrlHelper }, companyId) {
             </div>
         </div>
     ],
-        store
+        [store, { title: "Timesheet"}]
     ).route({
         report: reportView,
         new: ctx => timesheetView(ctx, repository)
-    }); // .mapRoute(loadTimesheet, (ctx, promise: any) => promise.then(data => timesheetView(ctx, data)));
+    });
 }
 
 function newuid() {

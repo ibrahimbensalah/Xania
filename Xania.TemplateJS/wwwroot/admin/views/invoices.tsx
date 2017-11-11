@@ -87,16 +87,15 @@ export function view({ url }: { url: UrlHelper }) {
     var view = View([
             <DataGrid data={expr("await dataSource")} onSelectionChanged={onSelectRow} style="height: 100%;">
                 <TextColumn field="description" template={descriptionTpl} display="Description" />
-                <TextColumn field="invoiceDate" template={expr("formatDate row.invoiceDate")} display="Invoice Date" />
+                <TextColumn field="invoiceDate" template={expr("formatDate row.invoiceDate", { formatDate })} display="Invoice Date" />
                 <TextColumn field="status" template={statusTemplate()} display="Status" />
             </DataGrid>,
-            <div>{expr("await url.childPath")}</div>,
             <footer style="height: 50px; margin: 0 16px; padding: 0;">
                 <button className="btn btn-primary" onClick={url.action("new")}>
                     <span className="fa fa-plus"></span> Add New</button>
             </footer>
         ],
-        [store, { formatDate, url }]
+        [store, { title: "Invoices" }]
     );
     view.mapRoute("new", ctx => invoiceView(ctx, { companyId: null, invoiceNumber: null, lines: [] }));
     view.mapRoute(loadInvoice, (ctx, promise: any) => promise.then(data => invoiceView(ctx, data)));
@@ -171,7 +170,7 @@ function invoiceView({ url }, invoice) {
                         {expr("display")}
                     </Html.DropDown>
                 </div>
-                <Html.TextEditor display="Number" field="invoiceNumber" placeholder="invoice number" />
+                <Html.TextEditor display="Number" field="invoiceNumber" value={expr("invoiceNumber")} placeholder="invoice number" />
                 <Html.TextEditor display="Description" field="description" placeholder="July 2017" />
 
                 <DataGrid data={expr("lines")}>
@@ -195,7 +194,7 @@ function invoiceView({ url }, invoice) {
                 </div>
             </footer>
         ],
-        [invoiceStore, { companiesDS }]
+        [invoiceStore, { companiesDS, title: ["Invoice ", expr("invoiceNumber")] }]
     ).mapRoute("report",
         () => {
             return View(
