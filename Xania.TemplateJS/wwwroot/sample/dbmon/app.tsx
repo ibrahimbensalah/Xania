@@ -58,19 +58,35 @@ var property = (name: string) => {
     var parts = name.split(".");
     if (parts.length === 1)
         return ({
+            id: Symbol(),
             execute(context: Re.Store, binding: Re.Binding) {
-                var result = context.get(name);
+                var id = this.id;
+                var result = context[id];
+                if (result) {
+                    return result;
+                }
+                result = context.get(name);
+                context[id] = result;
                 result.change(binding);
                 return result.valueOf();
             }
         });
     return ({
+        id: Symbol(),
         execute(context: Re.Store, binding: Re.Binding) {
-            var result = context.get(parts[0]);
-            var i = 0;
-            while (++i < parts.length) {
-                result = result.get(parts[i]);
+            var id = this.id;
+            var result = context[id];
+            if (result) {
+                return result;
             }
+            result = context.get(parts[0]);
+            var i = 1;
+            var length = parts.length | 0;
+            while (i < length) {
+                result = result.get(parts[i]);
+                i = (i + 1) | 0;
+            }
+            context[id] = result;
             result.change(binding);
             return result.valueOf();
         }

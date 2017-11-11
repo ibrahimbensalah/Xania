@@ -24,8 +24,8 @@ interface IAppAction {
 declare function fetch<T>(url: string, config?): Promise<T>;
 
 var actions: IAppAction[] = [
-    { path: "companies", display: "Companies" },
-    { path: "users", display: "Users" }
+    // { path: "companies", display: "Companies" },
+    // { path: "users", display: "Users" }
 ];
 
 function menuItems() {

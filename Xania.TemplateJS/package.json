@@ -14,7 +14,8 @@
     "css-loader": "0.26.1"
   },
   "scripts": {
-    "query": "pegjs -o ./wwwroot/xania/query.peg.js --optimize speed ./grammar/query.peg"
+    "query": "pegjs -o ./wwwroot/xania/query.peg.js --optimize speed ./grammar/query.peg",
+    "jspm": "jspm bundle css wwwroot/jspm-plugins.js --inject --minify"
   },
   "jspm": {
     "directories": {

@@ -7,7 +7,7 @@
     <PackageId>Xania.TemplateJS</PackageId>
     <UserSecretsId>aspnet-WebApplication1-60e99684-a172-4ef5-831f-8e5dac3966ce</UserSecretsId>
     <WebProject_DirectoryAccessLevelKey>0</WebProject_DirectoryAccessLevelKey>
-    <TypeScriptToolsVersion>2.5</TypeScriptToolsVersion>
+    <TypeScriptToolsVersion>2.6</TypeScriptToolsVersion>
     <!--<UserSecretsId>aspnet-Xania.TemplateJS-20161219121033</UserSecretsId>-->
   </PropertyGroup>
 
@@ -46,6 +46,7 @@
     <None Remove="Reporting\blue.PNG" />
     <None Remove="Reporting\logo.PNG" />
     <None Remove="Reporting\roboto.regular.ttf" />
+    <None Remove="wwwroot\boot.ts" />
     <None Remove="wwwroot\xania\query.peg.ts" />
   </ItemGroup>
 
@@ -70,7 +71,7 @@
     <PackageReference Include="Microsoft.AspNetCore.Server.IISIntegration" Version="2.0.0" />
     <PackageReference Include="Microsoft.AspNetCore.Server.Kestrel" Version="2.0.0" />
     <PackageReference Include="Microsoft.AspNetCore.StaticFiles" Version="2.0.0" />
-    <PackageReference Include="Microsoft.Azure.DocumentDB" Version="1.17.0" />
+    <PackageReference Include="Microsoft.Azure.DocumentDB" Version="1.19.0" />
     <PackageReference Include="Microsoft.CSharp" Version="4.4.0" />
     <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="2.0.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="2.0.0" />

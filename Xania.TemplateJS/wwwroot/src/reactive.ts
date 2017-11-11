@@ -390,13 +390,12 @@ export module Reactive {
                 return statiq;
             }
 
-            for (var i = 0; i < this.globals.length; i++) {
-                var g = this.globals[i][name];
+            var globals = this.globals, length = globals.length | 0;
+            for (var i = 0; i < length; i = (i+1)|0) {
+                var g = globals[i][name];
                 if (g !== void 0)
                     return g;
             }
-
-            return void 0;
         }
 
         refresh() {
@@ -409,14 +408,17 @@ export module Reactive {
                 const parent = stack[stackLength];
                 var properties = parent.properties;
                 const parentValue = parent.value;
-                let i: number = properties.length;
-                while (i--) {
+                let i: number = properties.length | 0;
+                while (i) {
+                    i = (i - 1) | 0;
                     var child = properties[i];
                     var changed = child.refresh(parentValue);
-                    stack[stackLength++] = child;
+                    stack[stackLength] = child;
+                    stackLength = (stackLength + 1) | 0;
 
                     if (child.actions && changed) {
-                        dirty[dirtyLength++] = child;
+                        dirty[dirtyLength] = child;
+                        dirtyLength = (dirtyLength + 1) | 0;
                     }
                 };
             }
@@ -425,14 +427,14 @@ export module Reactive {
             var observers = this.observers;
             while (j--) {
                 var property = dirty[j];
-                var n = observers.length;
+                var n = observers.length|0;
                 while (n--) {
                     var observer = observers[n];
                     observer(property);
                 }
 
                 var actions = property.actions;
-                var e = actions.length;
+                var e = actions.length | 0;
                 while (e--) {
                     var action = actions[e];
                     action.execute();
@@ -481,18 +483,19 @@ export module Reactive {
         }
 
         get(name: string) {
-            var contexts = this.contexts, length = contexts.length, i = 0;
+            var contexts = this.contexts, length = contexts.length | 0, i = 0;
             do {
-                var target = this.contexts[i];
+                var target = contexts[i];
                 var value = target.get ? target.get(name) : target[name];
                 if (value !== void 0)
                     return value;
-            } while (++i < length)
+                i = (i + 1) | 0;
+            } while (i < length)
             return void 0;
         }
 
         refresh() {
-            var contexts = this.contexts, i = contexts.length;
+            var contexts = this.contexts, i = contexts.length | 0;
             while (i--) {
                 var ctx = contexts[i];
                 if (ctx.refresh)
@@ -527,7 +530,7 @@ export module Reactive {
         updateChildren(context) {
             var { childBindings } = this;
             if (childBindings) {
-                let i = childBindings.length || 0;
+                let i = childBindings.length | 0;
                 while (i--) {
                     childBindings[i].update(context);
                 }
@@ -544,7 +547,7 @@ export module Reactive {
         dispose() {
             var { childBindings } = this;
             if (childBindings && Array.isArray(childBindings)) {
-                var i = childBindings.length || 0;
+                var i = childBindings.length | 0;
                 while (i--) {
                     childBindings[i].dispose();
                 }
@@ -569,8 +572,8 @@ export module Reactive {
                 var result = [];
                 if (length === void 0)
                     return result;
-                var len = +length;
-                for (var i = 0; i < len; i++) {
+                var len = length | 0;
+                for (var i = 0; i < len; i=(i+1)|0) {
                     var ext = this.extend(param, source.get(i));
                     result.push(ext);
                 }
@@ -628,7 +631,7 @@ export module Reactive {
                     } else if (cur.execute) {
                         stack.push(cur.execute(context, this));
                     } else if (Array.isArray(cur)) {
-                        var i = cur.length;
+                        var i = cur.length | 0;
                         while (i--) {
                             stack.push(cur[i]);
                         }

@@ -85,18 +85,19 @@ export class Scope {
     }
 
     get(name: string) {
-        var contexts = this.contexts, length = contexts.length, i = 0;
+        var contexts = this.contexts, length = contexts.length | 0, i = 0;
         do {
             var target = this.contexts[i];
             var value = target && (target.get ? target.get(name) : target[name]);
             if (value !== void 0)
                 return value;
-        } while (++i < length)
+            i = (i + 1) | 0;
+        } while (i < length)
         return void 0;
     }
 
     refresh() {
-        var contexts = this.contexts, i = contexts.length;
+        var contexts = this.contexts, i = contexts.length | 0;
         while (i--) {
             var ctx = contexts[i];
             if (ctx.refresh)
@@ -207,9 +208,9 @@ export default class Expression {
                         case "where":
                         case WHERE:
                             source = ast.left.value;
-                            let length = source.length;
+                            let length = source.length | 0;
                             var result = [];
-                            for (var i = 0; i < length; i++) {
+                            for (var i = 0; i < length; i = (i + 1) | 0) {
                                 var item = Expression.member(source, i, binding);
                                 var scope = new Scope([item, context]);
                                 var b = ast.right.compiled.execute(scope, binding);
@@ -227,8 +228,8 @@ export default class Expression {
                     break;
                 case APP:
                     let args;
-                    let length = ast.args.length;
-                    for (let i = 0; i < length; i++) {
+                    let length = ast.args.length | 0;
+                    for (let i = 0; i < length; i = (i + 1) | 0) {
                         var arg = ast.args[i].value;
                         if (arg === void 0)
                             return arg;

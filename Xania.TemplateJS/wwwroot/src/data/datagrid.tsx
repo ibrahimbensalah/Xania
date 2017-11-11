@@ -73,8 +73,7 @@ export default class DataGrid {
 
                     {this.columns.map(column =>
                         <div role="gridcell" className={"data-grid-cell data-grid-column-" + column.name}>
-                            <div className="data-grid-cell-content"><a >{column.display}</a>
-                            </div>
+                            <div><a>{column.display}</a></div>
                         </div>
                     )}
                     <div className="data-grid-header-column" style="flex: 1">&nbsp;</div>

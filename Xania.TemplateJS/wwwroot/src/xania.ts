@@ -447,11 +447,11 @@ class ListBinding extends Reactive.Binding {
 export function FixedArray(attrs, children) {
     return {
         bind(driver) {
-            var binding = new ArrayBinding(driver, attrs.source);
+            var arrayBinding = new ArrayBinding(driver, attrs.source);
             for (var i = 0; i < attrs.length; i++)
-                binding.childBindings.push(children[0].bind(driver));
+                arrayBinding.childBindings.push(children[0].bind(arrayBinding));
 
-            return binding;
+            return arrayBinding;
         }
     }
 }
@@ -462,18 +462,32 @@ export class ArrayBinding extends Reactive.Binding {
     }
 
     updateChildren(context) {
-        var { sourceExpr, childBindings, driver } = this;
+        var { sourceExpr, childBindings } = this;
         if (childBindings) {
-            let i = childBindings.length || 0;
-            var stream = sourceExpr.execute(context, this),
-                streamLength = stream.length;
-            while (i--) {
+            var stream = sourceExpr.execute(context, this);
+            let length = childBindings.length || 0;
+            for (var i = 0; i < length; i = (i + 1) | 0) {
                 childBindings[i].update(stream.get(i));
             }
         }
     }
 
     render(context) {
+    }
+
+    /**
+     * TODO code duplication
+     */
+    insert(fragment, dom, idx) {
+        if (this.driver) {
+            var offset = 0, { childBindings } = this;
+            for (var i = 0; i < childBindings.length; i++) {
+                if (childBindings[i] === fragment)
+                    break;
+                offset += childBindings[i].length;
+            }
+            this.driver.insert(this, dom, offset + idx);
+        }
     }
 }
 
