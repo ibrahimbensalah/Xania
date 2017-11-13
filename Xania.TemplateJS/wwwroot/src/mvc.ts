@@ -23,7 +23,7 @@ export class UrlHelper {
     }
 
     goto(path: string) {
-        var action = { path: this.router.action(this.basePath + path) };
+        var action = { path: this.router.action(path[0] === '/' ? path : this.basePath + path) };
         if (typeof action.path === "string") {
             window.history.pushState(action, "", action.path);
             // this.childPath.notify(path);

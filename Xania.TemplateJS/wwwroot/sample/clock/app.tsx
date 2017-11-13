@@ -22,7 +22,7 @@ export class ClockApp {
 
     view(xania) {
         return (
-            <div style="height: 200px;">
+            <div style="height: 200px;" class="clock">
                 <svg viewBox="0 0 200 200">
                     <g transform="scale(2) translate(50,50)">
                         <circle className="clock-face" r="35"></circle>

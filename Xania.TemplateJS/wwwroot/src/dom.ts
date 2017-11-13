@@ -228,8 +228,10 @@ export module Dom {
             }
             return this;
         }
-        attr(name, expr): this {
-            if (typeof expr === "string") {
+        attr(name, expr?): this {
+            if (!expr) {
+                return this.tagNode[name];
+            } else if (typeof expr === "string") {
                 this.tagNode.setAttribute(name, expr);
             } else if (name === "class") {
                 var classBinding = new ClassBinding(this.tagNode, expr, this.driver);

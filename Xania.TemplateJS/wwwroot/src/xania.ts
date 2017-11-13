@@ -82,7 +82,7 @@ export default class Xania {
         return result;
     }
 
-    static svgElements = ["svg", "circle", "line", "g", "path", "marker"];
+    static svgElements = ["svg", "circle", "line", "g", "path", "marker", "desc", "defs", "linearGradient", "tspan", "stop", "text"];
 
     static tag(element, attrs, ...children): Template.INode {
         var childNodes: Template.INode[] = this.templates(children);

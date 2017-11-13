@@ -91,7 +91,11 @@ export module Reactive {
         }
 
         set(name, value) {
-            this.value[name] = value;
+            if (this.value[name] !== value) {
+                this.value[name] = value;
+                return true;
+            }
+            return false;
         }
     }
 
@@ -155,7 +159,7 @@ export module Reactive {
         }
 
         update(value: any) {
-            this.parent.set(this.name, value);
+            return this.parent.set(this.name, value);
         }
 
         valueOf() {
@@ -461,6 +465,7 @@ export module Reactive {
     export interface IDriver {
         insert?(sender: Binding, dom, idx);
         on?(eventName, dom, eventBinding);
+        attr(name);
     }
 
     class Variable {
@@ -514,6 +519,14 @@ export module Reactive {
                 throw new Error("Argument driver is required.");
             if (typeof driver.insert !== "function")
                 throw new Error("Driver is incompatible.");
+        }
+
+        attr(name) {
+            return this.driver.attr(name);
+        }
+
+        insert(sender, dom, idx) {
+            return this.driver.insert(this, dom, idx);
         }
 
         execute(): Binding[] {

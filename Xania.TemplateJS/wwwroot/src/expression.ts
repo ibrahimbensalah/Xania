@@ -143,6 +143,8 @@ export default class Expression {
             return xs[1] - xs[0];
         } else if (fun === "*") {
             return xs[1] * xs[0];
+        } else if (fun === "/") {
+            return xs[1] / xs[0];
         } else if (fun === "assign") {
             throw new Error("assignment is only allow in EventBinding");
         }

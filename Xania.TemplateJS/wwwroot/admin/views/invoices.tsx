@@ -164,7 +164,7 @@ function invoiceView({ url }, invoice) {
     return View(
         [
             <div style="height: 100%;">
-                <div>
+                <div class="form-group">
                     <label>Company</label>
                     <Html.DropDown data={expr('await companiesDS')} value={expr("companyId")}>
                         {expr("display")}

@@ -46,6 +46,7 @@
     <None Remove="Reporting\blue.PNG" />
     <None Remove="Reporting\logo.PNG" />
     <None Remove="Reporting\roboto.regular.ttf" />
+    <None Remove="wwwroot\admin\charts.tsx" />
     <None Remove="wwwroot\boot.ts" />
   </ItemGroup>
 
