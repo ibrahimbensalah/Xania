@@ -3,6 +3,7 @@ import { View, UrlHelper } from "../../src/mvc"
 import DataGrid, { TextColumn } from "../../src/data/datagrid"
 import Html from '../../src/html'
 import './invoices.css'
+import * as formatters from "../../src/formatters"
 
 class TimeSheetRepository extends ModelRepository {
     constructor() {
@@ -20,55 +21,13 @@ class TimeSheetRepository extends ModelRepository {
 
 var guid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 var any = path => path;
-var formatters = {
-    timeSpan: {
-        parse(str) {
-            return str;
-        },
-        format(obj) {
-            var str = obj.toString();
-            var matches = /(\d{2}:\d{2}):\d{2}/.exec(str);
-            return matches ? matches[1] : str;
-        }
-    },
-    dateTime: {
-        parse(str) {
-            return new Date(str);
-        },
-        format(date) {
-            return date.toDateString();
-        }
-    }
-}
-function format(expr, formatter) {
-    return {
-        execute(context, binding) {
-            return {
-                inner: expr.execute(context, binding),
-                toString() {
-                    return formatter.format(this.inner && this.inner.valueOf());
-                },
-                update(value) {
-                    this.inner.update(formatter.parse(value));
-                }
-            }
-        }
-    }
-}
-function timeSpan(code: string) {
-    return format(expr(code), formatters.timeSpan);
-}
-function dateTime(code: string) {
-    return format(expr(code), formatters.dateTime);
-}
 
 export function view({ url }: { url: UrlHelper }) {
     var remote = new RemoteStore("/api/xaniadb");
-    var view = View([
+    var view = View(
         <DataGrid data={expr("await companies", { companies: remote.execute("companies") })} onSelectionChanged={expr("url.goto id", { url })} >
             <TextColumn field="name" template={<span>{expr("row.name")}</span>} display="Company" />
-        </DataGrid>
-    ], { title: "Companies"});
+        </DataGrid>, { title: "Timesheets"});
 
     view.mapRoute(guid, (ctx, companyId) => viewTimeSheet(ctx, companyId));
 
@@ -144,29 +103,30 @@ export function viewTimeSheet({ url }: { url: UrlHelper }, companyId) {
     }
 
     return View([
-        <div>
+        <div style="height: 100%;">
+            <div class="alert alert-warning" style="line-height: 34px; padding: 0 14px; margin-bottom: 4px; min-width: 420px;">Pending Approval</div>
             <List source={expr("await declarations |> groupData", { declarations, groupData })}>
-                <div style="float: left; height: auto; overflow: auto; clear: both;">
-                    <label style="line-height: 30px;">
+                <div style="float: left; height: auto; overflow: auto; clear: both; margin-left: 14px;">
+                    <label style="line-height: 34px;">
                         {expr("key")}</label>
                 </div>
                 <div style="float: left;">
                     <List source={expr("items")}>
-                        <div style="float: left; overflow: auto; clear: both;">
-                            <label style="width: 20px; line-height: 30px; margin: 0 10px; text-align: center;">
+                        <div style="float: left; overflow: auto; clear: both; ">
+                            <label style="width: 20px; line-height: 34px; margin: 0 10px; text-align: center;">
                                 {expr("key + 1")}</label>
                         </div>
                         <div style="float: left;">
                             <List source={expr("items")}>
                                 <div style="overflow: auto; float: left; clear: both;">
-                                    <label style="line-height: 30px; margin: 0 4px; width: 20px; font-weight: bold; text-align: center; margin-right: 10px;">
+                                    <label style="line-height: 34px; margin: 0 4px; width: 20px; font-weight: bold; text-align: center; margin-right: 10px;">
                                         {expr("key + 1")}</label>
                                 </div>
                                 <div style="float: left;">
                                     <List source={expr("items |> mapData", { mapData })}>
                                         <div class="input-group">
                                             <input class="form-control" type="text" placeholder="Time" name="timeSpan" value={
-                                                timeSpan("timeSpan")} style="width: 70px" />
+                                                formatters.timeSpan("timeSpan")} style="width: 70px" />
                                             <input class="form-control" type="text" placeholder="Notes" value={expr(
                                                 "description")} style="width: 200px" />
                                             <a class="btn-delete-record" href="" style="" onClick={call(
@@ -180,10 +140,10 @@ export function viewTimeSheet({ url }: { url: UrlHelper }, companyId) {
                     </List>
                 </div>
             </List>
-            <div style="clear: both; display: block;">
-                <a href="" class="btn btn-primary" onClick={url.action("new")}>Add</a>
-            </div>
-        </div>
+        </div>,
+        <footer>
+            <a href="" class="btn btn-primary" onClick={url.action("new")}>Add</a>
+        </footer>
     ],
         [store, { title: "Timesheet"}]
     ).route({
@@ -240,31 +200,23 @@ function timesheetView({ url }, repository: { save(item); create(): any }) {
     var td = repository.create();
     var timesheetStore = new Re.Store(td);
 
-    var myFormatter = {
-        parse(str: string) {
-            return str && new Date(str);
-        },
-        format(date) {
-            return date.toLocaleDateString();
-        }
-    };
-
-    var dateTime = (code: string) => format(expr(code), myFormatter);
-
     return View([
+        <div style="color: gray; background-color: #EEE; line-height: 34px; padding: 0 14px; margin-bottom: 4px; min-width: 420px;">New Time Declaration</div>,
         <div style="height: 100%;">
-            <div>
+            <div class="form-group">
                 <label>Company</label>
                 <Html.DropDown data={subscribe(companiesDS)} value={expr("companyId")}>
                     {expr("display")}
                 </Html.DropDown>
             </div>
-            <Html.TextEditor display="Date" placeholder="Date" value={dateTime("date")} />
+            <Html.TextEditor display="Date" placeholder="Date" value={formatters.dateTime("date")} />
             <Html.TextEditor display="Description" field="description" placeholder="Desc.." value={expr("description")} />
-            <Html.TextEditor display="Time" field="timeSpan" placeholder="08:00" value={timeSpan("timeSpan")} />
+            <Html.TextEditor display="Time" field="timeSpan" placeholder="08:00" value={formatters.timeSpan("timeSpan")} />
+        </div>,
+        <footer>
             <button class="btn btn-primary" onClick={repository.save.bind(repository, td)}>Save</button>
-        </div>
-    ], timesheetStore);
+        </footer>
+    ], [timesheetStore, { title: formatters.dateTime("date")}]);
 }
 
 

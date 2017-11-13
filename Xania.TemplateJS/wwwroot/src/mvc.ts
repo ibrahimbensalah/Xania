@@ -272,7 +272,7 @@ export class Router {
         this.actions = new Observables.Observable<string>();
     }
 
-    static getView(controllerContext: IControllerContext, path: string) {
+    static getView(controllerContext: ControllerContext, path: string) {
         var name = path.slice(1);
         return dataReady(controllerContext, x => {
             if (typeof x['then'] === "function")
@@ -285,10 +285,14 @@ export class Router {
     start(app, basePath: string) {
         var controllerContext = new ControllerContext(app, basePath, new UrlHelper(this), null);
 
-        var scanner = cache(Router.getView);
+        var views = [];
+        var scanner = cache(Router.getView, views);
 
-        return this.actions.map((route: string) =>
-            scan(route.match(/\/([^\/]+)/g), scanner, controllerContext));
+        return this.actions.map((route: string) => {
+            var paths = route.match(/\/([^\/]+)/g);
+            views.length = paths.length;
+            return scan(paths, scanner, controllerContext);
+        });
     }
 
     action(actionPath): string | false {
@@ -309,7 +313,7 @@ export class Router {
         window.onpopstate = () => {
             var { pathname } = window.location;
 
-            if (pathname.startsWith(appPath)) {
+            if (pathname.substr(0, appPath.length) === appPath) {
                 var actionPath = pathname.substring(appPath.length);
                 router.action(actionPath);
             }

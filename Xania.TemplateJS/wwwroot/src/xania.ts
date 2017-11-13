@@ -3,6 +3,10 @@ import { Dom } from "./dom"
 import { Scope } from "./expression"
 import compile, { parse } from "./compile"
 import { Reactive } from "./reactive"
+import { parse as mustache } from '../xania/mustache.peg'
+
+var assign = Object['assign'];
+var Reflect = window['Reflect'];
 
 export default class Xania {
     static templates(elements) {
@@ -27,7 +31,7 @@ export default class Xania {
                 }
             } else if (typeof child.view === "function") {
                 result.push(Component(child, []));
-            } else if (child instanceof Promise) {
+            } else if (typeof child.then === "function") {
                 result.push(PromiseTemplate(child));
             } else {
                 result.push(child);
@@ -42,10 +46,27 @@ export default class Xania {
             for (var prop in attrs) {
                 if (attrs.hasOwnProperty(prop)) {
                     var attrValue = attrs[prop];
+                    if (typeof attrValue === "string") {
+                        var m = mustache(attrValue);
+                        if (Array.isArray(m)) {
+                            var res = [];
+                            for (var i = 0; i < m.length; i++) {
+                                let item = m[i];
+                                if (item.expr) {
+                                    res.push(compile(item.expr));
+                                } else {
+                                    res.push(item);
+                                }
+                            }
+                            attrValue = res;
+                        }
+                        // attrValue = attrValue.split('{{x}}', '');
+                    }
+
                     if (prop === "className" || prop === "classname" || prop === "clazz")
-                        Object.assign(result, { "class": attrValue });
+                        assign(result, { "class": attrValue });
                     else if (prop === "htmlFor")
-                        Object.assign(result, { "for": attrValue });
+                        assign(result, { "for": attrValue });
                     else
                         result[prop] = attrValue;
                 }
@@ -53,7 +74,7 @@ export default class Xania {
             if (typeof attrs.name === "string") {
                 if (attrs.type === "text") {
                     if (!attrs.value) {
-                        Object.assign(result, { "value": compile(attrs.name) });
+                        assign(result, { "value": compile(attrs.name) });
                     }
                 }
             }

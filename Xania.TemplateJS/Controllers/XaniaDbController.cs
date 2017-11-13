@@ -36,9 +36,9 @@ namespace Xania.TemplateJS.Controllers
         {
             return new[]
             {
-                new MenuItem {Path = "clock", Display = "Clock"},
                 new MenuItem {Path = "invoices", Display = "Invoices"},
                 new MenuItem {Path = "timesheet", Display = "Timesheets"},
+                new MenuItem {Path = "clock", Display = "Clock"}
                 // new MenuItem {Path = "graph", Display = "Graph"},
                 // new MenuItem {Path = "balls", Display = "Balls"},
                 // new MenuItem {Path = "hierachical", Display = "Hiararchical urls"}

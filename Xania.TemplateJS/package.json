@@ -3,18 +3,18 @@
   "name": "xania.js",
   "private": true,
   "devDependencies": {
-    "@types/core-js": "",
     "@types/jasmine": "^2.5.38",
     "jspm": "^0.16.53",
-    "pegjs": "0.10.0",
-    "phantomjs": "2.1.7",
-    "typescript": "^2.6.1"
+    "typescript": "^2.6.1",
+    "pegjs": "pegjs/pegjs#master"
   },
   "dependencies": {
+    "@types/core-js": "^0.9.43",
     "css-loader": "0.26.1"
   },
   "scripts": {
     "query": "pegjs -o ./wwwroot/xania/query.peg.js --optimize speed ./grammar/query.peg",
+    "mustache": "pegjs -o ./wwwroot/xania/mustache.peg.js --optimize speed ./grammar/mustache.peg",
     "jspm": "jspm bundle css wwwroot/jspm-plugins.js --inject --minify"
   },
   "jspm": {
@@ -26,13 +26,12 @@
       "fetch": "github:github/fetch@^2.0.3",
       "fontawesome": "npm:fontawesome@^4.7.2",
       "less": "npm:systemjs-less-plugin@^2.2.2",
-      "ts": "github:frankwallis/plugin-typescript@^7.1.1"
+      "pegjs": "npm:pegjs@^0.10.0"
     },
     "devDependencies": {
       "babel": "npm:babel-core@^5.8.24",
       "babel-runtime": "npm:babel-runtime@^5.8.24",
-      "core-js": "npm:core-js@^1.1.4",
-      "typescript": "npm:typescript@^2.6.1"
+      "core-js": "npm:core-js@^1.1.4"
     }
   }
 }

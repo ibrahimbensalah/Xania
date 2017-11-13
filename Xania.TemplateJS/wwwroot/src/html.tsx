@@ -123,7 +123,7 @@ export class DropDown {
                     </button>
                     <div className="dropdown-menu">
                         <List source={expr('data')}>
-                            <a className="dropdown-item" href="" onClick={this.select("selectItem data id")}>
+                            <a tabindex="-1" className="dropdown-item" href="" onClick={this.select("selectItem data id")}>
                                 { this.children }
                             </a>
                         </List>

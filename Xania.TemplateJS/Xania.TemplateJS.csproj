@@ -47,11 +47,6 @@
     <None Remove="Reporting\logo.PNG" />
     <None Remove="Reporting\roboto.regular.ttf" />
     <None Remove="wwwroot\boot.ts" />
-    <None Remove="wwwroot\xania\query.peg.ts" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Content Include="wwwroot\xania\query.peg.ts" />
   </ItemGroup>
 
   <ItemGroup>
@@ -101,6 +96,7 @@
 
   <ItemGroup>
     <Folder Include="Properties\PublishProfiles\" />
+    <Folder Include="wwwroot\xania\" />
   </ItemGroup>
 
 </Project>

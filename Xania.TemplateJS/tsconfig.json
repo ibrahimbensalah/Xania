@@ -2,21 +2,22 @@
   "compileOnSave": true,
   "compilerOptions": {
     "allowJs": false,
-    "lib": [ "dom", "es6" ],
+    "lib": [ "dom", "es2017" ],
     "module": "commonjs",
     "noEmitOnError": true,
     "noImplicitAny": false,
     "removeComments": true,
     "sourceMap": true,
+    "suppressImplicitAnyIndexErrors": true,
+    "suppressExcessPropertyErrors": true,
     // "sourceRoot": "",
     // "inlineSourceMap": true,
     // "inlineSources": true,
     "target": "es5",
-    "types": [ "jasmine" ],
+    // "types": [ "jasmine" ],
     //    "outDir": "wwwroot",
     "jsx": "react",
-    "jsxFactory": "xania.tag",
-    "moduleResolution": "node"
+    "jsxFactory": "xania.tag"
   },
   "include": [
     "wwwroot/src/*.ts",
@@ -32,6 +33,7 @@
     "wwwroot/home/**/*.tsx"
   ],
   "exclude": [
-    "wwwroot/xania"
+    "wwwroot/xania/query.peg.ts",
+    "node_modules/"
   ]
 }

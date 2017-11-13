@@ -1,0 +1,62 @@
+﻿{
+	function plus(x, y) {
+		return y + x;
+	}
+
+	var binaryReducer = function (prev, binder) { 
+		var op = binder[1].op;
+		var operand = binder[1].operand;
+		return { type: BINARY, op: op, left: prev, right: operand };
+	}
+}
+
+Template
+    = h:Text? tail:(Expr Text?)* {
+       if (!tail.length && !h)
+       	  return null;
+       
+       if (!tail.length)
+          return h;
+       
+       var result = h ? [h] : [];
+       for(var i=0 ; i<tail.length ; i++) {
+         var pair = tail[i];
+         result.push(pair[0]);
+         if (pair[1])
+            result.push(pair[1]);
+       }
+       return result;
+    }
+    
+Text
+	= expr:([^{])+ {
+       return expr.join('')
+	}
+    
+Expr
+  = "{{" expr:[^}]* rc:"}}" {
+    return { expr: expr.join('') }
+  }
+  / a:"{" b:"{"? c:Text? {
+    return a + (b || '') + (c || '');
+  }
+
+LCurly
+  = "{"
+
+RCurly
+  = "}"
+
+End "End"
+  = "\t"
+  / "\v"
+  / "\n"
+  / "\r"
+  / "\f"
+  / " "
+  / "\u00A0"
+  / "\uFEFF"
+  / Zs
+
+// Separator, Space
+Zs = [\u0020\u00A0\u1680\u2000-\u200A\u202F\u205F\u3000]

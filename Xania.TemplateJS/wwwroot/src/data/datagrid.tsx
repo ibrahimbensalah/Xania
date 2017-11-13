@@ -83,7 +83,7 @@ export default class DataGrid {
                         <div className={["data-grid-row", expr("row = activeRow -> ' data-grid-row-selected'")]}
                             onTouchStart={this.onRowClick} onClick={this.onRowClick}>
                             <div role="rowheader" className="data-grid-row-header">
-                                <span className={["fa", expr("row = activeRow -> ' fa-edit'")]}></span>
+                                <span class={["fa", expr("row = activeRow -> ' fa-caret-right'")]}></span>
                             </div>
                             {this.columns.map(column =>
                                 <div role="gridcell" className={"data-grid-cell data-grid-column-" + column.name}>
