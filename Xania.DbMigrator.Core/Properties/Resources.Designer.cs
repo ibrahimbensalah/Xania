@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace Xania.DbMigrator.Properties {
+namespace Xania.DbMigrator.Core.Properties {
     using System;
     
     
@@ -19,7 +19,7 @@ namespace Xania.DbMigrator.Properties {
     // class via a tool like ResGen or Visual Studio.
     // To add or remove a member, edit your .ResX file then rerun ResGen
     // with the /str option, or rebuild your VS project.
-    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Resources.Tools.StronglyTypedResourceBuilder", "4.0.0.0")]
+    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Resources.Tools.StronglyTypedResourceBuilder", "15.0.0.0")]
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
     [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
     internal class Resources {
@@ -39,7 +39,7 @@ namespace Xania.DbMigrator.Properties {
         internal static global::System.Resources.ResourceManager ResourceManager {
             get {
                 if (object.ReferenceEquals(resourceMan, null)) {
-                    global::System.Resources.ResourceManager temp = new global::System.Resources.ResourceManager("Xania.DbMigrator.Properties.Resources", typeof(Resources).Assembly);
+                    global::System.Resources.ResourceManager temp = new global::System.Resources.ResourceManager("Xania.DbMigrator.Core.Properties.Resources", typeof(Resources).Assembly);
                     resourceMan = temp;
                 }
                 return resourceMan;
@@ -57,36 +57,6 @@ namespace Xania.DbMigrator.Properties {
             }
             set {
                 resourceCulture = value;
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to CREATE PROCEDURE [dbo].[add_migration]
-        ///(
-        ///	@Id nchar(100),
-        ///	@Script text
-        ///)
-        ///AS
-        ///BEGIN
-        ///	DECLARE @exists BIT = 
-        ///		CASE WHEN EXISTS (SELECT * FROM DbMigrationHistory WHERE Id = @Id) THEN 1 ELSE 0 END
-        ///
-        ///	MERGE INTO DbMigrationHistory as tar
-        ///	USING (
-        ///		VALUES (@Id, GETDATE(), @Script)
-        ///	) AS src (Id, [Date], [Script]) ON src.Id = tar.Id
-        ///	WHEN NOT MATCHED THEN
-        ///		INSERT (Id, [Date], [Script])
-        ///		VALUES (Id, [Date], [Script])
-        ///	WHEN MATCHED THEN
-        ///		UPDATE SET [Script] = src.[Script]
-        ///	;
-        ///
-        ///	SELECT CASE WH [rest of string was truncated]&quot;;.
-        /// </summary>
-        internal static string add_migration {
-            get {
-                return ResourceManager.GetString("add_migration", resourceCulture);
             }
         }
         

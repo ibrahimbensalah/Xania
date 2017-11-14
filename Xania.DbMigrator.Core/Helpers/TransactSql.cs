@@ -1,13 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Data;
+﻿using System.Data;
 using System.Data.SqlClient;
+using System.IO;
 using System.Linq;
-using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
-namespace Xania.DbMigrator.Helpers
+namespace Xania.DbMigrator.Core.Helpers
 {
     public class TransactSql
     {
@@ -16,6 +14,25 @@ namespace Xania.DbMigrator.Helpers
         public TransactSql(string script)
         {
             _script = script;
+        }
+
+        public void Execute(string connectionString)
+        {
+            ExecuteAsync(connectionString).Wait();
+        }
+
+        public async Task ExecuteAsync(string connectionString)
+        {
+            using (var conn = new SqlConnection(connectionString))
+            {
+                await conn.OpenAsync();
+                using (var trans = conn.BeginTransaction())
+                {
+                    await ExecuteAsync(conn, trans);
+                    trans.Commit();
+                }
+                conn.Close();
+            }
         }
 
         public async Task<string> ExecuteAsync(SqlConnection conn, SqlTransaction trans)
@@ -29,11 +46,17 @@ namespace Xania.DbMigrator.Helpers
                 cmd.Transaction = trans;
                 cmd.CommandText = part;
                 cmd.CommandType = CommandType.Text;
+                cmd.CommandTimeout = 600;
 
                 await cmd.ExecuteNonQueryAsync();
             }
 
             return _script;
+        }
+
+        public static TransactSql FromFile(string file)
+        {
+            return new TransactSql(File.ReadAllText(file));
         }
     }
 }

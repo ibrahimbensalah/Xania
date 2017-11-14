@@ -5,9 +5,9 @@ using System.Linq;
 using System.Resources;
 using System.Text;
 using System.Threading.Tasks;
-using Xania.DbMigrator.Helpers;
+using Xania.DbMigrator.Core.Helpers;
 
-namespace Xania.DbMigrator
+namespace Xania.DbMigrator.Core
 {
     public abstract class DbMigration : IDbMigration
     {
@@ -26,7 +26,7 @@ namespace Xania.DbMigrator
         }
 
         public string Id { get; }
-        public abstract Task<string> ExecuteAsync(SqlConnection conn, SqlTransaction trans);
+        public abstract Task ExecuteAsync(SqlConnection conn, SqlTransaction trans);
 
         protected TransactSql ResourceScript(string scriptName)
         {

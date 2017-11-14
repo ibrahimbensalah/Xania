@@ -1,11 +1,11 @@
 ﻿using System.Data.SqlClient;
 using System.Threading.Tasks;
 
-namespace Xania.DbMigrator
+namespace Xania.DbMigrator.Core
 {
     public interface IDbMigration
     {
         string Id { get; }
-        Task<string> ExecuteAsync(SqlConnection conn, SqlTransaction trans);
+        Task ExecuteAsync(SqlConnection conn, SqlTransaction trans);
     }
 }

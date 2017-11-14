@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Reflection;
+using Xania.DbMigrator.Core;
 
 namespace Xania.DbMigrator
 {
@@ -26,7 +27,7 @@ namespace Xania.DbMigrator
             {
                 try
                 {
-                    Runner.Upgrade(options.ConnectionString, Assembly.LoadFrom(options.Library));
+                    Runner.Upgrade(options.ConnectionString, TransactSqlMigration.FromAssembly(Assembly.LoadFrom(options.Library)));
                 }
                 catch (Exception ex)
                 {

@@ -1,13 +1,11 @@
 ﻿using System;
 using System.Data;
 using System.Data.SqlClient;
-using System.Linq;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Microsoft.SqlServer.Dac;
-using Xania.DbMigrator.Properties;
+using Xania.DbMigrator.Core.Properties;
 
-namespace Xania.DbMigrator.Helpers
+namespace Xania.DbMigrator.Core.Helpers
 {
     public class DbMigrationServices
     {
@@ -31,25 +29,64 @@ namespace Xania.DbMigrator.Helpers
         {
             Console.WriteLine($@"Restoring backup....");
 
-            using (var conn = new SqlConnection(_connectionString))
+            using (var conn = new SqlConnection(_masterConnectionString))
             {
                 await conn.OpenAsync();
-                using (var trans = conn.BeginTransaction())
+                if (!CreateDatabaseIfNotExists(conn, _databaseName))
                 {
-                    await new TransactSql(Resources.truncate_db).ExecuteAsync(conn, trans);
-                    trans.Commit();
+                    conn.ChangeDatabase(_databaseName);
+                    Console.WriteLine($@"Truncate database {_databaseName}");
+                    using (var trans = conn.BeginTransaction())
+                    {
+                        await new TransactSql(Resources.truncate_db).ExecuteAsync(conn, trans);
+                        trans.Commit();
+                    }
                 }
+                conn.Close();
             }
 
             var dbServices = new DacServices(_masterConnectionString);
             dbServices.ImportBacpac(BacPackage.Load(bacpacFileName), _databaseName);
         }
 
+        public static bool CreateDatabaseIfNotExists(SqlConnection conn, string databaseName)
+        {
+            Console.WriteLine($@"CREATE DATABASE {databaseName} IF NOT EXISTS");
+            using (var command = new SqlCommand($"SELECT db_id(@databaseName)", conn))
+            {
+                command.Parameters.Add(new SqlParameter
+                {
+                    ParameterName = "@databaseName",
+                    DbType = DbType.String,
+                    Value = databaseName
+                });
+                var exists = command.ExecuteScalar() != DBNull.Value;
+                Console.WriteLine($@"DATABASE {databaseName} Exists = {exists}");
+                if (exists)
+                    return false;
+            }
+
+            Console.WriteLine($@"CREATE DATABASE {databaseName}");
+            using (var command = new SqlCommand("exec ('CREATE DATABASE ' + @databaseName)", conn))
+            {
+                command.Parameters.Add(new SqlParameter
+                {
+                    ParameterName = "@databaseName",
+                    DbType = DbType.String,
+                    Value = databaseName
+                });
+                command.ExecuteNonQuery();
+            }
+            return true;
+        }
+
+
         public void ExportBacpac(string bacpacFile)
         {
             Console.WriteLine($@"Generating backup....");
 
-            var dbServices = new DacServices(_masterConnectionString);
+            var dbServices = new DacServices(_connectionString);
+            dbServices.Message += (sender, evt) => Console.WriteLine(evt.Message);
             dbServices.ExportBacpac(bacpacFile, _databaseName);
         }
 

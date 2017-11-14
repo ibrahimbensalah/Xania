@@ -13,10 +13,7 @@
     <tags>db database migrations upgrade</tags>
     <dependencies>
         <dependency id="FluentCommandLineParser" version="[1.4.3, 2)" />
-        <dependency id="Microsoft.SqlServer.DacFx.x64" version="[130.3485.1, 131)" />
+        <dependency id="Microsoft.SqlServer.DacFx.x64" version="[140.3745.1, 141)" />
     </dependencies>
   </metadata>
-  <files>
-    <file src="bin\DebugNet45\Xania.*" target="lib\net45" />
-  </files>
 </package>

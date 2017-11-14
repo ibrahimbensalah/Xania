@@ -74,7 +74,6 @@
     <Compile Include="Runner.cs" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="db\add_migration.sql" />
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
@@ -91,4 +90,8 @@
     </EmbeddedResource>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <PropertyGroup>
+    <PostBuildEvent>
+    </PostBuildEvent>
+  </PropertyGroup>
 </Project>

@@ -1,4 +1,4 @@
-namespace Xania.DbMigrator
+namespace Xania.DbMigrator.Core
 {
     internal class ConnectionInfo
     {

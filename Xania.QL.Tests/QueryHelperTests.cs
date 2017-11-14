@@ -8,12 +8,9 @@ using System.Linq.Expressions;
 using System.Net.Http.Formatting;
 using System.Reflection;
 using System.Reflection.Emit;
-using System.Text;
 using FluentAssertions;
-using Newtonsoft.Json.Linq;
 using NUnit.Framework;
 using Xania.QL.Tests.Properties;
-using Xania.TemplateJS.Reporting;
 using Xania.Models;
 
 namespace Xania.QL.Tests
