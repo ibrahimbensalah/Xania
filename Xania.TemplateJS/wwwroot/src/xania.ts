@@ -3,6 +3,10 @@ import { Dom } from "./dom"
 import { Scope } from "./expression"
 import compile, { parse } from "./compile"
 import { Reactive } from "./reactive"
+import { parse as mustache } from '../xania/mustache.peg'
+
+var assign = Object['assign'];
+var Reflect = window['Reflect'];
 
 export default class Xania {
     static templates(elements) {
@@ -13,7 +17,8 @@ export default class Xania {
             if (child === null || child === void 0)
                 continue;
             else if (typeof child === "function") {
-                result.push(new Template.CustomTemplate(child));
+                result.push(Xania.tag(child, {}));
+                // result.push(new Template.CustomTemplate(child()));
             }
             else if (child.bind)
                 result.push(child);
@@ -26,6 +31,8 @@ export default class Xania {
                 }
             } else if (typeof child.view === "function") {
                 result.push(Component(child, []));
+            } else if (typeof child.then === "function") {
+                result.push(PromiseTemplate(child));
             } else {
                 result.push(child);
             }
@@ -39,10 +46,27 @@ export default class Xania {
             for (var prop in attrs) {
                 if (attrs.hasOwnProperty(prop)) {
                     var attrValue = attrs[prop];
+                    if (typeof attrValue === "string") {
+                        var m = mustache(attrValue);
+                        if (Array.isArray(m)) {
+                            var res = [];
+                            for (var i = 0; i < m.length; i++) {
+                                let item = m[i];
+                                if (item.expr) {
+                                    res.push(compile(item.expr));
+                                } else {
+                                    res.push(item);
+                                }
+                            }
+                            attrValue = res;
+                        }
+                        // attrValue = attrValue.split('{{x}}', '');
+                    }
+
                     if (prop === "className" || prop === "classname" || prop === "clazz")
-                        Object.assign(result, { "class": attrValue });
+                        assign(result, { "class": attrValue });
                     else if (prop === "htmlFor")
-                        Object.assign(result, { "for": attrValue });
+                        assign(result, { "for": attrValue });
                     else
                         result[prop] = attrValue;
                 }
@@ -50,7 +74,7 @@ export default class Xania {
             if (typeof attrs.name === "string") {
                 if (attrs.type === "text") {
                     if (!attrs.value) {
-                        Object.assign(result, { "value": compile(attrs.name) });
+                        assign(result, { "value": compile(attrs.name) });
                     }
                 }
             }
@@ -58,7 +82,7 @@ export default class Xania {
         return result;
     }
 
-    static svgElements = ["svg", "circle", "line", "g", "path", "marker"];
+    static svgElements = ["svg", "circle", "line", "g", "path", "marker", "desc", "defs", "linearGradient", "tspan", "stop", "text"];
 
     static tag(element, attrs, ...children): Template.INode {
         var childNodes: Template.INode[] = this.templates(children);
@@ -74,15 +98,15 @@ export default class Xania {
             }
             return tag;
         } else if (typeof element === "function") {
-            if (element.prototype.bind) {
-                return Reflect.construct(element, [attributes, childNodes]);
-            } else if (element.prototype.view) {
+            if (element.prototype && element.prototype.bind) {
+                return <Template.INode>Reflect.construct(element, [attributes, childNodes]);
+            } else if (element.prototype && element.prototype.view) {
                 return Component(Reflect.construct(element, [attributes, childNodes]), attributes);
             } else {
                 var view = element(attributes, childNodes);
                 if (!view)
                     throw new Error("Failed to load view");
-                return view;
+                return <Template.INode>view;
             }
         } else {
             throw Error("tag unresolved");
@@ -120,6 +144,45 @@ export function mount(root: IBinding) {
 
 }
 
+function PromiseTemplate<T>(promise: Promise<T>) {
+    return {
+        promise,
+        bind(driver: IDriver) {
+            return new PromiseBinding(driver, this.promise);
+        }
+    }
+}
+
+class PromiseBinding extends Reactive.Binding {
+    constructor(driver: IDriver, private promise) {
+        super(driver);
+    }
+
+    execute() {
+        this.promise.then(template => {
+            var { context, childBindings } = this;
+            var child = template.bind(this).update(context);
+            mount(child);
+            childBindings.push(child);
+        });
+
+        return void 0;
+    }
+
+    render() {
+        // noop
+    }
+
+    insert(sender, dom, idx) {
+        return this.driver.insert(this, dom, idx);
+    }
+
+    on(eventName, dom, eventBinding) {
+        this.driver.on(eventName, dom, eventBinding);
+    }
+
+}
+
 export function Component(component, props: any) {
     return {
         component,
@@ -140,11 +203,13 @@ class ComponentBinding extends Reactive.Binding {
 
     get(name: string) {
         let { props } = this;
+        var result;
         if (props.hasOwnProperty(name)) {
             var expr = props[name];
-            return expr.execute ? expr.execute(this, this.context) : expr;
+            return expr.execute ? expr.execute([this.context, this.componentStore], this) : expr;
         } else {
-            return this.componentStore.get(name);
+            result = this.componentStore.get(name);
+            return result === undefined && this.context && this.context.get ? this.context.get(name) : result;
         }
     }
 
@@ -157,7 +222,7 @@ class ComponentBinding extends Reactive.Binding {
         for (let prop in props) {
             if (props.hasOwnProperty(prop)) {
                 var expr = props[prop];
-                var sourceValue = expr.execute ? expr.execute(this, context) : expr;
+                var sourceValue = expr.execute ? expr.execute(context, this) : expr;
                 if (sourceValue) {
                     this.component[prop] = sourceValue.valueOf();
                 }
@@ -178,9 +243,19 @@ class ComponentBinding extends Reactive.Binding {
     }
 
     refresh() {
+        var { context } = this;
         this.componentStore.refresh();
-        if (this.context)
-            this.context.refresh();
+        if (context) {
+            if (Array.isArray(context)) {
+                var i = context.length;
+                while (i--) {
+                    var x = context[i];
+                    if (x && x.refresh)
+                        x.refresh();
+                }
+            } else if (typeof context.refresh === 'function')
+                context.refresh();
+        }
     }
 }
 
@@ -271,8 +346,16 @@ export function If(attrs, children: Template.INode[]) {
     }
 }
 
-export function expr(code: string) {
-    return compile(code);
+export function call(f: (obj) => any, code: string) {
+    return expr("f (" + code + ")", { f });
+}
+
+export function subscribe(observable) {
+    return expr("await observable", { observable });
+}
+
+export function expr(code: string, context = null) {
+    return compile(code, context);
 }
 
 export class RepeatTemplate<T> implements Template.INode {
@@ -326,9 +409,11 @@ class ListBinding extends Reactive.Binding {
 
         if (Array.isArray(sourceExpr)) {
             stream = sourceExpr;
-        } else if (!!sourceExpr && !!sourceExpr.execute) {
-            stream = sourceExpr.execute(this, context);
-            if (stream.length === void 0)
+        } else if (sourceExpr && sourceExpr.execute) {
+            stream = sourceExpr.execute(context, this);
+            if (stream === void 0 || stream === null)
+                stream = [];
+            else if (stream.length === void 0)
                 if (stream.value === null) {
                     stream = [];
                 } else {
@@ -380,6 +465,53 @@ class ListBinding extends Reactive.Binding {
     }
 }
 
+export function FixedArray(attrs, children) {
+    return {
+        bind(driver) {
+            var arrayBinding = new ArrayBinding(driver, attrs.source);
+            for (var i = 0; i < attrs.length; i++)
+                arrayBinding.childBindings.push(children[0].bind(arrayBinding));
+
+            return arrayBinding;
+        }
+    }
+}
+
+export class ArrayBinding extends Reactive.Binding {
+    constructor(driver, private sourceExpr) {
+        super(driver);
+    }
+
+    updateChildren(context) {
+        var { sourceExpr, childBindings } = this;
+        if (childBindings) {
+            var stream = sourceExpr.execute(context, this);
+            let length = childBindings.length || 0;
+            for (var i = 0; i < length; i = (i + 1) | 0) {
+                childBindings[i].update(stream.get(i));
+            }
+        }
+    }
+
+    render(context) {
+    }
+
+    /**
+     * TODO code duplication
+     */
+    insert(fragment, dom, idx) {
+        if (this.driver) {
+            var offset = 0, { childBindings } = this;
+            for (var i = 0; i < childBindings.length; i++) {
+                if (childBindings[i] === fragment)
+                    break;
+                offset += childBindings[i].length;
+            }
+            this.driver.insert(this, dom, offset + idx);
+        }
+    }
+}
+
 class RepeatBinding extends Reactive.Binding {
     get length() {
         var total = 0, length = this.childBindings.length;
@@ -428,7 +560,7 @@ class RepeatBinding extends Reactive.Binding {
     render(context, driver) {
         var stream;
         if (!!this.expr && !!this.expr.execute) {
-            stream = this.expr.execute(this, context);
+            stream = this.expr.execute(context, this);
             if (stream.length === void 0)
                 if (stream.value === null) {
                     stream = [];
@@ -611,6 +743,25 @@ export class Fragment {
 }
 
 declare function fetch<T>(url: string, config?): Promise<T>;
+
+export class RemoteStore {
+    constructor(private url: string = "/api/xaniadb") {
+    }
+    execute(query: string) {
+        var config = {
+            method: "POST",
+            headers: {
+                'Content-Type': "application/json"
+            },
+            body: JSON.stringify(parse(query)),
+            credentials: 'same-origin'
+        };
+        return fetch(this.url, config)
+            .then((response: any) => {
+                return response.json();
+            });
+    }
+}
 
 export class RemoteDataSource {
     private observers = [];

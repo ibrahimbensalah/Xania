@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using Newtonsoft.Json.Linq;
 
 namespace Xania.QL
 {
@@ -81,11 +83,11 @@ namespace Xania.QL
             return accept(ast, new Store(values));
         }
 
-        public Expression ToLinq(dynamic ast, IContext context)
+        public Expression ToLinq(dynamic ast, IContext context, Type type = null)
         {
-            var type = (Token)ast.type;
+            var token = (Token)ast.type;
             string name;
-            switch (type)
+            switch (token)
             {
                 case Token.IDENT:
                     name = (string)ast.name;
@@ -123,14 +125,13 @@ namespace Xania.QL
                     return Expression.MemberInit(Expression.New(newType.AsType()), memberBindings);
                 case Token.BINARY:
                     var op = (Token)ast.op;
-                    Expression left = ToLinq(ast.left, context);
-                    Expression right = ToLinq(ast.right, context);
 
                     switch (op)
                     {
                         case Token.EQ:
-                            var objectEquals = typeof(object).GetRuntimeMethod("Equals", new Type[] { typeof(object), typeof(object) });
-                            return Expression.Call(null, objectEquals, Expression.Convert(left, typeof(object)), Expression.Convert(right, typeof(object)));
+                            return GetEqualExpression(ast.left, ast.right, context);
+                        case Token.WHERE:
+                            return GetWhereExpression(ast.left, ast.right, context);
                         default:
                             throw new InvalidOperationException("unsupported binary operator " + op);
                     }
@@ -138,9 +139,53 @@ namespace Xania.QL
                     IQuery query = ToQuery(ast.source, context);
                     Expression selectorExpr = ToLinq(ast.selector, query.CreateContext());
                     return query.Select(selectorExpr);
+                case Token.WHERE:
+                    IQuery leftQ = ToQuery(ast.left, context);
+                    Expression predicateExpr = ToLinq(ast.right, leftQ.CreateContext());
+                    return leftQ.Where(predicateExpr);
+                case Token.CONST:
+                    return Expression.Constant(Convert(ast.value, type), type);
                 default:
                     throw new InvalidOperationException("unsupported type: " + type);
             }
+        }
+
+        private static object Convert(object value, Type type)
+        {
+            if (value == null)
+                return null;
+
+            var underlyingType = Nullable.GetUnderlyingType(type);
+            if (underlyingType != null)
+            {
+                return Convert(value, underlyingType);
+            }
+
+            var valueConverter = TypeDescriptor.GetConverter(value.GetType());
+            if (valueConverter.CanConvertTo(type))
+                return valueConverter.ConvertTo(value, type);
+            var typeConverter = TypeDescriptor.GetConverter(type);
+            if (typeConverter.CanConvertFrom(value.GetType()))
+                return typeConverter.ConvertFrom(value);
+            if (value is JValue)
+                return Convert(value.ToString(), type);
+            throw new InvalidOperationException($" {value} to {type} ");
+
+        }
+
+        private Expression GetEqualExpression(dynamic leftAst, dynamic rightAst, IContext context)
+        {
+            Expression left = ToLinq(leftAst, context);
+            Expression right = ToLinq(rightAst, context, left.Type);
+
+            return Expression.Equal(left, right);
+        }
+
+        private Expression GetWhereExpression(dynamic leftAst, dynamic rightAst, IContext context)
+        {
+            IQuery leftQ = ToQuery(leftAst, context);
+            Expression predicateExpr = ToLinq(rightAst, new ContextStack(leftQ.CreateContext(), context));
+            return leftQ.Where(predicateExpr);
         }
 
         private IQuery ToQuery(dynamic ast, IContext context)
@@ -163,30 +208,9 @@ namespace Xania.QL
                     var innerKeyExpr = ToLinq(condition.innerKey, innerQuery.CreateContext());
 
                     return outerQuery.Join(innerQuery, outerKeyExpr, innerKeyExpr);
-
-                    // foreach (var kvp in context)
-                    // innerContext.Add(kvp.Key, outerQuery.ElementType);
-
-                    // newType.Add();
-
-                    //    IQuery innerQuery = ToQuery(ast.inner, context);
-
-                    //    var condition = ast.conditions[0];
-
-                    //    var outerKeyExpr = ToLinq(condition.outerKey, outerQuery.CreateContext());
-                    //    var innerKeyExpr = ToLinq(condition.innerKey, innerQuery.CreateContext());
-
-                    //    return new JoinQuery(_reflectionHelper, outerQuery, innerQuery, outerKeyExpr, innerKeyExpr);
-
-                    //case Token.JOIN:
-                    //    Expression outerExpr = ToQuery(ast.outer, context);
-                    //    var outerType = _reflectionHelper.GetElementType(outerExpr.Type);
-                    //    var paramName = (string)ast.query.param;
-                    //    var paramExpr = Expression.Parameter(elementType, paramName);
-
-                    //    Expression innerExpr = ToQuery(ast.inner, context);
-                    //    // var conditionExpr = ToLinq(ast.condition, context);
-                    throw new InvalidOperationException();
+                case Token.IDENT:
+                    var identExpr = context.Get((string)ast.name);
+                    return new IdentQuery(_reflectionHelper, identExpr);
                 default:
                     throw new InvalidOperationException();
             }
@@ -194,8 +218,63 @@ namespace Xania.QL
 
         public dynamic Execute(object ast, params IContext[] contexts)
         {
-            var expr = ToLinq(ast, new ContextStack (contexts));
+            var expr = ToLinq(ast, new ContextStack(contexts));
             return Expression.Lambda(expr).Compile().DynamicInvoke();
+        }
+    }
+
+    internal class IdentQuery : IQuery, IContext
+    {
+        private readonly IReflectionHelper _reflectionHelper;
+        private readonly Expression _identExpr;
+        private readonly ParameterExpression _paramElement;
+        private readonly Type _elementType;
+
+        public IdentQuery(IReflectionHelper reflectionHelper, Expression identExpr)
+        {
+            _reflectionHelper = reflectionHelper;
+            _identExpr = identExpr;
+            _elementType = reflectionHelper.GetElementType(identExpr.Type);
+            _paramElement = Expression.Parameter(_elementType);
+        }
+
+        public Expression Select(Expression selectorExpr)
+        {
+            throw new NotImplementedException();
+        }
+
+        public IContext CreateContext()
+        {
+            return this;
+        }
+
+        public IQuery Join(Query inner, Expression outerKeyExpr, Expression innerKeyExpr)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Expression Where(Expression predicateExpr)
+        {
+            var whereMethod = _reflectionHelper.GetQueryableWhere(_elementType);
+            return Expression.Call(whereMethod, _identExpr, Expression.Lambda(predicateExpr, _paramElement));
+        }
+
+        IEnumerator<KeyValuePair<string, Expression>> IEnumerable<KeyValuePair<string, Expression>>.GetEnumerator()
+        {
+            throw new NotImplementedException();
+        }
+
+        Expression IContext.Get(string name)
+        {
+            var prop = _elementType.GetProperties()
+                .SingleOrDefault(e => e.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+
+            return prop != null ? Expression.Property(_paramElement, prop) : null;
+        }
+
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            throw new NotImplementedException();
         }
     }
 
@@ -204,6 +283,7 @@ namespace Xania.QL
         Expression Select(Expression selectorExpr);
         IContext CreateContext();
         IQuery Join(Query inner, Expression outerKeyExpr, Expression innerKeyExpr);
+        Expression Where(Expression predicateExpr);
     }
 
     internal class Query : IQuery
@@ -215,7 +295,7 @@ namespace Xania.QL
         public Type ElementType { get; }
 
         public Query(IReflectionHelper reflectionHelper, string paramName, Expression sourceExpr, Type elementType)
-            : this (reflectionHelper, Expression.Parameter(elementType, paramName), sourceExpr, elementType)
+            : this(reflectionHelper, Expression.Parameter(elementType, paramName), sourceExpr, elementType)
         {
         }
 
@@ -255,6 +335,14 @@ namespace Xania.QL
         public IQuery Join(Query inner, Expression outerKeyExpr, Expression innerKeyExpr)
         {
             return new JoinQuery(_reflectionHelper, this, inner, outerKeyExpr, innerKeyExpr);
+        }
+
+        public Expression Where(Expression predicateExpr)
+        {
+            var lambdaPredicate = Expression.Lambda(predicateExpr, ElementParam);
+
+            var selectMethod = _reflectionHelper.GetQueryableWhere(ElementType);
+            return Expression.Call(selectMethod, SourceExpr, lambdaPredicate);
         }
     }
 
@@ -354,13 +442,18 @@ namespace Xania.QL
                 .Join(
                     inner,
                     ExpressionReplacer.Replace(outerKeyExpr, _outer.ElementParam, outerPropertyReplacement),
-//                    ExpressionReplacer.Replace(outerSelectorExpr, resultContext),
+                    //                    ExpressionReplacer.Replace(outerSelectorExpr, resultContext),
                     innerKeyExpr
                 );
 
             // return outer.Join(inner, outerKeyExpr, innerKeyExpr);
 
             // throw new NotImplementedException();
+        }
+
+        public Expression Where(Expression predicateExpr)
+        {
+            throw new NotImplementedException();
         }
     }
 
@@ -433,7 +526,7 @@ namespace Xania.QL
         }
     }
 
-    public interface IContext: IEnumerable<KeyValuePair<string, Expression>>
+    public interface IContext : IEnumerable<KeyValuePair<string, Expression>>
     {
         Expression Get(string name);
     }
@@ -443,6 +536,7 @@ namespace Xania.QL
         Type GetElementType(Type type);
         TypeInfo CreateType(IDictionary<string, Type> fields);
         MethodInfo GetQueryableSelect(Type elementType, Type resultType);
+        MethodInfo GetQueryableWhere(Type elementType);
         MethodInfo GetQueryableJoin(Type outerType, Type innerType, Type keyType, Type resultType);
     }
 

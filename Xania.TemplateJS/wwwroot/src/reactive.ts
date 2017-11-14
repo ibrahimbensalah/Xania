@@ -57,8 +57,9 @@ export module Reactive {
                 property.length = initialValue.length;
                 return property;
             } else if (initialValue && initialValue.subscribe) {
-                const property = new AwaitableProperty(parent, name);
+                const property = new ObservableProperty(parent, name);
                 property.value = initialValue;
+                property.awaited = new AwaitedObservable(initialValue);
                 return property;
             } else {
                 const property = new ObjectProperty(parent, name);
@@ -90,7 +91,11 @@ export module Reactive {
         }
 
         set(name, value) {
-            this.value[name] = value;
+            if (this.value[name] !== value) {
+                this.value[name] = value;
+                return true;
+            }
+            return false;
         }
     }
 
@@ -102,17 +107,26 @@ export module Reactive {
         // list of observers to be dispatched on value change
         private actions: IAction[];
 
-        constructor(protected parent: { get(name: string): any, set(name: string, value: any)}, public name) {
+        constructor(protected parent: { get(name: string): any, set(name: string, value: any) }, public name) {
             super();
         }
 
-        get(name: string) {
-            var result = super.get(name);
+        get(propertyName: string) {
+            var properties = this.properties;
+            var i = properties.length;
+            while (i--) {
+                var prop = properties[i];
+                if (prop.name === propertyName) {
+                    return prop;
+                }
+            }
+
+            var result = super.get(propertyName);
             if (result !== void 0) {
                 return result;
             }
 
-            return this.parent.get(name);
+            return this.parent.get(propertyName);
         }
 
         change(action: IAction): this | boolean {
@@ -145,7 +159,7 @@ export module Reactive {
         }
 
         update(value: any) {
-            this.parent.set(this.name, value);
+            return this.parent.set(this.name, value);
         }
 
         valueOf() {
@@ -208,14 +222,47 @@ export module Reactive {
         }
     }
 
-    class AwaitableProperty extends ObjectProperty {
+    //class AwaitableProperty extends ObjectProperty {
+    //    get length() {
+    //        if (Array.isArray(this.value))
+    //            return this.value.length;
+    //        return 0;
+    //    }
+
+    //    refresh(parentValue) {
+    //        if (super.refresh(parentValue)) {
+    //            if (this.awaited) {
+    //                this.awaited.dispose();
+    //                delete this.awaited;
+    //            }
+    //            return true;
+    //        }
+    //        return false;
+    //    }
+
+    //    public awaited: AwaitedObservable;
+    //    await() {
+    //        if (!this.awaited) {
+    //            this.awaited = new AwaitedObservable(this.value);
+    //        }
+    //        return this.awaited;
+    //    }
+
+    //    subscribe() {
+    //        return this.value.subscribe.apply(arguments);
+    //    }
+    //}
+
+    class ObservableProperty extends ObjectProperty {
+        public awaited;
+
         get length() {
             if (Array.isArray(this.value))
                 return this.value.length;
             return 0;
         }
 
-        refresh(parentValue) {
+        refresh(parentValue): boolean {
             if (super.refresh(parentValue)) {
                 if (this.awaited) {
                     this.awaited.dispose();
@@ -226,12 +273,9 @@ export module Reactive {
             return false;
         }
 
-        public awaited: AwaitedObservable;
-        await() {
-            if (!this.awaited) {
-                this.awaited = new AwaitedObservable(this.value);
-            }
-            return this.awaited;
+        subscribe() {
+            var { value } = this;
+            return value.subscribe.apply(value, arguments);
         }
     }
 
@@ -350,16 +394,15 @@ export module Reactive {
                 return statiq;
             }
 
-            for (var i = 0; i < this.globals.length; i++) {
-                var g = this.globals[i][name];
+            var globals = this.globals, length = globals.length | 0;
+            for (var i = 0; i < length; i = (i+1)|0) {
+                var g = globals[i][name];
                 if (g !== void 0)
                     return g;
             }
-
-            return void 0;
         }
 
-        refresh(mutable = true) {
+        refresh() {
             var stack: { properties, value }[] = [this];
             var stackLength: number = 1;
             var dirty: any[] = [];
@@ -369,16 +412,17 @@ export module Reactive {
                 const parent = stack[stackLength];
                 var properties = parent.properties;
                 const parentValue = parent.value;
-                let i: number = properties.length;
-                while (i--) {
+                let i: number = properties.length | 0;
+                while (i) {
+                    i = (i - 1) | 0;
                     var child = properties[i];
                     var changed = child.refresh(parentValue);
-                    if (mutable || changed) {
-                        stack[stackLength++] = child;
+                    stack[stackLength] = child;
+                    stackLength = (stackLength + 1) | 0;
 
-                        if (changed === true) {
-                            dirty[dirtyLength++] = child;
-                        }
+                    if (child.actions && changed) {
+                        dirty[dirtyLength] = child;
+                        dirtyLength = (dirtyLength + 1) | 0;
                     }
                 };
             }
@@ -387,20 +431,17 @@ export module Reactive {
             var observers = this.observers;
             while (j--) {
                 var property = dirty[j];
-
-                var n = observers.length;
+                var n = observers.length|0;
                 while (n--) {
                     var observer = observers[n];
                     observer(property);
                 }
 
-                var actions = property.actions; 
-                if (actions) {
-                    var e = actions.length;
-                    while (e--) {
-                        var action = actions[e];
-                        action.execute();
-                    }
+                var actions = property.actions;
+                var e = actions.length | 0;
+                while (e--) {
+                    var action = actions[e];
+                    action.execute();
                 }
             }
         }
@@ -424,6 +465,7 @@ export module Reactive {
     export interface IDriver {
         insert?(sender: Binding, dom, idx);
         on?(eventName, dom, eventBinding);
+        attr(name);
     }
 
     class Variable {
@@ -441,6 +483,32 @@ export module Reactive {
         }
     }
 
+    export class Scope {
+        constructor(private contexts: any[]) {
+        }
+
+        get(name: string) {
+            var contexts = this.contexts, length = contexts.length | 0, i = 0;
+            do {
+                var target = contexts[i];
+                var value = target.get ? target.get(name) : target[name];
+                if (value !== void 0)
+                    return value;
+                i = (i + 1) | 0;
+            } while (i < length)
+            return void 0;
+        }
+
+        refresh() {
+            var contexts = this.contexts, i = contexts.length | 0;
+            while (i--) {
+                var ctx = contexts[i];
+                if (ctx.refresh)
+                    ctx.refresh();
+            }
+        }
+    }
+
     export abstract class Binding {
         public context;
         public length;
@@ -453,13 +521,21 @@ export module Reactive {
                 throw new Error("Driver is incompatible.");
         }
 
+        attr(name) {
+            return this.driver.attr(name);
+        }
+
+        insert(sender, dom, idx) {
+            return this.driver.insert(this, dom, idx);
+        }
+
         execute(): Binding[] {
             this.render(this.context, this.driver);
             return this.childBindings;
         }
 
         update(context): this {
-            this.context = context;
+            this.context = Array.isArray(context) ? new Scope(context) : context;
             this.updateChildren(context);
             return this;
         }
@@ -467,7 +543,7 @@ export module Reactive {
         updateChildren(context) {
             var { childBindings } = this;
             if (childBindings) {
-                let i = childBindings.length || 0;
+                let i = childBindings.length | 0;
                 while (i--) {
                     childBindings[i].update(context);
                 }
@@ -484,7 +560,7 @@ export module Reactive {
         dispose() {
             var { childBindings } = this;
             if (childBindings && Array.isArray(childBindings)) {
-                var i = childBindings.length || 0;
+                var i = childBindings.length | 0;
                 while (i--) {
                     childBindings[i].dispose();
                 }
@@ -509,8 +585,8 @@ export module Reactive {
                 var result = [];
                 if (length === void 0)
                     return result;
-                var len = +length;
-                for (var i = 0; i < len; i++) {
+                var len = length | 0;
+                for (var i = 0; i < len; i=(i+1)|0) {
                     var ext = this.extend(param, source.get(i));
                     result.push(ext);
                 }
@@ -531,68 +607,31 @@ export module Reactive {
             return new Variable(name, value, this.context);
         }
 
-        member(target: { get(name: string) }, name) {
-            if (target === null || target === undefined)
-                return target;
-            if (target.get) {
-                var value = target.get(name);
-                if (value && value.change)
-                    value.change(this);
-
-                return value;
-            }
-            return target[name];
-        }
-
-        app(fun, args: any[]) {
-            var xs = [], length = args.length;
-            for (var i = 0; i < length; i++) {
-                var arg = args[i];
-                if (arg && arg.valueOf) {
-                    var x = arg.valueOf();
-                    if (x === void 0)
-                        return void 0;
-                    xs.push(x);
-                } else {
-                    xs.push(arg);
-                }
-            }
-
-            if (fun === "+") {
-                return xs[1] + xs[0];
-            } else if (fun === "-") {
-                return xs[1] - xs[0];
-            } else if (fun === "*") {
-                return xs[1] * xs[0];
-            } else if (fun === "assign") {
-                throw new Error("assignment is only allow in EventBinding");
-            }
-
-            return fun.apply(null, xs);
-        }
-
         const(value) {
             return value;
         }
 
         await(value) {
             if (!value.awaited) {
-                var observable = value.valueOf();
+                var observable = value;
                 if (observable.then)
                     value.awaited = new AwaitedPromise(value);
                 else if (typeof observable.subscribe === "function")
                     value.awaited = new AwaitedObservable(observable);
-                else
+                else {
                     return value;
+                }
             }
 
             this.observe(value.awaited);
             return value.awaited;
         }
 
+
+
         evaluateText(parts, context = this.context): any {
             if (parts.execute) {
-                let result = parts.execute(this, context);
+                let result = parts.execute(context, this);
                 return result && result.toString();
             } else if (Array.isArray(parts)) {
                 var stack = parts.slice(0).reverse();
@@ -603,9 +642,9 @@ export module Reactive {
                     if (cur === void 0 || cur === null) {
                         // skip 
                     } else if (cur.execute) {
-                        stack.push(cur.execute(this, context));
+                        stack.push(cur.execute(context, this));
                     } else if (Array.isArray(cur)) {
-                        var i = cur.length;
+                        var i = cur.length | 0;
                         while (i--) {
                             stack.push(cur[i]);
                         }
@@ -619,14 +658,14 @@ export module Reactive {
                 return parts;
             } else {
                 return parts.toString();
-            } 
+            }
         }
 
         evaluateObject(expr, context = this.context): any {
             if (!expr)
                 return expr;
             else if (expr.execute)
-                return expr.execute(this, context);
+                return expr.execute(context, this);
             else if (Array.isArray(expr)) {
                 return expr.map(x => this.evaluateObject(x, context));
             }

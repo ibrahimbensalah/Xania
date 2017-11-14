@@ -8,6 +8,11 @@ namespace Xania.TemplateJS.Reporting
 {
     public static class GuidUtil
     {
+        public static Guid ToGuid(this object src)
+        {
+            return ToGuid(src.ToString());
+        }
+
         public static Guid ToGuid(this string src)
         {
             byte[] stringbytes = Encoding.UTF8.GetBytes(src);

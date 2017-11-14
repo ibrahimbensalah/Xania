@@ -1,24 +1,49 @@
 ﻿.data-grid-cell {
-  &-content {
-    color: gray;
+    &-content {
+        color: gray;
 
-    .invoice-number {
-      color: black;
-      margin-right: 10px;
-    }
-  }
-
-  &.data-grid-column {
-    &-description {
-      width: 200px;
+        .invoice-number {
+            color: black;
+            margin-right: 10px;
+        }
     }
 
-    &-invoicedate {
-      width: 140px;
-    }
+    &.data-grid-column {
+        &-description {
+            width: 200px;
+        }
 
-    &-status {
-      width: 80px;
+        &-invoicedate {
+            width: 140px;
+        }
+
+        &-status {
+            width: 80px;
+        }
+
+        &-name {
+            width: 220px;
+        }
     }
-  }
 }
+
+
+.dropdown-toggle:focus {
+    color: red;
+}
+
+.btn-delete-record {
+    color: gray;
+    padding: 0 8px;
+    line-height: 30px;
+    font-weight: bold;
+    display: block;
+    font-size: 20px;
+    text-decoration: none;
+
+    &:hover {
+        color: red;
+        text-decoration: none;
+    }
+}
+

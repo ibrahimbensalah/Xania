@@ -20,7 +20,7 @@ namespace Xania.TemplateJS.Controllers
         [HttpPost]
         public async Task<User> AddCompany([FromBody]Company company)
         {
-            await _companies.UpdateAsync(x => x.Id == company.Id, company);
+            await _companies.AddAsync(company);
             return null;
         }
 

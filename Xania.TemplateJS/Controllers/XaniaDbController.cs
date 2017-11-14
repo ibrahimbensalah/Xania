@@ -6,10 +6,10 @@ using System.Reflection;
 using System.Reflection.Emit;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using Newtonsoft.Json.Converters;
 using Xania.DataAccess;
 using Xania.Models;
 using Xania.QL;
-using Xania.TemplateJS.Reporting;
 
 namespace Xania.TemplateJS.Controllers
 {
@@ -18,11 +18,31 @@ namespace Xania.TemplateJS.Controllers
     {
         private readonly QueryContext _storeContext;
 
-        public XaniaDbController(IObjectStore<Invoice> invoiceStore, IObjectStore<Company> companyStore)
+        public XaniaDbController(
+            IObjectStore<Invoice> invoiceStore, 
+            IObjectStore<Company> companyStore, 
+            IObjectStore<TimeSheet> timeSheetStore,
+            IObjectStore<TimeDeclaration> declarationStore)
         {
             _storeContext = new QueryContext()
                 .Add("companies", companyStore.AsQueryable())
-                .Add("invoices", invoiceStore.AsQueryable());
+                .Add("invoices", invoiceStore.AsQueryable())
+                .Add("timesheets", timeSheetStore.AsQueryable())
+                .Add("declarations", declarationStore.AsQueryable().OrderBy(e => e.Date))
+                .Add("menuItems", GetMenuItems());
+        }
+
+        private static MenuItem[] GetMenuItems()
+        {
+            return new[]
+            {
+                new MenuItem {Path = "invoices", Display = "Invoices"},
+                new MenuItem {Path = "timesheet", Display = "Timesheets"},
+                new MenuItem {Path = "clock", Display = "Clock"}
+                // new MenuItem {Path = "graph", Display = "Graph"},
+                // new MenuItem {Path = "balls", Display = "Balls"},
+                // new MenuItem {Path = "hierachical", Display = "Hiararchical urls"}
+            };
         }
 
         [HttpPost]
@@ -41,6 +61,29 @@ namespace Xania.TemplateJS.Controllers
                 return Json(queryHelper.Execute(ast, _storeContext, requestContext));
             });
         }
+    }
+
+    public class TimeSheet
+    {
+        public Guid? Id { get; set; }
+        public Guid CompanyId { get; set; }
+        public DateTime? ApprovalDate { get; set; }
+        public TimeDeclaration[] Declarations { get; set; }
+    }
+
+    public class TimeDeclaration
+    {
+        public Guid? Id { get; set; } = Guid.NewGuid();
+        public DateTimeOffset Date { get; set; }
+        public TimeSpan TimeSpan { get; set; } = TimeSpan.FromHours(8);
+        public Guid? CompanyId { get; set; }
+        public string Description { get; set; } = "Software Development";
+    }
+
+    internal class MenuItem
+    {
+        public string Display { get; set; }
+        public string Path { get; set; }
     }
 
     internal class RuntimeReflectionHelper : IReflectionHelper
@@ -91,9 +134,18 @@ namespace Xania.TemplateJS.Controllers
                 .Single(e => e.GetParameters().Any(p => p.ParameterType == expressionType));
         }
 
+        public MethodInfo GetQueryableWhere(Type elementType)
+        {
+            var expressionType = typeof(Expression<>).MakeGenericType(typeof(Func<,>).MakeGenericType(elementType, typeof(bool)));
+            return typeof(Queryable)
+                .GetRuntimeMethods()
+                .Where(e => e.Name.Equals("Where"))
+                .Select(e => e.MakeGenericMethod(elementType))
+                .Single(e => e.GetParameters().Any(p => p.ParameterType == expressionType));
+        }
+
         public MethodInfo GetQueryableJoin(Type outerType, Type innerType, Type keyType, Type resultType)
         {
-            // Queryable.Join()
             return typeof(Queryable).GetRuntimeMethods()
                 .Where(e => e.Name.Equals("Join") && e.GetParameters().Length == 5)
                 .Select(e => e.MakeGenericMethod(outerType, innerType, keyType, resultType))

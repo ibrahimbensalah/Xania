@@ -4,26 +4,26 @@
 <div class="animated fadeIn main-content"></div>
 
 @section scripts {
-<script>
-    var basePath = '@Model.Base';
-    var appName = '@Model.Name';
-    var appPath = basePath + appName;
-    var actionPath = '@(Model.Args.Any() ? string.Join("", Model.Args.Select(x => "/" + x)) : "/index")';
+    <script>
+        var basePath = '@Model.Base';
+        var appName = '@Model.Name';
+        var appPath = basePath + appName;
+        var actionPath = '@(Model.Args.Any() ? string.Join("", Model.Args.Select(x => "/" + x)) : "/index")';
 
-    function importModule(path) {
-      return System.import(path);
-    }
+        function importModule(path) {
+            return System['import'](path);
+        }
 
-    function load(names, callback) {
-      var promises = names.map(x => System.import(x));
-      Promise.all(promises).then(function (modules) {
-        callback.apply(null, modules);
-      });
-    }
+        function load(names, callback) {
+            var promises = names.map(importModule);
+            Promise.all(promises).then(function (modules) {
+                callback.apply(null, modules);
+            });
+        }
 
-    load([appPath, '/src/mvc'], function (app, mvc) {
-      mvc.boot(basePath, appPath, app)
-        .action(actionPath);
-    });
-</script>
+        load([appPath, '/src/mvc'], function (app, mvc) {
+            mvc.boot(basePath, appPath, app)
+                .action(actionPath);
+        });
+    </script>
 }

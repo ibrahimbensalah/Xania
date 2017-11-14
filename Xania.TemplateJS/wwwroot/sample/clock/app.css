@@ -5,8 +5,7 @@
     padding-bottom: 100%;
   }
 
-  svg {
-    position: absolute;
+  .clock svg {
     width: 300px;
     height: 300px;
   }

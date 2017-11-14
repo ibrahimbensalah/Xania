@@ -1,4 +1,4 @@
-﻿import Xania, { expr, List, Reactive as Re, Dom, mount } from "../../src/xania"
+﻿import xania, { expr, FixedArray as Arr, Reactive as Re, Dom, mount } from "../../src/xania"
 
 // ReSharper disable InconsistentNaming
 declare var ENV;
@@ -13,7 +13,7 @@ export function run(target: Node) {
     };
     var store = new Re.Store(state);
 
-    var binding = dbmon(Xania)
+    var binding = dbmon
         .bind(new Dom.DomDriver(target))
         .update(store);
 
@@ -30,31 +30,95 @@ export function run(target: Node) {
 
 }
 
-var dbmon: any = (xania) =>
+var once = (property: string) => ({
+    execute(context: Re.Store) {
+        var parts = property.split(".");
+        var result = context.get(parts[0]);
+        var i = 0;
+        while (++i < parts.length) {
+            result = result.get(parts[i]);
+        }
+        return result;
+    }
+});
+
+var value = (property: string) => ({
+    execute(context: Re.Store) {
+        var parts = property.split(".");
+        var result = context.value[parts[0]];
+        var i = 0;
+        while (++i < parts.length) {
+            result = result.get[parts[i]];
+        }
+        return result.valueOf();
+    }
+});
+
+var property = (name: string) => {
+    var parts = name.split(".");
+    if (parts.length === 1)
+        return ({
+            id: Symbol(),
+            execute(context: Re.Store, binding: Re.Binding) {
+                var id = this.id;
+                var result = context[id];
+                if (result) {
+                    return result;
+                }
+                result = context.get(name);
+                context[id] = result;
+                result.change(binding);
+                return result.valueOf();
+            }
+        });
+    return ({
+        id: Symbol(),
+        execute(context: Re.Store, binding: Re.Binding) {
+            var id = this.id;
+            var result = context[id];
+            if (result) {
+                return result;
+            }
+            result = context.get(parts[0]);
+            var i = 1;
+            var length = parts.length | 0;
+            while (i < length) {
+                result = result.get(parts[i]);
+                i = (i + 1) | 0;
+            }
+            context[id] = result;
+            result.change(binding);
+            return result.valueOf();
+        }
+    });
+};
+
+var dbmon: any = (
     <table clazz="table table-striped latest-data">
         <tbody>
-            <List source={expr("databases")}>
+            <Arr source={once("databases")} length={100}>
                 <tr>
                     <td className="dbname">
-                        {expr("dbname")}
+                        {property("dbname")}
                     </td>
                     <td className="query-count">
-                        <span className={expr("lastSample.countClassName")}>
-                            {expr("lastSample.nbQueries")}
+                        <span className={property("lastSample.countClassName")}>
+                            {property("lastSample.nbQueries")}
                         </span>
                     </td>
-                    <List source={expr("lastSample.topFiveQueries")} >
-                        <td className={expr("elapsedClassName")}>
-                            {expr("formatElapsed")}
+                    <Arr source={once("lastSample.topFiveQueries")} length={5} >
+                        <td className={property("elapsedClassName")}>
+                            {property("formatElapsed")}
                             <div className="popover left">
                                 <div className="popover-content">
-                                    {expr("query")}
+                                    {property("query")}
                                 </div>
                                 <div className="arrow"></div>
                             </div>
                         </td>
-                    </List>
+                    </Arr>
                 </tr>
-            </List>
+            </Arr>
         </tbody>
-    </table>;
+    </table>
+);

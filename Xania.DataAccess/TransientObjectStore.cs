@@ -50,14 +50,8 @@ namespace Xania.DataAccess
             return Task.CompletedTask;
         }
 
-        public Task UpdateAsync(Expression<Func<TModel, bool>> condition, TModel newItem)
+        public Task UpdateAsync(TModel model)
         {
-            var existingItem = Items.SingleOrDefault(condition.Compile());
-            if (existingItem != null)
-            {
-                Items.Remove(existingItem);
-            }
-            Items.Add(newItem);
             return Task.CompletedTask;
         }
     }

@@ -3,7 +3,7 @@
     select(source, selector);
     query(param, source);
     member(target, name);
-    app(fun, args: any[]);
+    app(fun, args: any[], context?);
     extend(name: string, value: any);
     await(observable);
     const(value);
@@ -85,18 +85,19 @@ export class Scope {
     }
 
     get(name: string) {
-        var contexts = this.contexts, length = contexts.length, i = 0;
+        var contexts = this.contexts, length = contexts.length | 0, i = 0;
         do {
             var target = this.contexts[i];
-            var value = target.get ? target.get(name) : target[name];
+            var value = target && (target.get ? target.get(name) : target[name]);
             if (value !== void 0)
                 return value;
-        } while (++i < length)
+            i = (i + 1) | 0;
+        } while (i < length)
         return void 0;
     }
 
     refresh() {
-        var contexts = this.contexts, i = contexts.length;
+        var contexts = this.contexts, i = contexts.length | 0;
         while (i--) {
             var ctx = contexts[i];
             if (ctx.refresh)
@@ -106,12 +107,63 @@ export class Scope {
 }
 
 export default class Expression {
-    constructor(public ast, private stack) {
+    constructor(public ast, private stack, private context) {
     }
 
-    execute(binding: IAstVisitor, contexts: any) {
+    static member(target: { get(name: string) }, name, binding) {
+        if (target === null || target === undefined)
+            return target;
+        if (target.get) {
+            var value = target.get(name);
+            if (value && value.change)
+                value.change(binding);
+
+            return value;
+        }
+        return target[name];
+    }
+
+    static app(fun, args: any[], context) {
+        var xs = [], length = args.length;
+        for (var i = 0; i < length; i++) {
+            var arg = args[i];
+            if (arg && arg.valueOf) {
+                var x = arg.valueOf();
+                if (x === void 0)
+                    return void 0;
+                xs.push(x);
+            } else {
+                xs.push(arg);
+            }
+        }
+
+        if (fun === "+") {
+            return xs[1] + xs[0];
+        } else if (fun === "-") {
+            return xs[1] - xs[0];
+        } else if (fun === "*") {
+            return xs[1] * xs[0];
+        } else if (fun === "/") {
+            return xs[1] / xs[0];
+        } else if (fun === "assign") {
+            throw new Error("assignment is only allow in EventBinding");
+        }
+
+        return fun.apply(context, xs);
+    }
+
+    execute(contexts: any, binding: IAstVisitor) {
         var { stack } = this;
 
+        var local = this.context;
+        if (local) {
+            if (Array.isArray(contexts))
+                contexts = contexts.concat([local]);
+            else if (contexts)
+                contexts = [contexts, local];
+            else
+                contexts = local;
+        }
         var context = Array.isArray(contexts) ? new Scope(contexts) : contexts;
 
         let idx = stack.length;
@@ -119,7 +171,7 @@ export default class Expression {
             var ast = stack[idx];
             switch (ast.type) {
                 case IDENT:
-                    ast.value = binding.member(context, ast.name);
+                    ast.value = Expression.member(context, ast.name, binding);
                     break;
                 case QUERY:
                     ast.value = binding.query(ast.param, ast.source.value);
@@ -129,7 +181,7 @@ export default class Expression {
                 case MEMBER:
                     var target = ast.target.value;
                     var name = ast.member.value || ast.member;
-                    ast.value = binding.member(target, name);
+                    ast.value = Expression.member(target, name, binding);
                     break;
                 case AWAIT:
                     ast.value = binding.await(ast.expr.value);
@@ -153,17 +205,17 @@ export default class Expression {
                             if (source === void 0 || !source.valueOf())
                                 return void 0;
 
-                            ast.value = ast.right.compiled.execute(binding, context);
+                            ast.value = ast.right.compiled.execute(context, binding);
                             break;
                         case "where":
                         case WHERE:
                             source = ast.left.value;
-                            let length = source.length;
+                            let length = source.length | 0;
                             var result = [];
-                            for (var i = 0; i < length; i++) {
-                                var item = binding.member(source, i);
+                            for (var i = 0; i < length; i = (i + 1) | 0) {
+                                var item = Expression.member(source, i, binding);
                                 var scope = new Scope([item, context]);
-                                var b = ast.right.compiled.execute(binding, scope);
+                                var b = ast.right.compiled.execute(scope, binding);
                                 if (b)
                                     result.push(item);
                             }
@@ -172,14 +224,14 @@ export default class Expression {
                         default:
                             var left = ast.left.value;
                             var right = ast.right.value;
-                            ast.value = binding.app(ast.op, [right, left]);
+                            ast.value = Expression.app(ast.op, [right, left], binding);
                             break;
                     }
                     break;
                 case APP:
                     let args;
-                    let length = ast.args.length;
-                    for (let i = 0; i < length; i++) {
+                    let length = ast.args.length | 0;
+                    for (let i = 0; i < length; i = (i + 1) | 0) {
                         var arg = ast.args[i].value;
                         if (arg === void 0)
                             return arg;
@@ -190,8 +242,9 @@ export default class Expression {
                     if (fun === void 0) {
                         console.error("could not resolve expression, " + JSON.stringify(ast.fun));
                         return void 0;
-                    } else
-                        ast.value = binding.app(fun.valueOf(), args);
+                    } else {
+                        ast.value = Expression.app(fun.valueOf(), args, ast.fun.target && ast.fun.target.value);
+                    }
                     break;
                 case LAZY:
                     ast.value = ast.expr(binding, context);
@@ -211,10 +264,10 @@ export default class Expression {
         return this.ast.value;
     }
 
-    static compile(ast) {
+    static compile(ast, context = null) {
         var queue = [];
         Expression.compileAst(ast, queue);
-        return new Expression(ast, queue);
+        return new Expression(ast, queue, context);
     }
 
     static compileAst(ast, stack: any[]) {

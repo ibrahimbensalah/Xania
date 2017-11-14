@@ -3,15 +3,15 @@
 <head>
     <meta charset="utf-8" />
     <title></title>
-    <script src="/jspm_packages/system.js"></script>
+    <script src="/jspm/system.js"></script>
     <script src="/lib/fetch/fetch.js"></script>
     <script>
         System.config({
             packages: { '/': {} },
             paths: {
-                "github:*": "/jspm_packages/github/*",
-                "npm:*": "/jspm_packages/npm/*",
-                "ts:*": "/jspm_packages/npm/*"
+                "github:*": "/jspm/github/*",
+                "npm:*": "/jspm/npm/*",
+                "ts:*": "/jspm/npm/*"
             },
             map: {
                 "css": "github:systemjs/plugin-css@0.1.32",
@@ -26,13 +26,9 @@
     </script>
     <script>
         var query =
-            ` for i in invoices
-              join c in companies on i.companyId = c.id
+            ` for c in companies
               select { 
-                    invoiceId: i.id, 
-                    invoiceDate: i.invoiceDate, 
-                    invoiceNumber: i.invoiceNumber,
-                    companyName : c.name
+                companyName : c.name
               }
             `;
 

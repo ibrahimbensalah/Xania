@@ -26,29 +26,30 @@ namespace Xania.TemplateJS.Controllers
             _companyStore = companyStore;
         }
 
-        [HttpGet, Route("{invoiceId:guid}/pdf")]
-        public IActionResult GeneratePDF(Guid invoiceId)
+        [HttpGet, Route("{invoiceNumber}/pdf")]
+        public IActionResult GeneratePDF(string invoiceNumber)
         {
-            var invoiceData = GetInvoideReportData(invoiceId);
+            var invoiceData = GetInvoiceReportData(invoiceNumber);
             var reportContents = new InvoiceReport().Generate(invoiceData);
             return File(reportContents, "application/pdf");
         }
 
-        public InvoiceReportDataTO GetInvoideReportData(Guid invoiceId)
+        public InvoiceReportDataTO GetInvoiceReportData(string invoiceNumber)
         {
-            var invoice = _invoiceStore.Single(e => e.Id == invoiceId);
+            var invoice = _invoiceStore.Single(e => e.InvoiceNumber.Equals(invoiceNumber, StringComparison.OrdinalIgnoreCase));
 
-            if (invoice.CompanyId == null || invoice.InvoiceDate == null)
+            if (invoice.CompanyId == null)
                 throw new InvalidOperationException("invoice is not valid");
 
             var company = _companyStore.Single(e => e.Id == invoice.CompanyId);
+            var invoiceDate = invoice.InvoiceDate ?? DateTime.UtcNow;
 
             return new InvoiceReportDataTO
             {
                 Invoice = new InvoiceTO
                 {
-                    ExpirationDate = invoice.InvoiceDate.Value + TimeSpan.FromDays(30),
-                    InvoiceDate = invoice.InvoiceDate.Value,
+                    ExpirationDate = invoiceDate + TimeSpan.FromDays(30),
+                    InvoiceDate = invoiceDate,
                     InvoiceNumber = invoice.InvoiceNumber,
                     LineItems = from l in invoice.Lines
                         select new LineItemTO
@@ -88,24 +89,35 @@ namespace Xania.TemplateJS.Controllers
             if (invoice == null)
                 throw new NullReferenceException();
 
-            await _invoiceStore.UpdateAsync(x => x.Id == invoice.Id, invoice);
+            await _invoiceStore.AddAsync(invoice);
             return null;
         }
 
-        [HttpPut, Route("{invoiceId:guid}")]
-        public async Task<Invoice> Update(Guid invoiceId, [FromBody]Invoice invoice)
+        [HttpPut, Route("{invoiceNumber}")]
+        public async Task<Invoice> Update(string invoiceNumber, [FromBody]Invoice invoice)
         {
             if (invoice == null)
                 throw new NullReferenceException();
 
-            await _invoiceStore.UpdateAsync(x => x.Id == invoiceId, invoice);
+            await _invoiceStore.UpdateAsync(invoice);
             return invoice;
         }
 
-        [HttpPost, Route("{invoiceId:guid}")]
-        public Invoice Get(Guid invoiceId)
+        [HttpPost, Route("{invoiceNumber}")]
+        public Invoice Get(string invoiceNumber)
         {
-            return _invoiceStore.SingleOrDefault(e => e.Id == invoiceId);
+            return 
+                _invoiceStore.FirstOrDefault(x => string.Equals(x.InvoiceNumber, invoiceNumber, StringComparison.OrdinalIgnoreCase))
+                ;
+        }
+
+        [HttpPut, Route("{invoiceNumber}/close")]
+        public async Task<Invoice> Close(string invoiceNumber, [FromBody]Invoice invoice)
+        {
+            invoice.InvoiceDate = DateTime.UtcNow;
+            await _invoiceStore.UpdateAsync(invoice);
+
+            return invoice;
         }
 
         [HttpPost]

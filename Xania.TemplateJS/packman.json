@@ -1,0 +1,24 @@
+{
+  "packages": {
+    "font-awesome": {
+      "path": "wwwroot/font-awesome",
+      "version": "4.7.0",
+      "files": [
+        "css/font-awesome.min.css",
+        "fonts/fontawesome-webfont.eot",
+        "fonts/fontawesome-webfont.svg",
+        "fonts/fontawesome-webfont.ttf",
+        "fonts/fontawesome-webfont.woff",
+        "fonts/fontawesome-webfont.woff2",
+        "fonts/FontAwesome.otf"
+      ]
+    },
+    "systemjs": {
+      "path": "wwwroot/systemjs",
+      "version": "0.20.19",
+      "files": [
+        "system.js"
+      ]
+    }
+  }
+}

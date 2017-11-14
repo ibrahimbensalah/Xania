@@ -1,4 +1,4 @@
-﻿import xania, { Repeat, expr } from "../xania"
+﻿import xania, { List, Repeat, expr } from "../xania"
 import { UrlHelper } from "../mvc"
 import './datagrid.min.css'
 
@@ -49,7 +49,6 @@ export default class DataGrid {
     private onSelectionChanged = null;
 
     constructor(private attrs, private columns: IDataColumn[] = []) {
-        console.debug("datagrid columns", columns);
     }
 
     private activateRow = (row) => {
@@ -58,6 +57,8 @@ export default class DataGrid {
 
             if (this.onSelectionChanged) {
                 this.onSelectionChanged(row, this);
+            } else if (this.attrs.onSelectionChanged) {
+                this.attrs.onSelectionChanged.execute([row, this], this);
             }
         }
     };
@@ -72,18 +73,17 @@ export default class DataGrid {
 
                     {this.columns.map(column =>
                         <div role="gridcell" className={"data-grid-cell data-grid-column-" + column.name}>
-                            <div className="data-grid-cell-content"><a >{column.display}</a>
-                            </div>
+                            <div><a>{column.display}</a></div>
                         </div>
                     )}
                     <div className="data-grid-header-column" style="flex: 1">&nbsp;</div>
                 </div>
-                <div className="data-grid-content" style="padding-top: 0px; ">
-                    <Repeat source={expr("for row in data")}>
+                <div className="data-grid-content" style="padding-top: 0px;">
+                    <List source={expr("for row in data")}>
                         <div className={["data-grid-row", expr("row = activeRow -> ' data-grid-row-selected'")]}
                             onTouchStart={this.onRowClick} onClick={this.onRowClick}>
                             <div role="rowheader" className="data-grid-row-header">
-                                <span className={["fa", expr("row = activeRow -> ' fa-edit'")]}></span>
+                                <span class={["fa", expr("row = activeRow -> ' fa-caret-right'")]}></span>
                             </div>
                             {this.columns.map(column =>
                                 <div role="gridcell" className={"data-grid-cell data-grid-column-" + column.name}>
@@ -92,7 +92,7 @@ export default class DataGrid {
                                 </div>
                             )}
                         </div>
-                    </Repeat>
+                    </List>
                 </div>
             </div>
         );

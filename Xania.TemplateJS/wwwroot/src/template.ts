@@ -1,6 +1,7 @@
 ﻿export interface IDriver {
     insert?(binding, dom, idx);
     on?(eventName, dom, eventBinding);
+    attr(name);
 }
 
 export module Template {

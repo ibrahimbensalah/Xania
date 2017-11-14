@@ -1,19 +1,18 @@
 ﻿using System;
-using Newtonsoft.Json;
 
 namespace Xania.Models
 {
     public class Invoice
     {
-        public Guid Id { get; set; }
+        public Guid? Id { get; set; }
 
         public string InvoiceNumber { get; set; }
 
         public string Description { get; set; }
 
-        public DateTime? InvoiceDate { get; set; }
+        public DateTimeOffset? InvoiceDate { get; set; }
 
-        public int? CompanyId { get; set; }
+        public Guid? CompanyId { get; set; }
 
         public bool IsClosed { get; set; }
 

@@ -34,7 +34,9 @@ export module Dom {
         static tag(tagName: string, ns: string, attrs, driver: Re.IDriver): TagBinding {
             var tag = new TagBinding(driver, tagName, ns), length = attrs.length;
             for (var i = 0; i < length; i++) {
-                tag.attr(attrs[i].name, attrs[i].tpl);
+                var { name, tpl } = attrs[i];
+                if (typeof tpl !== "undefined")
+                    tag.attr(name, tpl);
             }
 
             return tag;
@@ -44,7 +46,7 @@ export module Dom {
     export class DomDriver {
         private target;
         private domElements = [];
-        private events:{eventName: string, eventBinding: any, dom: any }[] = [];
+        private events: { eventName: string, eventBinding: any, dom: any }[] = [];
 
         constructor(target) {
             if (typeof target === "string")
@@ -155,7 +157,7 @@ export module Dom {
     export class TextBinding extends Re.Binding implements IDomBinding {
         public textNode;
         public length = 1;
-        public oldValue;
+        // public oldValue;
 
         constructor(private expr, driver: Re.IDriver) {
             super(driver);
@@ -166,15 +168,18 @@ export module Dom {
         }
 
         render(context, driver: IDOMDriver) {
-            const newValue = this.evaluateText(this.expr);
-            if (newValue !== this.oldValue) {
-                this.oldValue = newValue;
+            var { expr } = this;
+            var typeOfExpr = typeof expr;
+            const newValue = typeOfExpr === "string" || typeOfExpr === "undefined" ? expr : this.evaluateText(expr);
+            // if (newValue !== this.oldValue)
+            {
+                // this.oldValue = newValue;
                 var textNode = this.textNode;
-                if (!textNode) {
+                if (textNode) {
+                    textNode.nodeValue = newValue;
+                } else {
                     textNode = this.textNode = (<any>document).createTextNode(newValue);
                     driver.insert(this, textNode, 0);
-                } else {
-                    textNode.nodeValue = newValue;
                 }
             }
         }
@@ -223,8 +228,10 @@ export module Dom {
             }
             return this;
         }
-        attr(name, expr): this {
-            if (typeof expr === "string") {
+        attr(name, expr?): this {
+            if (!expr) {
+                return this.tagNode[name];
+            } else if (typeof expr === "string") {
                 this.tagNode.setAttribute(name, expr);
             } else if (name === "class") {
                 var classBinding = new ClassBinding(this.tagNode, expr, this.driver);
@@ -267,11 +274,13 @@ export module Dom {
         //}
 
         insert(binding, dom, idx) {
-            var offset = 0, length = this.childBindings.length;
+            var { childBindings } = this;
+            var offset = 0, length = childBindings.length;
             for (var i = 0; i < length; i++) {
-                if (this.childBindings[i] === binding)
+                var b = childBindings[i];
+                if (b === binding)
                     break;
-                offset += this.childBindings[i].length;
+                offset += typeof b.length === 'number' ? b.length : 1;
             }
             return this.domDriver.insert(this, dom, offset + idx);
         }
@@ -292,7 +301,7 @@ export module Dom {
 
     export class ClassBinding extends Re.Binding {
         public dom;
-        private oldValue;
+        // private oldValue;
 
         constructor(private tagNode: HTMLElement, private expr, driver: Re.IDriver) {
             super(driver);
@@ -301,10 +310,10 @@ export module Dom {
         render() {
             var newValue = this.evaluateText(this.expr);
 
-            if (newValue !== this.oldValue) {
-                this.oldValue = newValue;
+            // if (newValue !== this.oldValue) {
+                // this.oldValue = newValue;
                 this.tagNode.className = newValue;
-            }
+            // }
         }
     }
 
@@ -317,9 +326,7 @@ export module Dom {
             if (typeof expr === "function")
                 return expr(event, this.context);
 
-
-
-            return expr.execute(this, context);
+            return expr.execute(context, this);
         }
 
         fire(event, context = this.context) {
@@ -327,40 +334,34 @@ export module Dom {
             var eventContext = context ? [context] : [];
             eventContext.push({ value: event, event, node: event.target });
 
+            var promises;
             if (Array.isArray(this.expr))
-                this.expr.map(x => this.evaluate(x, eventContext));
+                promises = this.expr.map(x => this.evaluate(x, eventContext));
             else
-                this.evaluate(this.expr, eventContext);
+                promises = [ this.evaluate(this.expr, eventContext) ];
 
             if (context && context.refresh)
-                context.refresh();
+                Promise.all(promises).then(() => {
+                    context.refresh();
+                });
+
         }
 
         render(context, driver) {
             driver.on(this.name, this.tagNode, this);
         }
 
-        extend() {
-            throw Error("Not implemented yet.");
-        }
-        where(source, predicate) {
-            throw Error("Not implemented yet.");
-        }
-        select(source, selector) {
-            throw Error("Not implemented yet.");
-        }
-        query(param, source) {
-            throw Error("Not implemented yet.");
-        }
-        await(observable) {
-            throw Error("Not implemented yet.");
-        }
         const(value) {
             return value;
         }
 
-        app(fun, args: any[]) {
+        app(fun, args: any[], context?) {
             if (fun === "assign") {
+                if (typeof args[1].update !== 'function') {
+                    console.error("Object is not mutable", args[1]);
+                    return void 0;
+                }
+
                 var arg = args[0];
                 if (arg === null)
                     args[1].update(null);
@@ -373,7 +374,7 @@ export module Dom {
             }
 
             if (args)
-                return fun.apply(null, args.map(EventBinding.valueOf));
+                return fun.apply(context, args.map(EventBinding.valueOf));
             else
                 return fun();
         }
@@ -436,10 +437,10 @@ export module Dom {
         constructor(private tagNode: any, private expr, driver: Re.IDriver) {
             super(driver);
 
-            tagNode.addEventListener("change", this.fire.bind(this));
+            tagNode.addEventListener("change", this.fire);
         }
 
-        fire() {
+        private fire = () => {
             let value = this.evaluateObject(this.expr);
             if (value && value.update) {
                 value.update(this.tagNode.value);

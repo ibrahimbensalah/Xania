@@ -19,12 +19,12 @@ namespace Xania.QL.Tests
     {
         private readonly IEnumerable<Invoice> _invoiceStore = new[]
         {
-            new Invoice {CompanyId = 1, Id = Guid.NewGuid()}
+            new Invoice {CompanyId = 1.ToGuid()}
         };
 
         private readonly IEnumerable<Company> _companyStore = new[]
         {
-            new Company {Id = 1, Name = "Xania BV"}
+            new Company {Id = 1.ToGuid(), Name = "Xania BV"}
         };
 
         private readonly QueryHelper _helper = new QueryHelper(new RuntimeReflectionHelper());
@@ -39,16 +39,21 @@ namespace Xania.QL.Tests
                 {"invoices", (_invoiceStore.AsQueryable())}
             };
 
-            object obj = Resources.ResourceManager.GetObject(resourceName, Resources.Culture);
-            var data = (byte[])obj;
-            Debug.Assert(data != null, "data != null");
-            var ast = GetAst(new MemoryStream(data));
+            var ast = GetAstFromResource(resourceName);
             var expr = _helper.ToLinq(ast, context);
             var result = new List<dynamic>(Invoke<IQueryable<dynamic>>(expr));
 
             var invoice = _invoiceStore.Single();
-            ((Guid)result[0].invoiceId).Should().Be(invoice.Id);
+            ((string)result[0].invoiceNumber).Should().Be(invoice.InvoiceNumber);
             ((string)result[0].companyName).Should().Be("Xania BV");
+        }
+
+        private static dynamic GetAstFromResource(string resourceName)
+        {
+            var data = (byte[]) Resources.ResourceManager.GetObject(resourceName, Resources.Culture);
+            Debug.Assert(data != null, "data != null");
+            var ast = GetAst(new MemoryStream(data), Encoding.Default);
+            return ast;
         }
 
         [Test]
@@ -88,7 +93,7 @@ namespace Xania.QL.Tests
             var result = Invoke<IQueryable<dynamic>>(expr).ToArray();
 
             var invoice = _invoiceStore.Single();
-            ((Guid)result[0].invoiceId).Should().Be(invoice.Id);
+            ((string)result[0].invoiceNumber).Should().Be(invoice.InvoiceNumber);
             ((string)result[0].companyName).Should().Be("Xania BV");
         }
 
@@ -97,7 +102,7 @@ namespace Xania.QL.Tests
         {
             var context = new QueryContext
             {
-                {"companies", new[] {new Company {Id = 1, Name = "Xania"}}.AsQueryable()}
+                {"companies", new[] {new Company {Id = 1.ToGuid(), Name = "Xania"}}.AsQueryable()}
             };
 
             var ast = GetSelector(GetQuery("c", GetIdentifier("companies")), GetMember(GetIdentifier("c"), "Name"));
@@ -112,13 +117,13 @@ namespace Xania.QL.Tests
         {
             var context = new QueryContext
             {
-                {"c", new Company {Id = 1, Name = "Xania"}}
+                {"c", new Company {Id = 1.ToGuid(), Name = "Xania"}}
             };
 
             var expr = _helper.ToLinq(GetIdentifier("c"), context);
             var company = Invoke<Company>(expr);
             company.Name.Should().Be("Xania");
-            company.Id.Should().Be(1);
+            company.Id.Should().Be(1.ToGuid());
         }
 
         [Test]
@@ -126,7 +131,7 @@ namespace Xania.QL.Tests
         {
             var context = new QueryContext
             {
-                {"c", (new Company {Id = 1, Name = "Xania"})}
+                {"c", (new Company {Id = 1.ToGuid(), Name = "Xania"})}
             };
 
             var expr = _helper.ToLinq(GetMember(GetIdentifier("c"), "Name"), context);
@@ -137,18 +142,17 @@ namespace Xania.QL.Tests
         [Test]
         public void RecordTest()
         {
-            var invoiceId = Guid.NewGuid();
             var context = new QueryContext
             {
-                {"c", (new Company {Id = 1, Name = "Xania"})},
-                {"i", (new Invoice {CompanyId = 1, InvoiceNumber = "2017001", Id = invoiceId})}
+                {"c", (new Company {Id = 1.ToGuid(), Name = "Xania"})},
+                {"i", (new Invoice {CompanyId = 1.ToGuid(), InvoiceNumber = "2017001"})}
             };
 
             var record = GetRecord(GetMemberBind("invoiceId", GetMember(GetIdentifier("i"), "Id")),
                 GetMemberBind("companyName", GetMember(GetIdentifier("c"), "Name")));
             var expr = _helper.ToLinq(record, context);
             var result = Invoke<dynamic>(expr);
-            ((Guid)result.invoiceId).Should().Be(invoiceId);
+            ((string)result.invoiceNumber).Should().Be("2017001");
             ((string)result.companyName).Should().Be("Xania");
         }
 
@@ -157,14 +161,51 @@ namespace Xania.QL.Tests
         {
             var context = new QueryContext
             {
-                {"c", new Company {Id = 1, Name = "Xania"}},
-                {"i", new Invoice {CompanyId = 1, InvoiceNumber = "2017001"}}
+                {"c", new Company {Id = 1.ToGuid(), Name = "Xania"}},
+                {"i", new Invoice {CompanyId = 1.ToGuid(), InvoiceNumber = "2017001"}}
             };
 
             var equal = GetEqual(GetMember(GetIdentifier("c"), "Id"), GetMember(GetIdentifier("i"), "CompanyId"));
             var expr = _helper.ToLinq(equal, context);
             var result = Invoke<bool>(expr);
             result.Should().BeTrue();
+        }
+
+        [Test]
+        public void WhereTest()
+        {
+            var companies = new[]
+            {
+                new Company {Id = 1.ToGuid(), Name = "Xania"},
+                new Company {Id = 2.ToGuid(), Name = "Rider"},
+                new Company {Id = 3.ToGuid(), Name = "Rabo"}
+            };
+            var context = new QueryContext
+            {
+                {"companies", companies.AsQueryable()}
+            };
+
+            var ast = GetAstFromResource("where");
+            var linq = _helper.ToLinq(ast, context);
+            IQueryable<Company> result = Invoke<IQueryable<Company>>(linq);
+            result.Count().Should().Be(1);
+        }
+
+        private object GetConst(object value)
+        {
+            dynamic ast = new ExpandoObject();
+            ast.type = Token.CONST;
+            ast.value = value;
+            return ast;
+        }
+
+        private object GetWhere(object left, object right)
+        {
+            dynamic ast = new ExpandoObject();
+            ast.type = Token.WHERE;
+            ast.left = left;
+            ast.right = right;
+            return ast;
         }
 
         private object GetJoinCondition(object outerKey, object innerKey)
@@ -268,10 +309,10 @@ namespace Xania.QL.Tests
             return ast;
         }
 
-        private static dynamic GetAst(Stream memoryStream)
+        private static dynamic GetAst(Stream memoryStream, Encoding encoding)
         {
             var formatter = new JsonMediaTypeFormatter();
-            dynamic ast = formatter.ReadFromStreamAsync(typeof(object), memoryStream, null, null).Result;
+            dynamic ast = formatter.ReadFromStream(typeof(object), memoryStream, encoding, null);
             return ast;
         }
 
@@ -309,6 +350,16 @@ namespace Xania.QL.Tests
                 .GetRuntimeMethods()
                 .Where(e => e.Name.Equals("Select"))
                 .Select(e => e.MakeGenericMethod(elementType, resultType))
+                .Single(e => e.GetParameters().Any(p => p.ParameterType == expressionType));
+        }
+
+        public MethodInfo GetQueryableWhere(Type elementType)
+        {
+            var expressionType = typeof(Expression<>).MakeGenericType(typeof(Func<,>).MakeGenericType(elementType, typeof(bool)));
+            return typeof(Queryable)
+                .GetRuntimeMethods()
+                .Where(e => e.Name.Equals("Where"))
+                .Select(e => e.MakeGenericMethod(elementType))
                 .Single(e => e.GetParameters().Any(p => p.ParameterType == expressionType));
         }
 

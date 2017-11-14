@@ -1,5 +1,6 @@
-﻿import Xania, { Repeat, Template, Dom, Reactive as Re, expr } from "../../src/xania"
+﻿import Xania, { Repeat, expr } from "../../src/xania"
 import './app.css'
+import {IDriver} from "../../src/template";
 
 export class ClockApp {
     time = new Date().getTime();
@@ -21,7 +22,7 @@ export class ClockApp {
 
     view(xania) {
         return (
-            <div style="height: 200px;">
+            <div style="height: 200px;" class="clock">
                 <svg viewBox="0 0 200 200">
                     <g transform="scale(2) translate(50,50)">
                         <circle className="clock-face" r="35"></circle>
@@ -31,9 +32,9 @@ export class ClockApp {
                         <Repeat source={expr("for p in [ 0..11 ]")}>
                             <line className="major" y1="35" y2="45" transform={["rotate(", expr("p * 30"), ")"]} />
                         </Repeat>
-                        <line className="hour" y1="2" y2="-20" transform={["rotate(", expr("hoursAngle (time)"), ")"]} />
-                        <line className="minute" y1="4" y2="-30" transform={["rotate(", expr("minutesAngle (time)"), ")"]} />
-                        <g transform={["rotate(", expr("secondsAngle (time)"), ")"]}>
+                        <line className="hour" y1="2" y2="-20" transform={["rotate(", expr("hoursAngle time"), ")"]} />
+                        <line className="minute" y1="4" y2="-30" transform={["rotate(", expr("minutesAngle time"), ")"]} />
+                        <g transform={["rotate(", expr("secondsAngle time"), ")"]}>
                             <line className="second" y1="10" y2="-38"></line>
                             <line className="second-counterweight" y1="10" y2="2"></line>
                         </g>
@@ -44,6 +45,6 @@ export class ClockApp {
     }
 }
 
-export function execute({ driver }) {
-    return Xania.render(ClockApp, driver);
+export function execute(ctx: { driver: IDriver }) {
+    return Xania.render(ClockApp, ctx.driver);
 }

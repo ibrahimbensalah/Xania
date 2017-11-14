@@ -1,9 +1,10 @@
 ﻿import { Observables } from "./observables"
-import xania, { expr, mount, Repeat, Reactive } from './xania'
+import { expr, mount, Reactive } from './xania'
 import Dom from './dom'
 
 export class UrlHelper {
     public observers = [];
+    // private childPath = new Observables.Observable();
 
     constructor(public router: Router, public basePath = "/") {
     }
@@ -22,7 +23,15 @@ export class UrlHelper {
     }
 
     goto(path: string) {
-        var action = { path: this.router.action(this.basePath + path) };
+        var action = { path: this.router.action(path[0] === '/' ? path : this.basePath + path) };
+        if (typeof action.path === "string") {
+            window.history.pushState(action, "", action.path);
+            // this.childPath.notify(path);
+        }
+    }
+
+    pop() {
+        var action = { path: this.router.action(this.basePath) };
         if (typeof action.path === "string") {
             window.history.pushState(action, "", action.path);
         }
@@ -35,6 +44,10 @@ export class UrlHelper {
 
 class ViewBinding {
     constructor(private binding) {
+    }
+
+    get length() {
+        return this.binding.length;
     }
 
     execute() {
@@ -82,7 +95,7 @@ class ControllerContext {
         else if (typeof this.controller.get === "function") {
             viewResult = this.controller.get(path, childContext);
         } else {
-            viewResult = System.import(this.basePath + "views/" + path).then(mod => mod.view(childContext));
+            viewResult = System["import"](this.basePath + "views/" + path).then(mod => mod.view(childContext));
         }
 
         return dataReady(viewResult,
@@ -94,7 +107,7 @@ interface IRoute {
     execute(context, args: any[]): ViewResult | Promise<ViewResult>;
 }
 
-declare type Matcher = string | ((str: string) => any);
+declare type Matcher = string | ((str: string) => any) | RegExp;
 
 class ActionRoute implements IRoute {
     constructor(public matcher: Matcher, private action: (context, args: any[]) => ViewResult | Promise<ViewResult>) { }
@@ -106,9 +119,11 @@ class ActionRoute implements IRoute {
     matches(path: string) {
         var { matcher } = this;
         if (typeof matcher === "string")
-            return this.matcher === path;
+            return this.matcher === path ? path : null;
         else if (typeof matcher === "function")
             return matcher(path);
+        else if (matcher instanceof RegExp)
+            return matcher.test(path) ? path : null;
         return null;
     }
 }
@@ -134,13 +149,13 @@ export class ViewResult {
     }
 
     get(path: string, viewContext: IViewContext): ViewResult | Promise<ViewResult> {
-        var { routes } = this, i = routes.length;
+        var { routes } = this;
 
-        while (i--) {
+        for(var i=0 ; i<routes.length ; i++) {
             var route = routes[i];
             var match = route.matches(path);
             if (match !== null && match !== undefined) {
-                console.debug("route matched", match);
+                // console.debug("route matched", match);
                 return route.execute(viewContext, match);
             }
         }
@@ -166,6 +181,17 @@ class CompositeBinding extends Reactive.Binding {
 
     render(context, driver) {
     }
+
+    get length() {
+        var { childBindings } = this, result = 0;
+        if (childBindings) {
+            let i = childBindings.length || 0;
+            while (i--) {
+                result += childBindings[i].length;
+            }
+        }
+        return result;
+    }
 }
 
 // ReSharper disable once InconsistentNaming
@@ -174,7 +200,6 @@ export function View(view, model?) {
 }
 
 declare class System {
-    static import(path: string);
 }
 
 export function dataReady<T>(data: T | PromiseLike<T>, resolve: (x: T) => any) {
@@ -247,7 +272,7 @@ export class Router {
         this.actions = new Observables.Observable<string>();
     }
 
-    static getView(controllerContext: IControllerContext, path: string) {
+    static getView(controllerContext: ControllerContext, path: string) {
         var name = path.slice(1);
         return dataReady(controllerContext, x => {
             if (typeof x['then'] === "function")
@@ -260,10 +285,14 @@ export class Router {
     start(app, basePath: string) {
         var controllerContext = new ControllerContext(app, basePath, new UrlHelper(this), null);
 
-        var scanner = cache(Router.getView);
+        var views = [];
+        var scanner = cache(Router.getView, views);
 
-        return this.actions.map((route: string) =>
-            scan(route.match(/\/([^\/]+)/g), scanner, controllerContext));
+        return this.actions.map((route: string) => {
+            var paths = route.match(/\/([^\/]+)/g);
+            views.length = paths.length;
+            return scan(paths, scanner, controllerContext);
+        });
     }
 
     action(actionPath): string | false {
@@ -284,7 +313,7 @@ export class Router {
         window.onpopstate = () => {
             var { pathname } = window.location;
 
-            if (pathname.startsWith(appPath)) {
+            if (pathname.substr(0, appPath.length) === appPath) {
                 var actionPath = pathname.substring(appPath.length);
                 router.action(actionPath);
             }

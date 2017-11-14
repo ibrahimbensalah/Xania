@@ -14,3 +14,22 @@
 .data-grid-cell.data-grid-column-status {
   width: 80px;
 }
+.data-grid-cell.data-grid-column-name {
+  width: 220px;
+}
+.dropdown-toggle:focus {
+  color: red;
+}
+.btn-delete-record {
+  color: gray;
+  padding: 0 8px;
+  line-height: 30px;
+  font-weight: bold;
+  display: block;
+  font-size: 20px;
+  text-decoration: none;
+}
+.btn-delete-record:hover {
+  color: red;
+  text-decoration: none;
+}

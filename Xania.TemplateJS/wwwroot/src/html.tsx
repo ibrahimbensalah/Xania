@@ -1,12 +1,12 @@
-﻿import xania, { mount, expr, With, Repeat, List, Template, Reactive } from "./xania";
+﻿import xania, { mount, expr, call, With, Repeat, List, Template, Reactive } from "./xania";
 import { IDriver } from "./template";
 
-export function TextEditor(attrs: { display; field; placeholder?; }) {
+export function TextEditor(attrs: { display; field; placeholder?; value?; }) {
     var id = Math.random();
     return (
         <div className="form-group" {...attrs}>
             <label for={id}>{attrs.display}</label>
-            <input class="form-control" id={id} type="text" placeholder={attrs.placeholder || attrs.display} name={attrs.field} />
+            <input class="form-control" id={id} type="text" placeholder={attrs.placeholder || attrs.display} value={attrs.value} />
         </div>
     );
 }
@@ -59,9 +59,9 @@ export class DataSource {
 }
 
 export class DropDown {
-    private data: any[];
+    private data;
 
-    constructor(private attrs: { dataSource: DataSource }, private children) {
+    constructor(private attrs: { data }, private children) {
     }
 
     private expanded: boolean = false;
@@ -71,8 +71,29 @@ export class DropDown {
         this.expanded = !this.expanded;
     }
 
-    private selectItem(value) {
-        var { data } = this;
+    private select = (code) => {
+        var getter = expr(code);
+        var target = expr("value");
+        return {
+            execute(context, binding) {
+                var property = target.execute(context, binding);
+                var newValue = getter.execute(context, binding);
+                property.update(newValue);
+                return newValue;
+            }
+        }
+    }
+
+    private expand = () => {
+        this.expanded = true;
+    }
+
+    private hide = () => {
+        this.expanded = false;
+    }
+
+    private selectItem(data, value) {
+        console.log("selectItem", { data, value });
         this.expanded = false;
         var i = data.length;
         while (i--) {
@@ -84,17 +105,25 @@ export class DropDown {
     }
 
     view() {
-        this.data = this.attrs.dataSource.read();
-        return (
+        var delay = (f, time) => {
+            return () => new Promise(resolve => {
+                setTimeout(() => {
+                    f();
+                    resolve();
+                }, time);
+            });
+        }
+
+        return(
             <div style="position: relative">
                 <div className={[expr("expanded -> ' show'")]}>
-                    <button className="btn btn-secondary btn-sm dropdown-toggle" onClick={this.onToggle}
+                    <button className="btn btn-secondary btn-sm dropdown-toggle" onFocusIn={this.expand} onFocusOut={delay(this.hide, 100)}
                         type="button" aria-haspopup="true" aria-expanded={expr("expanded")}>
                         <With object={expr("data where id = value |> single")}>{this.children}</With>
                     </button>
                     <div className="dropdown-menu">
-                        <List source={this.data}>
-                            <a className="dropdown-item" href="" onClick={expr("value <- selectItem id")}>
+                        <List source={expr('data')}>
+                            <a tabindex="-1" className="dropdown-item" href="" onClick={this.select("selectItem data id")}>
                                 { this.children }
                             </a>
                         </List>
@@ -150,9 +179,10 @@ class PartialBinding extends Reactive.Binding {
         if (this.driver) {
             var offset = 0, { childBindings } = this;
             for (var i = 0; i < childBindings.length; i++) {
-                if (childBindings[i] === fragment)
+                var b = childBindings[i];
+                if (b === fragment)
                     break;
-                offset += childBindings[i].length;
+                offset += typeof b.length == 'number' ? b.length : 1;
             }
             this.driver.insert(this, dom, offset + idx);
         }
