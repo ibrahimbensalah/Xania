@@ -2,11 +2,11 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using Newtonsoft.Json.Linq;
+using Xania.Reflection;
 
 namespace Xania.QL
 {
@@ -348,13 +348,13 @@ namespace Xania.QL
 
     internal class JoinQuery : IQuery
     {
-        private readonly IReflectionHelper _reflectionHelper;
+        private readonly Xania.Reflection.IReflectionHelper _reflectionHelper;
         private readonly Query _outer;
         private readonly Query _inner;
         private readonly Expression _outerKeyExpr;
         private readonly Expression _innerKeyExpr;
 
-        public JoinQuery(IReflectionHelper reflectionHelper, Query outer, Query inner, Expression outerKeyExpr, Expression innerKeyExpr)
+        public JoinQuery(Xania.Reflection.IReflectionHelper reflectionHelper, Query outer, Query inner, Expression outerKeyExpr, Expression innerKeyExpr)
         {
             _reflectionHelper = reflectionHelper;
             _outer = outer;
@@ -529,15 +529,6 @@ namespace Xania.QL
     public interface IContext : IEnumerable<KeyValuePair<string, Expression>>
     {
         Expression Get(string name);
-    }
-
-    public interface IReflectionHelper
-    {
-        Type GetElementType(Type type);
-        TypeInfo CreateType(IDictionary<string, Type> fields);
-        MethodInfo GetQueryableSelect(Type elementType, Type resultType);
-        MethodInfo GetQueryableWhere(Type elementType);
-        MethodInfo GetQueryableJoin(Type outerType, Type innerType, Type keyType, Type resultType);
     }
 
     public class Store

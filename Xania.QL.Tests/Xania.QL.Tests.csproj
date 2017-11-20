@@ -107,12 +107,16 @@
       <Name>Xania.Models</Name>
     </ProjectReference>
     <ProjectReference Include="..\Xania.QL\Xania.QL.csproj">
-      <Project>{95264966-9e27-48ab-b039-198a6f6cab3c}</Project>
+      <Project>{A8A25CB8-661C-4050-B7E4-C2C8380526B4}</Project>
       <Name>Xania.QL</Name>
     </ProjectReference>
     <ProjectReference Include="..\Xania.Railway\Xania.Railway.csproj">
-      <Project>{CC0DFB66-FDD9-4AF5-BBBE-293CE326630C}</Project>
+      <Project>{cc0dfb66-fdd9-4af5-bbbe-293ce326630c}</Project>
       <Name>Xania.Railway</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Xania.Reflection\Xania.Reflection.csproj">
+      <Project>{6320f29a-f0c9-48e7-bf6e-a56b0b448352}</Project>
+      <Name>Xania.Reflection</Name>
     </ProjectReference>
     <ProjectReference Include="..\Xania.TemplateJS\Xania.TemplateJS.csproj">
       <Project>{660FE6B8-1FCE-43B4-AC80-107A323CD73C}</Project>

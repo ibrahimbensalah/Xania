@@ -7,6 +7,7 @@ using Xania.Data.DocumentDB;
 
 namespace Xania.Models.Tests
 {
+    [Ignore("Documents obsolete in favor of graphs")]
     public class AzureDocumentDBTests
     {
         const string EndpointUrl = "https://xania-sql.documents.azure.com:443/";
