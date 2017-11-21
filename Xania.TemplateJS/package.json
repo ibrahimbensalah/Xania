@@ -5,8 +5,8 @@
   "devDependencies": {
     "@types/jasmine": "^2.5.38",
     "jspm": "^0.16.53",
-    "typescript": "^2.6.1",
-    "pegjs": "pegjs/pegjs#master"
+    "pegjs": "pegjs/pegjs#master",
+    "typescript": "^2.6.1"
   },
   "dependencies": {
     "@types/core-js": "^0.9.43",
@@ -15,7 +15,7 @@
   "scripts": {
     "query": "pegjs -o ./wwwroot/xania/query.peg.js --optimize speed ./grammar/query.peg",
     "mustache": "pegjs -o ./wwwroot/xania/mustache.peg.js --optimize speed ./grammar/mustache.peg",
-    "jspm": "jspm bundle css wwwroot/jspm-plugins.js --inject --minify"
+    "jspm": "jspm bundle css wwwroot/jspm-plugins.js --inject"
   },
   "jspm": {
     "directories": {

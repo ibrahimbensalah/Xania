@@ -8,10 +8,12 @@ using System.Linq.Expressions;
 using System.Net.Http.Formatting;
 using System.Reflection;
 using System.Reflection.Emit;
+using System.Text;
 using FluentAssertions;
 using NUnit.Framework;
 using Xania.QL.Tests.Properties;
 using Xania.Models;
+using Xania.TemplateJS.Reporting;
 
 namespace Xania.QL.Tests
 {
