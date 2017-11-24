@@ -18,7 +18,7 @@ namespace Xania.CosmosDb
 
         public override string ToString()
         {
-            return $"{SourceId}->{Name}({Id})->{TargetId}";
+            return $"({SourceId}) -> [{Name}({Id})] -> ({TargetId})";
         }
     }
 

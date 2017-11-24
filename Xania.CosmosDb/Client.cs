@@ -67,7 +67,6 @@ namespace Xania.CosmosDb
                         var label = relationJson.Value<string>("label");
                         var targetId = relationJson.Value<string>("inV");
                         var sourceId = relationJson.Value<string>("outV");
-                        Console.WriteLine($"relation: {id} {sourceId} -> {targetId}");
 
                         var relation = new Relation(sourceId, label, targetId)
                         {
