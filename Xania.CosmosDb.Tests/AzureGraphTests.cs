@@ -39,33 +39,39 @@ namespace Xania.CosmosDb.Tests
         [Test]
         public void SaveModelTest()
         {
+            var friend = new Person { Id = 2 };
             var model = new Person
             {
                 Id = 1,
                 FirstName = "Ibrahim",
-                Friend = new Person { Id = 2 },
-                Enemy = new Person { Id = 2 },
+                Friend = friend,
+                Enemy = new Person { Id = 3 },
                 HQ = new Address
                 {
                     Id = "address1",
                     Location = "Amstelveen"
                 },
                 Tags = new[] { "Programmer", "Entrepeneur" },
-                Friends = { new Person { Id = 4 } }
+                Friends = { friend }
             };
 
             var graph = Graph.FromObject(model);
 
             using (var client = new Client(EndpointUrl, PrimaryKey))
             {
-                Console.WriteLine("Reading all objects");
+                client.UpsertAsync(graph).Wait();
+
                 var clone = client.GetVertexTree(1).Result.ToObjects<Person>().SingleOrDefault();
                 if (clone != null)
                 {
                     Console.WriteLine(JsonConvert.SerializeObject(clone));
+
+                    clone.Enemy.Should().NotBeNull();
+                    clone.Friend.Should().NotBeNull();
+                    clone.Friends.Should().HaveCount(1);
+
                     client.ExecuteGremlinAsync("g.V().drop()").Wait();
                 }
-                client.UpsertAsync(graph).Wait();
             }
         }
 

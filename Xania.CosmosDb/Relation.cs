@@ -22,24 +22,6 @@ namespace Xania.CosmosDb
         }
     }
 
-    public class Relation<T>: IRelation
-    {
-        public string Id { get; set; } = Guid.NewGuid().ToString();
-        public T Target { get; set; }
-
-        object IRelation.Target => Target;
-
-        public Relation(T target)
-        {
-            Target = target;
-        }
-
-        public static implicit operator Relation<T>(T target)
-        {
-            return new Relation<T>(target);
-        }
-    }
-
     public interface IRelation
     {
         object Target { get; }

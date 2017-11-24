@@ -3,7 +3,6 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
-using System.ComponentModel.Design;
 using System.Linq;
 using Newtonsoft.Json.Linq;
 
@@ -16,86 +15,48 @@ namespace Xania.CosmosDb
 
         public static Graph FromObject(Object model)
         {
-            return ConvertObject(model).Item2;
+            return ConvertObject(model, model.GetType(), new Dictionary<object, ConvertResult>()).Graph;
         }
 
-        private static Tuple<Vertex, Graph> ConvertObject(object value)
+        private static ConvertResult ConvertObject(object value, Type valueType, IDictionary<object, ConvertResult> cache)
         {
-            if (value == null)
-                return new Tuple<Vertex, Graph>(null, null);
+            if (cache.TryGetValue(value, out var result))
+                return result;
 
+            if (IsPrimitive(valueType))
+            {
+                return ConvertResult.Primitve(new Tuple<string, object>(Guid.NewGuid().ToString(), value));
+            }
+            if (value is IEnumerable enumerable)
+            {
+                var elementType = GetElementType(valueType);
+                if (elementType == null)
+                    throw new InvalidOperationException($"Could not derive element type from '{valueType}'");
+
+                if (IsPrimitive(elementType))
+                {
+                    var values = enumerable.OfType<object>()
+                        .Select(e => new Tuple<string, object>(Guid.NewGuid().ToString(), e));
+                    return ConvertResult.Primitve(values.ToArray());
+                }
+                return ConvertResult.List(enumerable.OfType<object>().Select(e => ConvertObject(e, e.GetType(), cache)));
+            }
+
+            var vertex = new Vertex(valueType.Name);
             var graph = new Graph();
-            var vertex = new Vertex(value.GetType().Name);
             foreach (var prop in TypeDescriptor.GetProperties(value).OfType<PropertyDescriptor>())
             {
                 var propValue = prop.GetValue(value);
-                if (IsPrimitive(prop.PropertyType))
-                {
-                    if (string.Equals(prop.Name, "id", StringComparison.InvariantCultureIgnoreCase))
-                        vertex.Id = propValue?.ToString() ?? Guid.NewGuid().ToString();
-                    else if (propValue != null)
-                        vertex.Properties.Add(new Property(prop.Name, new Tuple<string, object>(Guid.NewGuid().ToString(), propValue)));
-                }
-                else if (propValue is IRelation)
-                {
-                    var rel = propValue as IRelation;
-
-                    Merge(graph, vertex, prop.Name, rel);
-                }
-                else if (propValue is IEnumerable)
-                {
-                    var enumerable = propValue as IEnumerable;
-                    var elementType = GetElementType(propValue.GetType());
-                    if (elementType == null)
-                        throw new InvalidOperationException($"Could not derive element type from '{propValue.GetType()}'");
-
-                    Merge(vertex, prop, graph, elementType, enumerable);
-                }
+                if (string.Equals(prop.Name, "id", StringComparison.InvariantCultureIgnoreCase))
+                    vertex.Id = propValue?.ToString() ?? Guid.NewGuid().ToString();
                 else if (propValue != null)
                 {
-                    // throw new NotImplementedException();
+                    var pair = ConvertObject(propValue, propValue.GetType(), cache);
+                    pair.Merge(graph, vertex, prop.Name);
                 }
-
             }
             graph.Vertices.Add(vertex);
-            return new Tuple<Vertex, Graph>(vertex, graph);
-        }
-
-        private static void Merge(Graph graph, Vertex vertex, string propName, IRelation rel)
-        {
-            var pair = ConvertObject(rel.Target);
-            graph.Relations.Add(new Relation(vertex.Id, propName, pair.Item1.Id) { Id = rel.Id });
-            foreach (var x in pair.Item2.Relations)
-                graph.Relations.Add(x);
-            foreach (var childVertex in pair.Item2.Vertices)
-                graph.Vertices.Add(childVertex);
-        }
-
-        private static void Merge(Vertex vertex, PropertyDescriptor prop, Graph graph, Type elementType, IEnumerable enumerable)
-        {
-            if (IsPrimitive(elementType))
-            {
-                var values = enumerable.OfType<object>()
-                    .Select(e => new Tuple<string, object>(Guid.NewGuid().ToString(), e));
-                vertex.Properties.Add(new Property(prop.Name, values.ToArray()));
-            }
-            else
-            {
-                foreach (var e in enumerable)
-                {
-                    var pair = ConvertObject(e);
-                    Merge(graph, vertex, prop.Name, pair);
-                }
-            }
-        }
-
-        private static void Merge(Graph graph, Vertex vertex, string propName, Tuple<Vertex, Graph> pair)
-        {
-            graph.Relations.Add(new Relation(vertex.Id, propName, pair.Item1.Id));
-            foreach (var rel in pair.Item2.Relations)
-                graph.Relations.Add(rel);
-            foreach (var childVertex in pair.Item2.Vertices)
-                graph.Vertices.Add(childVertex);
+            return ConvertResult.Object(vertex, graph);
         }
 
         private static Type GetElementType(Type enumerableType)
@@ -119,9 +80,10 @@ namespace Xania.CosmosDb
             var cache = new Dictionary<Vertex, object>();
 
             var label = typeof(TModel).Name;
-            foreach (var vertex in Vertices.Where(e => e.Label.Equals(label, StringComparison.InvariantCultureIgnoreCase)))
+            foreach (var vertex in Vertices.Where(e =>
+                e.Label.Equals(label, StringComparison.InvariantCultureIgnoreCase)))
             {
-                yield return (TModel)ToObject(vertex, typeof(TModel), cache);
+                yield return (TModel) ToObject(vertex, typeof(TModel), cache);
                 // yield return json.ToObject<TModel>();
             }
         }
@@ -155,38 +117,48 @@ namespace Xania.CosmosDb
             {
                 var target = Vertices.SingleOrDefault(e => e.Id.Equals(rel.TargetId));
                 var modelProperty = modelProperties[rel.Name];
-                if (target == null)
-                {
-                    var relModelProperties = TypeDescriptor.GetProperties(modelProperty.PropertyType).OfType<PropertyDescriptor>()
-                        .ToDictionary(e => e.Name, StringComparer.InvariantCultureIgnoreCase);
-                    var relIdProperty = relModelProperties.ContainsKey("Id") ? relModelProperties["Id"] : null;
-                    modelProperty.SetValue(model, Proxy(modelProperty.PropertyType, Convert(rel.TargetId, relIdProperty?.PropertyType)));
-                }
-                else if (typeof(IEnumerable).IsAssignableFrom(modelProperty.PropertyType)) 
+                if (typeof(IEnumerable).IsAssignableFrom(modelProperty.PropertyType))
                 {
                     var elementType = GetElementType(modelProperty.PropertyType);
-                    Add(modelProperty.GetValue(model), ToObject(target, elementType, cache));
+                    var item = target == null
+                        ? Proxy(elementType, rel.TargetId)
+                        : ToObject(target, elementType, cache);
+                    Add(modelProperty.GetValue(model), item, elementType);
                 }
-                else 
+                else
                 {
-                    modelProperty.SetValue(model, ToObject(target, modelProperty.PropertyType, cache));
+                    var item = target == null
+                        ? Proxy(modelProperty.PropertyType, rel.TargetId)
+                        : ToObject(target, modelProperty.PropertyType, cache);
+                    modelProperty.SetValue(model, item);
                 }
             }
             return model;
         }
 
-        private object Proxy(Type proxyType, object id)
+        private object Proxy(Type modelType, string targetId)
         {
-            return new ShallowProxy(proxyType, id).GetTransparentProxy();
+            var relModelProperties = TypeDescriptor.GetProperties(modelType)
+                .OfType<PropertyDescriptor>()
+                .ToDictionary(e => e.Name, StringComparer.InvariantCultureIgnoreCase);
+            var relIdProperty = relModelProperties.ContainsKey("Id") ? relModelProperties["Id"] : null;
+            return Proxy(modelType, Convert(targetId, relIdProperty?.PropertyType));
         }
 
-        private void Add(object collection, object toObject)
+        private object Proxy(Type proxyType, object id)
+        {
+            if (typeof(MarshalByRefObject).IsAssignableFrom(proxyType) || proxyType.IsInterface)
+                return new ShallowProxy(proxyType, id).GetTransparentProxy();
+            return null;
+        }
+
+        private void Add(object collection, object toObject, Type elementType)
         {
             var collectionType = TypeDescriptor.GetReflectionType(collection);
-            var addMethod = collectionType.GetMethod("Add", new Type[] { toObject.GetType() });
+            var addMethod = collectionType.GetMethod("Add", new [] { elementType });
             if (addMethod == null)
                 throw new Exception("Add method is not found");
-            addMethod.Invoke(collection, new[] { toObject });
+            addMethod.Invoke(collection, new[] {toObject});
         }
 
         private static object Convert(object source, Type targetType)
@@ -206,7 +178,7 @@ namespace Xania.CosmosDb
             if (vertex == null)
                 return null;
 
-            var o = new JObject { { "Id", vertex.Id } };
+            var o = new JObject {{"Id", vertex.Id}};
             foreach (var p in vertex.Properties)
             {
                 var value = p.Values.Select(e => e.Item2).ToArray();
@@ -221,7 +193,84 @@ namespace Xania.CosmosDb
         }
     }
 
-    public class TypeResolver: ITypeResolver
+    internal class PrimitiveResult : ConvertResult
+    {
+        public override void Merge(Graph graph, Vertex vertex, string propName)
+        {
+            vertex.Properties.Add(new Property(propName, this.Values));
+        }
+
+        public Tuple<string, object>[] Values { get; set; }
+    }
+
+    internal class ObjectResult : ConvertResult
+    {
+        public Vertex Vertex { get; set; }
+
+        public override void Merge(Graph graph, Vertex vertex, string propName)
+        {
+            graph.Relations.Add(new Relation(vertex.Id, propName, Vertex.Id));
+            foreach (var rel in Graph.Relations)
+                graph.Relations.Add(rel);
+            foreach (var childVertex in Graph.Vertices)
+                graph.Vertices.Add(childVertex);
+        }
+    }
+
+    internal abstract class ConvertResult
+    {
+        public Graph Graph { get; set; }
+        public static ConvertResult None { get; set; } = new NoResult();
+
+        public static ObjectResult Object(Vertex vertex, Graph graph)
+        {
+            return new ObjectResult
+            {
+                Graph = graph,
+                Vertex = vertex
+            };
+        }
+
+        public abstract void Merge(Graph graph, Vertex vertex, string propName);
+
+        public static PrimitiveResult Primitve(params Tuple<string, object>[] values)
+        {
+            return new PrimitiveResult
+            {
+                Values = values
+            };
+        }
+
+        public static CollectResult List(IEnumerable<ConvertResult> list)
+        {
+            return new CollectResult
+            {
+                List = list
+            };
+        }
+    }
+
+    internal class CollectResult : ConvertResult
+    {
+        public IEnumerable<ConvertResult> List { get; set; }
+
+        public override void Merge(Graph graph, Vertex vertex, string propName)
+        {
+            foreach (var item in this.List)
+            {
+                item.Merge(graph, vertex, propName);
+            }
+        }
+    }
+
+    internal class NoResult : ConvertResult
+    {
+        public override void Merge(Graph graph, Vertex vertex, string propName)
+        {
+        }
+    }
+
+    public class TypeResolver : ITypeResolver
     {
         private readonly Type _modelType;
 
