@@ -9,10 +9,6 @@ namespace Xania.CosmosDb
     {
         public static string ToGremlin(Expression expression)
         {
-            // The expression must represent a query over the data source. 
-            if (!IsQueryOverDataSource(expression))
-                throw new InvalidProgramException("No query over the data source was specified.");
-
             /**
              * Evaluate expression
              */
@@ -49,7 +45,7 @@ namespace Xania.CosmosDb
                     {
                         yield return new MemberCall
                         {
-                            Method = "filter",
+                            Method = "where",
                             Count = 2
                         };
                         stack.Push(methodCall.Arguments[0]);
@@ -95,7 +91,7 @@ namespace Xania.CosmosDb
                         if (valueType.IsGenericType && valueType.GenericTypeArguments.Length == 1 && valueType.GetGenericTypeDefinition() == typeof(GraphQueryable<>))
                         {
                             var itemType = valueType.GenericTypeArguments[0];
-                            yield return new Term($"'g.V().has('label', '{itemType.Name.ToCamelCase()}')");
+                            yield return new Term($"g.V().hasLabel('{itemType.Name.ToCamelCase()}')");
                         }
                         else if (valueType.IsPrimitive)
                         {
@@ -109,7 +105,7 @@ namespace Xania.CosmosDb
                 }
                 else if (item is MemberExpression memberExpression)
                 {
-                    yield return new Term($"'{memberExpression.Member.Name}'");
+                    yield return new Term($"'{memberExpression.Member.Name.ToLowerInvariant()}'");
                 }
                 else
                 {
@@ -179,7 +175,7 @@ namespace Xania.CosmosDb
         public string Method { get; set; }
         public override string ToGremlin(params string[] args)
         {
-            return $"{Method}({args[0]}, {args[1]})";
+            return $"{Method}({args[0]}, '{args[1]}')";
         }
     }
 }

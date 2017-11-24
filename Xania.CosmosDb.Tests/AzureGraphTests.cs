@@ -59,6 +59,7 @@ namespace Xania.CosmosDb.Tests
 
             using (var client = new Client(EndpointUrl, PrimaryKey))
             {
+                client.ExecuteGremlinAsync("g.V().drop()").Wait();
                 client.UpsertAsync(graph).Wait();
 
                 var clone = client.GetVertexTree(1).Result.ToObjects<Person>().SingleOrDefault();
@@ -69,8 +70,6 @@ namespace Xania.CosmosDb.Tests
                     clone.Enemy.Should().NotBeNull();
                     clone.Friend.Should().NotBeNull();
                     clone.Friends.Should().HaveCount(1);
-
-                    client.ExecuteGremlinAsync("g.V().drop()").Wait();
                 }
             }
         }
