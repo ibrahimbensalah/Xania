@@ -241,22 +241,22 @@ namespace Xania.CosmosDb
             };
         }
 
-        public static CollectResult List(IEnumerable<ConvertResult> list)
+        public static ListResult List(IEnumerable<ConvertResult> list)
         {
-            return new CollectResult
+            return new ListResult
             {
-                List = list
+                Values = list
             };
         }
     }
 
-    internal class CollectResult : ConvertResult
+    internal class ListResult : ConvertResult
     {
-        public IEnumerable<ConvertResult> List { get; set; }
+        public IEnumerable<ConvertResult> Values { get; set; }
 
         public override void Merge(Graph graph, Vertex vertex, string propName)
         {
-            foreach (var item in this.List)
+            foreach (var item in Values)
             {
                 item.Merge(graph, vertex, propName);
             }

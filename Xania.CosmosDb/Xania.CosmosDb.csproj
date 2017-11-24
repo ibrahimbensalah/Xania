@@ -103,6 +103,7 @@
       <HintPath>..\packages\System.Console.4.3.0\lib\net46\System.Console.dll</HintPath>
     </Reference>
     <Reference Include="System.Core" />
+    <Reference Include="System.Data.Linq" />
     <Reference Include="System.Diagnostics.DiagnosticSource, Version=4.0.1.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
       <HintPath>..\packages\System.Diagnostics.DiagnosticSource.4.3.0\lib\net46\System.Diagnostics.DiagnosticSource.dll</HintPath>
     </Reference>
@@ -197,6 +198,7 @@
   <ItemGroup>
     <Compile Include="AzureGraphStore.cs" />
     <Compile Include="Client.cs" />
+    <Compile Include="CosmosQueryContext.cs" />
     <Compile Include="GraphQueryable.cs" />
     <Compile Include="GraphQueryProvider.cs" />
     <Compile Include="ShallowProxy.cs" />

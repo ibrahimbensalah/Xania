@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Linq.Expressions;
+using Newtonsoft.Json;
 
 namespace Xania.CosmosDb
 {
@@ -31,6 +32,10 @@ namespace Xania.CosmosDb
         public TResult Execute<TResult>(Expression expression)
         {
             bool IsEnumerable = (typeof(TResult).Name == "IEnumerable`1");
+            var gremlin = CosmosQueryContext.ToGremlin(expression);
+            var result = _client.ExecuteGremlinAsync(gremlin).Result;
+            Console.WriteLine(JsonConvert.SerializeObject(result));
+
             throw new NotImplementedException();
         }
     }
