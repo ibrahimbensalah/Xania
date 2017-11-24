@@ -1,0 +1,3 @@
+﻿namespace Xania.CosmosDb.Tests
+{
+}
