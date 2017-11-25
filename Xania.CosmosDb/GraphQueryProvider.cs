@@ -1,7 +1,8 @@
 ﻿using System;
+using System.Collections;
 using System.Linq;
 using System.Linq.Expressions;
-using Newtonsoft.Json;
+using Xania.Reflection;
 
 namespace Xania.CosmosDb
 {
@@ -33,10 +34,18 @@ namespace Xania.CosmosDb
         {
             bool IsEnumerable = (typeof(TResult).Name == "IEnumerable`1");
             var gremlin = CosmosQueryContext.ToGremlin(expression);
-            var result = _client.ExecuteGremlinAsync(gremlin).Result;
-            Console.WriteLine(JsonConvert.SerializeObject(result));
+            var graph = _client.GetTree(gremlin).Result;
 
-            throw new NotImplementedException();
+            var resultType = typeof(IQueryable<>).MapTo(typeof(TResult));
+            var elementType = resultType.GenericTypeArguments[0];
+
+            return (TResult) OfType(graph.ToObjects(elementType), elementType);
+        }
+
+        private object OfType(IEnumerable objects, Type elementType)
+        {
+            var ofType = typeof(Enumerable).GetMethod("OfType")?.MakeGenericMethod(elementType);
+            return ofType?.Invoke(null, new object[]{ objects });
         }
     }
 }

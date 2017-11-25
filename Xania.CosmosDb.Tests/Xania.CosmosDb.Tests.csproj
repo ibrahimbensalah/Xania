@@ -85,6 +85,7 @@
   <ItemGroup>
     <Compile Include="Address.cs" />
     <Compile Include="AzureGraphTests.cs" />
+    <Compile Include="GremlinqTests.cs" />
     <Compile Include="Person.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Relation.cs" />

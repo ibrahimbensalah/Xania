@@ -69,9 +69,34 @@ namespace Xania.CosmosDb
                 {
                     if (binaryExpression.NodeType == ExpressionType.Equal)
                     {
-                        yield return new Call {Method = "has", Count = 2};
-                        stack.Push(binaryExpression.Left);
-                        stack.Push(binaryExpression.Right);
+                        if (binaryExpression.Left is MemberExpression left)
+                        {
+                            if (left.Expression is ParameterExpression)
+                            {
+                                yield return new Call
+                                {
+                                    Method = "has",
+                                    Count = 1,
+                                    Args = { $"'{left.Member.Name.ToCamelCase()}'" }
+                                };
+                                stack.Push(binaryExpression.Right);
+                            }
+                            else
+                            {
+                                yield return new MemberCall
+                                {
+                                    Method = "has",
+                                    Count = 2,
+                                    Args = { $"'{left.Member.Name.ToCamelCase()}'" }
+                                };
+                                stack.Push(left.Expression);
+                                stack.Push(binaryExpression.Right);
+                            }
+                        }
+                        else
+                        {
+                            throw new NotImplementedException();
+                        }
                     }
                     else
                     {
@@ -80,7 +105,7 @@ namespace Xania.CosmosDb
                 }
                 else if (item is ParameterExpression)
                 {
-                    yield return new Term("it");
+                    yield return new Term("_");
                 }
                 else if (item is ConstantExpression constantExpression)
                 {
@@ -95,7 +120,11 @@ namespace Xania.CosmosDb
                         }
                         else if (valueType.IsPrimitive)
                         {
-                            yield return new Term(constantExpression.Value);
+                            yield return new Term($"'{constantExpression.Value}'");
+                        }
+                        else if (value is string)
+                        {
+                            yield return new Term($"'{value}'");
                         }
                         else
                         {
@@ -105,7 +134,13 @@ namespace Xania.CosmosDb
                 }
                 else if (item is MemberExpression memberExpression)
                 {
-                    yield return new Term($"'{memberExpression.Member.Name.ToLowerInvariant()}'");
+                    var memberName = memberExpression.Member.Name.ToCamelCase();
+                    yield return new Member(memberName);
+
+                    if (!(memberExpression.Expression is ParameterExpression))
+                    {
+                        stack.Push(memberExpression.Expression);
+                    }
                 }
                 else
                 {
@@ -113,12 +148,21 @@ namespace Xania.CosmosDb
                 }
             }
         }
+    }
 
-        private static bool IsQueryOverDataSource(Expression expression)
+    internal class Member : GremlinExpr
+    {
+        private readonly string _name;
+
+        public Member(string name)
         {
-            // If expression represents an unqueried IQueryable data source instance, 
-            // expression is of type ConstantExpression, not MethodCallExpression. 
-            return (expression is MethodCallExpression);
+            _name = name;
+            Count = 0;
+        }
+
+        public override string ToGremlin(params string[] args)
+        {
+            return $"out('{_name}')";
         }
     }
 
@@ -164,18 +208,22 @@ namespace Xania.CosmosDb
     internal class MemberCall : GremlinExpr
     {
         public string Method { get; set; }
+        public ICollection<string> Args { get; } = new List<string>();
+
         public override string ToGremlin(params string[] args)
         {
-            return $"{args[0]}.{Method}({args[1]})";
+            return $"{args[0]}.{Method}({string.Join(", ", Args.Concat(args.Skip(1)))})";
+            // return $"{args[0]}.{Method}({string.Join(", ", args.Skip(1).Concat(Args))})";
         }
     }
 
     internal class Call: GremlinExpr
     {
         public string Method { get; set; }
+        public ICollection<string> Args { get; } = new List<string>();
         public override string ToGremlin(params string[] args)
         {
-            return $"{Method}({args[0]}, '{args[1]}')";
+            return $"{Method}({string.Join(", ", Args.Concat(args))})";
         }
     }
 }

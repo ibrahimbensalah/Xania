@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Security;
+using System.Threading.Tasks;
 using FluentAssertions;
 using Newtonsoft.Json;
 using NUnit.Framework;
@@ -101,19 +102,6 @@ namespace Xania.CosmosDb.Tests
             clone.Enemy.Id.Should().Be(model.Enemy.Id);
 
             //clone.Friends.Length.Should().Be(1);
-        }
-
-        [Test]
-        public void GraphLinqTest()
-        {
-            using (var client = new Client(EndpointUrl, PrimaryKey))
-            {
-                var persons = client.Query<Person>().Where(e => e.Id == 1);
-                foreach (var i in persons)
-                {
-                    Console.WriteLine($"Person: {i.FirstName} [{string.Join(",", i.Tags)}]");
-                }
-            }
         }
     }
 }

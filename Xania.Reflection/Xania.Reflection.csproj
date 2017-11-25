@@ -40,6 +40,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="TypeExtensions.cs" />
     <Compile Include="RuntimeReflectionHelper.cs" />
     <Compile Include="IReflectionHelper.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

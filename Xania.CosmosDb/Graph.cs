@@ -77,13 +77,18 @@ namespace Xania.CosmosDb
 
         public IEnumerable<TModel> ToObjects<TModel>() where TModel : new()
         {
+            return ToObjects(typeof(TModel)).OfType<TModel>();
+        }
+
+        public IEnumerable ToObjects(Type modelType)
+        {
             var cache = new Dictionary<Vertex, object>();
 
-            var label = typeof(TModel).Name;
+            var label = modelType.Name;
             foreach (var vertex in Vertices.Where(e =>
                 e.Label.Equals(label, StringComparison.InvariantCultureIgnoreCase)))
             {
-                yield return (TModel) ToObject(vertex, typeof(TModel), cache);
+                yield return ToObject(vertex, modelType, cache);
                 // yield return json.ToObject<TModel>();
             }
         }

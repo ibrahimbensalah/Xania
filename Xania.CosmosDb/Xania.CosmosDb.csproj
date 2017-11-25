@@ -221,6 +221,10 @@
       <Project>{6187e3ff-238f-4354-8f05-13de0d4c7f8d}</Project>
       <Name>Xania.DataAccess</Name>
     </ProjectReference>
+    <ProjectReference Include="..\Xania.Reflection\Xania.Reflection.csproj">
+      <Project>{6320f29a-f0c9-48e7-bf6e-a56b0b448352}</Project>
+      <Name>Xania.Reflection</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="..\packages\Microsoft.Azure.DocumentDB.1.19.1\build\Microsoft.Azure.DocumentDB.targets" Condition="Exists('..\packages\Microsoft.Azure.DocumentDB.1.19.1\build\Microsoft.Azure.DocumentDB.targets')" />

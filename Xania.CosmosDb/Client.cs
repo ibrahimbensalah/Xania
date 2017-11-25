@@ -19,7 +19,11 @@ namespace Xania.CosmosDb
 
         public Client(string endpointUrl, SecureString primaryKey)
         {
-            var connectionPolicy = new ConnectionPolicy { ConnectionMode = ConnectionMode.Direct, ConnectionProtocol = Protocol.Tcp };
+            var connectionPolicy = new ConnectionPolicy
+            {
+                ConnectionMode = ConnectionMode.Gateway,
+                ConnectionProtocol = Protocol.Https
+            };
             var settings = new JsonSerializerSettings
             {
                 ContractResolver = new CamelCasePropertyNamesContractResolver(),
@@ -30,13 +34,21 @@ namespace Xania.CosmosDb
                 UriFactory.CreateDatabaseUri("XaniaDataContext"),
                 new DocumentCollection { Id = "Items" },
                 new RequestOptions { OfferThroughput = 1 }).Result.Resource;
+
+            _client.OpenAsync().Wait();
         }
 
-        public async Task<Graph> GetVertexTree(object vertexId)
+        public event Action<string> Log;
+
+        public Task<Graph> GetVertexTree(object vertexId)
         {
-            var gremlin = $"g.V('{vertexId}').optional(outE()).tree()";
+            return GetTree($"g.V('{vertexId}')");
+        }
+
+        public async Task<Graph> GetTree(string vertexQuery)
+        {
             var graph = new Graph();
-            foreach (var result in await ExecuteGremlinAsync(gremlin))
+            foreach (var result in await ExecuteGremlinAsync(vertexQuery + ".optional(outE()).tree()"))
             {
                 foreach (var verticesJson in result.Properties().Select(x => x.Value).OfType<JObject>())
                 {
@@ -54,7 +66,7 @@ namespace Xania.CosmosDb
                         foreach (var prop in propertiesJson.Properties())
                         {
                             var propValue = ((JArray)prop.Value).Select(x =>
-                                new Tuple<string, object>(x.Value<string>("id"), x.Value<Object>("value"))).ToArray();
+                               new Tuple<string, object>(x.Value<string>("id"), x.Value<Object>("value"))).ToArray();
 
                             var graphProp = new Property(prop.Name, propValue);
                             vertex.Properties.Add(graphProp);
@@ -81,16 +93,26 @@ namespace Xania.CosmosDb
 
         public async Task<IEnumerable<JObject>> ExecuteGremlinAsync(string gremlin)
         {
-            Console.WriteLine($"Running {gremlin}");
+            Log?.Invoke($"Running {gremlin}");
 
-            var query = _client.CreateGremlinQuery(_collection, gremlin);
             var list = new List<JObject>();
-            while (query.HasMoreResults)
+            var feedOptions = new FeedOptions
             {
-                var result = await query.ExecuteNextAsync<JObject>();
-                foreach(var e in result)
-                    list.Add(e);
+                MaxDegreeOfParallelism = 10,
+                MaxBufferedItemCount = 100,
+                MaxItemCount = 100,
+                EnableCrossPartitionQuery = true
+            };
+            using (var query = _client.CreateGremlinQuery(_collection, gremlin, feedOptions))
+            {
+                while (query.HasMoreResults)
+                {
+                    var result = await query.ExecuteNextAsync<JObject>();
+                    foreach (var e in result)
+                        list.Add(e);
+                }
             }
+            Log?.Invoke($"Response [{list.Count} Items]\r\n{string.Join(",\r\n", list.Take(1))}");
             return list;
         }
 
