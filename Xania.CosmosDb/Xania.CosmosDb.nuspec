@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<package>
+  <metadata>
+    <id>$id$</id>
+    <version>$version$-preview</version>
+    <title>$title$</title>
+    <authors>Ibrahim ben Salah</authors>
+    <owners>Xania Software</owners>
+    <projectUrl>https://github.com/ibrahimbensalah/Xania/tree/master/Xania.CosmosDb</projectUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>Linq to Graphs</description>
+    <copyright>Copyright 2017</copyright>
+    <tags>linq gremlin documentdb graphs cosmos db</tags>
+    <dependencies>
+      <dependency id="Microsoft.Azure.DocumentDB" version="[1.19.1,2.0)" />
+      <dependency id="Newtonsoft.Json" version="[10.0,11.0)" />
+    </dependencies>
+  </metadata>
+</package>

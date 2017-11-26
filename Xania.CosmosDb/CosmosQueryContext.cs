@@ -213,7 +213,6 @@ namespace Xania.CosmosDb
         public override string ToGremlin(params string[] args)
         {
             return $"{args[0]}.{Method}({string.Join(", ", Args.Concat(args.Skip(1)))})";
-            // return $"{args[0]}.{Method}({string.Join(", ", args.Skip(1).Concat(Args))})";
         }
     }
 

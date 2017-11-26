@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Security;
+using Newtonsoft.Json;
 using NUnit.Framework;
 
 namespace Xania.CosmosDb.Tests
@@ -34,12 +35,14 @@ namespace Xania.CosmosDb.Tests
         public void FilterByFirstName()
         {
             var persons = _client.Query<Person>().Where(e => e.FirstName == "Ibrahim").ToArray();
+            Console.WriteLine(JsonConvert.SerializeObject(persons));
         }
 
         [Test]
         public void FilterByFriend()
         {
             var persons = _client.Query<Person>().Where(e => e.Friend.Id == 2).ToArray();
+            Console.WriteLine(JsonConvert.SerializeObject(persons));
         }
 
         [Test]

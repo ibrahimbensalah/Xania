@@ -6,7 +6,7 @@
     <title>$title$</title>
     <authors>Ibrahim ben Salah</authors>
     <owners>Xania Software</owners>
-    <projectUrl>https://github.com/ibrahimbensalah/Xania.DbMigrator</projectUrl>
+    <projectUrl>https://github.com/ibrahimbensalah/Xania/tree/master/Xania.DbMigrator</projectUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <description>Database First Migration Tool</description>
     <copyright>Copyright 2017</copyright>
