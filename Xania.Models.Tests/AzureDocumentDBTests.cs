@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
+using Microsoft.Extensions.Configuration;
 using NUnit.Framework;
 using Xania.Data.DocumentDB;
 
@@ -10,13 +11,20 @@ namespace Xania.Models.Tests
     [Ignore("Documents obsolete in favor of graphs")]
     public class AzureDocumentDBTests
     {
-        const string EndpointUrl = "https://xania-sql.documents.azure.com:443/";
-        const string PrimaryKey = "xiq9QJQ2naMaqrkbWlu5yxL8N3PTIST0dJuwjHqsei1psDvdGGWfEsGO9I0dP3HuJvXbMXjle4galX0VrcV0FA==";
+        private string _endpointUrl;
+        private string _primaryKey;
 
+        [SetUp]
+        public void Startup()
+        {
+            var config = new ConfigurationBuilder().AddUserSecrets<AzureDocumentDBTests>().Build();
+            _endpointUrl = config["xaniadb-endpointUrl"];
+            _primaryKey = config["xaniadb-primarykey"];
+        }
         [Test]
         public void DocumentDemoTest()
         {
-            using (var db = new XaniaDataContext(EndpointUrl, PrimaryKey))
+            using (var db = new XaniaDataContext(_endpointUrl, _primaryKey))
             {
                 var store = db.Store<Invoice>();
 
@@ -37,7 +45,7 @@ namespace Xania.Models.Tests
         [Test]
         public void Setup()
         {
-            using (var db = new XaniaDataContext(EndpointUrl, PrimaryKey))
+            using (var db = new XaniaDataContext(_endpointUrl, _primaryKey))
             {
                 var invoiceStore = db.Store<Invoice>();
                 invoiceStore.AddAsync(new Invoice
@@ -114,7 +122,7 @@ namespace Xania.Models.Tests
         [Test]
         public void DeleteAllInvoices()
         {
-            using (var db = new XaniaDataContext(EndpointUrl, PrimaryKey))
+            using (var db = new XaniaDataContext(_endpointUrl, _primaryKey))
             {
                 db.Store<Invoice>().DeleteAsync(invoice => true).Wait();
             }

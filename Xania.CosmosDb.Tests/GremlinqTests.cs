@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Linq;
-using System.Security;
+using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
 using NUnit.Framework;
 
@@ -9,13 +9,15 @@ namespace Xania.CosmosDb.Tests
     public class GremlinqTests
     {
         private Client _client;
-        private readonly string EndpointUrl = "https://xania-sql.documents.azure.com:443/";
-        private readonly SecureString PrimaryKey = "xiq9QJQ2naMaqrkbWlu5yxL8N3PTIST0dJuwjHqsei1psDvdGGWfEsGO9I0dP3HuJvXbMXjle4galX0VrcV0FA==".Secure();
 
         [SetUp]
         public void CreateClient()
         {
-            _client = new Client(EndpointUrl, PrimaryKey);
+            var config = new ConfigurationBuilder().AddUserSecrets<GremlinqTests>().Build();
+            var endpointUrl = config["xaniadb-endpointUrl"];
+            var primaryKey = config["xaniadb-primarykey"].Secure();
+
+            _client = new Client(endpointUrl, primaryKey);
             _client.Log += Console.WriteLine;
         }
 
@@ -34,8 +36,13 @@ namespace Xania.CosmosDb.Tests
         [Test]
         public void FilterByFirstName()
         {
-            var persons = _client.Query<Person>().Where(e => e.FirstName == "Ibrahim").ToArray();
-            Console.WriteLine(JsonConvert.SerializeObject(persons));
+            //var persons = _client.Query<Person>().Where(e => e.FirstName == "Ibrahim").ToArray();
+            //Console.WriteLine(JsonConvert.SerializeObject(persons));
+            var array =
+                from p in _client.Query<Person>()
+                where p.FirstName == "Ibrahim"
+                select p;
+            Console.WriteLine(JsonConvert.SerializeObject(array));
         }
 
         [Test]

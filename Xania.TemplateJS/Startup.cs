@@ -66,7 +66,7 @@ namespace Xania.TemplateJS
 
             services.AddSingleton<IObjectStore<User>>(new TransientObjectStore<User>());
 
-            var endpointUrl = "https://xania-sql.documents.azure.com:443/";
+            var endpointUrl = Configuration["xaniadb-endpointUrl"];
             var primaryKey =  Configuration["xaniadb-primarykey"];
 
             var dataContext  = new XaniaDataContext(endpointUrl, primaryKey);

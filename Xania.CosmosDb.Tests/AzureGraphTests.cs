@@ -3,6 +3,7 @@ using System.Linq;
 using System.Security;
 using System.Threading.Tasks;
 using FluentAssertions;
+using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
 using NUnit.Framework;
 
@@ -10,9 +11,6 @@ namespace Xania.CosmosDb.Tests
 {
     public class AzureGraphTests
     {
-        private readonly string EndpointUrl = "https://xania-sql.documents.azure.com:443/";
-        private readonly SecureString PrimaryKey = "xiq9QJQ2naMaqrkbWlu5yxL8N3PTIST0dJuwjHqsei1psDvdGGWfEsGO9I0dP3HuJvXbMXjle4galX0VrcV0FA==".Secure();
-
         [Test]
         public void Test()
         {
@@ -58,7 +56,11 @@ namespace Xania.CosmosDb.Tests
 
             var graph = Graph.FromObject(model);
 
-            using (var client = new Client(EndpointUrl, PrimaryKey))
+            var config = new ConfigurationBuilder().AddUserSecrets<GremlinqTests>().Build();
+            var endpointUrl = config["xaniadb-endpointUrl"];
+            var primaryKey = config["xaniadb-primarykey"].Secure();
+
+            using (var client = new Client(endpointUrl, primaryKey))
             {
                 client.ExecuteGremlinAsync("g.V().drop()").Wait();
                 client.UpsertAsync(graph).Wait();

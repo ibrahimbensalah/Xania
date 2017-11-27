@@ -26,7 +26,8 @@
       "fetch": "github:github/fetch@^2.0.3",
       "fontawesome": "npm:fontawesome@^4.7.2",
       "less": "npm:systemjs-less-plugin@^2.2.2",
-      "pegjs": "npm:pegjs@^0.10.0"
+      "pegjs": "npm:pegjs@^0.10.0",
+      "wasm": "npm:wasm@^1.0.0"
     },
     "devDependencies": {
       "babel": "npm:babel-core@^5.8.24",
