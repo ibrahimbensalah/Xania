@@ -1,18 +1,44 @@
 ﻿<script src="~/systemjs/system.js"></script>
-<script src="~/jspm-plugins.js"></script>
 <script>
     System.config({
         defaultExtension: true,
         packages: { '/': {} },
         paths: {
             "github:*": "/jspm_packages/github/*",
-            "npm:*": "jspm_packages/npm/*"
+            "npm:*": "/jspm_packages/npm/*"
         },
         map: {
             "css": "github:systemjs/plugin-css@0.1.36"
         },
         meta: {
             '*.css': { loader: 'css' }
-        }
+        },
+        depCache: {
+            "src/xania.js": [
+                "./template",
+                "./dom",
+                "./expression",
+                "./compile",
+                "./reactive",
+                "../xania/mustache.peg"
+            ],
+            "src/dom.js": [
+                "./core",
+                "./reactive"
+            ],
+            "src/compile.js": [
+                "./expression",
+                "../xania/query.peg"
+            ],
+            "src/reactive.js": [
+                "./core"
+            ],
+            "src/mvc.js": [
+                "./observables",
+                "./xania",
+                "./dom"
+            ]
+        },
     });
 </script>
+<script src="~/jspm-plugins.js"></script>

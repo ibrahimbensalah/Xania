@@ -15,7 +15,7 @@
   "scripts": {
     "query": "pegjs -o ./wwwroot/xania/query.peg.js --optimize speed ./grammar/query.peg",
     "mustache": "pegjs -o ./wwwroot/xania/mustache.peg.js --optimize speed ./grammar/mustache.peg",
-    "jspm": "jspm bundle css wwwroot/jspm-plugins.js --inject"
+    "jspm": "jspm bundle css + src/mvc wwwroot/jspm-plugins.js"
   },
   "jspm": {
     "directories": {
