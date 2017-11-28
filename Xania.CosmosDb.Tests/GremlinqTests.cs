@@ -48,15 +48,28 @@ namespace Xania.CosmosDb.Tests
         [Test]
         public void FilterByFriend()
         {
-            var persons = _client.Query<Person>().Where(e => e.Friend.Id == 2).ToArray();
+            var persons = 
+                from p in _client.Query<Person>()
+                where p.Friend.Id == 2
+                select p;
             Console.WriteLine(JsonConvert.SerializeObject(persons));
         }
 
         [Test]
         public void GremlinTest()
         {
-            var g = "g.V().hasLabel('person').where(out('friend').has('id', '2')).optional(outE()).tree()";
+            var g = "g.V().hasLabel('person').as('p').where(has('firstName', 'Ibrahim')).optional(outE()).tree()";
             _client.ExecuteGremlinAsync(g).Wait();
+        }
+
+        [Test]
+        public void SelectFriends()
+        {
+            var persons =
+                from p in _client.Query<Person>()
+                from f in p.Friends
+                select p;
+            Console.WriteLine(JsonConvert.SerializeObject(persons));
         }
 
     }
