@@ -28,6 +28,12 @@ namespace Xania.CosmosDb.Tests
         }
 
         [Test]
+        public void NoFilter()
+        {
+            var persons = _client.Query<Person>().ToArray();
+        }
+
+        [Test]
         public void FilterById()
         {
             var persons = _client.Query<Person>().Where(e => e.Id == 1).ToArray();
@@ -58,7 +64,9 @@ namespace Xania.CosmosDb.Tests
         [Test]
         public void GremlinTest()
         {
-            var g = "g.V().hasLabel('person').as('p').where(has('firstName', 'Ibrahim')).optional(outE()).tree()";
+            var g = "g.V().hasLabel('person').has('id', '2').in('friend').hasLabel('person')";
+            // var g = "g.V().hasLabel('person').as('p').where(firstName.is(eq('Ibrahim')))";
+            // var g = "g.V().hasLabel('person').as('p').out().where(neq('p'))";
             _client.ExecuteGremlinAsync(g).Wait();
         }
 

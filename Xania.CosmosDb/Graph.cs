@@ -88,6 +88,7 @@ namespace Xania.CosmosDb
             foreach (var vertex in Vertices.Where(e =>
                 e.Label.Equals(label, StringComparison.InvariantCultureIgnoreCase)))
             {
+
                 yield return ToObject(vertex, modelType, cache);
                 // yield return json.ToObject<TModel>();
             }
@@ -170,7 +171,14 @@ namespace Xania.CosmosDb
         {
             if (targetType == null)
                 return null;
-            return JToken.FromObject(source).ToObject(targetType);
+            try
+            {
+                return JToken.FromObject(source).ToObject(targetType);
+            }
+            catch
+            {
+                return Activator.CreateInstance(targetType);
+            }
         }
 
         /// <summary>

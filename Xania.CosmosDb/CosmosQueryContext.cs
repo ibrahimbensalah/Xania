@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
+using Xania.CosmosDb.AST;
 using Xania.Reflection;
 
 namespace Xania.CosmosDb
@@ -10,22 +11,27 @@ namespace Xania.CosmosDb
     {
         public static string ToGremlin(Expression expression)
         {
+            return "g.V()." + Transpile(expression).ToGremlin();
+        }
+
+        public static IStep Transpile(Expression expression)
+        {
             /**
              * Evaluate expression
              */
-            var values = new Stack<GremlinAST>();
+            var values = new Stack<IStep>();
             foreach (var oper in GetOperators(expression).Reverse())
             {
                 var args = PopValues(values, oper.Count).ToArray();
                 values.Push(oper.ToGremlin(args));
             }
 
-            return "g.V()." + values.Single();
+            return values.Single();
         }
 
-        private static GremlinAST[] PopValues(Stack<GremlinAST> values, int operCount)
+        private static IStep[] PopValues(Stack<IStep> values, int operCount)
         {
-            var arr = new GremlinAST[operCount];
+            var arr = new IStep[operCount];
             for (var i = operCount - 1; i >= 0; i--)
             {
                 arr[i] = values.Pop();
@@ -46,17 +52,14 @@ namespace Xania.CosmosDb
                     if (methodName.Equals("Where"))
                     {
                         var lambda = GetSingleParameterLambda(methodCall, stack);
-                        yield return new MemberCall
-                        {
-                            Method = $"as('{lambda.Parameters[0].Name}').where",
-                            Count = 2
-                        };
+                        yield return new WhereExpr { };
                         stack.Push(methodCall.Arguments[0]);
+                        stack.Push(lambda.Parameters[0]);
                         stack.Push(lambda.Body);
                     }
                     else if (methodName.Equals("SelectMany"))
                     {
-                        yield return new Traverse { };
+                        yield return new SelectManyExpr { };
                         stack.Push(methodCall.Arguments[0]);
                         stack.Push(methodCall.Arguments[1]);
                         stack.Push(methodCall.Arguments[2]);
@@ -70,55 +73,18 @@ namespace Xania.CosmosDb
                 }
                 else if (item is LambdaExpression lambda)
                 {
-                    //if (lambda.Parameters.Count != 1)
-                    throw new NotSupportedException("Parameters count more 1.");
-                    // stack.Push(lambda.Body);
+                    throw new NotSupportedException();
                 }
                 else if (item is BinaryExpression binaryExpression)
                 {
-                    if (binaryExpression.NodeType == ExpressionType.Equal)
-                    {
-                        yield return new Binary("has");
-                        stack.Push(binaryExpression.Left);
-                        stack.Push(binaryExpression.Right);
-
-                        //if (binaryExpression.Left is MemberExpression left)
-                        //{
-                        //    if (left.Expression is ParameterExpression)
-                        //    {
-                        //        yield return new Call
-                        //        {
-                        //            Method = "has",
-                        //            Count = 1,
-                        //            Args = { $"'{left.Member.Name.ToCamelCase()}'" }
-                        //        };
-                        //        stack.Push(binaryExpression.Right);
-                        //    }
-                        //    else
-                        //    {
-                        //        yield return new MemberCall
-                        //        {
-                        //            Method = "has",
-                        //            Count = 2,
-                        //            Args = { $"'{left.Member.Name.ToCamelCase()}'" }
-                        //        };
-                        //        stack.Push(left.Expression);
-                        //        stack.Push(binaryExpression.Right);
-                        //    }
-                        //}
-                        //else
-                        //{
-                        //    throw new NotImplementedException();
-                        //}
-                    }
-                    else
-                    {
-                        yield return new Term($"[{item.GetType()}]");
-                    }
+                    yield return new Binary(ExpressionType.Equal);
+                    stack.Push(binaryExpression.Left);
+                    stack.Push(binaryExpression.Right);
                 }
                 else if (item is ParameterExpression param)
                 {
-                    yield return new Term(param.Name);
+                    yield return new Term(new AST.Vertex(param.Type.Name.ToCamelCase()));
+                    // yield return new Term(param.Name);
                 }
                 else if (item is ConstantExpression constantExpression)
                 {
@@ -130,19 +96,16 @@ namespace Xania.CosmosDb
                         if (queryableType != null)
                         {
                             var itemType = queryableType.GenericTypeArguments[0];
-                            yield return new Term($"hasLabel('{itemType.Name.ToCamelCase()}')");
+                            yield return new Term(new AST.Vertex(itemType.Name.ToCamelCase()));
                         }
-                        else if (valueType.IsPrimitive)
+                        else if (valueType.IsPrimitive || value is string)
                         {
-                            yield return new Term($"'{constantExpression.Value}'");
-                        }
-                        else if (value is string)
-                        {
-                            yield return new Term($"'{value}'");
+                            yield return new Term(new AST.Constant(constantExpression.Value));
                         }
                         else
                         {
-                            yield return new Term($"C:[{item.GetType()}]");
+                            throw new NotImplementedException();
+                            // yield return new Term($"C:[{item.GetType()}]");
                         }
                     }
                 }
@@ -160,7 +123,8 @@ namespace Xania.CosmosDb
                 }
                 else
                 {
-                    yield return new Term($"[[{item.GetType()}]]");
+                    throw new NotImplementedException();
+                    // yield return new Term($"[[{item.GetType()}]]");
                 }
             }
         }
@@ -176,15 +140,42 @@ namespace Xania.CosmosDb
 
                     return lambda;
                 }
-                else
-                {
-                    throw new NotSupportedException("Where second argument not supported.");
-                }
+                throw new NotSupportedException("Where second argument not supported.");
             }
             else
             {
                 throw new NotSupportedException("Where second argument not supported.");
             }
+        }
+    }
+
+    internal class SelectManyExpr : GremlinExpr
+    {
+        public SelectManyExpr()
+        {
+            Count = 3;
+        }
+
+        public override IStep ToGremlin(params IStep[] args)
+        {
+            if (args[0] is IPipe pipe)
+                return pipe.SelectMany(args[1], args[2]);
+            throw new InvalidOperationException("not a pipe");
+        }
+    }
+
+    internal class WhereExpr : GremlinExpr
+    {
+        public WhereExpr()
+        {
+            Count = 3;
+        }
+
+        public override IStep ToGremlin(params IStep[] args)
+        {
+            if (args[0] is IPipe pipe)
+                return pipe.Where(args[2]);
+            throw new InvalidOperationException("not a pipe");
         }
     }
 
@@ -198,101 +189,75 @@ namespace Xania.CosmosDb
             Count = 1;
         }
 
-        public override GremlinAST ToGremlin(params GremlinAST[] args)
+        public override IStep ToGremlin(params IStep[] args)
         {
-            return $"out({args[0]}).'{_name}'";
+            return new Route(args[0], _name);
         }
     }
 
     internal class Binary : GremlinExpr
     {
-        private readonly string _oper;
+        private readonly ExpressionType _oper;
 
-        public Binary(string oper)
+        public Binary(ExpressionType oper)
         {
             _oper = oper;
             Count = 2;
         }
 
-        public override GremlinAST ToGremlin(params GremlinAST[] args)
+        public override IStep ToGremlin(params IStep[] args)
         {
-            return $"{_oper}({args[0]}, {args[1]})";
-        }
-    }
-
-    internal class Format : GremlinExpr
-    {
-        private readonly string _format;
-
-        public Format(string format)
-        {
-            _format = format;
-        }
-
-        public override GremlinAST ToGremlin(params GremlinAST[] args)
-        {
-            return string.Format(_format, args);
+            if (_oper == ExpressionType.Equal)
+            {
+                return args[0].Has(args[1]);
+            }
+            throw new NotImplementedException();
+            // yield return new Term(new Vertex($"[{item.GetType()}]"));
         }
     }
 
     internal class Term : GremlinExpr
     {
-        private readonly object _value;
+        private readonly IStep _value;
 
-        public Term(object value)
+        public Term(IStep value)
         {
             _value = value;
         }
 
-        public override GremlinAST ToGremlin(params GremlinAST[] args)
+        public override IStep ToGremlin(params IStep[] args)
         {
             if (args.Length > 0)
                 throw new InvalidOperationException("Arguments not expected");
-            return _value?.ToString() ?? "null";
+
+            return _value;
         }
     }
 
     internal abstract class GremlinExpr
     {
         public int Count { get; set; } = 0;
-        public abstract GremlinAST ToGremlin(params GremlinAST[] args);
+        public abstract IStep ToGremlin(params IStep[] args);
     }
 
     internal class MemberCall : GremlinExpr
     {
         public string Method { get; set; }
-        public ICollection<GremlinAST> Args { get; } = new List<GremlinAST>();
+        public ICollection<IStep> Args { get; } = new List<IStep>();
 
-        public override GremlinAST ToGremlin(params GremlinAST[] args)
+        public override IStep ToGremlin(params IStep[] args)
         {
-            return $"{args[0]}.{Method}({string.Join(", ", Args.Concat(args.Skip(1)))})";
+            return new AST.MemberCall(args[0], Method, Args.Concat(args.Skip(1)).ToArray());
         }
     }
 
     internal class Call : GremlinExpr
     {
         public string Method { get; set; }
-        public ICollection<GremlinAST> Args { get; } = new List<GremlinAST>();
-        public override GremlinAST ToGremlin(params GremlinAST[] args)
+        public ICollection<IStep> Args { get; } = new List<IStep>();
+        public override IStep ToGremlin(params IStep[] args)
         {
-            return $"{Method}({string.Join(", ", Args.Concat(args))})";
+            return new AST.MemberCall(null, Method, Args.Concat(args).ToArray());
         }
-    }
-
-    internal class Traverse : GremlinExpr
-    {
-        public Traverse()
-        {
-            Count = 3;
-        }
-
-        public override GremlinAST ToGremlin(params GremlinAST[] args)
-        {
-            return string.Join(".", args.Select(e => e.ToString()));
-        }
-    }
-
-    internal interface GremlinAST
-    {
     }
 }

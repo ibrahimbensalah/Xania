@@ -169,7 +169,17 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="AST\Constant.cs" />
+    <Compile Include="AST\Label.cs" />
+    <Compile Include="AST\MemberCall.cs" />
+    <Compile Include="AST\Route.cs" />
+    <Compile Include="AST\Term.cs" />
+    <Compile Include="AST\Step.cs" />
+    <Compile Include="AST\Traverse.cs" />
+    <Compile Include="AST\Vertex.cs" />
+    <Compile Include="AST\Where.cs" />
     <Compile Include="AzureGraphStore.cs" />
+    <Compile Include="AST\Binary.cs" />
     <Compile Include="Client.cs" />
     <Compile Include="CosmosQueryContext.cs" />
     <Compile Include="GraphQueryable.cs" />
@@ -185,7 +195,9 @@
   </ItemGroup>
   <ItemGroup />
   <ItemGroup>
-    <None Include="app.config" />
+    <None Include="app.config">
+      <SubType>Designer</SubType>
+    </None>
     <None Include="packages.config" />
     <None Include="README.md" />
   </ItemGroup>

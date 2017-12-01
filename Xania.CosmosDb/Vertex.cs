@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Newtonsoft.Json;
+using Xania.CosmosDb.AST;
 
 namespace Xania.CosmosDb
 {
