@@ -1,5 +1,4 @@
 ﻿using System;
-using Microsoft.Azure.Graphs;
 
 namespace Xania.CosmosDb.AST
 {
@@ -16,8 +15,6 @@ namespace Xania.CosmosDb.AST
 
         public string ToGremlin()
         {
-            if (_predicate is IPipe pipe)
-                return $"{pipe.ToGremlin()}.in({_source.ToGremlin()})";
             return $"{_source.ToGremlin()}.where({_predicate.ToGremlin()})";
         }
 

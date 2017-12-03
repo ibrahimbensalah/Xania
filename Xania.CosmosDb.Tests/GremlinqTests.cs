@@ -64,9 +64,9 @@ namespace Xania.CosmosDb.Tests
         [Test]
         public void GremlinTest()
         {
-            var g = "g.V().hasLabel('person').has('id', '2').in('friend').hasLabel('person')";
+            // var g = "g.V().hasLabel('person').has('id', '2').in('friend').hasLabel('person')";
             // var g = "g.V().hasLabel('person').as('p').where(firstName.is(eq('Ibrahim')))";
-            // var g = "g.V().hasLabel('person').as('p').out().where(neq('p'))";
+            var g = "g.V().hasLabel('person').where(out('friend').has('id', '2'))";
             _client.ExecuteGremlinAsync(g).Wait();
         }
 

@@ -10,6 +10,5 @@
     {
         IStep Where(IStep predicate);
         IStep SelectMany(IStep step, IStep step1);
-        IPipe Inverse();
     }
 }

@@ -19,7 +19,7 @@ namespace Xania.CosmosDb.AST
 
         public string ToGremlin()
         {
-            return $"{_source.ToGremlin()}:{_step.ToGremlin()}";
+            return $"{_source.ToGremlin()}.{_step.ToGremlin()}";
         }
 
         public IStep Has(IStep step)
@@ -33,11 +33,6 @@ namespace Xania.CosmosDb.AST
         }
 
         public IStep SelectMany(IStep step, IStep step1)
-        {
-            throw new NotImplementedException();
-        }
-
-        public IPipe Inverse()
         {
             throw new NotImplementedException();
         }

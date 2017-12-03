@@ -1,8 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Xania.CosmosDb.AST
 {
@@ -19,14 +15,14 @@ namespace Xania.CosmosDb.AST
 
         public string ToGremlin()
         {
-            return $"{_target.ToGremlin()}.out('{_name}')";
+            return $"out('{_name}').{_target.ToGremlin()}";
         }
 
         public IStep Has(IStep step)
         {
             var binary = new Binary("has", new Constant(_name), step);
             if (_target is IPipe pipe)
-                return new Traverse(pipe, binary).Inverse();
+                return new Traverse(pipe, binary);
             return binary;
         }
 
@@ -36,11 +32,6 @@ namespace Xania.CosmosDb.AST
         }
 
         public IStep SelectMany(IStep step, IStep step1)
-        {
-            throw new NotImplementedException();
-        }
-
-        public IPipe Inverse()
         {
             throw new NotImplementedException();
         }
