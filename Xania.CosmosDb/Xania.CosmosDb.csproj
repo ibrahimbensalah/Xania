@@ -159,6 +159,7 @@
     <Reference Include="System.Security.SecureString, Version=4.0.1.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
       <HintPath>..\packages\System.Security.SecureString.4.3.0\lib\net46\System.Security.SecureString.dll</HintPath>
     </Reference>
+    <Reference Include="System.Web" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -180,18 +181,28 @@
     <Compile Include="AST\Where.cs" />
     <Compile Include="AzureGraphStore.cs" />
     <Compile Include="AST\Binary.cs" />
+    <Compile Include="Binary.cs" />
+    <Compile Include="Call.cs" />
     <Compile Include="Client.cs" />
     <Compile Include="CosmosQueryContext.cs" />
     <Compile Include="GraphQueryable.cs" />
     <Compile Include="GraphQueryProvider.cs" />
+    <Compile Include="GremlinExpr.cs" />
+    <Compile Include="LambdaExpr.cs" />
+    <Compile Include="MemberExpr.cs" />
+    <Compile Include="MemberCall.cs" />
+    <Compile Include="AST\Parameter.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="SelectManyExpr.cs" />
     <Compile Include="ShallowProxy.cs" />
     <Compile Include="Graph.cs" />
     <Compile Include="Property.cs" />
     <Compile Include="Relation.cs" />
     <Compile Include="StringExtensions.cs" />
+    <Compile Include="Term.cs" />
     <Compile Include="Vertex.cs" />
     <Compile Include="VertexConverter.cs" />
+    <Compile Include="AST\WhereExpr.cs" />
   </ItemGroup>
   <ItemGroup />
   <ItemGroup>

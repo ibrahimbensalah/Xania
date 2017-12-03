@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Linq;
-using System.Security;
-using System.Threading.Tasks;
 using FluentAssertions;
 using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
@@ -44,7 +42,7 @@ namespace Xania.CosmosDb.Tests
                 Id = 1,
                 FirstName = "Ibrahim",
                 Friend = friend,
-                Enemy = new Person { Id = 3 },
+                Enemy = new Person { Id = 3, Friends = { friend }},
                 HQ = new Address
                 {
                     Id = "address1",
@@ -56,11 +54,11 @@ namespace Xania.CosmosDb.Tests
 
             var graph = Graph.FromObject(model);
 
-            var config = new ConfigurationBuilder().AddUserSecrets<GremlinqTests>().Build();
+            var config = new ConfigurationBuilder().AddUserSecrets<AzureGraphTests>().Build();
             var endpointUrl = config["xaniadb-endpointUrl"];
             var primaryKey = config["xaniadb-primarykey"].Secure();
 
-            using (var client = new Client(endpointUrl, primaryKey))
+            using (var client = new Client(endpointUrl, primaryKey, "XaniaDataContext", "Items"))
             {
                 client.ExecuteGremlinAsync("g.V().drop()").Wait();
                 client.UpsertAsync(graph).Wait();

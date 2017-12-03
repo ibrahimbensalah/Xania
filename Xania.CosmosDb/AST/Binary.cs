@@ -1,21 +1,21 @@
 ﻿namespace Xania.CosmosDb.AST
 {
-    internal class Binary : IStep
+    public class Binary : IStep
     {
-        private readonly string _oper;
-        private readonly IStep _left;
-        private readonly IStep _right;
+        public string Oper { get; }
+        public IStep Left { get; }
+        public IStep Right { get; }
 
         public Binary(string oper, IStep left, IStep right)
         {
-            _oper = oper;
-            _left = left;
-            _right = right;
+            Oper = oper;
+            Left = left;
+            Right = right;
         }
 
         public string ToGremlin()
         {
-            return $"{_oper}({_left.ToGremlin()}, {_right.ToGremlin()})";
+            return $"{Oper}({Left.ToGremlin()}, {Right.ToGremlin()})";
         }
 
         public IStep Has(IStep step)

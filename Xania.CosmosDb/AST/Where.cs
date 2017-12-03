@@ -1,13 +1,14 @@
 ﻿using System;
+using System.Linq;
 
 namespace Xania.CosmosDb.AST
 {
     internal class Where : IStep
     {
         private readonly IStep _source;
-        private readonly IStep _predicate;
+        private readonly Lambda _predicate;
 
-        public Where(IStep source, IStep predicate)
+        public Where(IStep source, Lambda predicate)
         {
             _source = source;
             _predicate = predicate;

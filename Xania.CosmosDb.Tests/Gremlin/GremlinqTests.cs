@@ -1,42 +1,22 @@
 ﻿using System;
 using System.Linq;
-using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
 using NUnit.Framework;
 
-namespace Xania.CosmosDb.Tests
+namespace Xania.CosmosDb.Tests.Gremlin
 {
-    public class GremlinqTests
-    {
-        private Client _client;
-
-        [SetUp]
-        public void CreateClient()
-        {
-            var config = new ConfigurationBuilder().AddUserSecrets<GremlinqTests>().Build();
-            var endpointUrl = config["xaniadb-endpointUrl"];
-            var primaryKey = config["xaniadb-primarykey"].Secure();
-
-            _client = new Client(endpointUrl, primaryKey);
-            _client.Log += Console.WriteLine;
-        }
-
-        [TearDown]
-        public void DisposeClient()
-        {
-            _client.Dispose();
-        }
+    public class GremlinqTests {
 
         [Test]
         public void NoFilter()
         {
-            var persons = _client.Query<Person>().ToArray();
+            var persons = GremlinSetup.Client.Query<Person>().ToArray();
         }
 
         [Test]
         public void FilterById()
         {
-            var persons = _client.Query<Person>().Where(e => e.Id == 1).ToArray();
+            var persons = GremlinSetup.Client.Query<Person>().Where(e => e.Id == 1).ToArray();
         }
 
         [Test]
@@ -45,7 +25,7 @@ namespace Xania.CosmosDb.Tests
             //var persons = _client.Query<Person>().Where(e => e.FirstName == "Ibrahim").ToArray();
             //Console.WriteLine(JsonConvert.SerializeObject(persons));
             var array =
-                from p in _client.Query<Person>()
+                from p in GremlinSetup.Client.Query<Person>()
                 where p.FirstName == "Ibrahim"
                 select p;
             Console.WriteLine(JsonConvert.SerializeObject(array));
@@ -54,8 +34,8 @@ namespace Xania.CosmosDb.Tests
         [Test]
         public void FilterByFriend()
         {
-            var persons = 
-                from p in _client.Query<Person>()
+            var persons =
+                from p in GremlinSetup.Client.Query<Person>()
                 where p.Friend.Id == 2
                 select p;
             Console.WriteLine(JsonConvert.SerializeObject(persons));
@@ -66,15 +46,19 @@ namespace Xania.CosmosDb.Tests
         {
             // var g = "g.V().hasLabel('person').has('id', '2').in('friend').hasLabel('person')";
             // var g = "g.V().hasLabel('person').as('p').where(firstName.is(eq('Ibrahim')))";
-            var g = "g.V().hasLabel('person').where(out('friend').has('id', '2'))";
-            _client.ExecuteGremlinAsync(g).Wait();
+            // var g = "g.V().hasLabel('person').out('friends').hasLabel('person').values('id').tree()";
+            // var g = "g.V('3').hasLabel('person').union(outE(), out('friends'))";
+            // var g = "g.V('1').as('v').hasLabel('person').select('v').optional(outE()).tree()";
+            // var g = "g.V().hasLabel('person').as('p').where(has('firstName', 'Ibrahim')).optional(outE()).tree()";
+            var g = "g.V().hasLabel('person').as('p').select('p').out('friends').optional(outE()).tree()";
+            GremlinSetup.Client.ExecuteGremlinAsync(g).Wait();
         }
 
         [Test]
         public void SelectFriends()
         {
             var persons =
-                from p in _client.Query<Person>()
+                from p in GremlinSetup.Client.Query<Person>()
                 from f in p.Friends
                 select p;
             Console.WriteLine(JsonConvert.SerializeObject(persons));

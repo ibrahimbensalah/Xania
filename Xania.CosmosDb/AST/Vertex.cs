@@ -25,14 +25,14 @@ namespace Xania.CosmosDb.AST
             throw new NotImplementedException();
         }
 
-        public IStep Where(IStep predicate)
+        public IStep Where(Lambda predicate)
         {
-            return new AST.Where(this, predicate);
+            return new Where(this, predicate);
         }
 
-        public IStep SelectMany(IStep step, IStep step1)
+        public IStep SelectMany(IStep collectionStep, IStep selectStep)
         {
-            throw new NotImplementedException();
+            return new Traverse(this, collectionStep);
         }
     }
 }

@@ -19,12 +19,12 @@
             throw new System.NotImplementedException();
         }
 
-        public IStep Where(IStep predicate)
+        public IStep Where(Lambda predicate)
         {
             return new Where(this, predicate);
         }
 
-        public IStep SelectMany(IStep step, IStep step1)
+        public IStep SelectMany(IStep collectionStep, IStep step1)
         {
             throw new System.NotImplementedException();
         }

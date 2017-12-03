@@ -119,7 +119,7 @@ namespace Xania.CosmosDb
                 modelProperty.SetValue(model, Convert(value, modelProperty.PropertyType));
             }
 
-            foreach (var rel in Relations.Where(e => e.SourceId.Equals(vertex.Id)))
+            foreach (var rel in Relations.Where(e => string.Equals(e.SourceId, vertex.Id)))
             {
                 var target = Vertices.SingleOrDefault(e => e.Id.Equals(rel.TargetId));
                 var modelProperty = modelProperties[rel.Name];

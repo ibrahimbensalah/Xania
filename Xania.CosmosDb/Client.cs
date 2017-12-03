@@ -17,12 +17,12 @@ namespace Xania.CosmosDb
         public readonly DocumentClient _client;
         public readonly DocumentCollection _collection;
 
-        public Client(string endpointUrl, SecureString primaryKey)
+        public Client(string endpointUrl, SecureString primaryKey, string databaseId, string collectionId)
         {
             var connectionPolicy = new ConnectionPolicy
             {
-                ConnectionMode = ConnectionMode.Gateway,
-                ConnectionProtocol = Protocol.Https
+                ConnectionMode = ConnectionMode.Direct,
+                ConnectionProtocol = Protocol.Tcp
             };
             var settings = new JsonSerializerSettings
             {
@@ -30,12 +30,13 @@ namespace Xania.CosmosDb
                 Converters = { new VertexConverter() }
             };
             _client = new DocumentClient(new Uri(endpointUrl), primaryKey, settings, connectionPolicy);
-            _collection = _client.CreateDocumentCollectionIfNotExistsAsync(
-                UriFactory.CreateDatabaseUri("XaniaDataContext"),
-                new DocumentCollection { Id = "Items" },
-                new RequestOptions { OfferThroughput = 1 }).Result.Resource;
-
             _client.OpenAsync().Wait();
+
+            CreateDatabaseIfNotExistsAsync(databaseId).Wait();
+            _collection = _client.CreateDocumentCollectionIfNotExistsAsync(
+                UriFactory.CreateDatabaseUri(databaseId),
+                new DocumentCollection { Id = collectionId },
+                new RequestOptions { OfferThroughput = 10000 }).Result.Resource;
         }
 
         public event Action<string> Log;
@@ -48,7 +49,7 @@ namespace Xania.CosmosDb
         public async Task<Graph> GetTree(string vertexQuery)
         {
             var graph = new Graph();
-            foreach (var result in await ExecuteGremlinAsync(vertexQuery + ".optional(outE()).tree()"))
+            foreach (var result in (await ExecuteGremlinAsync(vertexQuery + ".optional(outE()).tree()")).OfType<JObject>())
             {
                 foreach (var verticesJson in result.Properties().Select(x => x.Value).OfType<JObject>())
                 {
@@ -91,11 +92,11 @@ namespace Xania.CosmosDb
             return graph;
         }
 
-        public async Task<IEnumerable<JObject>> ExecuteGremlinAsync(string gremlin)
+        public async Task<IEnumerable<JToken>> ExecuteGremlinAsync(string gremlin)
         {
             Log?.Invoke($"Running {gremlin}");
 
-            var list = new List<JObject>();
+            var list = new List<JToken>();
             var feedOptions = new FeedOptions
             {
                 MaxDegreeOfParallelism = 10,
@@ -107,12 +108,12 @@ namespace Xania.CosmosDb
             {
                 while (query.HasMoreResults)
                 {
-                    var result = await query.ExecuteNextAsync<JObject>();
+                    var result = await query.ExecuteNextAsync<JToken>();
                     foreach (var e in result)
                         list.Add(e);
                 }
             }
-            Log?.Invoke($"Response [{list.Count} Items]\r\n{string.Join(",\r\n", list.Take(1))}");
+            Log?.Invoke($"Response [{list.Count} Items]\r\n{string.Join(",\r\n", list.Take(5))}");
             return list;
         }
 
@@ -148,6 +149,47 @@ namespace Xania.CosmosDb
         public GraphQueryable<TModel> Query<TModel>()
         {
             return new GraphQueryable<TModel>(this);
+        }
+
+        private async Task CreateDatabaseIfNotExistsAsync(string DatabaseId)
+        {
+            try
+            {
+                await _client.ReadDatabaseAsync(UriFactory.CreateDatabaseUri(DatabaseId));
+            }
+            catch (DocumentClientException e)
+            {
+                if (e.StatusCode == System.Net.HttpStatusCode.NotFound)
+                {
+                    await _client.CreateDatabaseAsync(new Database { Id = DatabaseId });
+                }
+                else
+                {
+                    throw;
+                }
+            }
+        }
+
+        private async Task CreateCollectionIfNotExistsAsync(string DatabaseId, string CollectionId)
+        {
+            try
+            {
+                await _client.ReadDocumentCollectionAsync(UriFactory.CreateDocumentCollectionUri(DatabaseId, CollectionId));
+            }
+            catch (DocumentClientException e)
+            {
+                if (e.StatusCode == System.Net.HttpStatusCode.NotFound)
+                {
+                    await _client.CreateDocumentCollectionAsync(
+                        UriFactory.CreateDatabaseUri(DatabaseId),
+                        new DocumentCollection { Id = CollectionId },
+                        new RequestOptions { OfferThroughput = 1000 });
+                }
+                else
+                {
+                    throw;
+                }
+            }
         }
     }
 }

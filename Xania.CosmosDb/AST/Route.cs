@@ -4,34 +4,32 @@ namespace Xania.CosmosDb.AST
 {
     internal class Route : IPipe
     {
-        private readonly IStep _target;
-        private readonly string _name;
+        public IStep Target { get; }
+        public string Name { get; }
 
         public Route(IStep target, string name)
         {
-            _target = target;
-            _name = name;
+            Target = target;
+            Name = name;
         }
 
         public string ToGremlin()
         {
-            return $"out('{_name}').{_target.ToGremlin()}";
+            return $"{Target.ToGremlin()}.out('{Name}')";
         }
 
         public IStep Has(IStep step)
         {
-            var binary = new Binary("has", new Constant(_name), step);
-            if (_target is IPipe pipe)
-                return new Traverse(pipe, binary);
-            return binary;
+            var binary = new Binary("has", new Constant(Name), step);
+            return new Traverse(Target, binary);
         }
 
-        public IStep Where(IStep predicate)
+        public IStep Where(Lambda predicate)
         {
             throw new NotImplementedException();
         }
 
-        public IStep SelectMany(IStep step, IStep step1)
+        public IStep SelectMany(IStep collectionStep, IStep step1)
         {
             throw new NotImplementedException();
         }

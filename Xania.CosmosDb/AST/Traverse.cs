@@ -6,20 +6,20 @@ using System.Threading.Tasks;
 
 namespace Xania.CosmosDb.AST
 {
-    internal class Traverse: IPipe
+    internal class Traverse: IStep
     {
-        private readonly IPipe _source;
-        private readonly IStep _step;
+        public IStep Source { get; }
+        public IStep Step { get; }
 
-        public Traverse(IPipe source, IStep step)
+        public Traverse(IStep source, IStep step)
         {
-            _source = source;
-            _step = step;
+            Source = source;
+            Step = step;
         }
 
         public string ToGremlin()
         {
-            return $"{_source.ToGremlin()}.{_step.ToGremlin()}";
+            return $"{Source.ToGremlin()}.{Step.ToGremlin()}";
         }
 
         public IStep Has(IStep step)
@@ -27,14 +27,5 @@ namespace Xania.CosmosDb.AST
             throw new NotImplementedException();
         }
 
-        public IStep Where(IStep predicate)
-        {
-            throw new NotImplementedException();
-        }
-
-        public IStep SelectMany(IStep step, IStep step1)
-        {
-            throw new NotImplementedException();
-        }
     }
 }

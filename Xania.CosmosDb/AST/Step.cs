@@ -8,7 +8,7 @@
 
     public interface IPipe: IStep
     {
-        IStep Where(IStep predicate);
-        IStep SelectMany(IStep step, IStep step1);
+        IStep Where(Lambda predicate);
+        IStep SelectMany(IStep collectionStep, IStep step1);
     }
 }
