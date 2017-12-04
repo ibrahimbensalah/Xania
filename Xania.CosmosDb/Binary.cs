@@ -16,12 +16,12 @@ namespace Xania.CosmosDb
 
         public override IStep ToGremlin(params IStep[] args)
         {
-            if (_oper == ExpressionType.Equal)
+            if (args[0] is Member member && _oper == ExpressionType.Equal)
             {
-                return args[0].Has(args[1]);
+                var binary = new Has(member.Name, args[1]);
+                return new Traverse(member.Target, binary);
             }
             throw new NotImplementedException();
-            // yield return new Term(new Vertex($"[{item.GetType()}]"));
         }
     }
 }

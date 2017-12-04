@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
+using Newtonsoft.Json;
 using Xania.CosmosDb.AST;
 using Xania.Reflection;
 
@@ -11,10 +12,24 @@ namespace Xania.CosmosDb
     {
         public static string ToGremlin(Expression expression)
         {
-            return "g.V()." + Transpile(expression).ToGremlin();
+            var step = Evaluate(expression);
+            return $"g.V().{step.ToGremlin()}.{GetGremlinSelector(step)}";
         }
 
-        public static IStep Transpile(Expression expression)
+        private static string GetGremlinSelector(IStep step)
+        {
+            if (step is Where where)
+                return GetGremlinSelector(where.Source);
+            if (step is AST.Vertex vertex)
+                return $"union(identity(), outE())";
+            if (step is AST.SelectMany many)
+            {
+                return "optional(outE()).tree()";
+            }
+            throw new NotImplementedException($"step {step.GetType().Name}");
+        }
+
+        public static IStep Evaluate(Expression expression)
         {
             /**
              * Evaluate expression
@@ -26,7 +41,9 @@ namespace Xania.CosmosDb
                 values.Push(oper.ToGremlin(args));
             }
 
-            return values.Single();
+            var result = values.Single();
+            Console.WriteLine(JsonConvert.SerializeObject(result, Formatting.Indented, new JsonSerializerSettings()));
+            return result;
         }
 
         private static IStep[] PopValues(Stack<IStep> values, int operCount)
@@ -41,7 +58,6 @@ namespace Xania.CosmosDb
 
         private static IEnumerable<GremlinExpr> GetOperators(Expression root)
         {
-            var cache = new Dictionary<Expression, GremlinExpr>();
             var stack = new Stack<Expression>();
             stack.Push(root);
             while (stack.Count > 0)

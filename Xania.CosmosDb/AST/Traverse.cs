@@ -22,10 +22,5 @@ namespace Xania.CosmosDb.AST
             return $"{Source.ToGremlin()}.{Step.ToGremlin()}";
         }
 
-        public IStep Has(IStep step)
-        {
-            throw new NotImplementedException();
-        }
-
     }
 }

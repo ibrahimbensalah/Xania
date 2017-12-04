@@ -2,12 +2,12 @@
 
 namespace Xania.CosmosDb.AST
 {
-    internal class Route : IPipe
+    internal class Member : IStep
     {
         public IStep Target { get; }
         public string Name { get; }
 
-        public Route(IStep target, string name)
+        public Member(IStep target, string name)
         {
             Target = target;
             Name = name;
@@ -15,13 +15,9 @@ namespace Xania.CosmosDb.AST
 
         public string ToGremlin()
         {
+            if (Target == null)
+                return $"out('{Name}')";
             return $"{Target.ToGremlin()}.out('{Name}')";
-        }
-
-        public IStep Has(IStep step)
-        {
-            var binary = new Binary("has", new Constant(Name), step);
-            return new Traverse(Target, binary);
         }
 
         public IStep Where(Lambda predicate)

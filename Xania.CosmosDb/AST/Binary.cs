@@ -1,26 +1,19 @@
 ﻿namespace Xania.CosmosDb.AST
 {
-    public class Binary : IStep
+    public class Has : IStep
     {
-        public string Oper { get; }
-        public IStep Left { get; }
+        public string PropertyName { get; }
         public IStep Right { get; }
 
-        public Binary(string oper, IStep left, IStep right)
+        public Has(string propertyName, IStep right)
         {
-            Oper = oper;
-            Left = left;
+            PropertyName = propertyName;
             Right = right;
         }
 
         public string ToGremlin()
         {
-            return $"{Oper}({Left.ToGremlin()}, {Right.ToGremlin()})";
-        }
-
-        public IStep Has(IStep step)
-        {
-            throw new System.NotImplementedException();
+            return $"has('{PropertyName}', {Right.ToGremlin()})";
         }
     }
 }

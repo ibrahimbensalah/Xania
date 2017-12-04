@@ -49,7 +49,7 @@ namespace Xania.CosmosDb
         public async Task<Graph> GetTree(string vertexQuery)
         {
             var graph = new Graph();
-            foreach (var result in (await ExecuteGremlinAsync(vertexQuery + ".optional(outE()).tree()")).OfType<JObject>())
+            foreach (var result in (await ExecuteGremlinAsync(vertexQuery)).OfType<JObject>())
             {
                 foreach (var verticesJson in result.Properties().Select(x => x.Value).OfType<JObject>())
                 {

@@ -21,10 +21,5 @@ namespace Xania.CosmosDb.AST
                 return $"{_methodName}({string.Join(", ", _args.Select(e => e.ToGremlin()))})";
             return $"{_target.ToGremlin()}.{_methodName}({string.Join(", ", _args.Select(e => e.ToGremlin()))})";
         }
-
-        public IStep Has(IStep step)
-        {
-            throw new System.NotImplementedException();
-        }
     }
 }

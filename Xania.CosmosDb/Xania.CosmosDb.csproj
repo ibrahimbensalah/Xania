@@ -104,6 +104,7 @@
     </Reference>
     <Reference Include="System.Core" />
     <Reference Include="System.Data.Linq" />
+    <Reference Include="System.Design" />
     <Reference Include="System.Diagnostics.DiagnosticSource, Version=4.0.1.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
       <HintPath>..\packages\System.Diagnostics.DiagnosticSource.4.3.0\lib\net46\System.Diagnostics.DiagnosticSource.dll</HintPath>
     </Reference>
@@ -172,8 +173,10 @@
   <ItemGroup>
     <Compile Include="AST\Constant.cs" />
     <Compile Include="AST\Label.cs" />
+    <Compile Include="AST\Lambda.cs" />
     <Compile Include="AST\MemberCall.cs" />
-    <Compile Include="AST\Route.cs" />
+    <Compile Include="AST\Member.cs" />
+    <Compile Include="AST\SelectMany.cs" />
     <Compile Include="AST\Term.cs" />
     <Compile Include="AST\Step.cs" />
     <Compile Include="AST\Traverse.cs" />
@@ -200,6 +203,7 @@
     <Compile Include="Relation.cs" />
     <Compile Include="StringExtensions.cs" />
     <Compile Include="Term.cs" />
+    <Compile Include="AST\ThisStepVisitor.cs" />
     <Compile Include="Vertex.cs" />
     <Compile Include="VertexConverter.cs" />
     <Compile Include="AST\WhereExpr.cs" />

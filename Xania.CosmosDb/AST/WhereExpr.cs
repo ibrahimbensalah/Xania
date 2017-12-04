@@ -11,9 +11,9 @@ namespace Xania.CosmosDb.AST
 
         public override IStep ToGremlin(params IStep[] args)
         {
-            if (args[0] is IPipe pipe && args[1] is Lambda lambda)
-                return pipe.Where(lambda);
-            throw new InvalidOperationException("not a pipe");
+            if (args[0] is Vertex traversal && args[1] is Lambda lambda)
+                return new Where(traversal, lambda);
+            throw new InvalidOperationException($"{args[0]} where {args[1]}");
         }
     }
 }

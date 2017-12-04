@@ -14,7 +14,7 @@ namespace Xania.CosmosDb
 
         public override IStep ToGremlin(params IStep[] args)
         {
-            return new Route(args[0], _name);
+            return new Member(args[0], _name);
         }
     }
 }

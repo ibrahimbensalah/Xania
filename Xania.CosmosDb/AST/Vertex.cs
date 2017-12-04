@@ -1,38 +1,28 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Xania.CosmosDb.AST
 {
-    public class Vertex: IPipe
+    public class Vertex: IStep
     {
-        private readonly string _label;
+        public string Label { get; }
 
         public Vertex(string label)
         {
-            _label = label;
+            Label = label;
         }
 
         public string ToGremlin()
         {
-            return $"hasLabel('{_label}')";
+            return $"hasLabel('{Label}')";
         }
 
-        public IStep Has(IStep step)
-        {
-            throw new NotImplementedException();
-        }
+    }
 
-        public IStep Where(Lambda predicate)
+    public class ContextNode : IStep
+    {
+        public string ToGremlin()
         {
-            return new Where(this, predicate);
-        }
-
-        public IStep SelectMany(IStep collectionStep, IStep selectStep)
-        {
-            return new Traverse(this, collectionStep);
+            return "__";
         }
     }
 }

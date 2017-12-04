@@ -5,23 +5,19 @@ namespace Xania.CosmosDb.AST
 {
     internal class Where : IStep
     {
-        private readonly IStep _source;
-        private readonly Lambda _predicate;
+        public Vertex Source { get; }
+        public Lambda Predicate { get; }
 
-        public Where(IStep source, Lambda predicate)
+
+        public Where(Vertex source, Lambda predicate)
         {
-            _source = source;
-            _predicate = predicate;
+            Source = source;
+            Predicate = predicate;
         }
 
         public string ToGremlin()
         {
-            return $"{_source.ToGremlin()}.where({_predicate.ToGremlin()})";
-        }
-
-        public IStep Has(IStep step)
-        {
-            throw new NotImplementedException();
+            return $"{Source.ToGremlin()}.where({Predicate.ToGremlin()})";
         }
     }
 }

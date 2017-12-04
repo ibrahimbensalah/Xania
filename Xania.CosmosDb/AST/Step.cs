@@ -3,12 +3,18 @@
     public interface IStep
     {
         string ToGremlin();
-        IStep Has(IStep step);
     }
 
-    public interface IPipe: IStep
+    public interface ITraversal: IStep
     {
-        IStep Where(Lambda predicate);
-        IStep SelectMany(IStep collectionStep, IStep step1);
+        Selector Selector { get; }
+    }
+
+    public class Selector: IStep
+    {
+        public string ToGremlin()
+        {
+            throw new System.NotImplementedException();
+        }
     }
 }

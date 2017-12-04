@@ -16,10 +16,5 @@
             // return "__";
             return $"select('{Name}')";
         }
-
-        public IStep Has(IStep step)
-        {
-            throw new System.NotImplementedException();
-        }
     }
 }

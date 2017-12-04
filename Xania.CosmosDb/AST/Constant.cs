@@ -19,10 +19,5 @@ namespace Xania.CosmosDb.AST
         {
             return $"'{value}'";
         }
-
-        public IStep Has(IStep step)
-        {
-            throw new NotImplementedException();
-        }
     }
 }

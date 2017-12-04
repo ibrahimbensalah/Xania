@@ -12,8 +12,10 @@ namespace Xania.CosmosDb
 
         public override IStep ToGremlin(params IStep[] args)
         {
-            if (args[0] is IPipe pipe)
-                return pipe.SelectMany(args[1], args[2]);
+            if (args[1] is Lambda collection && args[2] is Lambda selector)
+            {
+                return new SelectMany(args[0], collection, selector);
+            }
             throw new InvalidOperationException("not a pipe");
         }
     }

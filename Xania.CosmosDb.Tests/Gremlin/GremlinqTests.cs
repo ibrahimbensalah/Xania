@@ -50,8 +50,11 @@ namespace Xania.CosmosDb.Tests.Gremlin
             // var g = "g.V('3').hasLabel('person').union(outE(), out('friends'))";
             // var g = "g.V('1').as('v').hasLabel('person').select('v').optional(outE()).tree()";
             // var g = "g.V().hasLabel('person').as('p').where(has('firstName', 'Ibrahim')).optional(outE()).tree()";
-            var g = "g.V().hasLabel('person').as('p').select('p').out('friends').optional(outE()).tree()";
-            GremlinSetup.Client.ExecuteGremlinAsync(g).Wait();
+            // var g = "g.V().hasLabel('person').as('p').select('p').out('friends').optional(outE()).tree()";
+            // var g = "g.V().hasLabel('person').as('p').out('friends').as('f').union(select('f'), select('f').outE())";
+            GremlinSetup.Client
+                .ExecuteGremlinAsync("g.V().hasLabel('person').where(has('firstName', 'Ibrahim')).union(identity(), outE())")
+                .Wait();
         }
 
         [Test]
@@ -60,7 +63,7 @@ namespace Xania.CosmosDb.Tests.Gremlin
             var persons =
                 from p in GremlinSetup.Client.Query<Person>()
                 from f in p.Friends
-                select p;
+                select f;
             Console.WriteLine(JsonConvert.SerializeObject(persons));
         }
 
