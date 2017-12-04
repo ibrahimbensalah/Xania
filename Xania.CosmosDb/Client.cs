@@ -43,7 +43,7 @@ namespace Xania.CosmosDb
 
         public Task<Graph> GetVertexTree(object vertexId)
         {
-            return GetTree($"g.V('{vertexId}')");
+            return GetTree($"g.V('{vertexId}').union(identity(), outE())");
         }
 
         public async Task<Graph> GetTree(string vertexQuery)
@@ -51,6 +51,44 @@ namespace Xania.CosmosDb
             var graph = new Graph();
             foreach (var result in (await ExecuteGremlinAsync(vertexQuery)).OfType<JObject>())
             {
+                var type = result.Value<string>("type");
+                if (string.Equals(type, "vertex"))
+                {
+                    var vertexJson = result;
+                    var vertex = new Vertex(vertexJson.Value<string>("label"))
+                    {
+                        Id = vertexJson.Value<string>("id")
+                    };
+                    graph.Vertices.Add(vertex);
+                    var propertiesJson = vertexJson.Value<JObject>("properties");
+                    if (propertiesJson != null)
+                    {
+                        foreach (var prop in propertiesJson.Properties())
+                        {
+                            var propValue = ((JArray)prop.Value).Select(x =>
+                                new Tuple<string, object>(x.Value<string>("id"), x.Value<Object>("value"))).ToArray();
+
+                            var graphProp = new Property(prop.Name, propValue);
+                            vertex.Properties.Add(graphProp);
+                        }
+                    }
+                }
+                else if (string.Equals(type, "edge"))
+                {
+                    var relationJson = result;
+                    var id = relationJson.Value<string>("id");
+                    var label = relationJson.Value<string>("label");
+                    var targetId = relationJson.Value<string>("inV");
+                    var sourceId = relationJson.Value<string>("outV");
+
+                    var relation = new Relation(sourceId, label, targetId)
+                    {
+                        Id = id
+                    };
+                    graph.Relations.Add(relation);
+                }
+
+                /*
                 foreach (var verticesJson in result.Properties().Select(x => x.Value).OfType<JObject>())
                 {
                     var vertexJson = verticesJson.Value<JObject>("key");
@@ -88,6 +126,7 @@ namespace Xania.CosmosDb
                         graph.Relations.Add(relation);
                     }
                 }
+                */
             }
             return graph;
         }

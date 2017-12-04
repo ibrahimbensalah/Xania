@@ -24,7 +24,7 @@ namespace Xania.CosmosDb.Tests.Gremlin
         private static void SetUpData()
         {
             var friend = new Person {Id = 2};
-            var model = new Person
+            var ibrahim = new Person
             {
                 Id = 1,
                 FirstName = "Ibrahim",
@@ -38,9 +38,10 @@ namespace Xania.CosmosDb.Tests.Gremlin
                 Tags = new[] {"Programmer", "Entrepeneur"},
                 Friends = {friend}
             };
+            friend.Friends.Add(new Person {Id = 4});
 
             Client.ExecuteGremlinAsync("g.V().drop()").Wait();
-            Client.UpsertAsync(Graph.FromObject(model)).Wait();
+            Client.UpsertAsync(Graph.FromObject(ibrahim)).Wait();
         }
 
         [OneTimeTearDown]

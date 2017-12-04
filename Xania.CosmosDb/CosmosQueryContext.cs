@@ -20,12 +20,17 @@ namespace Xania.CosmosDb
         {
             if (step is Where where)
                 return GetGremlinSelector(where.Source);
-            if (step is AST.Vertex vertex)
-                return $"union(identity(), outE())";
+            if (step is AST.Vertex)
+                return "union(identity(), outE())";
             if (step is AST.SelectMany many)
-            {
-                return "optional(outE()).tree()";
-            }
+                return GetLambdaSelector(many.Selector.Body);
+            throw new NotImplementedException($"step {step.GetType().Name}");
+        }
+
+        private static string GetLambdaSelector(IStep step)
+        {
+            if (step is Parameter param)
+                return $"union(identity(), select('{param.Name}').outE())";
             throw new NotImplementedException($"step {step.GetType().Name}");
         }
 

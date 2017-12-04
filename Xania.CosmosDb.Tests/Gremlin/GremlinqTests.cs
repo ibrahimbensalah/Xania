@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using FluentAssertions;
 using Newtonsoft.Json;
 using NUnit.Framework;
 
@@ -11,12 +12,22 @@ namespace Xania.CosmosDb.Tests.Gremlin
         public void NoFilter()
         {
             var persons = GremlinSetup.Client.Query<Person>().ToArray();
+            var person1 = persons.Single(e => e.Id == 1);
+            var person2 = persons.Single(e => e.Id == 2);
+
+            person1.Friends.Should().Contain(person2);
+
+            var person3 = persons.Single(e => e.Id == 3);
+            person3.Friends.Should().Contain(person2);
         }
 
         [Test]
         public void FilterById()
         {
             var persons = GremlinSetup.Client.Query<Person>().Where(e => e.Id == 1).ToArray();
+            var person = persons.Should().ContainSingle().Subject;
+
+            AssertIbrahim(person);
         }
 
         [Test]
@@ -28,7 +39,18 @@ namespace Xania.CosmosDb.Tests.Gremlin
                 from p in GremlinSetup.Client.Query<Person>()
                 where p.FirstName == "Ibrahim"
                 select p;
-            Console.WriteLine(JsonConvert.SerializeObject(array));
+            var person = array.Should().ContainSingle().Subject;
+
+            AssertIbrahim(person);
+        }
+
+        private static void AssertIbrahim(Person person)
+        {
+            person.Id.Should().Be(1);
+            person.FirstName.Should().Be("Ibrahim");
+            person.Friend.Should().NotBeNull();
+            person.Enemy.Should().NotBeNull();
+            person.Friends.Should().HaveCount(1);
         }
 
         [Test]
@@ -38,7 +60,9 @@ namespace Xania.CosmosDb.Tests.Gremlin
                 from p in GremlinSetup.Client.Query<Person>()
                 where p.Friend.Id == 2
                 select p;
-            Console.WriteLine(JsonConvert.SerializeObject(persons));
+
+            var person = persons.Should().ContainSingle().Subject;
+            AssertIbrahim(person);
         }
 
         [Test]
@@ -64,7 +88,7 @@ namespace Xania.CosmosDb.Tests.Gremlin
                 from p in GremlinSetup.Client.Query<Person>()
                 from f in p.Friends
                 select f;
-            Console.WriteLine(JsonConvert.SerializeObject(persons));
+            Console.WriteLine(JsonConvert.SerializeObject(persons, Formatting.Indented));
         }
 
     }

@@ -13,7 +13,6 @@
 
         public string ToGremlin()
         {
-            // return "__";
             return $"select('{Name}')";
         }
     }
