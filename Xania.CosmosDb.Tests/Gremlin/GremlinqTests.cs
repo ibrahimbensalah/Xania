@@ -91,5 +91,15 @@ namespace Xania.CosmosDb.Tests.Gremlin
             Console.WriteLine(JsonConvert.SerializeObject(persons, Formatting.Indented));
         }
 
+        [Test]
+        public void SelectFriendsFriend()
+        {
+            var persons =
+                from p in GremlinSetup.Client.Query<Person>()
+                from f in p.Friends
+                select f.Friend;
+            Console.WriteLine(JsonConvert.SerializeObject(persons, Formatting.Indented));
+        }
+
     }
 }

@@ -17,10 +17,13 @@ namespace Xania.CosmosDb.AST
 
         public string ToGremlin()
         {
-            var sourceName = Selector.Parameters[0].Name;
-            var collectionName = Selector.Parameters[1].Name;
+            var sourceParam = Selector.Parameters[0];
+            var collectionParam = Selector.Parameters[1];
 
-            return $"{Source.ToGremlin()}.as('{sourceName}').{Collection.ToGremlin()}.as('{collectionName}').{Selector.ToGremlin()}";
+            if (collectionParam == Selector.Body)
+                return $"{Source.ToGremlin()}.{Collection.ToGremlin()}";
+
+            return $"{Source.ToGremlin()}.as('{sourceParam.Name}').{Collection.ToGremlin()}.as('{collectionParam.Name}').{Selector.ToGremlin()}";
         }
     }
 }

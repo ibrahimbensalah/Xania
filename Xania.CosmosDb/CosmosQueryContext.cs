@@ -31,6 +31,8 @@ namespace Xania.CosmosDb
         {
             if (step is Parameter param)
                 return $"union(identity(), select('{param.Name}').outE())";
+            if (step is Member member)
+                return $"union(identity(), identity().outE())";
             throw new NotImplementedException($"step {step.GetType().Name}");
         }
 
