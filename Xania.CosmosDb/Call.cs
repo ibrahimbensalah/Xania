@@ -4,13 +4,13 @@ using Xania.CosmosDb.AST;
 
 namespace Xania.CosmosDb
 {
-    internal class Call : GremlinExpr
-    {
-        public string Method { get; set; }
-        public ICollection<IStep> Args { get; } = new List<IStep>();
-        public override IStep ToGremlin(params IStep[] args)
-        {
-            return new AST.MemberCall(null, Method, Args.Concat(args).ToArray());
-        }
-    }
+    //internal class Call : LinqExpr
+    //{
+    //    public string Method { get; set; }
+    //    public ICollection<IExpr> Args { get; } = new List<IExpr>();
+    //    public override IExpr ToGremlin(params IExpr[] args)
+    //    {
+    //        return new AST.MemberCall(null, Method, Args.Concat(args).ToArray());
+    //    }
+    //}
 }

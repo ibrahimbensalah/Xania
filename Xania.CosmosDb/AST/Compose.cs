@@ -6,20 +6,20 @@ using System.Threading.Tasks;
 
 namespace Xania.CosmosDb.AST
 {
-    internal class Traverse: IStep
+    internal class Compose: IExpr
     {
-        public IStep Source { get; }
-        public IStep Step { get; }
+        public IExpr Source { get; }
+        public IExpr Expr { get; }
 
-        public Traverse(IStep source, IStep step)
+        public Compose(IExpr source, IExpr expr)
         {
             Source = source;
-            Step = step;
+            Expr = expr;
         }
 
         public string ToGremlin()
         {
-            return $"{Source.ToGremlin()}.{Step.ToGremlin()}";
+            return $"{Source.ToGremlin()}.{Expr.ToGremlin()}";
         }
 
     }

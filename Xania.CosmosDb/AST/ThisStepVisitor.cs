@@ -9,58 +9,58 @@
             _paramName = paramName;
         }
 
-        public IStep Convert(IStep step)
+        public IExpr Convert(IExpr expr)
         {
-            if (step is Parameter p && p.Name.Equals(_paramName))
+            if (expr is Parameter p && p.Name.Equals(_paramName))
                 return null;
-            return ConvertStep(step);
+            return ConvertStep(expr);
         }
 
-        public virtual IStep ConvertStep(IStep step)
+        public virtual IExpr ConvertStep(IExpr expr)
         {
-            if (step is Has has)
+            if (expr is Equal has)
                 return ConvertHas(has);
-            if (step is Constant constant)
+            if (expr is Constant constant)
                 return ConvertConstant(constant);
-            if (step is Traverse traverse)
+            if (expr is Compose traverse)
                 return ConvertTraverse(traverse);
-            if (step is Member route)
+            if (expr is Member route)
                 return ConvertMember(route);
-            if (step is Parameter parameter)
+            if (expr is Parameter parameter)
                 return ConvertParameter(parameter);
 
-            throw new System.NotImplementedException($"Convert {step.GetType().Name}");
+            throw new System.NotImplementedException($"Convert {expr.GetType().Name}");
         }
 
-        private IStep ConvertParameter(Parameter parameter)
+        private IExpr ConvertParameter(Parameter parameter)
         {
             return parameter;
         }
 
-        private IStep ConvertMember(Member member)
+        private IExpr ConvertMember(Member member)
         {
             return new Member(Convert(member.Target), member.Name);
         }
 
-        private IStep ConvertTraverse(Traverse traverse)
+        private IExpr ConvertTraverse(Compose compose)
         {
-            var source = Convert(traverse.Source);
-            var step = Convert(traverse.Step);
+            var source = Convert(compose.Source);
+            var step = Convert(compose.Expr);
 
             if (source == null)
                 return step;
 
-            return new Traverse(source, step);
+            return new Compose(source, step);
         }
 
-        public virtual IStep ConvertConstant(Constant constant)
+        public virtual IExpr ConvertConstant(Constant constant)
         {
             return constant;
         }
 
-        public virtual IStep ConvertHas(Has has)
+        public virtual IExpr ConvertHas(Equal equal)
         {
-            return new Has(has.PropertyName, Convert(has.Right));
+            return new Equal(equal.PropertyName, Convert(equal.Right));
         }
     }
 }

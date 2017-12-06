@@ -1,16 +1,16 @@
 ﻿namespace Xania.CosmosDb.AST
 {
-    public interface IStep
+    public interface IExpr
     {
         string ToGremlin();
     }
 
-    public interface ITraversal: IStep
+    public interface ITraversal: IExpr
     {
         Selector Selector { get; }
     }
 
-    public class Selector: IStep
+    public class Selector: IExpr
     {
         public string ToGremlin()
         {

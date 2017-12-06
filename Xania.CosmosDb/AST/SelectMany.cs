@@ -2,13 +2,13 @@
 
 namespace Xania.CosmosDb.AST
 {
-    public class SelectMany : IStep
+    public class SelectMany : IExpr
     {
-        public IStep Source { get; }
+        public IExpr Source { get; }
         public Lambda Collection { get; }
         public Lambda Selector { get; }
 
-        public SelectMany(IStep source, Lambda collection, Lambda selector)
+        public SelectMany(IExpr source, Lambda collection, Lambda selector)
         {
             Source = source;
             Collection = collection;
@@ -22,8 +22,19 @@ namespace Xania.CosmosDb.AST
 
             if (collectionParam == Selector.Body)
                 return $"{Source.ToGremlin()}.{Collection.ToGremlin()}";
+            //if (collectionParam == GetSeed(Selector.Body))
+            //    return $"{Source.ToGremlin()}.{Collection.ToGremlin()}.{Selector.ToGremlin()}";
 
             return $"{Source.ToGremlin()}.as('{sourceParam.Name}').{Collection.ToGremlin()}.as('{collectionParam.Name}').{Selector.ToGremlin()}";
+        }
+
+        private IExpr GetSeed(IExpr selector)
+        {
+            if (selector is Parameter)
+                return selector;
+            if (selector is Member member)
+                return GetSeed(member.Target);
+            return null;
         }
     }
 }

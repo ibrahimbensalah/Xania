@@ -2,7 +2,7 @@
 
 namespace Xania.CosmosDb.AST
 {
-    public class Vertex: IStep
+    public class Vertex: IExpr
     {
         public string Label { get; }
 
@@ -18,7 +18,7 @@ namespace Xania.CosmosDb.AST
 
     }
 
-    public class ContextNode : IStep
+    public class ContextNode : IExpr
     {
         public string ToGremlin()
         {

@@ -2,12 +2,12 @@
 
 namespace Xania.CosmosDb.AST
 {
-    public class Lambda : IStep
+    public class Lambda : IExpr
     {
         public Parameter[] Parameters { get; }
-        public IStep Body { get; }
+        public IExpr Body { get; }
 
-        public Lambda(Parameter[] parameters, IStep body)
+        public Lambda(Parameter[] parameters, IExpr body)
         {
             Parameters = parameters;
             Body = body;

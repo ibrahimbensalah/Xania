@@ -2,13 +2,13 @@
 
 namespace Xania.CosmosDb.AST
 {
-    public class MemberCall: IStep
+    public class MemberCall: IExpr
     {
-        private readonly IStep _target;
+        private readonly IExpr _target;
         private readonly string _methodName;
-        private readonly IStep[] _args;
+        private readonly IExpr[] _args;
 
-        public MemberCall(IStep target, string methodName, IStep[] args)
+        public MemberCall(IExpr target, string methodName, IExpr[] args)
         {
             _target = target;
             _methodName = methodName;

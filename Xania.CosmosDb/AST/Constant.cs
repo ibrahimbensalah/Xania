@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Xania.CosmosDb.AST
 {
-    public class Constant : IStep
+    public class Constant : IExpr
     {
         private object value;
 

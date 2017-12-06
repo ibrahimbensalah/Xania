@@ -3,7 +3,7 @@ using System.Linq;
 
 namespace Xania.CosmosDb.AST
 {
-    internal class Where : IStep
+    internal class Where : IExpr
     {
         public Vertex Source { get; }
         public Lambda Predicate { get; }

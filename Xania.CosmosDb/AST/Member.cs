@@ -2,12 +2,12 @@
 
 namespace Xania.CosmosDb.AST
 {
-    internal class Member : IStep
+    internal class Member : IExpr
     {
-        public IStep Target { get; }
+        public IExpr Target { get; }
         public string Name { get; }
 
-        public Member(IStep target, string name)
+        public Member(IExpr target, string name)
         {
             Target = target;
             Name = name;
@@ -20,12 +20,12 @@ namespace Xania.CosmosDb.AST
             return $"{Target.ToGremlin()}.out('{Name}')";
         }
 
-        public IStep Where(Lambda predicate)
+        public IExpr Where(Lambda predicate)
         {
             throw new NotImplementedException();
         }
 
-        public IStep SelectMany(IStep collectionStep, IStep step1)
+        public IExpr SelectMany(IExpr collectionExpr, IExpr step1)
         {
             throw new NotImplementedException();
         }

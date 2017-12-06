@@ -1,11 +1,11 @@
 ﻿namespace Xania.CosmosDb.AST
 {
-    public class Has : IStep
+    public class Equal : IExpr
     {
         public string PropertyName { get; }
-        public IStep Right { get; }
+        public IExpr Right { get; }
 
-        public Has(string propertyName, IStep right)
+        public Equal(string propertyName, IExpr right)
         {
             PropertyName = propertyName;
             Right = right;

@@ -2,7 +2,7 @@
 
 namespace Xania.CosmosDb.AST
 {
-    internal class Label : IStep
+    internal class Label : IExpr
     {
         private readonly string paramName;
 
