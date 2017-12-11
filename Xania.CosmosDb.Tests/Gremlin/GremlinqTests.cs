@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using FluentAssertions;
 using Newtonsoft.Json;
 using NUnit.Framework;
@@ -77,7 +78,8 @@ namespace Xania.CosmosDb.Tests.Gremlin
             // var g = "g.V().hasLabel('person').as('p').select('p').out('friends').optional(outE()).tree()";
             // var g = "g.V().hasLabel('person').as('p').out('friends').as('f').union(select('f'), select('f').outE())";
             GremlinSetup.Client
-                .ExecuteGremlinAsync("g.V().hasLabel('person').where(has('firstName', 'Ibrahim')).union(identity(), outE())")
+                // .ExecuteGremlinAsync("g.V().hasLabel('person').where(has('firstName', 'Ibrahim')).union(identity(), outE())")
+                .ExecuteGremlinAsync(@"g.V().hasLabel('person').as('p').where(select('p').values('firstName').eq(value('Ibrahim')))")
                 .Wait();
         }
 
@@ -92,7 +94,7 @@ namespace Xania.CosmosDb.Tests.Gremlin
         }
 
         [Test]
-        public void SelectFriendsFriend()
+        public void SelectFriendOfFriends()
         {
             var persons =
                 from p in GremlinSetup.Client.Query<Person>()
@@ -101,5 +103,22 @@ namespace Xania.CosmosDb.Tests.Gremlin
             Console.WriteLine(JsonConvert.SerializeObject(persons, Formatting.Indented));
         }
 
+        [Test]
+        public void SelectFriendOfFriendsOfFriends()
+        {
+            var persons =
+                from p in GremlinSetup.Client.Query<Person>()
+                from f in p.Friends
+                from g in f.Friends
+                select g.Friend;
+            Console.WriteLine(JsonConvert.SerializeObject(persons, Formatting.Indented));
+        }
+
+        [Test]
+        public void AnonymousType()
+        {
+            var anonType = new {a = 1, b = 2}.GetType();
+            anonType.CustomAttributes.Select(e => e.AttributeType).Should().Contain(typeof(CompilerGeneratedAttribute));
+        }
     }
 }

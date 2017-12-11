@@ -1,19 +1,14 @@
-﻿namespace Xania.CosmosDb.AST
-{
-    public class Parameter : IExpr
-    {
-        public string Name { get; }
-        public string Label { get; }
+﻿//namespace Xania.CosmosDb.AST
+//{
+//    public class Parameter : IExpr
+//    {
+//        public string Name { get; }
+//        public string Label { get; }
 
-        public Parameter(string name, string label)
-        {
-            Name = name;
-            Label = label;
-        }
-
-        public string ToGremlin()
-        {
-            return $"select('{Name}')";
-        }
-    }
-}
+//        public Parameter(string name, string label)
+//        {
+//            Name = name;
+//            Label = label;
+//        }
+//    }
+//}

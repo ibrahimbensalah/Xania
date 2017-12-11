@@ -70,7 +70,7 @@ namespace Xania.CosmosDb
         }
 
 
-        private static bool IsPrimitive(Type type)
+        public static bool IsPrimitive(Type type)
         {
             return type.IsPrimitive || type == typeof(string);
         }

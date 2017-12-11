@@ -21,7 +21,7 @@ namespace Xania.CosmosDb
         {
             var connectionPolicy = new ConnectionPolicy
             {
-                ConnectionMode = ConnectionMode.Direct,
+                ConnectionMode = ConnectionMode.Gateway,
                 ConnectionProtocol = Protocol.Tcp
             };
             var settings = new JsonSerializerSettings
