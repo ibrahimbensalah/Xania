@@ -7,7 +7,8 @@ using NUnit.Framework;
 
 namespace Xania.CosmosDb.Tests.Gremlin
 {
-    public class GremlinqTests {
+    public class GremlinqTests
+    {
 
         [Test]
         public void NoFilter()
@@ -79,7 +80,8 @@ namespace Xania.CosmosDb.Tests.Gremlin
             // var g = "g.V().hasLabel('person').as('p').out('friends').as('f').union(select('f'), select('f').outE())";
             GremlinSetup.Client
                 // .ExecuteGremlinAsync("g.V().hasLabel('person').where(has('firstName', 'Ibrahim')).union(identity(), outE())")
-                .ExecuteGremlinAsync(@"g.V().hasLabel('person').as('p').where(select('p').values('firstName').eq(value('Ibrahim')))")
+                .ExecuteGremlinAsync(
+                    @"g.V().hasLabel('person').as('x').out('friends').as('y').union(select('y'), outE())")
                 .Wait();
         }
 
@@ -90,7 +92,7 @@ namespace Xania.CosmosDb.Tests.Gremlin
                 from p in GremlinSetup.Client.Query<Person>()
                 from f in p.Friends
                 select f;
-            Console.WriteLine(JsonConvert.SerializeObject(persons, Formatting.Indented));
+            persons.Should().HaveCount(3);
         }
 
         [Test]
@@ -110,14 +112,15 @@ namespace Xania.CosmosDb.Tests.Gremlin
                 from p in GremlinSetup.Client.Query<Person>()
                 from f in p.Friends
                 from g in f.Friends
-                select g.Friend;
+                from h in g.Friends
+                select h.Friend;
             Console.WriteLine(JsonConvert.SerializeObject(persons, Formatting.Indented));
         }
 
         [Test]
         public void AnonymousType()
         {
-            var anonType = new {a = 1, b = 2}.GetType();
+            var anonType = new { a = 1, b = 2 }.GetType();
             anonType.CustomAttributes.Select(e => e.AttributeType).Should().Contain(typeof(CompilerGeneratedAttribute));
         }
     }

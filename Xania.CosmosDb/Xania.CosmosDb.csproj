@@ -242,7 +242,6 @@
     <Compile Include="AST\Where.cs" />
     <Compile Include="AzureGraphStore.cs" />
     <Compile Include="AST\Binary.cs" />
-    <Compile Include="Call.cs" />
     <Compile Include="Client.cs" />
     <Compile Include="CosmosQueryContext.cs" />
     <Compile Include="GraphQueryable.cs" />
