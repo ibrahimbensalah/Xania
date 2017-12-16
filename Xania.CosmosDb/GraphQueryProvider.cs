@@ -33,7 +33,9 @@ namespace Xania.CosmosDb
         public TResult Execute<TResult>(Expression expression)
         {
             bool IsEnumerable = (typeof(TResult).Name == "IEnumerable`1");
-            var gremlin = CosmosQueryContext.ToGremlin(expression);
+            var traversal = GremlinQueryContext.Evaluate(expression);
+            var gremlin = $"g.V().{traversal}.{traversal.Selector}";
+
             var graph = _client.GetTree(gremlin).Result;
 
             var resultType = typeof(IQueryable<>).MapTo(typeof(TResult));

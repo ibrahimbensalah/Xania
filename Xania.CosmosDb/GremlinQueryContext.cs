@@ -9,15 +9,8 @@ using Xania.Reflection;
 
 namespace Xania.CosmosDb
 {
-    public class CosmosQueryContext
+    public class GremlinQueryContext
     {
-        public static string ToGremlin(Expression expression)
-        {
-            var trav = Evaluate(expression);
-            return $"g.V().{trav}";
-            // return $"g.V().{step.ToGremlin()}.{GetGremlinSelector(step)}";
-        }
-
         //private static string GetGremlinSelector(Traversal expr)
         //{
         //    if (expr is Where where)
@@ -80,7 +73,9 @@ namespace Xania.CosmosDb
                         var lambda = GetSingleParameterLambda(methodCall, stack);
                         stack.Push(methodCall.Arguments[0]);
                         stack.Push(lambda);
-                        yield return (2, args => Where(args[0].Append(As(lambda.Parameters[0].Name)), args[1]));
+                        yield return (2, args => Where(args[0],
+                                args[1].Replace(e => e is Select select && select.Label.Equals(lambda.Parameters[0].Name), Traversal.__)
+                            ));
                     }
                     else if (methodName.Equals("SelectMany"))
                     {
@@ -262,13 +257,19 @@ namespace Xania.CosmosDb
 
         private static Traversal Binary(ExpressionType oper, Traversal left, Traversal right)
         {
-            // return Call("has", Const(equal.PropertyName), ToGremlin(equal.Right));
             if (oper == ExpressionType.Equal)
             {
                 if (left.Steps.Last() is Values values)
-                    return new Traversal(left.Steps.Take(left.Steps.Count() - 1)).Append(new Call("has", right.Steps.Prepend(new Const(values.Name))));
+                {
+                    var rightSteps = values.Name.Equals("id", StringComparison.OrdinalIgnoreCase) ?
+                        right.Steps.Select(e => e is Const cons ? new Const(cons.Value.ToString()) : e):
+                        right.Steps;
 
-                return left.Append(new Call("has", right.Steps));
+                    var reverseTail = left.Steps.Take(left.Steps.Count() - 1);
+                    var reverseHead = new Call("has", new Const(values.Name), new Eq(rightSteps));
+
+                    return new Traversal(reverseTail).Append(reverseHead);
+                }
             }
             throw new NotImplementedException();
         }
@@ -313,11 +314,6 @@ namespace Xania.CosmosDb
         public static IGremlinExpr As(string name)
         {
             return new Call("as", new Const(name));
-        }
-
-        public static IGremlinExpr Term(string value)
-        {
-            return new Term(value);
         }
 
         public static Const Const(object value)
@@ -375,10 +371,11 @@ namespace Xania.CosmosDb
 
         public override string ToString()
         {
-            return $"{string.Join(".", Steps.Select(e => e.ToString()))}.{Selector}";
+            return $"{string.Join(".", Steps.Select(e => e.ToString()))}";
         }
 
         public static readonly Traversal Empty = new Traversal(Enumerable.Empty<IGremlinExpr>(), null);
+        public static readonly IGremlinExpr __ = new Context();
 
         public Traversal Append(IGremlinExpr expr)
         {
@@ -411,6 +408,24 @@ namespace Xania.CosmosDb
         public override string ToString()
         {
             return _expression;
+        }
+    }
+
+    public static class TraversalExtensions
+    {
+        public static Traversal Replace(this Traversal traversal, Func<IGremlinExpr, bool> predicate,
+            IGremlinExpr replacement)
+        {
+            return new Traversal(traversal.Steps.Select(e => predicate(e) ? replacement : e))
+            {
+                Selector = traversal.Selector
+            };
+        }
+
+        public static IEnumerable<IGremlinExpr> Replace(this IEnumerable<IGremlinExpr> steps, Func<IGremlinExpr, bool> predicate,
+            Func<IGremlinExpr, IGremlinExpr> replace)
+        {
+            return steps.Select(e => predicate(e) ? replace(e) : e);
         }
     }
 }

@@ -8,9 +8,9 @@ namespace Xania.CosmosDb
 {
     public class GraphQueryable<TModel> : IQueryable<TModel>
     {
-        public GraphQueryable(Client client)
+        public GraphQueryable(IQueryProvider provider)
         {
-            Provider = new GraphQueryProvider(client);
+            Provider = provider;
             Expression = Expression.Constant(this);
         }
 
@@ -32,7 +32,7 @@ namespace Xania.CosmosDb
 
         public Expression Expression { get; }
         public Type ElementType { get; } = typeof(TModel);
-        public GraphQueryProvider Provider { get; }
+        public IQueryProvider Provider { get; }
         IQueryProvider IQueryable.Provider => Provider;
     }
 }

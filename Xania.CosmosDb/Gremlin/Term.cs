@@ -1,17 +1,20 @@
-﻿namespace Xania.CosmosDb.Gremlin
+﻿using System.Collections.Generic;
+using System.Linq;
+
+namespace Xania.CosmosDb.Gremlin
 {
     public class Term : IGremlinExpr
     {
-        private readonly string _expr;
+        private readonly IEnumerable<IGremlinExpr> _steps;
 
-        public Term(string expr)
+        public Term(IEnumerable<IGremlinExpr> steps)
         {
-            _expr = expr;
+            _steps = steps;
         }
 
         public override string ToString()
         {
-            return _expr;
+            return string.Join(".", _steps.Select(e => e.ToString()));
         }
     }
 }

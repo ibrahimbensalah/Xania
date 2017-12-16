@@ -243,10 +243,11 @@
     <Compile Include="AzureGraphStore.cs" />
     <Compile Include="AST\Binary.cs" />
     <Compile Include="Client.cs" />
-    <Compile Include="CosmosQueryContext.cs" />
+    <Compile Include="GremlinQueryContext.cs" />
     <Compile Include="GraphQueryable.cs" />
     <Compile Include="GraphQueryProvider.cs" />
     <Compile Include="Gremlin\Call.cs" />
+    <Compile Include="Gremlin\Context.cs" />
     <Compile Include="Gremlin\Helper.cs" />
     <Compile Include="Gremlin\Select.cs" />
     <Compile Include="Gremlin\Term.cs" />

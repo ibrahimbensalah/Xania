@@ -81,7 +81,7 @@ namespace Xania.CosmosDb.Tests.Gremlin
             GremlinSetup.Client
                 // .ExecuteGremlinAsync("g.V().hasLabel('person').where(has('firstName', 'Ibrahim')).union(identity(), outE())")
                 .ExecuteGremlinAsync(
-                    @"g.V().hasLabel('person').as('x').out('friends').as('y').union(select('y'), outE())")
+                    "g.V().hasLabel(\"person\").has(\"id\",eq(1)).union(identity(), outE())")
                 .Wait();
         }
 
@@ -122,6 +122,19 @@ namespace Xania.CosmosDb.Tests.Gremlin
         {
             var anonType = new { a = 1, b = 2 }.GetType();
             anonType.CustomAttributes.Select(e => e.AttributeType).Should().Contain(typeof(CompilerGeneratedAttribute));
+        }
+
+        [Test]
+        public void SelectCustomColumns()
+        {
+            var view =
+                from p in GremlinSetup.Client.Query<Person>()
+                select new
+                {
+                    FirstName = p.FirstName,
+                    FriendId = p.Friend.Id
+                };
+            Console.WriteLine(JsonConvert.SerializeObject(view, Formatting.Indented));
         }
     }
 }

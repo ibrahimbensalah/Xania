@@ -157,16 +157,16 @@ namespace Xania.CosmosDb.Gremlin
 
     public class Const : IGremlinExpr
     {
-        private readonly object _value;
+        public object Value { get; }
 
         public Const(object value)
         {
-            _value = value;
+            Value = value;
         }
 
         public override string ToString()
         {
-            return JsonConvert.SerializeObject(_value);
+            return JsonConvert.SerializeObject(Value);
         }
     }
 }

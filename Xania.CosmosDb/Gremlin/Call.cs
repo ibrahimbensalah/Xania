@@ -8,6 +8,32 @@ namespace Xania.CosmosDb.Gremlin
     {
     }
 
+    public class Is : Call
+    {
+        public Is(params IGremlinExpr[] expressions) :
+            base("is", expressions)
+        {
+        }
+
+        public Is(IEnumerable<IGremlinExpr> expressions) : 
+            base("is", expressions)
+        {
+        }
+    }
+
+    public class Eq : Call
+    {
+        public Eq(params IGremlinExpr[] expressions) :
+            base("eq", expressions)
+        {
+        }
+
+        public Eq(IEnumerable<IGremlinExpr> expressions) :
+            base("eq", expressions)
+        {
+        }
+    }
+
     public class Call : IGremlinExpr
     {
         private readonly string _methodName;

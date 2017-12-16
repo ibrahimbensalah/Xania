@@ -30,9 +30,10 @@ namespace Xania.CosmosDb
                 Converters = { new VertexConverter() }
             };
             _client = new DocumentClient(new Uri(endpointUrl), primaryKey, settings, connectionPolicy);
-            _client.OpenAsync().Wait();
+            
+            // _client.OpenAsync().Wait();
+            // CreateDatabaseIfNotExistsAsync(databaseId).Wait();
 
-            CreateDatabaseIfNotExistsAsync(databaseId).Wait();
             _collection = _client.CreateDocumentCollectionIfNotExistsAsync(
                 UriFactory.CreateDatabaseUri(databaseId),
                 new DocumentCollection { Id = collectionId },
@@ -147,7 +148,7 @@ namespace Xania.CosmosDb
             {
                 while (query.HasMoreResults)
                 {
-                    var result = await query.ExecuteNextAsync<JToken>();
+                    var result = await query.ExecuteNextAsync();
                     foreach (var e in result)
                         list.Add(e);
                 }
@@ -187,7 +188,7 @@ namespace Xania.CosmosDb
 
         public GraphQueryable<TModel> Query<TModel>()
         {
-            return new GraphQueryable<TModel>(this);
+            return new GraphQueryable<TModel>(new GraphQueryProvider(this));
         }
 
         private async Task CreateDatabaseIfNotExistsAsync(string DatabaseId)
