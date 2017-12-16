@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -72,17 +73,43 @@ namespace Xania.CosmosDb
                     {
                         var lambda = GetSingleParameterLambda(methodCall, stack);
                         stack.Push(methodCall.Arguments[0]);
-                        stack.Push(lambda);
+                        stack.Push(lambda.Body);
                         yield return (2, args => Where(args[0],
                                 args[1].Replace(e => e is Select select && select.Label.Equals(lambda.Parameters[0].Name), Traversal.__)
                             ));
                     }
                     else if (methodName.Equals("SelectMany"))
                     {
-                        foreach (var arg in methodCall.Arguments)
-                            stack.Push(arg);
+                        var sourceExpr = methodCall.Arguments[0];
+                        var collectionLambda = methodCall.Arguments[1] is UnaryExpression u
+                            ? (LambdaExpression) u.Operand
+                            : throw new NotSupportedException();
+                        var selectorLambda = methodCall.Arguments[2] is UnaryExpression s
+                            ? (LambdaExpression) s.Operand
+                            : throw new NotSupportedException();
 
-                        yield return (3, SelectMany);
+                        stack.Push(sourceExpr);
+                        stack.Push(collectionLambda.Body);
+                        stack.Push(selectorLambda.Body);
+
+                        yield return (3, args =>
+                        {
+                            var selectorParameters = selectorLambda.Parameters
+                                .Where(e => !IsAnonymousType(e.Type))
+                                .Reverse().Take(2)
+                                .ToArray();
+
+                            var source = selectorParameters.Length > 1
+                                ? args[0].Append(As(selectorParameters[1].Name))
+                                : args[0];
+
+                            var collection = args[1].Append(As(selectorParameters[0].Name));
+                            var selector = args[2];
+
+                            return source
+                                .Concat(collection)
+                                .Concat(selector);
+                        });
                     }
                     else
                         throw new NotSupportedException($"Method call {methodCall.Method.Name}");
@@ -91,11 +118,9 @@ namespace Xania.CosmosDb
                 {
                     stack.Push(unaryExpression.Operand);
                 }
-                else if (item is LambdaExpression lambda)
+                else if (item is LambdaExpression)
                 {
-                    var parameters = lambda.Parameters.SelectMany(UnfoldParameter).ToArray();
-                    stack.Push(lambda.Body);
-                    yield return (1, args => new Traversal(args[0].Steps, parameters));
+                    throw new NotSupportedException();
                 }
                 else if (item is BinaryExpression binaryExpression)
                 {
@@ -191,52 +216,6 @@ namespace Xania.CosmosDb
             //    return new Compose(null, null);
 
             return new Select(parameter.Name).ToTraversal();
-        }
-
-        private static Traversal Lambda(Traversal[] args)
-        {
-            return args.Last();
-            // return new Lambda(args.Take(args.Length - 1).Cast<Parameter>().ToArray(), args.Last());
-        }
-
-        private static Traversal SelectMany(Traversal[] args)
-        {
-            var source = args[0];
-            var collection = args[1];
-            var selector = args[2];
-
-            var parameters = args[2].Parameters.Reverse().Take(2).ToArray();
-            var collectionParam = parameters[0];
-            var sourceParam = parameters[1];
-
-            return source
-                .Append(As(sourceParam))
-                .Concat(collection)
-                .Append(As(collectionParam))
-                .Concat(selector);
-
-            //var sourceParam = selector.Parameters[0];
-            //var collectionParam = selector.Parameters[1];
-
-            // if (collectionParam == selector.Body)
-            //    return new Bind(source.Concat(Unfold(ToGremlin(collection))).ToArray());
-
-            // $"{Source.ToGremlin()}.as('{sourceParam.Name}')
-            //   .{ Collection.ToGremlin()}.as('{collectionParam.Name}')
-            //   .{Selector.ToGremlin()}";
-
-            // return source.Append(Helper.As(sourceParam.Name));
-
-            //return new Bind(
-            //    Unfold(source)
-            //        .Concat(Unfold(As(sourceParam.Name)))
-            //        .Concat(Unfold(collection))
-            //        .Concat(Unfold(As(collectionParam.Name)))
-            //        .Concat(Unfold(selector))
-            //        .ToArray()
-            //);
-
-            // return new SelectMany(args[0], (Lambda)args[1], (Lambda)args[2]);
         }
 
         private static Traversal Where(Traversal source, Traversal predicate)
@@ -355,7 +334,6 @@ namespace Xania.CosmosDb
     public class Traversal
     {
         public IEnumerable<IGremlinExpr> Steps { get; }
-        public string[] Parameters { get; }
         public GremlinSelector Selector { get; set; } = GremlinSelector.Vertex();
 
         public Traversal(IGremlinExpr step)
@@ -363,10 +341,9 @@ namespace Xania.CosmosDb
         {
         }
 
-        public Traversal(IEnumerable<IGremlinExpr> steps, params string[] parameters)
+        public Traversal(IEnumerable<IGremlinExpr> steps)
         {
             Steps = steps;
-            Parameters = parameters;
         }
 
         public override string ToString()
@@ -374,8 +351,8 @@ namespace Xania.CosmosDb
             return $"{string.Join(".", Steps.Select(e => e.ToString()))}";
         }
 
-        public static readonly Traversal Empty = new Traversal(Enumerable.Empty<IGremlinExpr>(), null);
-        public static readonly IGremlinExpr __ = new Context();
+        public static readonly Traversal Empty = new Traversal(Enumerable.Empty<IGremlinExpr>());
+        public static readonly Context __ = new Context();
 
         public Traversal Append(IGremlinExpr expr)
         {
@@ -393,7 +370,7 @@ namespace Xania.CosmosDb
 
     public class GremlinSelector
     {
-        private string _expression;
+        private readonly string _expression;
 
         public GremlinSelector(string expression)
         {
