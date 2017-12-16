@@ -35,8 +35,6 @@ namespace Xania.CosmosDb.Tests.Gremlin
         [Test]
         public void FilterByFirstName()
         {
-            //var persons = _client.Query<Person>().Where(e => e.FirstName == "Ibrahim").ToArray();
-            //Console.WriteLine(JsonConvert.SerializeObject(persons));
             var array =
                 from p in GremlinSetup.Client.Query<Person>()
                 where p.FirstName == "Ibrahim"
@@ -112,7 +110,7 @@ namespace Xania.CosmosDb.Tests.Gremlin
                 from p in GremlinSetup.Client.Query<Person>()
                 from f in p.Friends
                 from g in f.Friends
-                from h in g.Friends
+                from h in p.Friends
                 select h.Friend;
             Console.WriteLine(JsonConvert.SerializeObject(persons, Formatting.Indented));
         }

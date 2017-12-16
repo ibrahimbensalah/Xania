@@ -36,24 +36,24 @@ namespace Xania.CosmosDb.Gremlin
 
     public class Call : IGremlinExpr
     {
-        private readonly string _methodName;
+        public string MethodName { get; }
         private readonly IEnumerable<IGremlinExpr> _expressions;
 
         public Call(string methodName, params IGremlinExpr[] expressions)
         {
-            _methodName = methodName;
+            MethodName = methodName;
             _expressions = expressions;
         }
 
         public Call(string methodName, IEnumerable<IGremlinExpr> expressions)
         {
-            _methodName = methodName;
+            MethodName = methodName;
             _expressions = expressions;
         }
 
         public override string ToString()
         {
-            return $"{_methodName}({string.Join(",", _expressions.Select(e => e.ToString()))})";
+            return $"{MethodName}({string.Join(",", _expressions.Select(e => e.ToString()))})";
         }
     }
 

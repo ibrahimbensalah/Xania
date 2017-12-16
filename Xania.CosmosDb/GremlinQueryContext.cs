@@ -107,8 +107,8 @@ namespace Xania.CosmosDb
                             var selector = args[2];
 
                             return source
-                                .Concat(collection)
-                                .Concat(selector);
+                                .Bind(collection)
+                                .Bind(selector);
                         });
                     }
                     else
@@ -292,7 +292,7 @@ namespace Xania.CosmosDb
 
         public static IGremlinExpr As(string name)
         {
-            return new Call("as", new Const(name));
+            return new Alias(name);
         }
 
         public static Const Const(object value)
@@ -331,6 +331,21 @@ namespace Xania.CosmosDb
         }
     }
 
+    public class Alias : IGremlinExpr
+    {
+        public string Value { get; }
+
+        public Alias(string value)
+        {
+            Value = value;
+        }
+
+        public override string ToString()
+        {
+            return $"as('{Value}')";
+        }
+    }
+
     public class Traversal
     {
         public IEnumerable<IGremlinExpr> Steps { get; }
@@ -359,12 +374,23 @@ namespace Xania.CosmosDb
             return new Traversal(Steps.Append(expr)) { Selector = Selector };
         }
 
-        public Traversal Concat(Traversal other)
+        public Traversal Bind(Traversal other)
         {
-            return new Traversal(Steps.Concat(other.Steps))
+            if (Steps.LastOrDefault() is Alias l &&
+                other.Steps.FirstOrDefault() is Select f && f.Label.Equals(l.Value))
             {
-                Selector = other.Selector
-            };
+                return new Traversal(Steps.Concat(other.Steps.Skip(1)))
+                {
+                    Selector = other.Selector
+                };
+            }
+            else
+            {
+                return new Traversal(Steps.Concat(other.Steps))
+                {
+                    Selector = other.Selector
+                };
+            }
         }
     }
 
