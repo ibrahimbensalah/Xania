@@ -117,11 +117,30 @@ namespace Xania.CosmosDb.Tests.Gremlin
         }
 
         [Test]
+        public void SelectEveryBody()
+        {
+            var everybody =
+                from p in GremlinSetup.Client.Query<Person>()
+                select p;
+            Console.WriteLine(JsonConvert.SerializeObject(everybody, Formatting.Indented));
+        }
+
+        [Test]
         public void SelectCustomColumns()
         {
             var view =
                 from p in GremlinSetup.Client.Query<Person>()
-                select p;
+                where p.Id == 1
+                select new
+                {
+                    p.FirstName,
+                    p.Id
+                };
+
+            var ibrahim = view.Should().ContainSingle().Subject;
+            ibrahim.FirstName.Should().Be("ibrahim");
+            ibrahim.Id.Should().Be(1);
+
             Console.WriteLine(JsonConvert.SerializeObject(view, Formatting.Indented));
         }
     }
