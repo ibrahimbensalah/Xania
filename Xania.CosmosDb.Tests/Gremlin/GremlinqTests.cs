@@ -26,7 +26,10 @@ namespace Xania.CosmosDb.Tests.Gremlin
         [Test]
         public void FilterById()
         {
-            var persons = GremlinSetup.Client.Query<Person>().Where(e => e.Id == 1).ToArray();
+            var persons = 
+                from p in GremlinSetup.Client.Query<Person>()
+                where p.Id == 1
+                select p;
             var person = persons.Should().ContainSingle().Subject;
 
             AssertIbrahim(person);
@@ -68,18 +71,9 @@ namespace Xania.CosmosDb.Tests.Gremlin
         [Test]
         public void GremlinTest()
         {
-            // var g = "g.V().hasLabel('person').has('id', '2').in('friend').hasLabel('person')";
-            // var g = "g.V().hasLabel('person').as('p').where(firstName.is(eq('Ibrahim')))";
-            // var g = "g.V().hasLabel('person').out('friends').hasLabel('person').values('id').tree()";
-            // var g = "g.V('3').hasLabel('person').union(outE(), out('friends'))";
-            // var g = "g.V('1').as('v').hasLabel('person').select('v').optional(outE()).tree()";
-            // var g = "g.V().hasLabel('person').as('p').where(has('firstName', 'Ibrahim')).optional(outE()).tree()";
-            // var g = "g.V().hasLabel('person').as('p').select('p').out('friends').optional(outE()).tree()";
-            // var g = "g.V().hasLabel('person').as('p').out('friends').as('f').union(select('f'), select('f').outE())";
-            // .ExecuteGremlinAsync("g.V().hasLabel('person').where(has('firstName', 'Ibrahim')).union(identity(), outE())")
             GremlinSetup.Client
                 .ExecuteGremlinAsync(
-                    "g.V().hasLabel('person').as('p').out('friends').as('f').union(select('p'), select('f'), __.outE())")
+                    "g.V().hasLabel('person').as('p').out('friends').as('f').dedup().union(project('x', 't').by(identity()), outE())")
                 .Wait();
         }
 
@@ -127,11 +121,7 @@ namespace Xania.CosmosDb.Tests.Gremlin
         {
             var view =
                 from p in GremlinSetup.Client.Query<Person>()
-                select new
-                {
-                    FirstName = p.FirstName,
-                    FriendId = p.Friend.Id
-                };
+                select p;
             Console.WriteLine(JsonConvert.SerializeObject(view, Formatting.Indented));
         }
     }

@@ -149,11 +149,12 @@ namespace Xania.CosmosDb
                 while (query.HasMoreResults)
                 {
                     var result = await query.ExecuteNextAsync();
+                    Log?.Invoke($"Result [{result.Count} Items]\r\n{string.Join(",\r\n", result)}");
+
                     foreach (var e in result)
                         list.Add(e);
                 }
             }
-            Log?.Invoke($"Response [{list.Count} Items]\r\n{string.Join(",\r\n", list.Take(5))}");
             return list;
         }
 

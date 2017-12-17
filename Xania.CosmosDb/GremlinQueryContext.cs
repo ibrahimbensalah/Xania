@@ -12,6 +12,13 @@ namespace Xania.CosmosDb
 {
     public class GremlinQueryContext
     {
+        private static class By
+        {
+            public static Func<IGremlinExpr, bool> Select(string paramName)
+            {
+                return e => e is Select select && select.Label.Equals(paramName);
+            }
+        }
         //private static string GetGremlinSelector(Traversal expr)
         //{
         //    if (expr is Where where)
@@ -69,11 +76,15 @@ namespace Xania.CosmosDb
                 if (item is MethodCallExpression methodCall)
                 {
                     var methodName = methodCall.Method.Name;
-                    if (methodName.Equals("Where"))
+                    if (methodName.Equals("Select") && methodCall.Arguments.Count == 2)
                     {
                         yield return Select(methodCall, stack);
                     }
-                    else if (methodName.Equals("SelectMany"))
+                    else if (methodName.Equals("Where") && methodCall.Arguments.Count == 2)
+                    {
+                        yield return Where(methodCall, stack);
+                    }
+                    else if (methodName.Equals("SelectMany") && methodCall.Arguments.Count == 3)
                     {
                         yield return SelectMany(methodCall, stack);
                     }
@@ -159,14 +170,24 @@ namespace Xania.CosmosDb
                 }
             }
         }
-
+        
         private static (int, Func<Traversal[], Traversal>) Select(MethodCallExpression methodCall, Stack<Expression> stack)
         {
-            var lambda = GetSingleParameterLambda(methodCall, stack);
-            stack.Push(methodCall.Arguments[0]);
-            stack.Push(lambda.Body);
+            var source = methodCall.Arguments[0];
+            var predicate = GetSingleParameterLambda(methodCall.Arguments[1]);
+            stack.Push(source);
+            stack.Push(predicate.Body);
+            return (2, args => args[0].Append(As(predicate.Parameters[0].Name)).Bind(args[1]));
+        }
+
+        private static (int, Func<Traversal[], Traversal>) Where(MethodCallExpression methodCall, Stack<Expression> stack)
+        {
+            var source = methodCall.Arguments[0];
+            var predicate = GetSingleParameterLambda(methodCall.Arguments[1]);
+            stack.Push(source);
+            stack.Push(predicate.Body);
             return (2, args => Where(args[0],
-                args[1].Replace(e => e is Select select && @select.Label.Equals(lambda.Parameters[0].Name), Traversal.__)
+                args[1].Replace(By.Select(predicate.Parameters[0].Name), Traversal.__)
             ));
         }
 
@@ -259,9 +280,9 @@ namespace Xania.CosmosDb
             return result;
         }
 
-        private static LambdaExpression GetSingleParameterLambda(MethodCallExpression methodCall, Stack<Expression> stack)
+        private static LambdaExpression GetSingleParameterLambda(Expression expression)
         {
-            if (methodCall.Arguments[1] is UnaryExpression unaryExpression)
+            if (expression is UnaryExpression unaryExpression)
             {
                 if (unaryExpression.Operand is LambdaExpression lambda)
                 {
@@ -374,21 +395,26 @@ namespace Xania.CosmosDb
 
         public Traversal Bind(Traversal other)
         {
-            if (Steps.LastOrDefault() is Alias l &&
-                other.Steps.FirstOrDefault() is Select f && f.Label.Equals(l.Value))
+            var otherSteps = (other.Steps.FirstOrDefault() is Context) ? other.Steps.Skip(1).ToArray() : other.Steps.ToArray();
+
+            if (Steps.LastOrDefault() is Alias l)
             {
-                return new Traversal(Steps.Concat(other.Steps.Skip(1)))
-                {
-                    Selector = other.Selector
-                };
+                if (!otherSteps.Any(e => e is Select s && s.Label.Equals(l.Value)))
+                    return new Traversal(Steps.Take(Steps.Count() - 1).Concat(otherSteps))
+                    {
+                        Selector = other.Selector
+                    };
+                if (otherSteps.FirstOrDefault() is Select f && f.Label.Equals(l.Value))
+                    return new Traversal(Steps.Concat(otherSteps.Skip(1)))
+                    {
+                        Selector = other.Selector
+                    };
             }
-            else
+
+            return new Traversal(Steps.Concat(otherSteps))
             {
-                return new Traversal(Steps.Concat(other.Steps))
-                {
-                    Selector = other.Selector
-                };
-            }
+                Selector = other.Selector
+            };
         }
     }
 
