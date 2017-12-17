@@ -239,7 +239,6 @@
     <Compile Include="AST\Step.cs" />
     <Compile Include="AST\Compose.cs" />
     <Compile Include="AST\Vertex.cs" />
-    <Compile Include="AST\Where.cs" />
     <Compile Include="AzureGraphStore.cs" />
     <Compile Include="AST\Binary.cs" />
     <Compile Include="Client.cs" />

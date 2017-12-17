@@ -71,45 +71,11 @@ namespace Xania.CosmosDb
                     var methodName = methodCall.Method.Name;
                     if (methodName.Equals("Where"))
                     {
-                        var lambda = GetSingleParameterLambda(methodCall, stack);
-                        stack.Push(methodCall.Arguments[0]);
-                        stack.Push(lambda.Body);
-                        yield return (2, args => Where(args[0],
-                                args[1].Replace(e => e is Select select && select.Label.Equals(lambda.Parameters[0].Name), Traversal.__)
-                            ));
+                        yield return Select(methodCall, stack);
                     }
                     else if (methodName.Equals("SelectMany"))
                     {
-                        var sourceExpr = methodCall.Arguments[0];
-                        var collectionLambda = methodCall.Arguments[1] is UnaryExpression u
-                            ? (LambdaExpression) u.Operand
-                            : throw new NotSupportedException();
-                        var selectorLambda = methodCall.Arguments[2] is UnaryExpression s
-                            ? (LambdaExpression) s.Operand
-                            : throw new NotSupportedException();
-
-                        stack.Push(sourceExpr);
-                        stack.Push(collectionLambda.Body);
-                        stack.Push(selectorLambda.Body);
-
-                        yield return (3, args =>
-                        {
-                            var selectorParameters = selectorLambda.Parameters
-                                .Where(e => !IsAnonymousType(e.Type))
-                                .Reverse().Take(2)
-                                .ToArray();
-
-                            var source = selectorParameters.Length > 1
-                                ? args[0].Append(As(selectorParameters[1].Name))
-                                : args[0];
-
-                            var collection = args[1].Append(As(selectorParameters[0].Name));
-                            var selector = args[2];
-
-                            return source
-                                .Bind(collection)
-                                .Bind(selector);
-                        });
+                        yield return SelectMany(methodCall, stack);
                     }
                     else
                         throw new NotSupportedException($"Method call {methodCall.Method.Name}");
@@ -167,7 +133,7 @@ namespace Xania.CosmosDb
 
 
                         yield return (1, args =>
-                            isPrimitive ? args[0].Append(Values(memberName)) : args[0].Append(Relation(memberName)));
+                            isPrimitive ? args[0].Append(Values(memberName)) : args[0].Append(Out(memberName)));
                     }
 
                     //if (!(memberExpression.Expression is ParameterExpression))
@@ -194,6 +160,50 @@ namespace Xania.CosmosDb
             }
         }
 
+        private static (int, Func<Traversal[], Traversal>) Select(MethodCallExpression methodCall, Stack<Expression> stack)
+        {
+            var lambda = GetSingleParameterLambda(methodCall, stack);
+            stack.Push(methodCall.Arguments[0]);
+            stack.Push(lambda.Body);
+            return (2, args => Where(args[0],
+                args[1].Replace(e => e is Select select && @select.Label.Equals(lambda.Parameters[0].Name), Traversal.__)
+            ));
+        }
+
+        private static (int, Func<Traversal[], Traversal>) SelectMany(MethodCallExpression methodCall, Stack<Expression> stack)
+        {
+            var sourceExpr = methodCall.Arguments[0];
+            var collectionLambda = methodCall.Arguments[1] is UnaryExpression u
+                ? (LambdaExpression) u.Operand
+                : throw new NotSupportedException();
+            var selectorLambda = methodCall.Arguments[2] is UnaryExpression s
+                ? (LambdaExpression) s.Operand
+                : throw new NotSupportedException();
+
+            stack.Push(sourceExpr);
+            stack.Push(collectionLambda.Body);
+            stack.Push(selectorLambda.Body);
+
+            return (3, args =>
+            {
+                var selectorParameters = selectorLambda.Parameters
+                    .Where(e => !IsAnonymousType(e.Type))
+                    .Reverse().Take(2)
+                    .ToArray();
+
+                var source = selectorParameters.Length > 1
+                    ? args[0].Append(As(selectorParameters[1].Name))
+                    : args[0];
+
+                var collection = args[1].Append(As(selectorParameters[0].Name));
+                var selector = args[2];
+
+                return source
+                    .Bind(collection)
+                    .Bind(selector);
+            });
+        }
+
         private static IEnumerable<string> UnfoldParameter(ParameterExpression expr)
         {
             if (!IsAnonymousType(expr.Type))
@@ -212,26 +222,14 @@ namespace Xania.CosmosDb
 
         private static Traversal Parameter(ParameterExpression parameter)
         {
-            //if (IsAnonymousType(parameter.Type))
-            //    return new Compose(null, null);
-
             return new Select(parameter.Name).ToTraversal();
         }
 
         private static Traversal Where(Traversal source, Traversal predicate)
         {
+            if (predicate.Steps.ElementAtOrDefault(0) is Context && !predicate.Steps.Any(e => e is Out))
+                return new Traversal(source.Steps.Concat(predicate.Steps.Skip(1)));
             return source.Append(Scope("where", predicate));
-            //var parameter = predicate.Parameters[0];
-            // var predicate = ToGremlin(where.Predicate);
-            //var (head, tail) = HeadTail(predicate);
-            //if (head is Select select && select.Label.Equals(parameter.Name))
-            //{
-            //    if (tail == null)
-            //        return source;
-            //    return Bind(source, tail);
-            //}
-            // return new Bind(Unfold(source).Concat(new[] { As(parameter.Name), Call("where", predicate) }).ToArray());
-            // return new Where((AST.Vertex)args[0], (Lambda)args[1]);
         }
 
         private static Traversal Binary(ExpressionType oper, Traversal left, Traversal right)
@@ -280,9 +278,9 @@ namespace Xania.CosmosDb
             }
         }
 
-        public static Call Relation(string name)
+        public static Out Out(string edgeLabel)
         {
-            return new Call("out", Const(name));
+            return new Out(edgeLabel);
         }
 
         public static Values Values(string name)

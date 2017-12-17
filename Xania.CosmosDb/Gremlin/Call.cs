@@ -34,6 +34,21 @@ namespace Xania.CosmosDb.Gremlin
         }
     }
 
+    public class Out : IGremlinExpr
+    {
+        public string EdgeLabel { get; }
+
+        public Out(string edgeLabel)
+        {
+            EdgeLabel = edgeLabel;
+        }
+
+        public override string ToString()
+        {
+            return $"out('{EdgeLabel}')";
+        }
+    }
+
     public class Call : IGremlinExpr
     {
         public string MethodName { get; }
