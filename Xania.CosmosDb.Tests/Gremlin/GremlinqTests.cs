@@ -82,9 +82,11 @@ namespace Xania.CosmosDb.Tests.Gremlin
         {
             var persons =
                 from p in GremlinSetup.Client.Query<Person>()
+                where p.Id == 1
                 from f in p.Friends
                 select f;
-            persons.Should().HaveCount(3);
+            var ibrahimsFriend = persons.Should().ContainSingle().Subject;
+            ibrahimsFriend.Id.Should().Be(2);
         }
 
         [Test]
@@ -130,7 +132,6 @@ namespace Xania.CosmosDb.Tests.Gremlin
         {
             var view =
                 from p in GremlinSetup.Client.Query<Person>()
-                where p.Id == 1
                 select new
                 {
                     p.FirstName,
