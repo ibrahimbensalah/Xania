@@ -72,7 +72,7 @@ Here are examples that show the possible linq queries that you can write to quer
 
 | Desc | LINQ | Gremlin |
 | ---- | ---- | ------- |
-| Select everybody  | ```from p in people select p ```   | g.V().hasLabel("person").as('p').union(identity(), outE()) |
+| Select everybody  | ```from p in people select p ```   | ```g.V().hasLabel("person").as('p').union(identity(), outE())``` |
 | Select by Id | ```from p in people where p.Id == 1 select p ```   | ```g.V().hasLabel("person").has("id",eq("1")).union(identity(), outE())```|
 | Select by parent's Id | ```from p in people where p.Parent.Id == 2 select p ```   | ```g.V().hasLabel("person").where(__.out('parent').has("id",eq("2"))).union(identity(), outE())```|
 | Select all friends | ```from p in people where p.Id == 1 from f in p.Friends select f```   | ```g.V().hasLabel("person").has("id",eq("1")).as('p').out('friends').as('f').union(identity(), outE())``` |
