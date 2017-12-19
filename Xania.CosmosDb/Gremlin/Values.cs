@@ -17,6 +17,8 @@ namespace Xania.CosmosDb.Gremlin
 
         public override string ToString()
         {
+            if (Name.Equals("id"))
+                return "id()";
             return $"values('{Name}')";
         }
     }

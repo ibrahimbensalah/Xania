@@ -36,10 +36,10 @@ namespace Xania.CosmosDb
             var traversal = GremlinQueryContext.Evaluate(expression);
             var gremlin = $"g.V().{traversal}.{traversal.Selector}";
 
-            var graph = _client.GetTree(gremlin).Result;
-
             var resultType = typeof(IQueryable<>).MapTo(typeof(TResult));
             var elementType = resultType.GenericTypeArguments[0];
+
+            var graph = _client.GetVertexGraph(gremlin).Result;
 
             return (TResult) OfType(graph.ToObjects(elementType), elementType);
         }

@@ -76,6 +76,6 @@ Here are examples that show the possible linq queries that you can write to quer
 | Select by Id | ```from p in people where p.Id == 1 select p ```   | ```g.V().hasLabel("person").has("id",eq("1")).union(identity(), outE())```|
 | Select by parent's Id | ```from p in people where p.Parent.Id == 2 select p ```   | ```g.V().hasLabel("person").where(__.out('parent').has("id",eq("2"))).union(identity(), outE())```|
 | Select all friends | ```from p in people where p.Id == 1 from f in p.Friends select f```   | ```g.V().hasLabel("person").has("id",eq("1")).as('p').out('friends').as('f').union(identity(), outE())``` |
-| Select custom result | ```from p in people select new { p.FirstName } ```   | ??? suggestions are welcome |
+| Select custom result | ```from p in people select new { p.FirstName } ```   | ```g.V().hasLabel("person").as('p').project('firstName').by(coalesce(select('p').values('firstName'), constant()))``` |
 | Join without connecting edge | from p in people join c in contacts on p.FirstName equals c.Name select c | ??? suggestions are welcome |
 

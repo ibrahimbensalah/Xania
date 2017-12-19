@@ -63,7 +63,7 @@ namespace Xania.CosmosDb.Tests
                 client.ExecuteGremlinAsync("g.V().drop()").Wait();
                 client.UpsertAsync(graph).Wait();
 
-                var clone = client.GetVertexTree(1).Result.ToObjects<Person>().SingleOrDefault();
+                var clone = client.GetVertexGraph(1).Result.ToObjects<Person>().SingleOrDefault();
                 if (clone != null)
                 {
                     Console.WriteLine(JsonConvert.SerializeObject(clone));

@@ -5,6 +5,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
 using Newtonsoft.Json.Linq;
+using Xania.Reflection;
 
 namespace Xania.CosmosDb
 {
@@ -12,6 +13,7 @@ namespace Xania.CosmosDb
     {
         public Collection<Vertex> Vertices { get; } = new Collection<Vertex>();
         public Collection<Relation> Relations { get; } = new Collection<Relation>();
+        public Collection<JObject> Anonymous { get; } = new Collection<JObject>();
 
         public static Graph FromObject(Object model)
         {
@@ -84,17 +86,20 @@ namespace Xania.CosmosDb
         {
             var cache = new Dictionary<Vertex, object>();
 
-            var label = modelType.Name;
-            foreach (var vertex in Vertices.Where(e =>
-                e.Label.Equals(label, StringComparison.InvariantCultureIgnoreCase)))
+            if (modelType.IsAnonymousType())
             {
-
-                yield return ToObject(vertex, modelType, cache);
-                // yield return json.ToObject<TModel>();
+                foreach (var v in Anonymous)
+                    yield return v.ToObject(modelType);
+            }
+            else
+            {
+                var label = modelType.Name.ToCamelCase();
+                foreach (var vertex in Vertices.Where(e => e.Label.Equals(label)))
+                    yield return ToObject(vertex, modelType, cache);
             }
         }
 
-        private Object ToObject(Vertex vertex, Type modelType, IDictionary<Vertex, object> cache)
+        public Object ToObject(Vertex vertex, Type modelType, IDictionary<Vertex, object> cache)
         {
             if (cache.TryGetValue(vertex, out var model))
                 return model;

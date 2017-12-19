@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Text;
 using Xania.CosmosDb.Gremlin;
 using Xania.Reflection;
 
@@ -19,25 +19,6 @@ namespace Xania.CosmosDb
                 return e => e is Select select && select.Label.Equals(paramName);
             }
         }
-        //private static string GetGremlinSelector(Traversal expr)
-        //{
-        //    if (expr is Where where)
-        //        return GetGremlinSelector(where.Source);
-        //    if (expr is AST.Vertex)
-        //        return "union(identity(), outE())";
-        //    if (expr is AST.SelectMany many)
-        //        return GetLambdaSelector(many.Selector.Body);
-        //    throw new NotImplementedException($"step {expr.GetType().Name}");
-        //}
-
-        //private static string GetLambdaSelector(Traversal expr)
-        //{
-        //    if (expr is Parameter param)
-        //        return $"union(identity(), select('{param.Name}').outE())";
-        //    if (expr is Member member)
-        //        return $"union(identity(), identity().outE())";
-        //    throw new NotImplementedException($"step {expr.GetType().Name}");
-        //}
 
         public static Traversal Evaluate(Expression expression)
         {
@@ -133,7 +114,7 @@ namespace Xania.CosmosDb
                 }
                 else if (item is MemberExpression memberExpression)
                 {
-                    if (IsAnonymousType(memberExpression.Expression.Type))
+                    if (memberExpression.Expression.Type.IsAnonymousType())
                         yield return (0, args => new Traversal(new Select(memberExpression.Member.Name)));
                     else
                     {
@@ -146,31 +127,33 @@ namespace Xania.CosmosDb
                         yield return (1, args =>
                             isPrimitive ? args[0].Append(Values(memberName)) : args[0].Append(Out(memberName)));
                     }
-
-                    //if (!(memberExpression.Expression is ParameterExpression))
-                    //{
-                    //    yield return new Format("out('{0}')") {Count = 1};
-                    //    stack.Push(memberExpression.Expression);
-                    //}
                 }
                 else if (item is NewExpression newExpression)
                 {
-                    if (!IsAnonymousType(newExpression.Type))
+                    if (!newExpression.Type.IsAnonymousType())
                         throw new NotSupportedException($"GetOperators {newExpression}");
 
                     foreach (var arg in newExpression.Arguments)
                         stack.Push(arg);
 
-                    yield return (newExpression.Arguments.Count, args => Traversal.Empty);
+                    yield return (newExpression.Arguments.Count, args =>
+                        {
+                            var project = $"project({newExpression.Members.Select(e => $"'{e.Name.ToCamelCase()}'").Join(", ")})" +
+                                          $".by(coalesce({args.Join(", constant([]))).by(coalesce(")}, constant()))";
+                            return new Traversal(Enumerable.Empty<IGremlinExpr>())
+                            {
+                                Selector = new GremlinSelector(project.ToString())
+                            };
+                        }
+                    );
                 }
                 else
                 {
                     throw new NotImplementedException($"GetOperators {item}");
-                    // yield return new Term($"[[{item.GetType()}]]");
                 }
             }
         }
-        
+
         private static (int, Func<Traversal[], Traversal>) Select(MethodCallExpression methodCall, Stack<Expression> stack)
         {
             var source = methodCall.Arguments[0];
@@ -195,10 +178,10 @@ namespace Xania.CosmosDb
         {
             var sourceExpr = methodCall.Arguments[0];
             var collectionLambda = methodCall.Arguments[1] is UnaryExpression u
-                ? (LambdaExpression) u.Operand
+                ? (LambdaExpression)u.Operand
                 : throw new NotSupportedException();
             var selectorLambda = methodCall.Arguments[2] is UnaryExpression s
-                ? (LambdaExpression) s.Operand
+                ? (LambdaExpression)s.Operand
                 : throw new NotSupportedException();
 
             stack.Push(sourceExpr);
@@ -208,7 +191,7 @@ namespace Xania.CosmosDb
             return (3, args =>
             {
                 var selectorParameters = selectorLambda.Parameters
-                    .Where(e => !IsAnonymousType(e.Type))
+                    .Where(e => !e.Type.IsAnonymousType())
                     .Reverse().Take(2)
                     .ToArray();
 
@@ -222,23 +205,19 @@ namespace Xania.CosmosDb
                 return source
                     .Bind(collection)
                     .Bind(selector);
-            });
+            }
+            );
         }
 
         private static IEnumerable<string> UnfoldParameter(ParameterExpression expr)
         {
-            if (!IsAnonymousType(expr.Type))
+            if (!expr.Type.IsAnonymousType())
                 yield return expr.Name;
             else
             {
                 foreach (PropertyInfo p in expr.Type.GetProperties())
                     yield return p.Name;
             }
-        }
-
-        private static bool IsAnonymousType(Type type)
-        {
-            return type.CustomAttributes.Select(e => e.AttributeType).Contains(typeof(CompilerGeneratedAttribute));
         }
 
         private static Traversal Parameter(ParameterExpression parameter)
@@ -260,7 +239,7 @@ namespace Xania.CosmosDb
                 if (left.Steps.Last() is Values values)
                 {
                     var rightSteps = values.Name.Equals("id", StringComparison.OrdinalIgnoreCase) ?
-                        right.Steps.Select(e => e is Const cons ? new Const(cons.Value.ToString()) : e):
+                        right.Steps.Select(e => e is Const cons ? new Const(cons.Value.ToString()) : e) :
                         right.Steps;
 
                     var reverseTail = left.Steps.Take(left.Steps.Count() - 1);
@@ -400,7 +379,7 @@ namespace Xania.CosmosDb
             if (Steps.LastOrDefault() is Alias l)
             {
                 if (!otherSteps.Any(e => e is Select s && s.Label.Equals(l.Value)))
-                    return new Traversal(Steps.Take(Steps.Count() - 1).Concat(otherSteps))
+                    return new Traversal(Steps.Concat(otherSteps))
                     {
                         Selector = other.Selector
                     };
@@ -453,6 +432,11 @@ namespace Xania.CosmosDb
             Func<IGremlinExpr, IGremlinExpr> replace)
         {
             return steps.Select(e => predicate(e) ? replace(e) : e);
+        }
+
+        public static string Join<T>(this IEnumerable<T> source, string separator)
+        {
+            return source.Aggregate(new StringBuilder(), (sb, e) => sb.Length > 0 ? sb.Append(separator).Append(e) : sb.Append(e)).ToString();
         }
     }
 }

@@ -18,7 +18,7 @@ namespace Xania.CosmosDb.Tests.Gremlin
             Client = new Client(endpointUrl, primaryKey, "ToDoList", "Items");
             Client.Log += Console.WriteLine;
 
-            SetUpData();
+            // SetUpData();
         }
 
         private static void SetUpData()

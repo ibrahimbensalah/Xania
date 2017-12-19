@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 
 namespace Xania.Reflection
 {
@@ -19,7 +20,6 @@ namespace Xania.Reflection
         {
             return !(type.IsInterface || type.IsAbstract || type.GetConstructors().Length == 0);
         }
-
 
         public static Type MapTo(this Type templateType, Type targetType)
         {
@@ -75,5 +75,11 @@ namespace Xania.Reflection
                 return templateType.GetGenericTypeDefinition() == targetType.GetGenericTypeDefinition();
             return false;
         }
+
+        public static bool IsAnonymousType(this Type type)
+        {
+            return type.CustomAttributes.Select(e => e.AttributeType).Contains(typeof(CompilerGeneratedAttribute));
+        }
+
     }
 }

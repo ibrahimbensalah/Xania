@@ -73,7 +73,7 @@ namespace Xania.CosmosDb.Tests.Gremlin
         {
             GremlinSetup.Client
                 .ExecuteGremlinAsync(
-                    "g.V().hasLabel('person').as('p').out('friends').as('f').dedup().union(project('x', 't').by(identity()), outE())")
+                    "g.V().hasLabel('person').has('id', eq('1')).as('p').project('friendId').by(constant())")
                 .Wait();
         }
 
@@ -131,16 +131,17 @@ namespace Xania.CosmosDb.Tests.Gremlin
         public void SelectCustomColumns()
         {
             var view =
-                from p in GremlinSetup.Client.Query<Person>()
+                (from p in GremlinSetup.Client.Query<Person>()
+                where p.Id == 1
                 select new
                 {
                     p.FirstName,
-                    p.Id
-                };
+                    FriendId = p.Friend.Id
+                }).ToArray();
 
             var ibrahim = view.Should().ContainSingle().Subject;
-            ibrahim.FirstName.Should().Be("ibrahim");
-            ibrahim.Id.Should().Be(1);
+            // ibrahim.FirstName.Should().Be("Ibrahim");
+            ibrahim.FriendId.Should().Be(2);
 
             Console.WriteLine(JsonConvert.SerializeObject(view, Formatting.Indented));
         }

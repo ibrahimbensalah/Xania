@@ -9,6 +9,7 @@ using System.Security;
 using System.Threading.Tasks;
 using Microsoft.Azure.Documents;
 using Microsoft.Azure.Documents.Client;
+using System.Collections;
 
 namespace Xania.CosmosDb
 {
@@ -42,12 +43,12 @@ namespace Xania.CosmosDb
 
         public event Action<string> Log;
 
-        public Task<Graph> GetVertexTree(object vertexId)
+        public Task<Graph> GetVertexGraph(object vertexId)
         {
-            return GetTree($"g.V('{vertexId}').union(identity(), outE())");
+            return GetVertexGraph($"g.V('{vertexId}').union(identity(), outE())");
         }
 
-        public async Task<Graph> GetTree(string vertexQuery)
+        public async Task<Graph> GetVertexGraph(string vertexQuery)
         {
             var graph = new Graph();
             foreach (var result in (await ExecuteGremlinAsync(vertexQuery)).OfType<JObject>())
@@ -82,53 +83,19 @@ namespace Xania.CosmosDb
                     var targetId = relationJson.Value<string>("inV");
                     var sourceId = relationJson.Value<string>("outV");
 
+
                     var relation = new Relation(sourceId, label, targetId)
                     {
                         Id = id
                     };
                     graph.Relations.Add(relation);
                 }
-
-                /*
-                foreach (var verticesJson in result.Properties().Select(x => x.Value).OfType<JObject>())
+                else
                 {
-                    var vertexJson = verticesJson.Value<JObject>("key");
-                    var relationsJson = verticesJson.Value<JObject>("value");
-                    var vertex = new Vertex(vertexJson.Value<string>("label"))
-                    {
-                        Id = vertexJson.Value<string>("id")
-                    };
-                    graph.Vertices.Add(vertex);
-
-                    var propertiesJson = vertexJson.Value<JObject>("properties");
-                    if (propertiesJson != null)
-                    {
-                        foreach (var prop in propertiesJson.Properties())
-                        {
-                            var propValue = ((JArray)prop.Value).Select(x =>
-                               new Tuple<string, object>(x.Value<string>("id"), x.Value<Object>("value"))).ToArray();
-
-                            var graphProp = new Property(prop.Name, propValue);
-                            vertex.Properties.Add(graphProp);
-                        }
-                    }
-
-                    foreach (var relationJson in relationsJson.Properties().Select(x => x.Value.Value<JObject>("key")))
-                    {
-                        var id = relationJson.Value<string>("id");
-                        var label = relationJson.Value<string>("label");
-                        var targetId = relationJson.Value<string>("inV");
-                        var sourceId = relationJson.Value<string>("outV");
-
-                        var relation = new Relation(sourceId, label, targetId)
-                        {
-                            Id = id
-                        };
-                        graph.Relations.Add(relation);
-                    }
+                    graph.Anonymous.Add(result);
                 }
-                */
             }
+
             return graph;
         }
 
