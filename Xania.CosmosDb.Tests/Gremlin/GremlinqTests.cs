@@ -9,11 +9,12 @@ namespace Xania.CosmosDb.Tests.Gremlin
 {
     public class GremlinqTests
     {
+        private IQueryable<Person> People => GremlinSetup.Client.Query<Person>();
 
         [Test]
         public void NoFilter()
         {
-            var persons = GremlinSetup.Client.Query<Person>().ToArray();
+            var persons = People.ToArray();
             var person1 = persons.Single(e => e.Id == 1);
             var person2 = persons.Single(e => e.Id == 2);
 
@@ -27,7 +28,7 @@ namespace Xania.CosmosDb.Tests.Gremlin
         public void FilterById()
         {
             var persons = 
-                from p in GremlinSetup.Client.Query<Person>()
+                from p in People
                 where p.Id == 1
                 select p;
             var person = persons.Should().ContainSingle().Subject;
@@ -39,7 +40,7 @@ namespace Xania.CosmosDb.Tests.Gremlin
         public void FilterByFirstName()
         {
             var array =
-                from p in GremlinSetup.Client.Query<Person>()
+                from p in People
                 where p.FirstName == "Ibrahim"
                 select p;
             var person = array.Should().ContainSingle().Subject;
@@ -60,7 +61,7 @@ namespace Xania.CosmosDb.Tests.Gremlin
         public void FilterByFriend()
         {
             var persons =
-                from p in GremlinSetup.Client.Query<Person>()
+                from p in People
                 where p.Friend.Id == 2
                 select p;
 
@@ -81,7 +82,7 @@ namespace Xania.CosmosDb.Tests.Gremlin
         public void SelectFriends()
         {
             var persons =
-                from p in GremlinSetup.Client.Query<Person>()
+                from p in People
                 where p.Id == 1
                 from f in p.Friends
                 select f;
@@ -93,7 +94,7 @@ namespace Xania.CosmosDb.Tests.Gremlin
         public void SelectFriendOfFriends()
         {
             var persons =
-                from p in GremlinSetup.Client.Query<Person>()
+                from p in People
                 from f in p.Friends
                 select f.Friend;
             Console.WriteLine(JsonConvert.SerializeObject(persons, Formatting.Indented));
@@ -103,7 +104,7 @@ namespace Xania.CosmosDb.Tests.Gremlin
         public void SelectFriendOfFriendsOfFriends()
         {
             var persons =
-                from p in GremlinSetup.Client.Query<Person>()
+                from p in People
                 from f in p.Friends
                 from g in f.Friends
                 from h in p.Friends
@@ -122,7 +123,7 @@ namespace Xania.CosmosDb.Tests.Gremlin
         public void SelectEveryBody()
         {
             var everybody =
-                from p in GremlinSetup.Client.Query<Person>()
+                from p in People
                 select p;
             Console.WriteLine(JsonConvert.SerializeObject(everybody, Formatting.Indented));
         }
@@ -131,7 +132,7 @@ namespace Xania.CosmosDb.Tests.Gremlin
         public void SelectCustomColumns()
         {
             var view =
-                (from p in GremlinSetup.Client.Query<Person>()
+            (from p in People
                 where p.Id == 1
                 select new
                 {
@@ -142,6 +143,40 @@ namespace Xania.CosmosDb.Tests.Gremlin
             var ibrahim = view.Should().ContainSingle().Subject;
             // ibrahim.FirstName.Should().Be("Ibrahim");
             ibrahim.FriendId.Should().Be(2);
+
+            Console.WriteLine(JsonConvert.SerializeObject(view, Formatting.Indented));
+        }
+
+        [Test]
+        public void SelectCustomResultContainingOneVertex()
+        {
+            var view =
+            (from p in People
+                where p.Id == 1
+                select new
+                {
+                    p.Friend
+                }).ToArray();
+
+            var ibrahim = view.Should().ContainSingle().Subject;
+            ibrahim.Friend.Id.Should().Be(2);
+
+            Console.WriteLine(JsonConvert.SerializeObject(view, Formatting.Indented));
+        }
+
+        [Test]
+        public void SelectCustomResultContainingManyVertices()
+        {
+            var view =
+            (from p in People
+                where p.Id == 1
+                select new
+                {
+                    p.Friends
+                }).ToArray();
+
+            var ibrahim = view.Should().ContainSingle().Subject;
+            ibrahim.Friends.Should().ContainSingle().Which.Id.Should().Be(2);
 
             Console.WriteLine(JsonConvert.SerializeObject(view, Formatting.Indented));
         }

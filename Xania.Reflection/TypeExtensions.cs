@@ -1,6 +1,10 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 
 namespace Xania.Reflection
@@ -59,12 +63,56 @@ namespace Xania.Reflection
             return null;
         }
 
+        public static bool IsEnumerable(this Type type)
+        {
+            return type != typeof(string) && typeof(IEnumerable).IsAssignableFrom(type);
+        }
+
+        public static object CreateCollection(this Type targetType)
+        {
+            if (targetType.IsConcrete())
+            {
+                return Activator.CreateInstance(targetType);
+            }
+            var collectionType = typeof(Collection<>).MapTo(targetType);
+            if (collectionType != null)
+            {
+                return Activator.CreateInstance(collectionType);
+            }
+            throw new NotSupportedException($"CreateCollection {targetType.Name}");
+        }
+
+        public static object CreateArray(this Type targetType, object[] content)
+        {
+            if (targetType.IsArray)
+            {
+                var elementType = targetType.GetElementType();
+                var arr = Array.CreateInstance(elementType ?? throw new InvalidOperationException(), content.Length);
+                Array.Copy(content, arr, content.Length);
+                return arr;
+            }
+            throw new NotSupportedException($"CreateCollection {targetType.Name}");
+        }
+
+        public static object AddRange(this object collection, object[] items)
+        {
+            var collectionType = collection.GetType();
+
+            var addMethod =
+                collectionType.GetMembers().OfType<MethodInfo>()
+                .Single(m => m.Name.Equals("Add") && m.GetParameters().Length == 1);
+
+            foreach (var item in items)
+                addMethod.Invoke(collection, new[] {item});
+
+            return collection;
+        }
+
         private static IEnumerable<Type> GetParentTypes(this Type type)
         {
             if (type.BaseType != null)
                 return type.GetInterfaces(false).Concat(new[] { type.BaseType });
-            else
-                return type.GetInterfaces(false);
+            return type.GetInterfaces(false);
         }
 
         private static bool IsTemplateTypeOf(this Type templateType, Type targetType)
@@ -81,5 +129,14 @@ namespace Xania.Reflection
             return type.CustomAttributes.Select(e => e.AttributeType).Contains(typeof(CompilerGeneratedAttribute));
         }
 
+        public static Type GetItemType(this Type enumerableType)
+        {
+            foreach (var i in enumerableType.GetInterfaces())
+            {
+                if (i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IEnumerable<>))
+                    return i.GenericTypeArguments[0];
+            }
+            throw new InvalidOperationException("is not enumerable type " + enumerableType);
+        }
     }
 }

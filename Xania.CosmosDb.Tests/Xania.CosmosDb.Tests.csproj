@@ -274,6 +274,7 @@
   <ItemGroup>
     <Compile Include="Address.cs" />
     <Compile Include="AzureGraphTests.cs" />
+    <Compile Include="Graph\HelperTests.cs" />
     <Compile Include="Gremlin\GremlinqTests.cs" />
     <Compile Include="Gremlin\GremlinSetup.cs" />
     <Compile Include="Person.cs" />
@@ -293,6 +294,10 @@
     <ProjectReference Include="..\Xania.CosmosDb\Xania.CosmosDb.csproj">
       <Project>{f90c4f00-f5cb-41e9-8079-37d26a2cdffc}</Project>
       <Name>Xania.CosmosDb</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Xania.Reflection\Xania.Reflection.csproj">
+      <Project>{6320f29a-f0c9-48e7-bf6e-a56b0b448352}</Project>
+      <Name>Xania.Reflection</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
