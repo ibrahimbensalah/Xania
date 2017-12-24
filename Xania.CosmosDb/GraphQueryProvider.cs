@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
+using Newtonsoft.Json.Linq;
 using Xania.Reflection;
 
 namespace Xania.CosmosDb
@@ -39,9 +41,14 @@ namespace Xania.CosmosDb
             var resultType = typeof(IQueryable<>).MapTo(typeof(TResult));
             var elementType = resultType.GenericTypeArguments[0];
 
-            var graph = _client.GetVertexGraph(gremlin).Result;
+            var items = _client.ExecuteGremlinAsync(gremlin).Result.OfType<JObject>()
+                .Select(result => Client.ConvertToObject(result, elementType));
 
-            return (TResult) OfType(graph.ToObjects(elementType), elementType);
+            return (TResult) resultType.CreateCollection(items.ToArray());
+
+            // return (TResult) _client.GetVertexGraph(gremlin, resultType).Result;
+
+            // return (TResult) OfType(graph.ToObjects(elementType), elementType);
         }
 
         private object OfType(IEnumerable objects, Type elementType)

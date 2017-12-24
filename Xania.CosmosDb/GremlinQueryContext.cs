@@ -139,7 +139,7 @@ namespace Xania.CosmosDb
                     yield return (newExpression.Arguments.Count, args =>
                         {
                             var project = $"project({newExpression.Members.Select(e => $"'{e.Name.ToCamelCase()}'").Join(", ")})" +
-                                          $".by(coalesce({args.Join(", constant([]))).by(coalesce(")}, constant()))";
+                                          $".by(coalesce({args.SelectMany(ToGremlinSelector).Join(", constant())).by(coalesce(")}, constant()))";
                             return new Traversal(Enumerable.Empty<IGremlinExpr>())
                             {
                                 Selector = new GremlinSelector(project.ToString())
@@ -152,6 +152,19 @@ namespace Xania.CosmosDb
                     throw new NotImplementedException($"GetOperators {item}");
                 }
             }
+        }
+
+
+        private static IEnumerable<string> ToGremlinSelector(Traversal traversal)
+        {
+            var str = traversal.ToString();
+
+            if (!string.IsNullOrEmpty(str))
+                yield return str;
+
+
+            if (traversal.Selector != null)
+                yield return traversal.Selector.ToString();
         }
 
         private static (int, Func<Traversal[], Traversal>) Select(MethodCallExpression methodCall, Stack<Expression> stack)
@@ -347,7 +360,7 @@ namespace Xania.CosmosDb
     public class Traversal
     {
         public IEnumerable<IGremlinExpr> Steps { get; }
-        public GremlinSelector Selector { get; set; } = GremlinSelector.Vertex();
+        public GremlinSelector Selector { get; set; }
 
         public Traversal(IGremlinExpr step)
             : this(new[] { step })
@@ -364,11 +377,12 @@ namespace Xania.CosmosDb
             return $"{string.Join(".", Steps.Select(e => e.ToString()))}";
         }
 
-        public static readonly Traversal Empty = new Traversal(Enumerable.Empty<IGremlinExpr>());
         public static readonly Context __ = new Context();
 
         public Traversal Append(IGremlinExpr expr)
         {
+            if (expr is Values)
+                return new Traversal (Steps.Append(expr)) { Selector = null };
             return new Traversal(Steps.Append(expr)) { Selector = Selector };
         }
 
@@ -404,11 +418,6 @@ namespace Xania.CosmosDb
         public GremlinSelector(string expression)
         {
             _expression = expression;
-        }
-
-        public static GremlinSelector Vertex()
-        {
-            return new GremlinSelector(@"union(identity(), outE())");
         }
 
         public override string ToString()

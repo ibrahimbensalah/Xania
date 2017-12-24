@@ -68,18 +68,58 @@ namespace Xania.Reflection
             return type != typeof(string) && typeof(IEnumerable).IsAssignableFrom(type);
         }
 
-        public static object CreateCollection(this Type targetType)
+        public static object CreateCollection(this Type targetType, params object[] items)
         {
+            if (targetType.IsArray)
+            {
+                return CreateArray(targetType, items);
+            }
             if (targetType.IsConcrete())
             {
                 return Activator.CreateInstance(targetType);
             }
-            var collectionType = typeof(Collection<>).MapTo(targetType);
+            var collectionType = typeof(Collection<>).MapTo(targetType) ?? typeof(EnumerableQuery<>).MapTo(targetType);
             if (collectionType != null)
             {
-                return Activator.CreateInstance(collectionType);
+                var elementType = collectionType.GenericTypeArguments[0];
+                var arr = Array.CreateInstance(elementType ?? throw new InvalidOperationException(), items.Length);
+                Array.Copy(items, arr, items.Length);
+                return Activator.CreateInstance(collectionType, arr);
             }
             throw new NotSupportedException($"CreateCollection {targetType.Name}");
+        }
+
+        public static object CreateInstance(this Type type, Dictionary<string, Func<Type, object>> properties)
+        {
+            if (type.IsAnonymousType())
+            {
+                var ctor = type.GetConstructors().Single();
+                var args = ctor.GetParameters().Select(p =>
+                {
+                    if (properties.TryGetValue(p.Name, out var factory))
+                        return factory(p.ParameterType);
+
+                    if (p.HasDefaultValue)
+                        return p.DefaultValue;
+                    if (p.ParameterType.IsValueType)
+                        return Activator.CreateInstance(p.ParameterType);
+                    return null;
+                }).ToArray();
+
+                return ctor.Invoke(args);
+            }
+            else
+            {
+                var instance = Activator.CreateInstance(type);
+
+                foreach (var prop in TypeDescriptor.GetProperties(type).OfType<PropertyDescriptor>())
+                {
+                    if (properties.TryGetValue(prop.Name, out var value))
+                        prop.SetValue(instance, value(prop.PropertyType));
+                }
+
+                return instance;
+            }
         }
 
         public static object CreateArray(this Type targetType, object[] content)
@@ -100,10 +140,10 @@ namespace Xania.Reflection
 
             var addMethod =
                 collectionType.GetMembers().OfType<MethodInfo>()
-                .Single(m => m.Name.Equals("Add") && m.GetParameters().Length == 1);
+                    .Single(m => m.Name.Equals("Add") && m.GetParameters().Length == 1);
 
             foreach (var item in items)
-                addMethod.Invoke(collection, new[] {item});
+                addMethod.Invoke(collection, new[] { item });
 
             return collection;
         }

@@ -254,7 +254,7 @@
     <Compile Include="MemberCall.cs" />
     <Compile Include="AST\Parameter.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="RelaxedConverter.cs" />
+    <Compile Include="GraphConverter.cs" />
     <Compile Include="ShallowProxy.cs" />
     <Compile Include="Graph.cs" />
     <Compile Include="Property.cs" />

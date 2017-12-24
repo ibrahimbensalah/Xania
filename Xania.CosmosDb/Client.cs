@@ -10,10 +10,11 @@ using System.Threading.Tasks;
 using Microsoft.Azure.Documents;
 using Microsoft.Azure.Documents.Client;
 using System.Collections;
+using Xania.Reflection;
 
 namespace Xania.CosmosDb
 {
-    public class Client: IDisposable
+    public class Client : IDisposable
     {
         public readonly DocumentClient _client;
         public readonly DocumentCollection _collection;
@@ -31,7 +32,7 @@ namespace Xania.CosmosDb
                 Converters = { new VertexConverter() }
             };
             _client = new DocumentClient(new Uri(endpointUrl), primaryKey, settings, connectionPolicy);
-            
+
             // _client.OpenAsync().Wait();
             // CreateDatabaseIfNotExistsAsync(databaseId).Wait();
 
@@ -43,60 +44,103 @@ namespace Xania.CosmosDb
 
         public event Action<string> Log;
 
-        public Task<Graph> GetVertexGraph(object vertexId)
+        public async Task<IList<object>> GetVertexGraph(string vertexQuery, Type objectType)
         {
-            return GetVertexGraph($"g.V('{vertexId}').union(identity(), outE())");
-        }
-
-        public async Task<Graph> GetVertexGraph(string vertexQuery)
-        {
-            var graph = new Graph();
+            var list = new List<object>();
             foreach (var result in (await ExecuteGremlinAsync(vertexQuery)).OfType<JObject>())
             {
-                var type = result.Value<string>("type");
+                list.Add(ConvertToObject(result, objectType));
+            }
+            return list;
+        }
+
+        public static object ConvertToObject(JToken token, Type objectType)
+        {
+            if (objectType.IsEnumerable() && token.Type != JTokenType.Array)
+            {
+                var elementType = objectType.GetItemType();
+                var obj = ConvertToObject(token, elementType);
+
+                object[] items = { obj };
+
+                if (objectType.IsArray)
+                    return objectType.CreateArray(items);
+
+                return objectType.CreateCollection(items);
+            }
+            if (token.Type == JTokenType.Object)
+            {
+                var vertexJson = (JObject)token;
+                var type = vertexJson.Value<string>("type");
+                //if (string.Equals(type, "edge"))
+                //{
+                //    var relationJson = vertexJson;
+                //    var id = relationJson.Value<string>("id");
+                //    var label = relationJson.Value<string>("label");
+                //    var targetId = relationJson.Value<string>("inV");
+                //    var sourceId = relationJson.Value<string>("outV");
+
+                //    var relation = new Relation(sourceId, label, targetId)
+                //    {
+                //        Id = id
+                //    };
+                //    return relation;
+                //}
+
                 if (string.Equals(type, "vertex"))
                 {
-                    var vertexJson = result;
-                    var vertex = new Vertex(vertexJson.Value<string>("label"))
-                    {
-                        Id = vertexJson.Value<string>("id")
-                    };
-                    graph.Vertices.Add(vertex);
-                    var propertiesJson = vertexJson.Value<JObject>("properties");
-                    if (propertiesJson != null)
-                    {
-                        foreach (var prop in propertiesJson.Properties())
-                        {
-                            var propValue = ((JArray)prop.Value).Select(x =>
-                                new Tuple<string, object>(x.Value<string>("id"), x.Value<Object>("value"))).ToArray();
+                    string label = vertexJson.Value<string>("label");
 
-                            var graphProp = new Property(prop.Name, propValue);
-                            vertex.Properties.Add(graphProp);
-                        }
+                    if (!objectType.Name.Equals(label, StringComparison.InvariantCultureIgnoreCase))
+                    {
+                        throw new InvalidOperationException("Mapping mismatch type <> label");
                     }
-                }
-                else if (string.Equals(type, "edge"))
-                {
-                    var relationJson = result;
-                    var id = relationJson.Value<string>("id");
-                    var label = relationJson.Value<string>("label");
-                    var targetId = relationJson.Value<string>("inV");
-                    var sourceId = relationJson.Value<string>("outV");
 
+                    var properties = vertexJson.Value<JObject>("properties");
+                    var valueFactories =
+                        properties?
+                            .Properties()
+                            .ToDictionary<JProperty, string, Func<Type, object>>(
+                                e => e.Name,
+                                e => t => MultiValueToObject(e.Value.Select(v => v["value"]).ToArray(),
+                                    t),
+                                StringComparer.InvariantCultureIgnoreCase
+                            ) ?? new Dictionary<string, Func<Type, object>>(StringComparer
+                            .InvariantCultureIgnoreCase);
 
-                    var relation = new Relation(sourceId, label, targetId)
+                    if (vertexJson.TryGetValue("id", out var id))
                     {
-                        Id = id
-                    };
-                    graph.Relations.Add(relation);
+                        valueFactories.Add("id", t => id.ToObject(t));
+                    }
+
+                    return objectType.CreateInstance(valueFactories);
                 }
-                else
+
                 {
-                    graph.Anonymous.Add(result);
+                    var valueFactories =
+                        vertexJson
+                            .Properties()
+                            .ToDictionary<JProperty, string, Func<Type, object>>(
+                                e => e.Name,
+                                e => t => ConvertToObject(e.Value, t),
+                                StringComparer.InvariantCultureIgnoreCase
+                            );
+                    return objectType.CreateInstance(valueFactories);
                 }
             }
+            return token.ToObject(objectType);
+        }
 
-            return graph;
+        private static object MultiValueToObject(JToken[] values, Type objectType)
+        {
+            if (objectType.IsEnumerable())
+            {
+                var elementType = objectType.GetElementType();
+                var items = values.Select(e => ConvertToObject(e, elementType)).ToArray();
+                return objectType.CreateCollection(items);
+            }
+
+            return values.Select(e => ConvertToObject(e, objectType)).SingleOrDefault();
         }
 
         public async Task<IEnumerable<JToken>> ExecuteGremlinAsync(string gremlin)
@@ -109,7 +153,7 @@ namespace Xania.CosmosDb
                 MaxDegreeOfParallelism = 10,
                 MaxBufferedItemCount = 100,
                 MaxItemCount = 100,
-                EnableCrossPartitionQuery = true
+                EnableCrossPartitionQuery = false
             };
             using (var query = _client.CreateGremlinQuery(_collection, gremlin, feedOptions))
             {

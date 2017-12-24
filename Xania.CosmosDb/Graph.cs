@@ -14,7 +14,6 @@ namespace Xania.CosmosDb
     {
         public Collection<Vertex> Vertices { get; } = new Collection<Vertex>();
         public Collection<Relation> Relations { get; } = new Collection<Relation>();
-        public Collection<JToken> Anonymous { get; } = new Collection<JToken>();
 
         public static Graph FromObject(Object model)
         {
@@ -87,24 +86,23 @@ namespace Xania.CosmosDb
         {
             var cache = new Dictionary<Vertex, object>();
 
-            if (modelType.IsAnonymousType())
-            {
-                foreach (var v in Anonymous)
-                    yield return ToObject(v, modelType, cache);
-            }
-            else
-            {
-                var label = modelType.Name.ToCamelCase();
-                foreach (var vertex in Vertices.Where(e => e.Label.Equals(label)))
-                    yield return ToObject(vertex, modelType, cache);
-            }
+            //if (modelType.IsAnonymousType())
+            //{
+            //    foreach (var v in Anonymous)
+            //        yield return ToObject(v, modelType, cache);
+            //}
+            //else
+
+            var label = modelType.IsAnonymousType() ? null : modelType.Name.ToCamelCase();
+            foreach (var vertex in Vertices.Where(e => string.Equals(e.Label, label)))
+                yield return ToObject(vertex, modelType, cache);
         }
 
         private object ToObject(JToken token, Type modelType, IDictionary<Vertex, object> cache)
         {
             return token.ToObject(modelType, new JsonSerializer
             {
-                Converters = { new RelaxedConverter() }
+                Converters = { new GraphConverter() }
             });
         }
 
