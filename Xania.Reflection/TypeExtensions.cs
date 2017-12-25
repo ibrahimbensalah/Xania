@@ -113,18 +113,40 @@ namespace Xania.Reflection
 
                 return ctor.Invoke(args);
             }
-            else
+
             {
                 var instance = Activator.CreateInstance(type);
 
                 foreach (var prop in TypeDescriptor.GetProperties(type).OfType<PropertyDescriptor>())
                 {
                     if (properties.TryGetValue(prop.Name, out var value))
-                        prop.SetValue(instance, value(prop.PropertyType));
+                    {
+                        var newValue = value(prop.PropertyType);
+                        if (prop.IsReadOnly)
+                        {
+                            var existingValue = prop.GetValue(instance);
+                            if (existingValue != null)
+                            {
+                                if (newValue is IEnumerable enumerable)
+                                    existingValue.AddRange(OfType(enumerable, prop.PropertyType.GetItemType()).ToArray());
+                            }
+                        }
+                        else
+                        {
+                            prop.SetValue(instance, newValue);
+                        }
+                    }
                 }
 
                 return instance;
             }
+        }
+
+
+        private static IEnumerable<object> OfType(IEnumerable objects, Type elementType)
+        {
+            var ofType = typeof(Enumerable).GetMethod("OfType")?.MakeGenericMethod(elementType);
+            return (IEnumerable<object>)ofType?.Invoke(null, new object[] { objects });
         }
 
         public static object CreateArray(this Type targetType, object[] content)
@@ -139,7 +161,7 @@ namespace Xania.Reflection
             throw new NotSupportedException($"CreateCollection {targetType.Name}");
         }
 
-        public static object AddRange(this object collection, object[] items)
+        public static object AddRange(this object collection, IEnumerable<object> items)
         {
             var collectionType = collection.GetType();
 

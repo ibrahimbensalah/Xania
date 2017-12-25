@@ -121,26 +121,31 @@ namespace Xania.Graphs
                 modelProperty.SetValue(model, Convert(value, modelProperty.PropertyType));
             }
 
-            //foreach (var rel in Relations.Where(e => string.Equals(e.SourceId, vertex.Id)))
-            //{
-            //    var target = Vertices.SingleOrDefault(e => e.Id.Equals(rel.TargetId));
-            //    var modelProperty = modelProperties[rel.Name];
-            //    if (typeof(IEnumerable).IsAssignableFrom(modelProperty.PropertyType))
-            //    {
-            //        var elementType = GetElementType(modelProperty.PropertyType);
-            //        var item = target == null
-            //            ? Proxy(elementType, rel.TargetId)
-            //            : ToObject(target, elementType, cache);
-            //        Add(modelProperty.GetValue(model), item, elementType);
-            //    }
-            //    else
-            //    {
-            //        var item = target == null
-            //            ? Proxy(modelProperty.PropertyType, rel.TargetId)
-            //            : ToObject(target, modelProperty.PropertyType, cache);
-            //        modelProperty.SetValue(model, item);
-            //    }
-            //}
+            foreach (var rel in Relations.Where(e => string.Equals(e.SourceId, vertex.Id)))
+            {
+                var target = Vertices.SingleOrDefault(e => e.Id.Equals(rel.TargetId));
+                var modelProperty = modelProperties[rel.Name];
+                if (typeof(IEnumerable).IsAssignableFrom(modelProperty.PropertyType))
+                {
+                    var elementType = GetElementType(modelProperty.PropertyType);
+                    if (target != null)
+                        Add(modelProperty.GetValue(model), ToObject(target, elementType, cache), elementType);
+                    //var item = target == null
+                    //    ? Proxy(elementType, rel.TargetId)
+                    //    : ToObject(target, elementType, cache);
+                    //Add(modelProperty.GetValue(model), item, elementType);
+                }
+                else
+                {
+                    if (target != null)
+                        modelProperty.SetValue(model, ToObject(target, modelProperty.PropertyType, cache));
+                    //    Add(modelProperty.GetValue(model), ToObject(target, modelProperty.PropertyType, cache), elementType);
+                    //var item = target == null
+                    //    ? Proxy(modelProperty.PropertyType, rel.TargetId)
+                    //    : ToObject(target, modelProperty.PropertyType, cache);
+                    //modelProperty.SetValue(model, item);
+                }
+            }
             return model;
         }
 

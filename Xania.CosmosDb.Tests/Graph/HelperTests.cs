@@ -24,10 +24,9 @@ namespace Xania.CosmosDb.Tests
 
             Console.WriteLine(obj);
 
-            var person = obj.ToObject<Person>(new JsonSerializer
-            {
-                Converters = { new GraphConverter() }
-            });
+            var person = Client.ConvertToObject(obj, typeof(Person))
+                .Should().BeOfType<Person>().Subject;
+
             person.Id.Should().Be(1);
             person.Friends.Should().ContainSingle().Which.Id.Should().Be(2);
         }
