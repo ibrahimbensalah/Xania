@@ -20,6 +20,11 @@ namespace Xania.Reflection
             return Enumerable.Empty<Type>();
         }
 
+        public static bool IsPrimitive(this Type type)
+        {
+            return type.IsPrimitive || type == typeof(string);
+        }
+
         public static bool IsConcrete(this Type type)
         {
             return !(type.IsInterface || type.IsAbstract || type.GetConstructors().Length == 0);

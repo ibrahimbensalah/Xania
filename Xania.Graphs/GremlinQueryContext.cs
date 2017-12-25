@@ -3,29 +3,27 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using System.Runtime.CompilerServices;
 using System.Text;
-using Xania.CosmosDb.Gremlin;
 using Xania.Reflection;
 
-namespace Xania.CosmosDb
+namespace Xania.Graphs
 {
     public class GremlinQueryContext
     {
         private static class By
         {
-            public static Func<IGremlinExpr, bool> Select(string paramName)
+            public static Func<IStep, bool> Select(string paramName)
             {
                 return e => e is Select select && select.Label.Equals(paramName);
             }
         }
 
-        public static Traversal Evaluate(Expression expression)
+        public static GraphTraversal Evaluate(Expression expression)
         {
             /**
              * Evaluate expression
              */
-            var values = new Stack<Traversal>();
+            var values = new Stack<GraphTraversal>();
             foreach (var oper in GetOperators(expression).Reverse())
             {
                 var args = PopValues(values, oper.Item1).ToArray();
@@ -36,9 +34,9 @@ namespace Xania.CosmosDb
             return values.Single();
         }
 
-        private static Traversal[] PopValues(Stack<Traversal> values, int operCount)
+        private static GraphTraversal[] PopValues(Stack<GraphTraversal> values, int operCount)
         {
-            var arr = new Traversal[operCount];
+            var arr = new GraphTraversal[operCount];
             for (var i = operCount - 1; i >= 0; i--)
             {
                 arr[i] = values.Pop();
@@ -46,9 +44,9 @@ namespace Xania.CosmosDb
             return arr;
         }
 
-        private static IEnumerable<(int, Func<Traversal[], Traversal>)> GetOperators(Expression root)
+        private static IEnumerable<(int, Func<GraphTraversal[], GraphTraversal>)> GetOperators(Expression root)
         {
-            var cache = new Dictionary<ParameterExpression, Traversal>();
+            var cache = new Dictionary<ParameterExpression, GraphTraversal>();
             var stack = new Stack<Expression>();
             stack.Push(root);
             while (stack.Count > 0)
@@ -115,10 +113,10 @@ namespace Xania.CosmosDb
                 else if (item is MemberExpression memberExpression)
                 {
                     if (memberExpression.Expression.Type.IsAnonymousType())
-                        yield return (0, args => new Traversal(new Select(memberExpression.Member.Name)));
+                        yield return (0, args => new GraphTraversal(new Select(memberExpression.Member.Name)));
                     else
                     {
-                        var isPrimitive = Graph.IsPrimitive(memberExpression.Type);
+                        var isPrimitive = memberExpression.Type.IsPrimitive();
 
                         var memberName = memberExpression.Member.Name.ToCamelCase();
                         stack.Push(memberExpression.Expression);
@@ -140,7 +138,7 @@ namespace Xania.CosmosDb
                         {
                             var project = $"project({newExpression.Members.Select(e => $"'{e.Name.ToCamelCase()}'").Join(", ")})" +
                                           $".by(coalesce({args.SelectMany(ToGremlinSelector).Join(", constant())).by(coalesce(")}, constant()))";
-                            return new Traversal(Enumerable.Empty<IGremlinExpr>())
+                            return new GraphTraversal(Enumerable.Empty<IStep>())
                             {
                                 Selector = new GremlinSelector(project.ToString())
                             };
@@ -155,19 +153,19 @@ namespace Xania.CosmosDb
         }
 
 
-        private static IEnumerable<string> ToGremlinSelector(Traversal traversal)
+        private static IEnumerable<string> ToGremlinSelector(GraphTraversal graphTraversal)
         {
-            var str = traversal.ToString();
+            var str = graphTraversal.ToString();
 
             if (!string.IsNullOrEmpty(str))
                 yield return str;
 
 
-            if (traversal.Selector != null)
-                yield return traversal.Selector.ToString();
+            if (graphTraversal.Selector != null)
+                yield return graphTraversal.Selector.ToString();
         }
 
-        private static (int, Func<Traversal[], Traversal>) Select(MethodCallExpression methodCall, Stack<Expression> stack)
+        private static (int, Func<GraphTraversal[], GraphTraversal>) Select(MethodCallExpression methodCall, Stack<Expression> stack)
         {
             var source = methodCall.Arguments[0];
             var predicate = GetSingleParameterLambda(methodCall.Arguments[1]);
@@ -176,18 +174,18 @@ namespace Xania.CosmosDb
             return (2, args => args[0].Append(As(predicate.Parameters[0].Name)).Bind(args[1]));
         }
 
-        private static (int, Func<Traversal[], Traversal>) Where(MethodCallExpression methodCall, Stack<Expression> stack)
+        private static (int, Func<GraphTraversal[], GraphTraversal>) Where(MethodCallExpression methodCall, Stack<Expression> stack)
         {
             var source = methodCall.Arguments[0];
             var predicate = GetSingleParameterLambda(methodCall.Arguments[1]);
             stack.Push(source);
             stack.Push(predicate.Body);
             return (2, args => Where(args[0],
-                args[1].Replace(By.Select(predicate.Parameters[0].Name), Traversal.__)
+                args[1].Replace(By.Select(predicate.Parameters[0].Name), GraphTraversal.__)
             ));
         }
 
-        private static (int, Func<Traversal[], Traversal>) SelectMany(MethodCallExpression methodCall, Stack<Expression> stack)
+        private static (int, Func<GraphTraversal[], GraphTraversal>) SelectMany(MethodCallExpression methodCall, Stack<Expression> stack)
         {
             var sourceExpr = methodCall.Arguments[0];
             var collectionLambda = methodCall.Arguments[1] is UnaryExpression u
@@ -233,19 +231,19 @@ namespace Xania.CosmosDb
             }
         }
 
-        private static Traversal Parameter(ParameterExpression parameter)
+        private static GraphTraversal Parameter(ParameterExpression parameter)
         {
             return new Select(parameter.Name).ToTraversal();
         }
 
-        private static Traversal Where(Traversal source, Traversal predicate)
+        private static GraphTraversal Where(GraphTraversal source, GraphTraversal predicate)
         {
             if (predicate.Steps.ElementAtOrDefault(0) is Context && !predicate.Steps.Any(e => e is Out))
-                return new Traversal(source.Steps.Concat(predicate.Steps.Skip(1)));
+                return new GraphTraversal(source.Steps.Concat(predicate.Steps.Skip(1)));
             return source.Append(Scope("where", predicate));
         }
 
-        private static Traversal Binary(ExpressionType oper, Traversal left, Traversal right)
+        private static GraphTraversal Binary(ExpressionType oper, GraphTraversal left, GraphTraversal right)
         {
             if (oper == ExpressionType.Equal)
             {
@@ -258,7 +256,7 @@ namespace Xania.CosmosDb
                     var reverseTail = left.Steps.Take(left.Steps.Count() - 1);
                     var reverseHead = new Call("has", new Const(values.Name), new Eq(rightSteps));
 
-                    return new Traversal(reverseTail).Append(reverseHead);
+                    return new GraphTraversal(reverseTail).Append(reverseHead);
                 }
             }
             throw new NotImplementedException();
@@ -301,7 +299,7 @@ namespace Xania.CosmosDb
             return new Values(name);
         }
 
-        public static IGremlinExpr As(string name)
+        public static IStep As(string name)
         {
             return new Alias(name);
         }
@@ -311,38 +309,38 @@ namespace Xania.CosmosDb
             return new Const(value);
         }
 
-        public static Scope Scope(string methodName, Traversal traversal)
+        public static Scope Scope(string methodName, GraphTraversal graphTraversal)
         {
-            return new Scope(methodName, traversal);
+            return new Scope(methodName, graphTraversal);
         }
 
-        public static Call Call(string methodName, IEnumerable<IGremlinExpr> expressions)
+        public static Call Call(string methodName, IEnumerable<IStep> expressions)
         {
             return new Call(methodName, expressions);
         }
 
-        public static Bind Bind(IGremlinExpr expr1, IGremlinExpr expr2)
+        public static Bind Bind(IStep expr1, IStep expr2)
         {
             return new Bind(new[] { expr1, expr2 });
         }
 
-        public static Bind Bind(IGremlinExpr head, IEnumerable<IGremlinExpr> expressions)
+        public static Bind Bind(IStep head, IEnumerable<IStep> expressions)
         {
             if (head is Bind bind)
                 return new Bind(bind.Expressions.Concat(expressions).ToArray());
-            var list = new List<IGremlinExpr> { head };
+            var list = new List<IStep> { head };
             foreach (var expr in expressions)
                 list.Add(expr);
             return new Bind(list.ToArray());
         }
 
-        public static Traversal Vertex(string label)
+        public static GraphTraversal Vertex(string label)
         {
-            return new Traversal(new Call("hasLabel", Const(label)));
+            return new GraphTraversal(new Call("hasLabel", Const(label)));
         }
     }
 
-    public class Alias : IGremlinExpr
+    public class Alias : IStep
     {
         public string Value { get; }
 
@@ -357,17 +355,17 @@ namespace Xania.CosmosDb
         }
     }
 
-    public class Traversal
+    public class GraphTraversal
     {
-        public IEnumerable<IGremlinExpr> Steps { get; }
+        public IEnumerable<IStep> Steps { get; }
         public GremlinSelector Selector { get; set; }
 
-        public Traversal(IGremlinExpr step)
+        public GraphTraversal(IStep step)
             : this(new[] { step })
         {
         }
 
-        public Traversal(IEnumerable<IGremlinExpr> steps)
+        public GraphTraversal(IEnumerable<IStep> steps)
         {
             Steps = steps;
         }
@@ -379,32 +377,32 @@ namespace Xania.CosmosDb
 
         public static readonly Context __ = new Context();
 
-        public Traversal Append(IGremlinExpr expr)
+        public GraphTraversal Append(IStep expr)
         {
             if (expr is Values)
-                return new Traversal (Steps.Append(expr)) { Selector = null };
-            return new Traversal(Steps.Append(expr)) { Selector = Selector };
+                return new GraphTraversal (Steps.Append(expr)) { Selector = null };
+            return new GraphTraversal(Steps.Append(expr)) { Selector = Selector };
         }
 
-        public Traversal Bind(Traversal other)
+        public GraphTraversal Bind(GraphTraversal other)
         {
             var otherSteps = (other.Steps.FirstOrDefault() is Context) ? other.Steps.Skip(1).ToArray() : other.Steps.ToArray();
 
             if (Steps.LastOrDefault() is Alias l)
             {
                 if (!otherSteps.Any(e => e is Select s && s.Label.Equals(l.Value)))
-                    return new Traversal(Steps.Concat(otherSteps))
+                    return new GraphTraversal(Steps.Concat(otherSteps))
                     {
                         Selector = other.Selector
                     };
                 if (otherSteps.FirstOrDefault() is Select f && f.Label.Equals(l.Value))
-                    return new Traversal(Steps.Concat(otherSteps.Skip(1)))
+                    return new GraphTraversal(Steps.Concat(otherSteps.Skip(1)))
                     {
                         Selector = other.Selector
                     };
             }
 
-            return new Traversal(Steps.Concat(otherSteps))
+            return new GraphTraversal(Steps.Concat(otherSteps))
             {
                 Selector = other.Selector
             };
@@ -428,17 +426,17 @@ namespace Xania.CosmosDb
 
     public static class TraversalExtensions
     {
-        public static Traversal Replace(this Traversal traversal, Func<IGremlinExpr, bool> predicate,
-            IGremlinExpr replacement)
+        public static GraphTraversal Replace(this GraphTraversal graphTraversal, Func<IStep, bool> predicate,
+            IStep replacement)
         {
-            return new Traversal(traversal.Steps.Select(e => predicate(e) ? replacement : e))
+            return new GraphTraversal(graphTraversal.Steps.Select(e => predicate(e) ? replacement : e))
             {
-                Selector = traversal.Selector
+                Selector = graphTraversal.Selector
             };
         }
 
-        public static IEnumerable<IGremlinExpr> Replace(this IEnumerable<IGremlinExpr> steps, Func<IGremlinExpr, bool> predicate,
-            Func<IGremlinExpr, IGremlinExpr> replace)
+        public static IEnumerable<IStep> Replace(this IEnumerable<IStep> steps, Func<IStep, bool> predicate,
+            Func<IStep, IStep> replace)
         {
             return steps.Select(e => predicate(e) ? replace(e) : e);
         }

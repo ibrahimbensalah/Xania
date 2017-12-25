@@ -4,6 +4,7 @@ using FluentAssertions;
 using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
 using NUnit.Framework;
+using Xania.Graphs;
 
 namespace Xania.CosmosDb.Tests
 {

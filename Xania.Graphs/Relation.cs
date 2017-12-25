@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Xania.CosmosDb
+namespace Xania.Graphs
 {
     public class Relation
     {
@@ -20,11 +20,5 @@ namespace Xania.CosmosDb
         {
             return $"({SourceId}) -> [{Name}({Id})] -> ({TargetId})";
         }
-    }
-
-    public interface IRelation
-    {
-        object Target { get; }
-        string Id { get; }
     }
 }

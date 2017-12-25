@@ -1,13 +1,13 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 
-namespace Xania.CosmosDb.Gremlin
+namespace Xania.Graphs
 {
-    public class Term : IGremlinExpr
+    public class Term : IStep
     {
-        private readonly IEnumerable<IGremlinExpr> _steps;
+        private readonly IEnumerable<IStep> _steps;
 
-        public Term(IEnumerable<IGremlinExpr> steps)
+        public Term(IEnumerable<IStep> steps)
         {
             _steps = steps;
         }

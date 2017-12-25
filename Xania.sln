@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.27004.2009
+VisualStudioVersion = 15.0.27130.2010
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{2E94C4D9-0FA1-4CEC-B1E2-1BD68156A10C}"
 EndProject
@@ -77,6 +77,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Xania.QL", "Xania.QL\Xania.QL.csproj", "{A8A25CB8-661C-4050-B7E4-C2C8380526B4}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Xania.CosmosDb.Tests", "Xania.CosmosDb.Tests\Xania.CosmosDb.Tests.csproj", "{9E6C30FD-1BF9-43EB-BFFD-A50EBA2577EF}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Xania.Graphs", "Xania.Graphs\Xania.Graphs.csproj", "{597C682A-53CD-4BDD-A042-913E45A3EAF0}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -156,6 +158,10 @@ Global
 		{9E6C30FD-1BF9-43EB-BFFD-A50EBA2577EF}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9E6C30FD-1BF9-43EB-BFFD-A50EBA2577EF}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{9E6C30FD-1BF9-43EB-BFFD-A50EBA2577EF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{597C682A-53CD-4BDD-A042-913E45A3EAF0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{597C682A-53CD-4BDD-A042-913E45A3EAF0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{597C682A-53CD-4BDD-A042-913E45A3EAF0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{597C682A-53CD-4BDD-A042-913E45A3EAF0}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -189,6 +195,7 @@ Global
 		{6320F29A-F0C9-48E7-BF6E-A56B0B448352} = {D0B5A52A-3892-4034-91C5-74E4DBF1EEEF}
 		{A8A25CB8-661C-4050-B7E4-C2C8380526B4} = {9CB55B1D-E86A-4F6C-8728-CF83AA6C615D}
 		{9E6C30FD-1BF9-43EB-BFFD-A50EBA2577EF} = {2E94C4D9-0FA1-4CEC-B1E2-1BD68156A10C}
+		{597C682A-53CD-4BDD-A042-913E45A3EAF0} = {D0B5A52A-3892-4034-91C5-74E4DBF1EEEF}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {8F4FAC4E-FF7F-4A0F-9F2D-40599DDE98BC}

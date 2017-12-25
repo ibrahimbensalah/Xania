@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 
-namespace Xania.CosmosDb
+namespace Xania.Graphs
 {
     public class GraphQueryable<TModel> : IQueryable<TModel>
     {
@@ -14,7 +14,7 @@ namespace Xania.CosmosDb
             Expression = Expression.Constant(this);
         }
 
-        public GraphQueryable(GraphQueryProvider queryProvider, Expression expression)
+        public GraphQueryable(IQueryProvider queryProvider, Expression expression)
         {
             Provider = queryProvider;
             Expression = expression;

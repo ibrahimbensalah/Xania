@@ -1,10 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using Newtonsoft.Json;
 
-namespace Xania.CosmosDb
+namespace Xania.Graphs
 {
-    [JsonConverter(typeof(VertexConverter))]
     public class Vertex
     {
         public string Id { get; set; } = Guid.NewGuid().ToString();

@@ -4,12 +4,13 @@ using System.Runtime.CompilerServices;
 using FluentAssertions;
 using Newtonsoft.Json;
 using NUnit.Framework;
+using Xania.Graphs;
 
 namespace Xania.CosmosDb.Tests.Gremlin
 {
     public class GremlinqTests
     {
-        private IQueryable<Person> People => GremlinSetup.Client.Query<Person>();
+        private static IQueryable<Person> People => GremlinSetup.Client.Query<Person>();
 
         [Test]
         public void NoFilter()

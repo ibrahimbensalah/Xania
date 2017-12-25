@@ -1,18 +1,17 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
-using Newtonsoft.Json.Linq;
+using System.Threading.Tasks;
 using Xania.Reflection;
 
-namespace Xania.CosmosDb
+namespace Xania.Graphs
 {
     public class GraphQueryProvider : IQueryProvider
     {
-        private readonly Client _client;
+        private readonly IGraphDataContext _client;
 
-        public GraphQueryProvider(Client client)
+        public GraphQueryProvider(IGraphDataContext client)
         {
             _client = client;
         }
@@ -36,25 +35,20 @@ namespace Xania.CosmosDb
         {
             bool IsEnumerable = (typeof(TResult).Name == "IEnumerable`1");
             var traversal = GremlinQueryContext.Evaluate(expression);
-            var gremlin = $"g.V().{traversal}.{traversal.Selector}";
 
             var resultType = typeof(IQueryable<>).MapTo(typeof(TResult));
             var elementType = resultType.GenericTypeArguments[0];
 
-            var items = _client.ExecuteGremlinAsync(gremlin).Result.OfType<JObject>()
-                .Select(result => Client.ConvertToObject(result, elementType));
+            //var items = _client.ExecuteGremlinAsync(gremlin).Result.OfType<JObject>()
+            //    .Select(result => Client.ConvertToObject(result, elementType));
+            var items = _client.ExecuteGremlinAsync(traversal, elementType).Result;
 
             return (TResult) resultType.CreateCollection(items.ToArray());
-
-            // return (TResult) _client.GetVertexGraph(gremlin, resultType).Result;
-
-            // return (TResult) OfType(graph.ToObjects(elementType), elementType);
         }
+    }
 
-        private object OfType(IEnumerable objects, Type elementType)
-        {
-            var ofType = typeof(Enumerable).GetMethod("OfType")?.MakeGenericMethod(elementType);
-            return ofType?.Invoke(null, new object[]{ objects });
-        }
+    public interface IGraphDataContext
+    {
+        Task<IEnumerable<object>> ExecuteGremlinAsync(GraphTraversal traversal, Type elementType);
     }
 }

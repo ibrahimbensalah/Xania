@@ -1,7 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
 
-namespace Xania.CosmosDb
+namespace Xania.Graphs
 {
     public class Property
     {

@@ -10,11 +10,13 @@ using System.Threading.Tasks;
 using Microsoft.Azure.Documents;
 using Microsoft.Azure.Documents.Client;
 using System.Collections;
+using Xania.Graphs;
 using Xania.Reflection;
+using GraphTraversal = Xania.Graphs.GraphTraversal;
 
 namespace Xania.CosmosDb
 {
-    public class Client : IDisposable
+    public class Client : IDisposable, IGraphDataContext
     {
         public readonly DocumentClient _client;
         public readonly DocumentCollection _collection;
@@ -143,6 +145,14 @@ namespace Xania.CosmosDb
             return values.Select(e => ConvertToObject(e, objectType)).SingleOrDefault();
         }
 
+        public async Task<IEnumerable<Object>> ExecuteGremlinAsync(GraphTraversal traversal, Type elementType)
+        {
+            var gremlin = $"g.V().{traversal}.{traversal.Selector}";
+
+            return (await ExecuteGremlinAsync(gremlin)).OfType<JObject>()
+                .Select(e => ConvertToObject(e, elementType));
+        }
+
         public async Task<IEnumerable<JToken>> ExecuteGremlinAsync(string gremlin)
         {
             Log?.Invoke($"Running {gremlin}");
@@ -196,11 +206,6 @@ namespace Xania.CosmosDb
         public Task UpsertAsync(object model)
         {
             return UpsertAsync(Graph.FromObject(model));
-        }
-
-        public GraphQueryable<TModel> Query<TModel>()
-        {
-            return new GraphQueryable<TModel>(new GraphQueryProvider(this));
         }
 
         private async Task CreateDatabaseIfNotExistsAsync(string DatabaseId)

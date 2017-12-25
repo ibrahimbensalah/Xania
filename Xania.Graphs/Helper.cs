@@ -3,13 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using Newtonsoft.Json;
 
-namespace Xania.CosmosDb.Gremlin
+namespace Xania.Graphs
 {
     public static class Helper
     {
-        public static Traversal ToTraversal(this IGremlinExpr expr)
+        public static GraphTraversal ToTraversal(this IStep expr)
         {
-            return new Traversal(expr);
+            return new GraphTraversal(expr);
         }
 
         //public static IEnumerable<T> Prepend<T>(this T item, IEnumerable<T> source)
@@ -85,7 +85,7 @@ namespace Xania.CosmosDb.Gremlin
         }
         */
 
-        public static IEnumerable<IGremlinExpr> Unfold(IGremlinExpr expr)
+        public static IEnumerable<IStep> Unfold(IStep expr)
         {
             if (expr is Bind bind)
                 foreach (var child in bind.Expressions.SelectMany(Unfold))
@@ -96,7 +96,7 @@ namespace Xania.CosmosDb.Gremlin
                 yield return expr;
         }
 
-        public static (IGremlinExpr, IEnumerable<IGremlinExpr>) HeadTail(IGremlinExpr expr)
+        public static (IStep, IEnumerable<IStep>) HeadTail(IStep expr)
         {
             if (expr is Bind bind)
             {
@@ -104,7 +104,7 @@ namespace Xania.CosmosDb.Gremlin
                 var tail2 = bind.Expressions.Skip(1);
                 return (head, tail1.Concat(tail2));
             }
-            return (expr, Enumerable.Empty<IGremlinExpr>());
+            return (expr, Enumerable.Empty<IStep>());
         }
     }
 
@@ -155,7 +155,7 @@ namespace Xania.CosmosDb.Gremlin
         }
     }
 
-    public class Const : IGremlinExpr
+    public class Const : IStep
     {
         public object Value { get; }
 

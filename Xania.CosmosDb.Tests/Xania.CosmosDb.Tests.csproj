@@ -295,6 +295,10 @@
       <Project>{f90c4f00-f5cb-41e9-8079-37d26a2cdffc}</Project>
       <Name>Xania.CosmosDb</Name>
     </ProjectReference>
+    <ProjectReference Include="..\Xania.Graphs\Xania.Graphs.csproj">
+      <Project>{597c682a-53cd-4bdd-a042-913e45a3eaf0}</Project>
+      <Name>Xania.Graphs</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Xania.Reflection\Xania.Reflection.csproj">
       <Project>{6320f29a-f0c9-48e7-bf6e-a56b0b448352}</Project>
       <Name>Xania.Reflection</Name>

@@ -1,12 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace Xania.CosmosDb.Gremlin
+﻿namespace Xania.Graphs
 {
-    public class Select: IGremlinExpr
+    public class Select: IStep
     {
         public string Label { get; }
 

@@ -1,5 +1,6 @@
 ﻿using System;
 using Newtonsoft.Json;
+using Xania.Graphs;
 
 namespace Xania.CosmosDb
 {

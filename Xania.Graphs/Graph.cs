@@ -4,11 +4,10 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
-using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Xania.Reflection;
 
-namespace Xania.CosmosDb
+namespace Xania.Graphs
 {
     public class Graph
     {
@@ -25,7 +24,7 @@ namespace Xania.CosmosDb
             if (cache.TryGetValue(value, out var result))
                 return result;
 
-            if (IsPrimitive(valueType))
+            if (valueType.IsPrimitive())
             {
                 return ConvertResult.Primitve(new Tuple<string, object>(Guid.NewGuid().ToString(), value));
             }
@@ -35,7 +34,7 @@ namespace Xania.CosmosDb
                 if (elementType == null)
                     throw new InvalidOperationException($"Could not derive element type from '{valueType}'");
 
-                if (IsPrimitive(elementType))
+                if (elementType.IsPrimitive())
                 {
                     var values = enumerable.OfType<object>()
                         .Select(e => new Tuple<string, object>(Guid.NewGuid().ToString(), e));
@@ -71,12 +70,6 @@ namespace Xania.CosmosDb
             return null;
         }
 
-
-        public static bool IsPrimitive(Type type)
-        {
-            return type.IsPrimitive || type == typeof(string);
-        }
-
         public IEnumerable<TModel> ToObjects<TModel>() where TModel : new()
         {
             return ToObjects(typeof(TModel)).OfType<TModel>();
@@ -98,13 +91,10 @@ namespace Xania.CosmosDb
                 yield return ToObject(vertex, modelType, cache);
         }
 
-        private object ToObject(JToken token, Type modelType, IDictionary<Vertex, object> cache)
-        {
-            return token.ToObject(modelType, new JsonSerializer
-            {
-                Converters = { new GraphConverter() }
-            });
-        }
+        //private object ToObject(JToken token, Type modelType, IDictionary<Vertex, object> cache)
+        //{
+        //    return token.ToObject(modelType);
+        //}
 
         public Object ToObject(Vertex vertex, Type modelType, IDictionary<Vertex, object> cache)
         {
@@ -131,44 +121,44 @@ namespace Xania.CosmosDb
                 modelProperty.SetValue(model, Convert(value, modelProperty.PropertyType));
             }
 
-            foreach (var rel in Relations.Where(e => string.Equals(e.SourceId, vertex.Id)))
-            {
-                var target = Vertices.SingleOrDefault(e => e.Id.Equals(rel.TargetId));
-                var modelProperty = modelProperties[rel.Name];
-                if (typeof(IEnumerable).IsAssignableFrom(modelProperty.PropertyType))
-                {
-                    var elementType = GetElementType(modelProperty.PropertyType);
-                    var item = target == null
-                        ? Proxy(elementType, rel.TargetId)
-                        : ToObject(target, elementType, cache);
-                    Add(modelProperty.GetValue(model), item, elementType);
-                }
-                else
-                {
-                    var item = target == null
-                        ? Proxy(modelProperty.PropertyType, rel.TargetId)
-                        : ToObject(target, modelProperty.PropertyType, cache);
-                    modelProperty.SetValue(model, item);
-                }
-            }
+            //foreach (var rel in Relations.Where(e => string.Equals(e.SourceId, vertex.Id)))
+            //{
+            //    var target = Vertices.SingleOrDefault(e => e.Id.Equals(rel.TargetId));
+            //    var modelProperty = modelProperties[rel.Name];
+            //    if (typeof(IEnumerable).IsAssignableFrom(modelProperty.PropertyType))
+            //    {
+            //        var elementType = GetElementType(modelProperty.PropertyType);
+            //        var item = target == null
+            //            ? Proxy(elementType, rel.TargetId)
+            //            : ToObject(target, elementType, cache);
+            //        Add(modelProperty.GetValue(model), item, elementType);
+            //    }
+            //    else
+            //    {
+            //        var item = target == null
+            //            ? Proxy(modelProperty.PropertyType, rel.TargetId)
+            //            : ToObject(target, modelProperty.PropertyType, cache);
+            //        modelProperty.SetValue(model, item);
+            //    }
+            //}
             return model;
         }
 
-        private object Proxy(Type modelType, string targetId)
-        {
-            var relModelProperties = TypeDescriptor.GetProperties(modelType)
-                .OfType<PropertyDescriptor>()
-                .ToDictionary(e => e.Name, StringComparer.InvariantCultureIgnoreCase);
-            var relIdProperty = relModelProperties.ContainsKey("Id") ? relModelProperties["Id"] : null;
-            return Proxy(modelType, Convert(targetId, relIdProperty?.PropertyType));
-        }
+        //private object Proxy(Type modelType, string targetId)
+        //{
+        //    var relModelProperties = TypeDescriptor.GetProperties(modelType)
+        //        .OfType<PropertyDescriptor>()
+        //        .ToDictionary(e => e.Name, StringComparer.InvariantCultureIgnoreCase);
+        //    var relIdProperty = relModelProperties.ContainsKey("Id") ? relModelProperties["Id"] : null;
+        //    return Proxy(modelType, Convert(targetId, relIdProperty?.PropertyType));
+        //}
 
-        private object Proxy(Type proxyType, object id)
-        {
-            if (typeof(MarshalByRefObject).IsAssignableFrom(proxyType) || proxyType.IsInterface)
-                return new ShallowProxy(proxyType, id).GetTransparentProxy();
-            return null;
-        }
+        //private object Proxy(Type proxyType, object id)
+        //{
+        //    if (typeof(MarshalByRefObject).IsAssignableFrom(proxyType) || proxyType.IsInterface)
+        //        return new ShallowProxy(proxyType, id).GetTransparentProxy();
+        //    return null;
+        //}
 
         private void Add(object collection, object toObject, Type elementType)
         {
