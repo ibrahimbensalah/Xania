@@ -15,9 +15,8 @@ namespace Xania.CosmosDb.Tests
         {
             var secure = new SecureString();
             foreach (char c in str)
-            {
                 secure.AppendChar(c);
-            }
+            
             return secure;
         }
     }

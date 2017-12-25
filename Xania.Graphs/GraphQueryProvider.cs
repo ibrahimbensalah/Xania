@@ -41,7 +41,7 @@ namespace Xania.Graphs
 
             //var items = _client.ExecuteGremlinAsync(gremlin).Result.OfType<JObject>()
             //    .Select(result => Client.ConvertToObject(result, elementType));
-            var items = _client.ExecuteGremlinAsync(traversal, elementType).Result;
+            var items = _client.ExecuteAsync(traversal, elementType).Result;
 
             return (TResult) resultType.CreateCollection(items.ToArray());
         }
@@ -49,6 +49,6 @@ namespace Xania.Graphs
 
     public interface IGraphDataContext
     {
-        Task<IEnumerable<object>> ExecuteGremlinAsync(GraphTraversal traversal, Type elementType);
+        Task<IEnumerable<object>> ExecuteAsync(GraphTraversal traversal, Type elementType);
     }
 }

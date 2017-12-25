@@ -43,7 +43,7 @@ namespace Xania.CosmosDb.Tests
                 Id = 1,
                 FirstName = "Ibrahim",
                 Friend = friend,
-                Enemy = new Person { Id = 3, Friends = { friend }},
+                Enemy = new Person { Id = 3, Friends = { friend } },
                 HQ = new Address
                 {
                     Id = "address1",
@@ -53,26 +53,31 @@ namespace Xania.CosmosDb.Tests
                 Friends = { friend }
             };
 
-            var graph = Graph.FromObject(model);
+            var endpointUrl = "https://localhost:8081/";
+            var primaryKey = "C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw=="
+                .Secure();
 
-            var config = new ConfigurationBuilder().AddUserSecrets<AzureGraphTests>().Build();
-            var endpointUrl = config["xaniadb-endpointUrl"];
-            var primaryKey = config["xaniadb-primarykey"].Secure();
-
-            using (var client = new Client(endpointUrl, primaryKey, "XaniaDataContext", "Items"))
+            using (var client = new CosmosDbClient(endpointUrl, primaryKey, "ToDoList", "Items"))
             {
                 client.ExecuteGremlinAsync("g.V().drop()").Wait();
-                client.UpsertAsync(graph).Wait();
+                client.UpsertAsync(model).Wait();
 
-                //var clone = client.GetVertexGraph().Result.ToObjects<Person>().SingleOrDefault();
-                //if (clone != null)
-                //{
-                //    Console.WriteLine(JsonConvert.SerializeObject(clone));
+                client.Log += Console.WriteLine;
 
-                //    clone.Enemy.Should().NotBeNull();
-                //    clone.Friend.Should().NotBeNull();
-                //    clone.Friends.Should().HaveCount(1);
-                //}
+                var clone = (
+                    from p in client.Set<Person>()
+                    where p.Id == 1
+                    select new { p.Enemy, p.Friend, p.Friends }
+                ).ToArray().Single();
+
+                if (clone != null)
+                {
+                    Console.WriteLine(JsonConvert.SerializeObject(clone));
+
+                    clone.Enemy.Should().NotBeNull();
+                    clone.Friend.Should().NotBeNull();
+                    clone.Friends.Should().HaveCount(1);
+                }
             }
         }
 

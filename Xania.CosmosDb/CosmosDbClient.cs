@@ -16,12 +16,12 @@ using GraphTraversal = Xania.Graphs.GraphTraversal;
 
 namespace Xania.CosmosDb
 {
-    public class Client : IDisposable, IGraphDataContext
+    public class CosmosDbClient : IDisposable, IGraphDataContext
     {
         public readonly DocumentClient _client;
         public readonly DocumentCollection _collection;
 
-        public Client(string endpointUrl, SecureString primaryKey, string databaseId, string collectionId)
+        public CosmosDbClient(string endpointUrl, SecureString primaryKey, string databaseId, string collectionId)
         {
             var connectionPolicy = new ConnectionPolicy
             {
@@ -130,6 +130,11 @@ namespace Xania.CosmosDb
                     return objectType.CreateInstance(valueFactories);
                 }
             }
+            if (token is JArray arr)
+            {
+                if (!arr.HasValues)
+                    return null;
+            }
             return token.ToObject(objectType);
         }
 
@@ -145,7 +150,7 @@ namespace Xania.CosmosDb
             return values.Select(e => ConvertToObject(e, objectType)).SingleOrDefault();
         }
 
-        public async Task<IEnumerable<Object>> ExecuteGremlinAsync(GraphTraversal traversal, Type elementType)
+        public async Task<IEnumerable<Object>> ExecuteAsync(GraphTraversal traversal, Type elementType)
         {
             var gremlin = $"g.V().{traversal}.{traversal.Selector}";
 

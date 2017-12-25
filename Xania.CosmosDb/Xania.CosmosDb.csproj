@@ -241,7 +241,7 @@
     <Compile Include="AST\Vertex.cs" />
     <Compile Include="AzureGraphStore.cs" />
     <Compile Include="AST\Binary.cs" />
-    <Compile Include="Client.cs" />
+    <Compile Include="CosmosDbClient.cs" />
     <Compile Include="MemberCall.cs" />
     <Compile Include="AST\Parameter.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

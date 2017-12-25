@@ -7,7 +7,7 @@ namespace Xania.CosmosDb.Tests.Gremlin
     [SetUpFixture]
     public class GremlinSetup
     {
-        public static Client Client { get; private set; }
+        public static CosmosDbClient CosmosDbClient { get; private set; }
 
         [OneTimeSetUp]
         public static void CreateClient()
@@ -16,8 +16,8 @@ namespace Xania.CosmosDb.Tests.Gremlin
             var primaryKey = "C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw=="
                 .Secure();
 
-            Client = new Client(endpointUrl, primaryKey, "ToDoList", "Items");
-            Client.Log += Console.WriteLine;
+            CosmosDbClient = new CosmosDbClient(endpointUrl, primaryKey, "ToDoList", "Items");
+            CosmosDbClient.Log += Console.WriteLine;
 
             // SetUpData();
         }
@@ -41,14 +41,14 @@ namespace Xania.CosmosDb.Tests.Gremlin
             };
             friend.Friends.Add(new Person {Id = 4});
 
-            Client.ExecuteGremlinAsync("g.V().drop()").Wait();
-            Client.UpsertAsync(Graph.FromObject(ibrahim)).Wait();
+            CosmosDbClient.ExecuteGremlinAsync("g.V().drop()").Wait();
+            CosmosDbClient.UpsertAsync(Graph.FromObject(ibrahim)).Wait();
         }
 
         [OneTimeTearDown]
         public static void DisposeClient()
         {
-            Client.Dispose();
+            CosmosDbClient.Dispose();
         }
     }
 }

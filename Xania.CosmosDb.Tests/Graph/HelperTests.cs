@@ -24,7 +24,7 @@ namespace Xania.CosmosDb.Tests
 
             Console.WriteLine(obj);
 
-            var person = Client.ConvertToObject(obj, typeof(Person))
+            var person = CosmosDbClient.ConvertToObject(obj, typeof(Person))
                 .Should().BeOfType<Person>().Subject;
 
             person.Id.Should().Be(1);

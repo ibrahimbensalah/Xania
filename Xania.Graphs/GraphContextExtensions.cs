@@ -2,7 +2,7 @@
 {
     public static class GraphContextExtensions
     {
-        public static GraphQueryable<TModel> Query<TModel>(this IGraphDataContext client)
+        public static GraphQueryable<TModel> Set<TModel>(this IGraphDataContext client)
         {
             return new GraphQueryable<TModel>(new GraphQueryProvider(client));
         }

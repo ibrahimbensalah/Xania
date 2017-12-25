@@ -10,7 +10,7 @@ namespace Xania.CosmosDb.Tests.Gremlin
 {
     public class GremlinqTests
     {
-        private static IQueryable<Person> People => GremlinSetup.Client.Query<Person>();
+        private static IQueryable<Person> People => GremlinSetup.CosmosDbClient.Set<Person>();
 
         [Test]
         public void NoFilter()
@@ -73,7 +73,7 @@ namespace Xania.CosmosDb.Tests.Gremlin
         [Test]
         public void GremlinTest()
         {
-            GremlinSetup.Client
+            GremlinSetup.CosmosDbClient
                 .ExecuteGremlinAsync(
                     "g.V().hasLabel('person').as('p').project('composite')"
                 ).Wait();
