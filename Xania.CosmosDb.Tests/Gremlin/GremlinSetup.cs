@@ -19,7 +19,7 @@ namespace Xania.CosmosDb.Tests.Gremlin
             CosmosDbClient = new CosmosDbClient(endpointUrl, primaryKey, "ToDoList", "Items");
             CosmosDbClient.Log += Console.WriteLine;
 
-            // SetUpData();
+            SetUpData();
         }
 
         private static void SetUpData()
@@ -39,7 +39,7 @@ namespace Xania.CosmosDb.Tests.Gremlin
                 Tags = new[] {"Programmer", "Entrepeneur"},
                 Friends = {friend}
             };
-            friend.Friends.Add(new Person {Id = 4});
+            friend.Friends.Add(new Person {Id = 4, Friend = new Person {Id = 5}});
 
             CosmosDbClient.ExecuteGremlinAsync("g.V().drop()").Wait();
             CosmosDbClient.UpsertAsync(Graph.FromObject(ibrahim)).Wait();

@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Reflection;
 using Xania.Reflection;
 
 namespace Xania.Graphs.Linq
@@ -34,6 +33,8 @@ namespace Xania.Graphs.Linq
         public TResult Execute<TResult>(Expression expression)
         {
             bool IsEnumerable = (typeof(TResult).Name == "IEnumerable`1");
+            if (!IsEnumerable)
+                throw new NotImplementedException();
 
             var traversal = Evaluate(expression);
 
@@ -103,6 +104,14 @@ namespace Xania.Graphs.Linq
                     else if (methodName.Equals("SelectMany") && methodCall.Arguments.Count == 3)
                     {
                         yield return SelectMany(methodCall, stack);
+                    }
+                    else if (methodName.Equals("OrderBy") && methodCall.Arguments.Count == 2)
+                    {
+                        yield return OrderBy(methodCall, stack);
+                    }
+                    else if (methodName.Equals("OrderByDescending") && methodCall.Arguments.Count == 2)
+                    {
+                        yield return OrderBy(methodCall, stack, false);
                     }
                     else
                         throw new NotSupportedException($"Method call {methodCall.Method.Name}");
@@ -189,7 +198,6 @@ namespace Xania.Graphs.Linq
             }
         }
 
-
         private static IEnumerable<string> ToGremlinSelector(GraphTraversal graphTraversal)
         {
             var str = graphTraversal.ToString();
@@ -220,6 +228,16 @@ namespace Xania.Graphs.Linq
             return (2, args => Where(args[0],
                 args[1].Replace(By.Select(predicate.Parameters[0].Name), GraphTraversal.__)
             ));
+        }
+
+        private static (int, Func<GraphTraversal[], GraphTraversal>) OrderBy(MethodCallExpression methodCall, Stack<Expression> stack, bool ascending = true)
+        {
+            var source = methodCall.Arguments[0];
+            var predicate = GetSingleParameterLambda(methodCall.Arguments[1]);
+            stack.Push(source);
+            stack.Push(predicate.Body);
+
+            return (2, args => args[0].Append(new OrderBy(ascending, args[1].Replace(By.Select(predicate.Parameters[0].Name), GraphTraversal.__))));
         }
 
         private static (int, Func<GraphTraversal[], GraphTraversal>) SelectMany(MethodCallExpression methodCall, Stack<Expression> stack)
@@ -257,17 +275,6 @@ namespace Xania.Graphs.Linq
             );
         }
 
-        private static IEnumerable<string> UnfoldParameter(ParameterExpression expr)
-        {
-            if (!expr.Type.IsAnonymousType())
-                yield return expr.Name;
-            else
-            {
-                foreach (PropertyInfo p in expr.Type.GetProperties())
-                    yield return p.Name;
-            }
-        }
-
         private static GraphTraversal Parameter(ParameterExpression parameter)
         {
             return new Select(parameter.Name).ToTraversal();
@@ -279,7 +286,6 @@ namespace Xania.Graphs.Linq
                 return new GraphTraversal(source.Steps.Concat(predicate.Steps.Skip(1)));
             return source.Append(Scope("where", predicate));
         }
-
         private static GraphTraversal Binary(ExpressionType oper, GraphTraversal left, GraphTraversal right)
         {
             if (oper == ExpressionType.Equal)

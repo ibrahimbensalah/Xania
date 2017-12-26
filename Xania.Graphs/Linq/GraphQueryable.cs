@@ -6,7 +6,7 @@ using System.Linq.Expressions;
 
 namespace Xania.Graphs.Linq
 {
-    public class GraphQueryable<TModel> : IQueryable<TModel>
+    public class GraphQueryable<TModel> : IOrderedQueryable<TModel>
     {
         public GraphQueryable(IQueryProvider provider)
         {

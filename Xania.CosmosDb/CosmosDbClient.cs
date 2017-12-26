@@ -151,7 +151,9 @@ namespace Xania.CosmosDb
 
         public async Task<IEnumerable<Object>> ExecuteAsync(GraphTraversal traversal, Type elementType)
         {
-            var gremlin = $"g.V().{traversal}.{traversal.Selector}";
+            var gremlin = $"g.V().{traversal}";
+            if (traversal.Selector != null)
+                gremlin += "." + traversal.Selector;
 
             return (await ExecuteGremlinAsync(gremlin)).OfType<JObject>()
                 .Select(e => ConvertToObject(e, elementType));
@@ -159,7 +161,7 @@ namespace Xania.CosmosDb
 
         public async Task<IEnumerable<JToken>> ExecuteGremlinAsync(string gremlin)
         {
-            Log?.Invoke($"Running {gremlin}");
+            Log?.Invoke($"Running [{gremlin}]");
 
             var list = new List<JToken>();
             var feedOptions = new FeedOptions
@@ -169,7 +171,8 @@ namespace Xania.CosmosDb
                 MaxItemCount = 100,
                 EnableCrossPartitionQuery = false
             };
-            using (var query = _client.CreateGremlinQuery(_collection, gremlin, feedOptions))
+
+            using (var query = _client.CreateGremlinQuery(_collection, gremlin, feedOptions, GraphSONMode.Normal))
             {
                 while (query.HasMoreResults)
                 {

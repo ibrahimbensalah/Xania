@@ -8,7 +8,7 @@ using Xania.Graphs;
 
 namespace Xania.CosmosDb.Tests.Gremlin
 {
-    public class GremlinqTests
+    public class GremlinqSelectTests
     {
         private static IQueryable<Person> People => GremlinSetup.CosmosDbClient.Set<Person>();
 
@@ -171,10 +171,7 @@ namespace Xania.CosmosDb.Tests.Gremlin
             var view =
             (from p in People
                 where p.Id == 1
-                select new
-                {
-                    p.Friends
-                }).ToArray();
+                select new {p.Friends}).ToArray();
 
             var ibrahim = view.Should().ContainSingle().Subject;
             ibrahim.Friends.Should().ContainSingle().Which.Id.Should().Be(2);
@@ -188,10 +185,7 @@ namespace Xania.CosmosDb.Tests.Gremlin
             var view =
             (from p in People
                 where p.Id == 1
-                select new
-                {
-                    Composite = new { Person = p }
-                }).ToArray();
+                select new {Composite = new {Person = p}}).ToArray();
 
             var ibrahim = view.Should().ContainSingle().Subject.Composite.Person;
             AssertIbrahim(ibrahim);

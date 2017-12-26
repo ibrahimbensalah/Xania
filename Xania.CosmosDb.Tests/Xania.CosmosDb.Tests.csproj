@@ -275,7 +275,9 @@
     <Compile Include="Address.cs" />
     <Compile Include="AzureGraphTests.cs" />
     <Compile Include="Graph\HelperTests.cs" />
-    <Compile Include="Gremlin\GremlinqTests.cs" />
+    <Compile Include="Gremlin\GremlinqOrderByTests.cs" />
+    <Compile Include="Gremlin\GremlinqPagingByTests.cs" />
+    <Compile Include="Gremlin\GremlinqSelectTests.cs" />
     <Compile Include="Gremlin\GremlinSetup.cs" />
     <Compile Include="Person.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

@@ -52,6 +52,7 @@
     <Compile Include="GremlinSelector.cs" />
     <Compile Include="Linq\GraphQueryable.cs" />
     <Compile Include="Linq\GraphQueryProvider.cs" />
+    <Compile Include="OrderBy.cs" />
     <Compile Include="TraversalExtensions.cs" />
     <Compile Include="Helper.cs" />
     <Compile Include="IGraphDataContext.cs" />
