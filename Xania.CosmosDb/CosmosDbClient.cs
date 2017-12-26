@@ -4,6 +4,7 @@ using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Security;
 using System.Threading.Tasks;
@@ -114,6 +115,22 @@ namespace Xania.CosmosDb
                         valueFactories.Add("id", t => id.ToObject(t));
                     }
 
+                    if (vertexJson.TryGetValue("outE", out var outE))
+                    {
+                        foreach (var edge in outE.OfType<JProperty>())
+                        {
+                            valueFactories.Add(edge.Name, t =>
+                            {
+                                if (t.IsEnumerable())
+                                {
+                                    var elementType = t.GetItemType();
+                                    return edge.Value.Select(e => Proxy(elementType, e.Value<string>("inV")));
+                                }
+                                return edge.Value.Select(e => Proxy(t, e.Value<string>("inV"))).SingleOrDefault();
+                            });
+                        }
+                    }
+
                     return objectType.CreateInstance(valueFactories);
                 }
 
@@ -135,6 +152,16 @@ namespace Xania.CosmosDb
                     return null;
             }
             return token.ToObject(objectType);
+        }
+
+        private static object Proxy(Type modelType, object targetId)
+        {
+            var relModelProperties = TypeDescriptor.GetProperties(modelType)
+                .OfType<PropertyDescriptor>()
+                .ToDictionary(e => e.Name, StringComparer.InvariantCultureIgnoreCase);
+            var relIdProperty = relModelProperties.ContainsKey("Id") ? relModelProperties["Id"] : null;
+
+            return new ShallowProxy(modelType, targetId.Convert(relIdProperty?.PropertyType)).GetTransparentProxy();
         }
 
         private static object MultiValueToObject(JToken[] values, Type objectType)

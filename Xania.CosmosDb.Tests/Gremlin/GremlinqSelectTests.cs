@@ -53,9 +53,9 @@ namespace Xania.CosmosDb.Tests.Gremlin
         {
             person.Id.Should().Be(1);
             person.FirstName.Should().Be("Ibrahim");
-            //person.Friend.Should().NotBeNull();
-            //person.Enemy.Should().NotBeNull();
-            //person.Friends.Should().HaveCount(1);
+            person.Friend.Should().NotBeNull();
+            person.Enemy.Should().NotBeNull();
+            person.Friends.Should().HaveCount(1);
         }
 
         [Test]
@@ -73,10 +73,9 @@ namespace Xania.CosmosDb.Tests.Gremlin
         [Test]
         public void GremlinTest()
         {
-            GremlinSetup.CosmosDbClient
-                .ExecuteGremlinAsync(
-                    "g.V().hasLabel('person').as('p').project('composite')"
-                ).Wait();
+            GremlinSetup.CosmosDbClient.ExecuteGremlinAsync(
+                "g.V().hasLabel('person').order().by(__.id(), incr)"
+            ).Wait();
         }
 
         [Test]
