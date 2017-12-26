@@ -70,7 +70,10 @@ namespace Xania.Reflection
 
         public static bool IsEnumerable(this Type type)
         {
-            return type != typeof(string) && typeof(IEnumerable).IsAssignableFrom(type);
+            if (type == typeof(string))
+                return false;
+
+            return typeof(IEnumerable).IsAssignableFrom(type) || type.IsArray;
         }
 
         public static object CreateCollection(this Type targetType, params object[] items)
@@ -158,7 +161,7 @@ namespace Xania.Reflection
                 Array.Copy(content, arr, content.Length);
                 return arr;
             }
-            throw new NotSupportedException($"CreateCollection {targetType.Name}");
+            throw new NotSupportedException($"CreateArray {targetType.Name}");
         }
 
         public static object AddRange(this object collection, IEnumerable<object> items)

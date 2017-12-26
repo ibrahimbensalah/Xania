@@ -1,7 +1,6 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using Newtonsoft.Json;
 
 namespace Xania.Graphs
 {
@@ -71,7 +70,10 @@ namespace Xania.Graphs
 
         public override string ToString()
         {
-            return JsonConvert.SerializeObject(Value);
+            if (Value is string str)
+                return $"'{str}'";
+            return Value?.ToString() ?? string.Empty;
+            // return JsonConvert.SerializeObject(Value);
         }
     }
 }

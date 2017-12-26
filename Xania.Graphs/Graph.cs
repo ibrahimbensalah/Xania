@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
-using Newtonsoft.Json.Linq;
 using Xania.Reflection;
 
 namespace Xania.Graphs
@@ -105,7 +104,7 @@ namespace Xania.Graphs
             var modelProperties = TypeDescriptor.GetProperties(model).OfType<PropertyDescriptor>()
                 .ToDictionary(e => e.Name, StringComparer.InvariantCultureIgnoreCase);
             var idProperty = modelProperties.ContainsKey("Id") ? modelProperties["Id"] : null;
-            idProperty?.SetValue(model, Convert(vertex.Id, idProperty.PropertyType));
+            idProperty?.SetValue(model, vertex.Id.Convert(idProperty.PropertyType));
 
             foreach (var p in vertex.Properties)
             {
@@ -114,11 +113,7 @@ namespace Xania.Graphs
                     continue;
 
                 var modelProperty = modelProperties[p.Name];
-                var value = typeof(string) != modelProperty.PropertyType &&
-                            typeof(IEnumerable).IsAssignableFrom(modelProperty.PropertyType)
-                    ? values.ToArray()
-                    : values.SingleOrDefault();
-                modelProperty.SetValue(model, Convert(value, modelProperty.PropertyType));
+                modelProperty.SetValue(model, values.Convert(modelProperty.PropertyType));
             }
 
             foreach (var rel in Relations.Where(e => string.Equals(e.SourceId, vertex.Id)))
@@ -174,43 +169,29 @@ namespace Xania.Graphs
             addMethod.Invoke(collection, new[] {toObject});
         }
 
-        private static object Convert(object source, Type targetType)
-        {
-            if (targetType == null)
-                return null;
-            try
-            {
-                return JToken.FromObject(source).ToObject(targetType);
-            }
-            catch
-            {
-                return Activator.CreateInstance(targetType);
-            }
-        }
+        ///// <summary>
+        ///// TODO 
+        ///// </summary>
+        ///// <param name="vertex"></param>
+        ///// <returns></returns>
+        //public JObject ToJson(Vertex vertex)
+        //{
+        //    if (vertex == null)
+        //        return null;
 
-        /// <summary>
-        /// TODO 
-        /// </summary>
-        /// <param name="vertex"></param>
-        /// <returns></returns>
-        public JObject ToJson(Vertex vertex)
-        {
-            if (vertex == null)
-                return null;
-
-            var o = new JObject {{"Id", vertex.Id}};
-            foreach (var p in vertex.Properties)
-            {
-                var value = p.Values.Select(e => e.Item2).ToArray();
-                o.Add(p.Name, JToken.FromObject(value));
-            }
-            foreach (var rel in Relations.Where(e => e.SourceId.Equals(vertex.Id)))
-            {
-                var target = ToJson(Vertices.SingleOrDefault(e => e.Id.Equals(rel.TargetId)));
-                o.Add(rel.Name, target);
-            }
-            return o;
-        }
+        //    var o = new JObject {{"Id", vertex.Id}};
+        //    foreach (var p in vertex.Properties)
+        //    {
+        //        var value = p.Values.Select(e => e.Item2).ToArray();
+        //        o.Add(p.Name, JToken.FromObject(value));
+        //    }
+        //    foreach (var rel in Relations.Where(e => e.SourceId.Equals(vertex.Id)))
+        //    {
+        //        var target = ToJson(Vertices.SingleOrDefault(e => e.Id.Equals(rel.TargetId)));
+        //        o.Add(rel.Name, target);
+        //    }
+        //    return o;
+        //}
     }
 
     internal class PrimitiveResult : ConvertResult
