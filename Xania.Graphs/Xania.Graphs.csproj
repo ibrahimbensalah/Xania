@@ -44,16 +44,20 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Alias.cs" />
     <Compile Include="Bind.cs" />
     <Compile Include="Call.cs" />
     <Compile Include="Eq.cs" />
     <Compile Include="GraphContextExtensions.cs" />
     <Compile Include="Context.cs" />
     <Compile Include="Graph.cs" />
-    <Compile Include="GraphQueryable.cs" />
-    <Compile Include="GraphQueryProvider.cs" />
-    <Compile Include="GremlinQueryContext.cs" />
+    <Compile Include="GraphTraversal.cs" />
+    <Compile Include="GremlinSelector.cs" />
+    <Compile Include="Linq\GraphQueryable.cs" />
+    <Compile Include="Linq\GraphQueryProvider.cs" />
+    <Compile Include="TraversalExtensions.cs" />
     <Compile Include="Helper.cs" />
+    <Compile Include="IGraphDataContext.cs" />
     <Compile Include="Is.cs" />
     <Compile Include="IStep.cs" />
     <Compile Include="Out.cs" />

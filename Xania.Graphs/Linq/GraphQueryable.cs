@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 
-namespace Xania.Graphs
+namespace Xania.Graphs.Linq
 {
     public class GraphQueryable<TModel> : IQueryable<TModel>
     {

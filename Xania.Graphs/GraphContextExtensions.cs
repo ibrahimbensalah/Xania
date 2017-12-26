@@ -1,4 +1,6 @@
-﻿namespace Xania.Graphs
+﻿using Xania.Graphs.Linq;
+
+namespace Xania.Graphs
 {
     public static class GraphContextExtensions
     {

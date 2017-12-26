@@ -44,11 +44,11 @@ namespace Xania.Reflection
             if (targetType.IsGenericType && targetType.GetGenericTypeDefinition() == templateType)
                 return targetType;
 
-            foreach (var i in templateType.GetParentTypes())
+            foreach (var parentTpl in templateType.GetParentTypes())
             {
-                if (i.IsTemplateTypeOf(targetType))
+                if (parentTpl.IsTemplateTypeOf(targetType))
                 {
-                    var gtmap = i.GenericTypeArguments.Select((gt, idx) => new { gt, t = targetType.GenericTypeArguments[idx] });
+                    var gtmap = parentTpl.GenericTypeArguments.Select((gt, idx) => new { gt, t = targetType.GenericTypeArguments[idx] });
                     var args =
                         from a in templateType.GetGenericArguments()
                         join b in gtmap on a equals b.gt into j

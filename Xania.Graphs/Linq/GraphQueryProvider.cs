@@ -3,13 +3,50 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using System.Text;
 using Xania.Reflection;
 
-namespace Xania.Graphs
+namespace Xania.Graphs.Linq
 {
-    public class GremlinQueryContext
+    public class GraphQueryProvider : IQueryProvider
     {
+        private readonly IGraphDataContext _client;
+
+        public GraphQueryProvider(IGraphDataContext client)
+        {
+            _client = client;
+        }
+
+        public IQueryable CreateQuery(Expression expression)
+        {
+            throw new NotImplementedException();
+        }
+
+        public IQueryable<TElement> CreateQuery<TElement>(Expression expression)
+        {
+            return new GraphQueryable<TElement>(this, expression);
+        }
+
+        public object Execute(Expression expression)
+        {
+            throw new NotImplementedException();
+        }
+
+        public TResult Execute<TResult>(Expression expression)
+        {
+            bool IsEnumerable = (typeof(TResult).Name == "IEnumerable`1");
+
+            var traversal = Evaluate(expression);
+
+            var resultType = typeof(IQueryable<>).MapTo(typeof(TResult));
+            var elementType = resultType.GenericTypeArguments[0];
+
+            //var items = _client.ExecuteGremlinAsync(gremlin).Result.OfType<JObject>()
+            //    .Select(result => Client.ConvertToObject(result, elementType));
+            var items = _client.ExecuteAsync(traversal, elementType).Result;
+
+            return (TResult) resultType.CreateCollection(items.ToArray());
+        }
+
         private static class By
         {
             public static Func<IStep, bool> Select(string paramName)
@@ -135,14 +172,14 @@ namespace Xania.Graphs
                         stack.Push(arg);
 
                     yield return (newExpression.Arguments.Count, args =>
+                    {
+                        var project = $"project({newExpression.Members.Select(e => $"'{e.Name.ToCamelCase()}'").Join(", ")})" +
+                                      $".by(coalesce({args.SelectMany(ToGremlinSelector).Join(", constant())).by(coalesce(")}, constant()))";
+                        return new GraphTraversal(Enumerable.Empty<IStep>())
                         {
-                            var project = $"project({newExpression.Members.Select(e => $"'{e.Name.ToCamelCase()}'").Join(", ")})" +
-                                          $".by(coalesce({args.SelectMany(ToGremlinSelector).Join(", constant())).by(coalesce(")}, constant()))";
-                            return new GraphTraversal(Enumerable.Empty<IStep>())
-                            {
-                                Selector = new GremlinSelector(project.ToString())
-                            };
-                        }
+                            Selector = new GremlinSelector(project.ToString())
+                        };
+                    }
                     );
                 }
                 else
@@ -337,113 +374,6 @@ namespace Xania.Graphs
         public static GraphTraversal Vertex(string label)
         {
             return new GraphTraversal(new Call("hasLabel", Const(label)));
-        }
-    }
-
-    public class Alias : IStep
-    {
-        public string Value { get; }
-
-        public Alias(string value)
-        {
-            Value = value;
-        }
-
-        public override string ToString()
-        {
-            return $"as('{Value}')";
-        }
-    }
-
-    public class GraphTraversal
-    {
-        public IEnumerable<IStep> Steps { get; }
-        public GremlinSelector Selector { get; set; }
-
-        public GraphTraversal(IStep step)
-            : this(new[] { step })
-        {
-        }
-
-        public GraphTraversal(IEnumerable<IStep> steps)
-        {
-            Steps = steps;
-        }
-
-        public override string ToString()
-        {
-            return $"{string.Join(".", Steps.Select(e => e.ToString()))}";
-        }
-
-        public static readonly Context __ = new Context();
-
-        public GraphTraversal Append(IStep expr)
-        {
-            if (expr is Values)
-                return new GraphTraversal (Steps.Append(expr)) { Selector = null };
-            return new GraphTraversal(Steps.Append(expr)) { Selector = Selector };
-        }
-
-        public GraphTraversal Bind(GraphTraversal other)
-        {
-            var otherSteps = (other.Steps.FirstOrDefault() is Context) ? other.Steps.Skip(1).ToArray() : other.Steps.ToArray();
-
-            if (Steps.LastOrDefault() is Alias l)
-            {
-                if (!otherSteps.Any(e => e is Select s && s.Label.Equals(l.Value)))
-                    return new GraphTraversal(Steps.Concat(otherSteps))
-                    {
-                        Selector = other.Selector
-                    };
-                if (otherSteps.FirstOrDefault() is Select f && f.Label.Equals(l.Value))
-                    return new GraphTraversal(Steps.Concat(otherSteps.Skip(1)))
-                    {
-                        Selector = other.Selector
-                    };
-            }
-
-            return new GraphTraversal(Steps.Concat(otherSteps))
-            {
-                Selector = other.Selector
-            };
-        }
-    }
-
-    public class GremlinSelector
-    {
-        private readonly string _expression;
-
-        public GremlinSelector(string expression)
-        {
-            _expression = expression;
-        }
-
-        public override string ToString()
-        {
-            return _expression;
-        }
-    }
-
-    public static class TraversalExtensions
-    {
-        public static GraphTraversal Replace(this GraphTraversal graphTraversal, Func<IStep, bool> predicate,
-            IStep replacement)
-        {
-            return new GraphTraversal(graphTraversal.Steps.Select(e => predicate(e) ? replacement : e))
-            {
-                Selector = graphTraversal.Selector
-            };
-        }
-
-        public static IEnumerable<IStep> Replace(this IEnumerable<IStep> steps, Func<IStep, bool> predicate,
-            Func<IStep, IStep> replace)
-        {
-            return steps.Select(e => predicate(e) ? replace(e) : e);
-        }
-
-        public static string Join<T>(this IEnumerable<T> source, string separator)
-        {
-            return source.Aggregate(new StringBuilder(), (sb, e) => sb.Length > 0 ? sb.Append(separator).Append(e) : sb.Append(e)).ToString();
         }
     }
 }
