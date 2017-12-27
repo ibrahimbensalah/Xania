@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using NUnit.Framework;
 using Xania.Graphs;
 
@@ -7,23 +8,30 @@ namespace Xania.CosmosDb.Tests.Gremlin
     [SetUpFixture]
     public class GremlinSetup
     {
-        public static CosmosDbClient CosmosDbClient { get; private set; }
+        private static readonly IDictionary<string, CosmosDbClient> clients = new Dictionary<string, CosmosDbClient>();
 
-        [OneTimeSetUp]
-        public static void CreateClient()
+        public static CosmosDbClient CreateClient(string collectionId)
         {
+            if (clients.TryGetValue(collectionId, out var cosmosDbClient))
+                return cosmosDbClient;
+
             var endpointUrl = "https://localhost:8081/";
             var primaryKey = "C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw=="
                 .Secure();
 
-            CosmosDbClient = new CosmosDbClient(endpointUrl, primaryKey, "ToDoList", "Items");
-            CosmosDbClient.Log += Console.WriteLine;
+            cosmosDbClient = new CosmosDbClient(endpointUrl, primaryKey, "ToDoList", collectionId);
+            cosmosDbClient.Log += Console.WriteLine;
 
-            SetUpData();
+            SetUpData(cosmosDbClient);
+
+            clients.Add(collectionId, cosmosDbClient);
+            return cosmosDbClient;
         }
 
-        private static void SetUpData()
+        public static void SetUpData(CosmosDbClient client)
         {
+            client.ExecuteGremlinAsync("g.V().drop()").Wait();
+
             var friend = new Person {Id = 2};
             var ibrahim = new Person
             {
@@ -41,14 +49,14 @@ namespace Xania.CosmosDb.Tests.Gremlin
             };
             friend.Friends.Add(new Person {Id = 4, Friend = new Person {Id = 5}});
 
-            CosmosDbClient.ExecuteGremlinAsync("g.V().drop()").Wait();
-            CosmosDbClient.UpsertAsync(Graph.FromObject(ibrahim)).Wait();
+            client.UpsertAsync(Graph.FromObject(ibrahim)).Wait();
         }
 
         [OneTimeTearDown]
-        public static void DisposeClient()
+        public static void DisposeClients()
         {
-            CosmosDbClient.Dispose();
+            foreach(var client in clients.Values)
+                client.Dispose();
         }
     }
 }

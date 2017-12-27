@@ -7,7 +7,7 @@ namespace Xania.CosmosDb.Tests.Gremlin
 {
     public class GremlinqOrderByTests
     {
-        private static IQueryable<Person> People => GremlinSetup.CosmosDbClient.Set<Person>();
+        private static IQueryable<Person> People => GremlinSetup.CreateClient(nameof(GremlinqOrderByTests)).Set<Person>();
 
         [Test]
         public void OrderById()

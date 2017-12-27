@@ -33,19 +33,30 @@ namespace Xania.Graphs.Linq
         public TResult Execute<TResult>(Expression expression)
         {
             bool IsEnumerable = (typeof(TResult).Name == "IEnumerable`1");
-            if (!IsEnumerable)
-                throw new NotImplementedException();
+
+            //if (!IsEnumerable)
+            //    throw new NotImplementedException();
 
             var traversal = Evaluate(expression);
 
-            var resultType = typeof(IQueryable<>).MapTo(typeof(TResult));
-            var elementType = resultType.GenericTypeArguments[0];
+            if (IsEnumerable)
+            {
+                var resultType = typeof(IQueryable<>).MapTo(typeof(TResult));
+                var elementType = resultType.GenericTypeArguments[0];
 
-            //var items = _client.ExecuteGremlinAsync(gremlin).Result.OfType<JObject>()
-            //    .Select(result => Client.ConvertToObject(result, elementType));
-            var items = _client.ExecuteAsync(traversal, elementType).Result;
+                //var items = _client.ExecuteGremlinAsync(gremlin).Result.OfType<JObject>()
+                //    .Select(result => Client.ConvertToObject(result, elementType));
+                var items = _client.ExecuteAsync(traversal, elementType).Result;
 
-            return (TResult) resultType.CreateCollection(items.ToArray());
+                return (TResult) resultType.CreateCollection(items.ToArray());
+            }
+            else
+            {
+                var result = _client.ExecuteAsync(traversal, typeof(TResult)).Result.SingleOrDefault();
+                if (result == null)
+                    return default(TResult);
+                return (TResult) result.Convert(typeof(TResult));
+            }
         }
 
         private static class By
@@ -112,6 +123,10 @@ namespace Xania.Graphs.Linq
                     else if (methodName.Equals("OrderByDescending") && methodCall.Arguments.Count == 2)
                     {
                         yield return OrderBy(methodCall, stack, false);
+                    }
+                    else if (methodName.Equals("Drop") && methodCall.Arguments.Count == 1)
+                    {
+                        yield return Drop(methodCall, stack);
                     }
                     else
                         throw new NotSupportedException($"Method call {methodCall.Method.Name}");
@@ -238,6 +253,12 @@ namespace Xania.Graphs.Linq
             stack.Push(predicate.Body);
 
             return (2, args => args[0].Append(new OrderBy(ascending, args[1].Replace(By.Select(predicate.Parameters[0].Name), GraphTraversal.__))));
+        }
+
+        private static (int, Func<GraphTraversal[], GraphTraversal>) Drop(MethodCallExpression methodCall, Stack<Expression> stack)
+        {
+            stack.Push(methodCall.Arguments[0]);
+            return (1, args => args[0].Append(new Drop()));
         }
 
         private static (int, Func<GraphTraversal[], GraphTraversal>) SelectMany(MethodCallExpression methodCall, Stack<Expression> stack)
@@ -380,6 +401,14 @@ namespace Xania.Graphs.Linq
         public static GraphTraversal Vertex(string label)
         {
             return new GraphTraversal(new Call("hasLabel", Const(label)));
+        }
+    }
+
+    public class Drop : IStep
+    {
+        public override string ToString()
+        {
+            return "drop()";
         }
     }
 }
