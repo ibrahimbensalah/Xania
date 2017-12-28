@@ -16,8 +16,11 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
+using Xania.CosmosDb;
 using Xania.Data.DocumentDB;
 using Xania.DataAccess;
+using Xania.Graphs;
+using Xania.Graphs.Linq;
 using Xania.Models;
 using Xania.TemplateJS.Controllers;
 using Xania.TemplateJS.Reporting;
@@ -71,9 +74,22 @@ namespace Xania.TemplateJS
 
             var dataContext  = new XaniaDataContext(endpointUrl, primaryKey);
             services.AddSingleton(dataContext);
-            
+
+            var cosmosDbClient = new CosmosDb.CosmosDbClient(
+                "https://localhost:8081/",
+                "C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==",
+                "ToDoList",
+                "Portal"
+            );
+
+            var companyStore = new AzureGraphStore<Company>(cosmosDbClient);
+            foreach (var company in dataContext.Store<Company>())
+            {
+                companyStore.Add(company);
+            }
+
             services.AddTransient<IObjectStore<Invoice>>(ctx => dataContext.Store<Invoice>());
-            services.AddTransient<IObjectStore<Company>>(ctx => dataContext.Store<Company>());
+            services.AddTransient<IObjectStore<Company>>(ctx => companyStore);
             services.AddTransient<IObjectStore<TimeDeclaration>>(ctx => dataContext.Store<TimeDeclaration>());
             services.AddTransient<IObjectStore<TimeSheet>>(ctx => dataContext.Store<TimeSheet>());
 

@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Xania.Models
 {
+    [ComplexType]
     public class Address: MarshalByRefObject
     {
         public ICollection<AddressLine> Lines { get; set; } = new Collection<AddressLine>();

@@ -23,12 +23,13 @@ namespace Xania.CosmosDb.Tests
             var graph = Graph.FromObject(model);
             graph.Vertices.Count.Should().Be(2);
             graph.Vertices.Select(e => e.Label).All(e => e.Equals(nameof(Person).ToCamelCase())).Should().BeTrue();
-            graph.Vertices.SelectMany(v => v.Properties).Should().Contain(e => "firstName".Equals(e.Name)).Subject.Values.Select(e => e.Item2).Cast<string>().ShouldAllBeEquivalentTo(new[] { "Ibrahim" });
+            var subject = graph.Vertices.SelectMany(v => v.Properties).Should().Contain(e => "firstName".Equals(e.Name)).Subject;
+            subject.Value.Should().Be("Ibrahim");
 
-            var friend = graph.Relations.Should().ContainSingle().Which;
-            friend.Name.Should().Be("friend");
+            var friend = graph.Edges.Should().ContainSingle().Which;
+            friend.Label.Should().Be("friend");
 
-            friend.TargetId.Should().Be("2");
+            friend.InV.Should().Be("2");
 
             foreach (var vertex in graph.Vertices)
                 Console.WriteLine(JsonConvert.SerializeObject(vertex));
@@ -96,7 +97,7 @@ namespace Xania.CosmosDb.Tests
 
             var g = Graph.FromObject(model);
             g.Vertices.Count.Should().Be(4);
-            g.Relations.Count.Should().Be(3);
+            g.Edges.Count.Should().Be(3);
 
             var clone = g.ToObjects<Person>().Single(e => e.Id == 1);
 

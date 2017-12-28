@@ -11,35 +11,37 @@ namespace Xania.Graphs
     public class Graph
     {
         public Collection<Vertex> Vertices { get; } = new Collection<Vertex>();
-        public Collection<Relation> Relations { get; } = new Collection<Relation>();
+        public Collection<Edge> Edges { get; } = new Collection<Edge>();
 
         public static Graph FromObject(Object model)
         {
-            return ConvertObject(model, model.GetType(), new Dictionary<object, ConvertResult>()).Graph;
+            return ConvertValue(model, model.GetType(), new Dictionary<object, ConvertResult>()).Graph;
         }
 
-        private static ConvertResult ConvertObject(object value, Type valueType, IDictionary<object, ConvertResult> cache)
+        private static ConvertResult ConvertValue(object value, Type valueType, IDictionary<object, ConvertResult> cache)
         {
             if (cache.TryGetValue(value, out var result))
                 return result;
 
             if (valueType.IsPrimitive())
             {
-                return ConvertResult.Primitve(new Tuple<string, object>(Guid.NewGuid().ToString(), value));
+                return ConvertResult.Primitve(value);
             }
+            //if (valueType.IsComplexType())
+            //{
+            //    return ConvertResult.Complex(value);
+            //}
             if (value is IEnumerable enumerable)
             {
-                var elementType = GetElementType(valueType);
+                var elementType = valueType.GetItemType();
                 if (elementType == null)
                     throw new InvalidOperationException($"Could not derive element type from '{valueType}'");
 
                 if (elementType.IsPrimitive())
                 {
-                    var values = enumerable.OfType<object>()
-                        .Select(e => new Tuple<string, object>(Guid.NewGuid().ToString(), e));
-                    return ConvertResult.Primitve(values.ToArray());
+                    return ConvertResult.Primitve(enumerable);
                 }
-                return ConvertResult.List(enumerable.OfType<object>().Select(e => ConvertObject(e, e.GetType(), cache)));
+                return ConvertResult.List(enumerable.OfType<object>().Select(e => ConvertValue(e, e.GetType(), cache)));
             }
 
             var vertex = new Vertex(valueType.Name);
@@ -51,22 +53,12 @@ namespace Xania.Graphs
                     vertex.Id = propValue?.ToString() ?? Guid.NewGuid().ToString();
                 else if (propValue != null)
                 {
-                    var pair = ConvertObject(propValue, propValue.GetType(), cache);
+                    var pair = ConvertValue(propValue, propValue.GetType(), cache);
                     pair.Merge(graph, vertex, prop.Name);
                 }
             }
             graph.Vertices.Add(vertex);
             return ConvertResult.Object(vertex, graph);
-        }
-
-        private static Type GetElementType(Type enumerableType)
-        {
-            foreach (var i in enumerableType.GetInterfaces())
-            {
-                if (i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IEnumerable<>))
-                    return i.GenericTypeArguments[0];
-            }
-            return null;
         }
 
         public IEnumerable<TModel> ToObjects<TModel>() where TModel : new()
@@ -108,21 +100,21 @@ namespace Xania.Graphs
 
             foreach (var p in vertex.Properties)
             {
-                var values = p.Values.Select(e => e.Item2);
+                // var values = p.Values.Select(e => e.Item2);
                 if (!modelProperties.ContainsKey(p.Name))
                     continue;
 
                 var modelProperty = modelProperties[p.Name];
-                modelProperty.SetValue(model, values.Convert(modelProperty.PropertyType));
+                modelProperty.SetValue(model, p.Value.Convert(modelProperty.PropertyType));
             }
 
-            foreach (var rel in Relations.Where(e => string.Equals(e.SourceId, vertex.Id)))
+            foreach (var rel in Edges.Where(e => string.Equals(e.OutV, vertex.Id)))
             {
-                var target = Vertices.SingleOrDefault(e => e.Id.Equals(rel.TargetId));
-                var modelProperty = modelProperties[rel.Name];
+                var target = Vertices.SingleOrDefault(e => e.Id.Equals(rel.InV));
+                var modelProperty = modelProperties[rel.Label];
                 if (typeof(IEnumerable).IsAssignableFrom(modelProperty.PropertyType))
                 {
-                    var elementType = GetElementType(modelProperty.PropertyType);
+                    var elementType = modelProperty.PropertyType.GetItemType();
                     if (target != null)
                         Add(modelProperty.GetValue(model), ToObject(target, elementType, cache), elementType);
                     //var item = target == null
@@ -163,10 +155,10 @@ namespace Xania.Graphs
         private void Add(object collection, object toObject, Type elementType)
         {
             var collectionType = TypeDescriptor.GetReflectionType(collection);
-            var addMethod = collectionType.GetMethod("Add", new [] { elementType });
+            var addMethod = collectionType.GetMethod("Add", new[] { elementType });
             if (addMethod == null)
                 throw new Exception("Add method is not found");
-            addMethod.Invoke(collection, new[] {toObject});
+            addMethod.Invoke(collection, new[] { toObject });
         }
 
         ///// <summary>
@@ -198,10 +190,10 @@ namespace Xania.Graphs
     {
         public override void Merge(Graph graph, Vertex vertex, string propName)
         {
-            vertex.Properties.Add(new Property(propName, this.Values));
+            vertex.Properties.Add(new Property(propName, Value));
         }
 
-        public Tuple<string, object>[] Values { get; set; }
+        public object Value { get; set; }
     }
 
     internal class ObjectResult : ConvertResult
@@ -210,9 +202,9 @@ namespace Xania.Graphs
 
         public override void Merge(Graph graph, Vertex vertex, string propName)
         {
-            graph.Relations.Add(new Relation(vertex.Id, propName, Vertex.Id));
-            foreach (var rel in Graph.Relations)
-                graph.Relations.Add(rel);
+            graph.Edges.Add(new Edge(vertex.Id, propName, Vertex.Id));
+            foreach (var rel in Graph.Edges)
+                graph.Edges.Add(rel);
             foreach (var childVertex in Graph.Vertices)
                 graph.Vertices.Add(childVertex);
         }
@@ -234,11 +226,11 @@ namespace Xania.Graphs
 
         public abstract void Merge(Graph graph, Vertex vertex, string propName);
 
-        public static PrimitiveResult Primitve(params Tuple<string, object>[] values)
+        public static PrimitiveResult Primitve(object value)
         {
             return new PrimitiveResult
             {
-                Values = values
+                Value = value
             };
         }
 
@@ -249,6 +241,52 @@ namespace Xania.Graphs
                 Values = list
             };
         }
+
+        public static ComplexResult Complex(object value)
+        {
+            return new ComplexResult
+            {
+                Value = value
+            };
+        }
+    }
+
+    internal class ComplexResult : ConvertResult
+    {
+        public override void Merge(Graph graph, Vertex vertex, string baseName)
+        {
+            var stack = new Stack<(IEnumerable<string>, object)>();
+            stack.Push((Enumerable.Empty<string>(), Value));
+
+            var values = new Collection<Tuple<string, object>>();
+            while (stack.Count > 0)
+            {
+                var (p, v) = stack.Pop();
+
+                foreach (var prop in TypeDescriptor.GetProperties(v).OfType<PropertyDescriptor>())
+                {
+                    var propValue = prop.GetValue(v);
+                    var propName = prop.Name.ToCamelCase();
+                    var propPath = p.Append(propName);
+                    if (prop.PropertyType.IsPrimitive())
+                        values.Add(new Tuple<string, object>(
+                            propPath.Join("."),
+                            propValue
+                        ));
+                    else if (propValue is IEnumerable enumerable)
+                    {
+                        var i = 0;
+                        foreach(var e in enumerable)
+                            stack.Push((p.Append($"{propName}[{i++}]"), e));
+                    }
+                    else
+                        stack.Push((p.Append(propName), propValue));
+                }
+            }
+            vertex.Properties.Add(new Property(baseName, values.ToArray()));
+        }
+
+        public object Value { get; set; }
     }
 
     internal class ListResult : ConvertResult

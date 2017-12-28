@@ -4,12 +4,12 @@ namespace Xania.Graphs
 {
     public class Property
     {
-        public Tuple<string, object>[] Values { get; }
+        public object Value { get; }
         public string Name { get; }
 
-        public Property(string name, params Tuple<string, object>[] values)
+        public Property(string name, object value)
         {
-            Values = values;
+            Value = value;
             Name = name.ToCamelCase();
         }
 

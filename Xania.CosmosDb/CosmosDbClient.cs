@@ -21,6 +21,19 @@ namespace Xania.CosmosDb
         public readonly DocumentClient _client;
         public readonly DocumentCollection _collection;
 
+        public CosmosDbClient(string endpointUrl, string primaryKey, string databaseId, string collectionId)
+            : this(endpointUrl, Secure(primaryKey), databaseId, collectionId)
+        {
+        }
+
+        private static SecureString Secure(string str)
+        {
+            var secure = new SecureString();
+            foreach (char c in str)
+                secure.AppendChar(c);
+            return secure;
+        }
+
         public CosmosDbClient(string endpointUrl, SecureString primaryKey, string databaseId, string collectionId)
         {
             var connectionPolicy = new ConnectionPolicy
@@ -104,8 +117,7 @@ namespace Xania.CosmosDb
                             .Properties()
                             .ToDictionary<JProperty, string, Func<Type, object>>(
                                 e => e.Name,
-                                e => t => MultiValueToObject(e.Value.Select(v => v["value"]).ToArray(),
-                                    t),
+                                e => t => MultiValueToObject(e.Value.ToArray(), t),
                                 StringComparer.InvariantCultureIgnoreCase
                             ) ?? new Dictionary<string, Func<Type, object>>(StringComparer
                             .InvariantCultureIgnoreCase);
@@ -161,24 +173,48 @@ namespace Xania.CosmosDb
                 .ToDictionary(e => e.Name, StringComparer.InvariantCultureIgnoreCase);
             var relIdProperty = relModelProperties.ContainsKey("Id") ? relModelProperties["Id"] : null;
 
-            return new ShallowProxy(modelType, targetId.Convert(relIdProperty?.PropertyType)).GetTransparentProxy();
+            var id = relIdProperty == null ? null : targetId.Convert(relIdProperty?.PropertyType);
+
+            return new ShallowProxy(modelType, id).GetTransparentProxy();
         }
 
         private static object MultiValueToObject(JToken[] values, Type objectType)
         {
+            if (objectType.IsComplexType())
+            {
+                var instance = Activator.CreateInstance(objectType);
+
+                var properties = objectType.GetProperties().ToDictionary(e => e.Name, StringComparer.InvariantCultureIgnoreCase);
+
+                foreach (var token in values)
+                {
+                    var id = token.Value<string>("id");
+                    var value = token["value"];
+                    if (!id.Contains("."))
+                    {
+                        if (properties.TryGetValue(id, out var property))
+                        {
+                            property.SetValue(instance, ConvertToObject(value, property.PropertyType));
+                        }
+                    }
+                }
+
+                return instance;
+            }
+
             if (objectType.IsEnumerable())
             {
                 var elementType = objectType.GetElementType();
-                var items = values.Select(e => ConvertToObject(e, elementType)).ToArray();
+                var items = values.Select(e => ConvertToObject(e["value"], elementType)).ToArray();
                 return objectType.CreateCollection(items);
             }
 
-            return values.Select(e => ConvertToObject(e, objectType)).SingleOrDefault();
+            return values.Select(e => ConvertToObject(e["value"], objectType)).SingleOrDefault();
         }
 
         public async Task<IEnumerable<Object>> ExecuteAsync(GraphTraversal traversal, Type elementType)
         {
-            var gremlin = $"g.V().{traversal}";
+            var gremlin = $"g.{traversal}";
             if (traversal.Selector != null)
                 gremlin += "." + traversal.Selector;
 
@@ -227,11 +263,11 @@ namespace Xania.CosmosDb
         {
             foreach (var vertex in graph.Vertices)
                 await UpsertDocumentAsync(vertex);
-            foreach (var relation in graph.Relations)
+            foreach (var relation in graph.Edges)
             {
-                var sourceId = relation.SourceId;
-                var targetId = relation.TargetId;
-                var rel = relation.Name.ToCamelCase();
+                var sourceId = relation.OutV;
+                var targetId = relation.InV;
+                var rel = relation.Label.ToCamelCase();
 
                 await ExecuteGremlinAsync($"g.V('{sourceId}').where(outE('{rel}').inV().has('id', '{targetId}').count().is(0)).addE('{rel}').to(g.V('{targetId}'))");
             }
@@ -242,45 +278,45 @@ namespace Xania.CosmosDb
             return UpsertAsync(Graph.FromObject(model));
         }
 
-        private async Task CreateDatabaseIfNotExistsAsync(string DatabaseId)
-        {
-            try
-            {
-                await _client.ReadDatabaseAsync(UriFactory.CreateDatabaseUri(DatabaseId));
-            }
-            catch (DocumentClientException e)
-            {
-                if (e.StatusCode == System.Net.HttpStatusCode.NotFound)
-                {
-                    await _client.CreateDatabaseAsync(new Database { Id = DatabaseId });
-                }
-                else
-                {
-                    throw;
-                }
-            }
-        }
+        //private async Task CreateDatabaseIfNotExistsAsync(string DatabaseId)
+        //{
+        //    try
+        //    {
+        //        await _client.ReadDatabaseAsync(UriFactory.CreateDatabaseUri(DatabaseId));
+        //    }
+        //    catch (DocumentClientException e)
+        //    {
+        //        if (e.StatusCode == System.Net.HttpStatusCode.NotFound)
+        //        {
+        //            await _client.CreateDatabaseAsync(new Database { Id = DatabaseId });
+        //        }
+        //        else
+        //        {
+        //            throw;
+        //        }
+        //    }
+        //}
+        //private async Task CreateCollectionIfNotExistsAsync(string DatabaseId, string CollectionId)
+        //{
+        //    try
+        //    {
+        //        await _client.ReadDocumentCollectionAsync(UriFactory.CreateDocumentCollectionUri(DatabaseId, CollectionId));
+        //    }
+        //    catch (DocumentClientException e)
+        //    {
+        //        if (e.StatusCode == System.Net.HttpStatusCode.NotFound)
+        //        {
+        //            await _client.CreateDocumentCollectionAsync(
+        //                UriFactory.CreateDatabaseUri(DatabaseId),
+        //                new DocumentCollection { Id = CollectionId },
+        //                new RequestOptions { OfferThroughput = 1000 });
+        //        }
+        //        else
+        //        {
+        //            throw;
+        //        }
+        //    }
+        //}
 
-        private async Task CreateCollectionIfNotExistsAsync(string DatabaseId, string CollectionId)
-        {
-            try
-            {
-                await _client.ReadDocumentCollectionAsync(UriFactory.CreateDocumentCollectionUri(DatabaseId, CollectionId));
-            }
-            catch (DocumentClientException e)
-            {
-                if (e.StatusCode == System.Net.HttpStatusCode.NotFound)
-                {
-                    await _client.CreateDocumentCollectionAsync(
-                        UriFactory.CreateDatabaseUri(DatabaseId),
-                        new DocumentCollection { Id = CollectionId },
-                        new RequestOptions { OfferThroughput = 1000 });
-                }
-                else
-                {
-                    throw;
-                }
-            }
-        }
     }
 }

@@ -400,7 +400,22 @@ namespace Xania.Graphs.Linq
 
         public static GraphTraversal Vertex(string label)
         {
-            return new GraphTraversal(new Call("hasLabel", Const(label)));
+            return new GraphTraversal(new V(label));
+        }
+    }
+
+    public class V : IStep
+    {
+        public string Label { get; }
+
+        public V(string label)
+        {
+            Label = label;
+        }
+
+        public override string ToString()
+        {
+            return $"V().hasLabel('{Label}')";
         }
     }
 

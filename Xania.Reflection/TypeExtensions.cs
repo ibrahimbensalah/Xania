@@ -22,7 +22,12 @@ namespace Xania.Reflection
 
         public static bool IsPrimitive(this Type type)
         {
-            return type.IsPrimitive || type == typeof(string);
+            return type.IsPrimitive || type == typeof(string) || type.IsEnum || type == typeof(Guid);
+        }
+
+        public static bool IsComplexType(this Type type)
+        {
+            return type.IsValueType || type.CustomAttributes.Any(e => e.AttributeType.Name.Equals("ComplexTypeAttribute"));
         }
 
         public static bool IsConcrete(this Type type)

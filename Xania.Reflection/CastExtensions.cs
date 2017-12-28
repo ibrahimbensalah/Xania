@@ -21,6 +21,9 @@ namespace Xania.Reflection
             if (targetType == null)
                 throw new InvalidOperationException();
 
+            if (targetType == typeof(Guid))
+                return ConvertToGuid(source);
+
             if (!(source is string) && source is IEnumerable enumerable)
                 return Convert(enumerable, targetType);
 
@@ -42,6 +45,17 @@ namespace Xania.Reflection
             {
                 return Activator.CreateInstance(targetType);
             }
+        }
+
+        private static Guid ConvertToGuid(object source)
+        {
+            if (source is Guid)
+                return (Guid) source;
+            if (source is string str)
+                return new Guid(str);
+            if (source is byte[] bytes)
+                return new Guid(bytes);
+            throw new NotImplementedException();
         }
 
         public static object Convert(this IEnumerable source, Type targetType)

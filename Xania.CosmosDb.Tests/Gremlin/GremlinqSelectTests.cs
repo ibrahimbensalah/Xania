@@ -29,6 +29,8 @@ namespace Xania.CosmosDb.Tests.Gremlin
         [Test]
         public void FilterById()
         {
+            Db.Log += Console.WriteLine;
+
             var persons = 
                 from p in People
                 where p.Id == 1

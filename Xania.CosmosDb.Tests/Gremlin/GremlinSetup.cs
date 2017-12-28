@@ -10,7 +10,7 @@ namespace Xania.CosmosDb.Tests.Gremlin
     {
         private static readonly IDictionary<string, CosmosDbClient> clients = new Dictionary<string, CosmosDbClient>();
 
-        public static CosmosDbClient CreateClient(string collectionId)
+        public static CosmosDbClient CreateClient(string collectionId, bool seed = true )
         {
             if (clients.TryGetValue(collectionId, out var cosmosDbClient))
                 return cosmosDbClient;
@@ -20,9 +20,9 @@ namespace Xania.CosmosDb.Tests.Gremlin
                 .Secure();
 
             cosmosDbClient = new CosmosDbClient(endpointUrl, primaryKey, "ToDoList", collectionId);
-            cosmosDbClient.Log += Console.WriteLine;
 
-            SetUpData(cosmosDbClient);
+            if (seed)
+                SetUpData(cosmosDbClient);
 
             clients.Add(collectionId, cosmosDbClient);
             return cosmosDbClient;

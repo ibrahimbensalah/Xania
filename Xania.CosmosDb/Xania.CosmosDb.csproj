@@ -233,7 +233,6 @@
     <Compile Include="AST\Constant.cs" />
     <Compile Include="AST\Label.cs" />
     <Compile Include="AST\Lambda.cs" />
-    <Compile Include="AST\MemberCall.cs" />
     <Compile Include="AST\SelectMany.cs" />
     <Compile Include="AST\Term.cs" />
     <Compile Include="AST\Step.cs" />
@@ -242,6 +241,7 @@
     <Compile Include="AzureGraphStore.cs" />
     <Compile Include="AST\Binary.cs" />
     <Compile Include="CosmosDbClient.cs" />
+    <Compile Include="GraphContextExtensions.cs" />
     <Compile Include="MemberCall.cs" />
     <Compile Include="AST\Parameter.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

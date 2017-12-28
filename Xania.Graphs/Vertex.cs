@@ -15,9 +15,4 @@ namespace Xania.Graphs
             Label = label.ToCamelCase();
         }
     }
-
-    public class Edge
-    {
-
-    }
 }

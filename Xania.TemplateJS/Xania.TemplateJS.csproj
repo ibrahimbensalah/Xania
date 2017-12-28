@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
-    <TargetFramework>net462</TargetFramework>
+    <TargetFramework>net471</TargetFramework>
     <RuntimeIdentifier>win7-x86</RuntimeIdentifier>
     <AssemblyName>Xania.TemplateJS</AssemblyName>
     <PackageId>Xania.TemplateJS</PackageId>
@@ -56,6 +56,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Xania.CosmosDb\Xania.CosmosDb.csproj" />
     <ProjectReference Include="..\Xania.DataAccess\Xania.DataAccess.csproj" />
     <ProjectReference Include="..\Xania.Models.DocumentDB\Xania.Models.DocumentDB.csproj" />
     <ProjectReference Include="..\Xania.Models\Xania.Models.csproj" />

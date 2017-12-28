@@ -1,6 +1,8 @@
 ﻿using System;
+using Microsoft.Azure.Documents.SystemFunctions;
 using Newtonsoft.Json;
 using Xania.Graphs;
+using Xania.Reflection;
 
 namespace Xania.CosmosDb
 {
@@ -28,13 +30,18 @@ namespace Xania.CosmosDb
             {
                 writer.WritePropertyName(prop.Name);
                 writer.WriteStartArray();
-                foreach (var v in prop.Values)
+                var v = prop.Value;
                 {
                     writer.WriteStartObject();
                     writer.WritePropertyName("_value");
-                    writer.WriteValue(v.Item2);
+                    if (v == null)
+                        writer.WriteNull();
+                    else if (v.GetType().IsPrimitive())
+                        writer.WriteValue(v);
+                    else 
+                        serializer.Serialize(writer, v);
                     writer.WritePropertyName("id");
-                    writer.WriteValue(v.Item1);
+                    writer.WriteValue(Guid.NewGuid());
                     writer.WriteEndObject();
                 }
                 writer.WriteEndArray();
