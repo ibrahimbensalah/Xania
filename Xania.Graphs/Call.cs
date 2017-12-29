@@ -6,23 +6,23 @@ namespace Xania.Graphs
     public class Call : IStep
     {
         public string MethodName { get; }
-        private readonly IEnumerable<IStep> _expressions;
+        public IEnumerable<IStep> Steps { get; }
 
-        public Call(string methodName, params IStep[] expressions)
+        public Call(string methodName, params IStep[] steps)
         {
             MethodName = methodName;
-            _expressions = expressions;
+            Steps = steps;
         }
 
-        public Call(string methodName, IEnumerable<IStep> expressions)
+        public Call(string methodName, IEnumerable<IStep> steps)
         {
             MethodName = methodName;
-            _expressions = expressions;
+            Steps = steps;
         }
 
         public override string ToString()
         {
-            return $"{MethodName}({string.Join(",", _expressions.Select(e => e.ToString()))})";
+            return $"{MethodName}({string.Join(",", Steps.Select(e => e.ToString()))})";
         }
     }
 }

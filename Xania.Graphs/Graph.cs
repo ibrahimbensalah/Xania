@@ -10,55 +10,121 @@ namespace Xania.Graphs
 {
     public class Graph
     {
-        public Collection<Vertex> Vertices { get; } = new Collection<Vertex>();
-        public Collection<Edge> Edges { get; } = new Collection<Edge>();
+        public HashSet<Vertex> Vertices { get; } = new HashSet<Vertex>();
+        public HashSet<Edge> Edges { get; } = new HashSet<Edge>();
 
-        public static Graph FromObject(Object model)
+        public static Graph FromObject(params Object[] models)
         {
-            return ConvertValue(model, model.GetType(), new Dictionary<object, ConvertResult>()).Graph;
+            var subgraphs = models.Select(model => (SubGraph)ConvertValue(model, model.GetType(), new Dictionary<object, ConvertResult>()));
+
+            var graph = new Graph();
+            foreach (var sg in subgraphs)
+            {
+                graph.Vertices.Add(sg.Pivot);
+                foreach (var (from, name, to) in sg.Out)
+                {
+                    graph.Vertices.Add(from);
+                    graph.Vertices.Add(to);
+                    graph.Edges.Add(new Edge(@from.Id, name, to.Id));
+                }
+            }
+            return graph;
         }
 
-        private static ConvertResult ConvertValue(object value, Type valueType, IDictionary<object, ConvertResult> cache)
+        private static object ConvertValue(object value, Type valueType, IDictionary<object, ConvertResult> cache)
         {
             if (cache.TryGetValue(value, out var result))
                 return result;
 
             if (valueType.IsPrimitive())
-            {
-                return ConvertResult.Primitve(value);
-            }
-            //if (valueType.IsComplexType())
-            //{
-            //    return ConvertResult.Complex(value);
-            //}
+                return value;
+            if (valueType.IsComplexType())
+                return ConvertComplex(value, valueType);
+
+            // return ConvertResult.Complex(value);
             if (value is IEnumerable enumerable)
             {
                 var elementType = valueType.GetItemType();
                 if (elementType == null)
                     throw new InvalidOperationException($"Could not derive element type from '{valueType}'");
 
-                if (elementType.IsPrimitive())
-                {
-                    return ConvertResult.Primitve(enumerable);
-                }
-                return ConvertResult.List(enumerable.OfType<object>().Select(e => ConvertValue(e, e.GetType(), cache)));
+                return enumerable.OfType<object>().Select(e => ConvertValue(e, elementType, cache));
             }
 
-            var vertex = new Vertex(valueType.Name);
-            var graph = new Graph();
+            var subGraph = new SubGraph(new Vertex(valueType.Name.ToCamelCase()));
             foreach (var prop in TypeDescriptor.GetProperties(value).OfType<PropertyDescriptor>())
             {
                 var propValue = prop.GetValue(value);
                 if (string.Equals(prop.Name, "id", StringComparison.InvariantCultureIgnoreCase))
-                    vertex.Id = propValue?.ToString() ?? Guid.NewGuid().ToString();
+                    subGraph.Pivot.Id = propValue?.ToString() ?? Guid.NewGuid().ToString();
                 else if (propValue != null)
                 {
-                    var pair = ConvertValue(propValue, propValue.GetType(), cache);
-                    pair.Merge(graph, vertex, prop.Name);
+                    var convertResult = ConvertValue(propValue, propValue.GetType(), cache);
+                    if (IsVertexType(prop.PropertyType))
+                    {
+                        foreach (var sg in Unfold(convertResult).Cast<SubGraph>())
+                        {
+                            foreach (var rel in sg.Out)
+                                subGraph.Out.Add(rel);
+                            subGraph.Out.Add((subGraph.Pivot, prop.Name, sg.Pivot));
+                        }
+                    }
+                    else
+                        subGraph.Pivot.Properties.Add(new Property(prop.Name, convertResult));
                 }
             }
-            graph.Vertices.Add(vertex);
-            return ConvertResult.Object(vertex, graph);
+            return subGraph;
+        }
+
+        private static IEnumerable<object> Unfold(object obj)
+        {
+            if (obj is IEnumerable enu)
+            {
+                foreach (var o in enu)
+                    yield return o;
+            }
+            else
+                yield return obj;
+        }
+
+        private static bool IsVertexType(Type type)
+        {
+            if (type.IsEnumerable())
+            {
+                var itemType = type.GetItemType();
+                return !itemType.IsPrimitive() && !itemType.IsComplexType();
+            }
+            else
+                return !type.IsPrimitive() && !type.IsComplexType();
+        }
+
+        private static object ConvertComplex(object value, Type valueType)
+        {
+            if (value == null)
+                return null;
+            if (valueType.IsPrimitive())
+                return value;
+            if (valueType.IsEnumerable())
+                return ((IEnumerable) value).OfType<object>().Select(e => ConvertComplex(e, e.GetType()));
+
+            var stack = new Stack<(Dictionary<string, object>, object)>();
+            var root = new Dictionary<string, object>();
+            stack.Push((root, value));
+
+            while (stack.Count > 0)
+            {
+                var (container, obj) = stack.Pop();
+                foreach (var prop in TypeDescriptor.GetProperties(obj).OfType<PropertyDescriptor>())
+                {
+                    var propValue = prop.GetValue(value);
+                    if (propValue == null)
+                        continue;
+
+                    container.Add(prop.Name.ToCamelCase(), ConvertComplex(propValue, prop.PropertyType));
+                }
+            }
+
+            return root;
         }
 
         public IEnumerable<TModel> ToObjects<TModel>() where TModel : new()
@@ -184,13 +250,33 @@ namespace Xania.Graphs
         //    }
         //    return o;
         //}
+        public void Merge(Graph other)
+        {
+            if (other == null)
+                return;
+            foreach (var edge in other.Edges)
+                Edges.Add(edge);
+            foreach(var vertex in other.Vertices) 
+                Vertices.Add(vertex);
+        }
+    }
+
+    internal class SubGraph
+    {
+        public Vertex Pivot { get; }
+        public ICollection<(Vertex, string, Vertex)> Out { get; } = new List<(Vertex, string, Vertex)>();
+
+        public SubGraph(Vertex pivot)
+        {
+            Pivot = pivot;
+        }
     }
 
     internal class PrimitiveResult : ConvertResult
     {
-        public override void Merge(Graph graph, Vertex vertex, string propName)
+        public override Object Execute()
         {
-            vertex.Properties.Add(new Property(propName, Value));
+            return Value;
         }
 
         public object Value { get; set; }
@@ -200,31 +286,25 @@ namespace Xania.Graphs
     {
         public Vertex Vertex { get; set; }
 
-        public override void Merge(Graph graph, Vertex vertex, string propName)
+        public override object Execute()
         {
-            graph.Edges.Add(new Edge(vertex.Id, propName, Vertex.Id));
-            foreach (var rel in Graph.Edges)
-                graph.Edges.Add(rel);
-            foreach (var childVertex in Graph.Vertices)
-                graph.Vertices.Add(childVertex);
+            return Vertex;
         }
     }
 
     internal abstract class ConvertResult
     {
-        public Graph Graph { get; set; }
         public static ConvertResult None { get; set; } = new NoResult();
 
-        public static ObjectResult Object(Vertex vertex, Graph graph)
+        public static ObjectResult Object(Vertex vertex)
         {
             return new ObjectResult
             {
-                Graph = graph,
                 Vertex = vertex
             };
         }
 
-        public abstract void Merge(Graph graph, Vertex vertex, string propName);
+        public abstract object Execute();
 
         public static PrimitiveResult Primitve(object value)
         {
@@ -253,7 +333,12 @@ namespace Xania.Graphs
 
     internal class ComplexResult : ConvertResult
     {
-        public override void Merge(Graph graph, Vertex vertex, string baseName)
+        public override object Execute()
+        {
+            return null;
+        }
+
+        private void Merge2(Graph graph, Vertex vertex, string baseName)
         {
             var stack = new Stack<(IEnumerable<string>, object)>();
             stack.Push((Enumerable.Empty<string>(), Value));
@@ -293,19 +378,17 @@ namespace Xania.Graphs
     {
         public IEnumerable<ConvertResult> Values { get; set; }
 
-        public override void Merge(Graph graph, Vertex vertex, string propName)
+        public override object Execute()
         {
-            foreach (var item in Values)
-            {
-                item.Merge(graph, vertex, propName);
-            }
+            return Values.Select(i => i.Execute());
         }
     }
 
     internal class NoResult : ConvertResult
     {
-        public override void Merge(Graph graph, Vertex vertex, string propName)
+        public override object Execute()
         {
+            return null;
         }
     }
 

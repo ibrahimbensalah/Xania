@@ -318,7 +318,7 @@ namespace Xania.Graphs.Linq
                         right.Steps;
 
                     var reverseTail = left.Steps.Take(left.Steps.Count() - 1);
-                    var reverseHead = new Call("has", new Const(values.Name), new Eq(rightSteps));
+                    var reverseHead = new Has(values.Name, new Eq(rightSteps));
 
                     return new GraphTraversal(reverseTail).Append(reverseHead);
                 }

@@ -22,7 +22,7 @@ namespace Xania.Reflection
 
         public static bool IsPrimitive(this Type type)
         {
-            return type.IsPrimitive || type == typeof(string) || type.IsEnum || type == typeof(Guid);
+            return type.IsPrimitive || type == typeof(string) || type == typeof(DateTimeOffset) || type == typeof(DateTime) || type.IsEnum || type == typeof(Guid);
         }
 
         public static bool IsComplexType(this Type type)

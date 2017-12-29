@@ -24,7 +24,21 @@ namespace Xania.Reflection
             if (targetType == typeof(Guid))
                 return ConvertToGuid(source);
 
-            if (!(source is string) && source is IEnumerable enumerable)
+            if (source is string)
+                return System.Convert.ChangeType(source, targetType);
+
+            if (source is IDictionary<string, Object> dict)
+            {
+                var valueFactories = dict
+                    .ToDictionary<KeyValuePair<string, object>, string, Func<Type, object>>(
+                        e => e.Key,
+                        e => t => e.Value.Convert(t),
+                        StringComparer.InvariantCultureIgnoreCase
+                    );
+                return targetType.CreateInstance(valueFactories);
+            }
+
+            if (source is IEnumerable enumerable)
                 return Convert(enumerable, targetType);
 
             //var value = typeof(string) != modelProperty.PropertyType &&
@@ -37,20 +51,13 @@ namespace Xania.Reflection
                 return targetType.CreateCollection(source);
             }
 
-            try
-            {
-                return System.Convert.ChangeType(source, targetType);
-            }
-            catch
-            {
-                return Activator.CreateInstance(targetType);
-            }
+            return Activator.CreateInstance(targetType);
         }
 
         private static Guid ConvertToGuid(object source)
         {
             if (source is Guid)
-                return (Guid) source;
+                return (Guid)source;
             if (source is string str)
                 return new Guid(str);
             if (source is byte[] bytes)
@@ -68,14 +75,15 @@ namespace Xania.Reflection
                 return Convert(str as object, targetType);
             if (targetType.IsEnumerable())
             {
+                var elementType = targetType.GetItemType();
                 var list = new ArrayList();
                 foreach (var s in source)
                     list.Add(s);
 
-                return targetType.CreateCollection(list.ToArray());
+                return targetType.CreateCollection(list.OfType<object>().Select(e => e.Convert(elementType)).ToArray());
             }
 
-            foreach(var item in source)
+            foreach (var item in source)
                 return Convert(item, targetType);
 
             return null;
