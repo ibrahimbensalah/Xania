@@ -70,6 +70,7 @@
     <Compile Include="Term.cs" />
     <Compile Include="Values.cs" />
     <Compile Include="Vertex.cs" />
+    <Compile Include="Where.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Xania.Reflection\Xania.Reflection.csproj">

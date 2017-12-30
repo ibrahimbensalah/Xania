@@ -14,5 +14,10 @@ namespace Xania.Graphs
         {
             Label = label.ToCamelCase();
         }
+
+        public override string ToString()
+        {
+            return $"V['{Id}']";
+        }
     }
 }

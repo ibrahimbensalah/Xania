@@ -15,7 +15,8 @@ namespace Xania.Graphs
 
         public static Graph FromObject(params Object[] models)
         {
-            var subgraphs = models.Select(model => (SubGraph)ConvertValue(model, model.GetType(), new Dictionary<object, ConvertResult>()));
+            var cache = new Dictionary<object, object>();
+            var subgraphs = models.Select(model => (SubGraph)ConvertValue(model, model.GetType(), cache));
 
             var graph = new Graph();
             foreach (var sg in subgraphs)
@@ -31,7 +32,7 @@ namespace Xania.Graphs
             return graph;
         }
 
-        private static object ConvertValue(object value, Type valueType, IDictionary<object, ConvertResult> cache)
+        private static object ConvertValue(object value, Type valueType, IDictionary<object, object> cache)
         {
             if (cache.TryGetValue(value, out var result))
                 return result;
@@ -51,7 +52,9 @@ namespace Xania.Graphs
                 return enumerable.OfType<object>().Select(e => ConvertValue(e, elementType, cache));
             }
 
-            var subGraph = new SubGraph(new Vertex(valueType.Name.ToCamelCase()));
+            var vertex = new Vertex(valueType.Name.ToCamelCase());
+            var subGraph = new SubGraph(vertex);
+            cache.Add(value, new SubGraph(vertex));
             foreach (var prop in TypeDescriptor.GetProperties(value).OfType<PropertyDescriptor>())
             {
                 var propValue = prop.GetValue(value);
@@ -258,6 +261,19 @@ namespace Xania.Graphs
                 Edges.Add(edge);
             foreach(var vertex in other.Vertices) 
                 Vertices.Add(vertex);
+        }
+
+        public IEnumerable<Vertex> Out(Vertex from, string edgeLabel)
+        {
+            var edges = Edges.Where(edge =>
+                    edge.Label.Equals(edgeLabel, StringComparison.InvariantCultureIgnoreCase) &&
+                    edge.OutV.Equals(from.Id, StringComparison.InvariantCultureIgnoreCase)).ToArray();
+            return edges.Select(e => Vertices.Single(to => to.Id.Equals(e.InV))).ToArray();
+
+            //return Edges.Where(edge =>
+            //        edge.Label.Equals(edgeLabel, StringComparison.InvariantCultureIgnoreCase) &&
+            //        edge.OutV.Equals(from.Id, StringComparison.InvariantCultureIgnoreCase))
+            //    .Select(edge => Vertices.Single(to => to.Id.Equals(edge.InV)));
         }
     }
 

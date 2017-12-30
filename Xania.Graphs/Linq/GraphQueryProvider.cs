@@ -177,14 +177,19 @@ namespace Xania.Graphs.Linq
                         yield return (0, args => new GraphTraversal(new Select(memberExpression.Member.Name)));
                     else
                     {
-                        var isPrimitive = memberExpression.Type.IsPrimitive();
+                        var isValues = memberExpression.Type.IsPrimitive() || memberExpression.Type.IsComplexType();
 
                         var memberName = memberExpression.Member.Name.ToCamelCase();
                         stack.Push(memberExpression.Expression);
 
 
                         yield return (1, args =>
-                            isPrimitive ? args[0].Append(Values(memberName)) : args[0].Append(Out(memberName)));
+                        {
+                            if (isValues)
+                                return args[0].Append(Values(memberName));
+                            else
+                                return args[0].Append(Out(memberName));
+                            });
                     }
                 }
                 else if (item is NewExpression newExpression)
@@ -305,7 +310,7 @@ namespace Xania.Graphs.Linq
         {
             if (predicate.Steps.ElementAtOrDefault(0) is Context && !predicate.Steps.Any(e => e is Out))
                 return new GraphTraversal(source.Steps.Concat(predicate.Steps.Skip(1)));
-            return source.Append(Scope("where", predicate));
+            return source.Append(new Where(predicate));
         }
         private static GraphTraversal Binary(ExpressionType oper, GraphTraversal left, GraphTraversal right)
         {
@@ -371,11 +376,6 @@ namespace Xania.Graphs.Linq
         public static Const Const(object value)
         {
             return new Const(value);
-        }
-
-        public static Scope Scope(string methodName, GraphTraversal graphTraversal)
-        {
-            return new Scope(methodName, graphTraversal);
         }
 
         public static Call Call(string methodName, IEnumerable<IStep> expressions)
