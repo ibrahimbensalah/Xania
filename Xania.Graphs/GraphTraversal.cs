@@ -20,7 +20,16 @@ namespace Xania.Graphs
 
         public override string ToString()
         {
-            return $"{string.Join(".", Steps.Select(e => e.ToString()))}";
+            return ToGremlinSelector().Join(".");
+        }
+
+        private IEnumerable<string> ToGremlinSelector()
+        {
+            if (Steps.Any())
+                yield return $"{string.Join(".", Steps.Select(e => e.ToString()))}";
+
+            if (Selector != null)
+                yield return Selector.ToString();
         }
 
         public static readonly Context __ = new Context();

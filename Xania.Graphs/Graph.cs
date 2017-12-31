@@ -160,7 +160,7 @@ namespace Xania.Graphs
         {
             if (cache.TryGetValue(vertex, out var model))
                 return model;
-            cache.Add(vertex, model = Activator.CreateInstance(modelType));
+            cache.Add(vertex, model = modelType.CreateInstance(new Dictionary<string,object>{}));
 
             var modelProperties = TypeDescriptor.GetProperties(model).OfType<PropertyDescriptor>()
                 .ToDictionary(e => e.Name, StringComparer.InvariantCultureIgnoreCase);

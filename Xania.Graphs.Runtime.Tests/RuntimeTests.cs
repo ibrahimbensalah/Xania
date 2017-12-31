@@ -188,21 +188,6 @@ namespace Xania.Graphs.Runtime.Tests
                     result = result.Execute(step);
             }
 
-            //foreach (var step in traversal.Steps)
-            //{
-            //    if (step is V V)
-            //    {
-            //        var vertices = _graph.Vertices.Where(vertex => vertex.Label.Equals(V.Label));
-            //        var adjancyList = vertices.ToDictionary(e => e, e => _graph.Edges.Where(edge => edge.OutV.Equals(e.Id)));
-            //    }
-
-            //    throw new NotImplementedException($"Execute {step.GetType()}");
-            //}
-
-
-            //var result =
-            //    result.Select(v => CreateInstance(v, elementType));
-
             return Task.FromResult(result.OfType(elementType, graph));
         }
 

@@ -55,6 +55,7 @@
     <Compile Include="Linq\GraphQueryable.cs" />
     <Compile Include="Linq\GraphQueryProvider.cs" />
     <Compile Include="OrderBy.cs" />
+    <Compile Include="Project.cs" />
     <Compile Include="Runtime\GraphProcessor.cs" />
     <Compile Include="TraversalExtensions.cs" />
     <Compile Include="Helper.cs" />

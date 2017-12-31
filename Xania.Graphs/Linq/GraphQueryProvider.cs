@@ -202,8 +202,11 @@ namespace Xania.Graphs.Linq
 
                     yield return (newExpression.Arguments.Count, args =>
                     {
-                        var project = $"project({newExpression.Members.Select(e => $"'{e.Name.ToCamelCase()}'").Join(", ")})" +
-                                      $".by(coalesce({args.SelectMany(ToGremlinSelector).Join(", constant())).by(coalesce(")}, constant()))";
+                        var dict = newExpression.Members.Zip(args, (method, arg) => (method.Name.ToCamelCase(), arg))
+                            .ToDictionary(e=> e.Item1, e=>e.Item2);
+
+                        var project = new Project(dict);
+
                         return new GraphTraversal(Enumerable.Empty<IStep>())
                         {
                             Selector = new GremlinSelector(project.ToString())
@@ -216,18 +219,6 @@ namespace Xania.Graphs.Linq
                     throw new NotImplementedException($"GetOperators {item}");
                 }
             }
-        }
-
-        private static IEnumerable<string> ToGremlinSelector(GraphTraversal graphTraversal)
-        {
-            var str = graphTraversal.ToString();
-
-            if (!string.IsNullOrEmpty(str))
-                yield return str;
-
-
-            if (graphTraversal.Selector != null)
-                yield return graphTraversal.Selector.ToString();
         }
 
         private static (int, Func<GraphTraversal[], GraphTraversal>) Select(MethodCallExpression methodCall, Stack<Expression> stack)

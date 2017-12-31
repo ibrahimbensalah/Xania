@@ -144,14 +144,14 @@ namespace Xania.Graphs.Runtime.Tests
         [Test]
         public void SelectCustomColumns()
         {
-            var view =
-            (from p in People
-             where p.Id == 1
-             select new
-             {
-                 p.FirstName,
-                 FriendId = p.Friend.Id
-             }).ToArray();
+            var view = (
+                from p in People
+                where p.Id == 1
+                select new
+                {
+                    p.FirstName,
+                    FriendId = p.Friend.Id
+                }).ToArray();
 
             var ibrahim = view.Should().ContainSingle().Subject;
             // ibrahim.FirstName.Should().Be("Ibrahim");
