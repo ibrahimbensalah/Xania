@@ -10,10 +10,7 @@ namespace Xania.Graphs
         public static GraphTraversal Replace(this GraphTraversal graphTraversal, Func<IStep, bool> predicate,
             IStep replacement)
         {
-            return new GraphTraversal(graphTraversal.Steps.Select(e => predicate(e) ? replacement : e))
-            {
-                Selector = graphTraversal.Selector
-            };
+            return new GraphTraversal(graphTraversal.Steps.Select(e => predicate(e) ? replacement : e));
         }
 
         public static IEnumerable<IStep> Replace(this IEnumerable<IStep> steps, Func<IStep, bool> predicate,

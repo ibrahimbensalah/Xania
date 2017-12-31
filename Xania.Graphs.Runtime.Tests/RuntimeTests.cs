@@ -253,50 +253,63 @@ namespace Xania.Graphs.Runtime.Tests
                     return new VerticesResult(r, _graph);
                 }
 
+
+                if (step is Project project)
+                {
+                    var parameter = Expression.Parameter(typeof(Vertex));
+                    var select = project.Dict.ToDictionary(kvp => kvp.Key, kvp => Execute(parameter, kvp.Value));
+                    return new ObjectsResult(select);
+                }
+
                 if (step is Where where)
                 {
                     var parameter = Expression.Parameter(typeof(Vertex));
-                    var predicateExpr = where.Predicate.Steps.Aggregate<IStep, Expression>(parameter, (src, st) =>
-                    {
-                        if (src.Type == typeof(Vertex))
-                            return GetExpression(src, st);
-
-                        var p = Expression.Parameter(typeof(Vertex));
-                        var stepExpr = GetExpression(p, st);
-
-                        if (stepExpr.Type == typeof(IEnumerable<Vertex>))
-                        {
-                            var selectorLambda = Expression.Lambda<Func<Vertex, IEnumerable<Vertex>>>(stepExpr, p);
-                            var selectManyMethod = SelectMany_TSource_2<Vertex, Vertex>();
-                            return Expression.Call(null, selectManyMethod, src, selectorLambda);
-                        }
-
-                        if (stepExpr.Type == typeof(bool))
-                        {
-                            var selectorLambda = Expression.Lambda<Func<Vertex, bool>>(stepExpr, p);
-                            var anyMethod = Any_TSource_1<Vertex>();
-                            return Expression.Call(null, anyMethod, src, selectorLambda);
-                        }
-
-                        throw new NotImplementedException();
-                        //if (stepExpr.Type == typeof(bool))
-                        //{
-                        //    return stepExpr;
-                        //}
-                        //else
-                        //{
-                        //    return stepExpr;
-                        //    //var selectorLambda = Expression.Lambda<Func<Vertex, IEnumerable<Vertex>>>(selectorBody, p);
-                        //    //var selectManyMethod = SelectMany_TSource_2<Vertex, Vertex>();
-                        //    //return Expression.Call(null, selectManyMethod, src, selectorLambda);
-                        //}
-                    });
+                    var predicateExpr = Execute(parameter, where.Predicate);
 
                     var lambda = Expression.Lambda<Func<Vertex, bool>>(predicateExpr, parameter).Compile();
                     return new VerticesResult(_vertices.Where(lambda), _graph);
                 }
 
                 throw new NotImplementedException($"Execute {step.GetType()}");
+            }
+
+            private Expression Execute(Expression parameter, GraphTraversal traversal)
+            {
+                return traversal.Steps.Aggregate<IStep, Expression>(parameter, (src, st) =>
+                {
+                    if (src.Type == typeof(Vertex))
+                        return GetExpression(src, st);
+
+                    var p = Expression.Parameter(typeof(Vertex));
+                    var stepExpr = GetExpression(p, st);
+
+                    if (stepExpr.Type == typeof(IEnumerable<Vertex>))
+                    {
+                        var selectorLambda = Expression.Lambda<Func<Vertex, IEnumerable<Vertex>>>(stepExpr, p);
+                        var selectManyMethod = SelectMany_TSource_2<Vertex, Vertex>();
+                        return Expression.Call(null, selectManyMethod, src, selectorLambda);
+                    }
+
+                    if (stepExpr.Type == typeof(bool))
+                    {
+                        var selectorLambda = Expression.Lambda<Func<Vertex, bool>>(stepExpr, p);
+                        var anyMethod = Any_TSource_1<Vertex>();
+                        return Expression.Call(null, anyMethod, src, selectorLambda);
+                    }
+
+                    throw new NotImplementedException();
+                    //if (stepExpr.Type == typeof(bool))
+                    //{
+                    //    return stepExpr;
+                    //}
+                    //else
+                    //{
+                    //    return stepExpr;
+                    //    //var selectorLambda = Expression.Lambda<Func<Vertex, IEnumerable<Vertex>>>(selectorBody, p);
+                    //    //var selectManyMethod = SelectMany_TSource_2<Vertex, Vertex>();
+                    //    //return Expression.Call(null, selectManyMethod, src, selectorLambda);
+                    //}
+                });
             }
 
             private Expression GetExpression(Expression source, IStep step)
@@ -386,6 +399,26 @@ namespace Xania.Graphs.Runtime.Tests
                      .GetMethodInfo().GetGenericMethodDefinition()))
                 .MakeGenericMethod(typeof(TSource));
 
+        }
+    }
+
+    internal class ObjectsResult : InMemoryGraphDbContext.IExecuteResult
+    {
+        public Dictionary<string, Expression> Dict { get; }
+
+        public ObjectsResult(Dictionary<string, Expression> dict)
+        {
+            Dict = dict;
+        }
+
+        public InMemoryGraphDbContext.IExecuteResult Execute(IStep step)
+        {
+            throw new NotImplementedException();
+        }
+
+        public IEnumerable<object> OfType(Type elementType, Graph graph)
+        {
+            throw new NotImplementedException();
         }
     }
 

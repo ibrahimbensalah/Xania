@@ -1,21 +1,22 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace Xania.Graphs
 {
     public class Project: IStep
     {
-        private readonly Dictionary<string, GraphTraversal> _dict;
+        public Dictionary<string, GraphTraversal> Dict { get; }
 
         public Project(Dictionary<string, GraphTraversal> dict)
         {
-            _dict = dict;
+            Dict = dict ?? throw new ArgumentNullException(nameof(dict));
         }
 
         public override string ToString()
         {
-            return $"project({_dict.Keys.Select(e => $"'{e}'").Join(", ")})" +
-                   $".by(coalesce({_dict.Values.Join(", constant())).by(coalesce(")}, constant()))";
+            return $"project({Dict.Keys.Select(e => $"'{e}'").Join(", ")})" +
+                   $".by(coalesce({Dict.Values.Join(", constant())).by(coalesce(")}, constant()))";
         }
     }
 }

@@ -6,7 +6,6 @@ namespace Xania.Graphs
     public class GraphTraversal
     {
         public IEnumerable<IStep> Steps { get; }
-        public GremlinSelector Selector { get; set; }
 
         public GraphTraversal(IStep step)
             : this(new[] { step })
@@ -27,9 +26,6 @@ namespace Xania.Graphs
         {
             if (Steps.Any())
                 yield return $"{string.Join(".", Steps.Select(e => e.ToString()))}";
-
-            if (Selector != null)
-                yield return Selector.ToString();
         }
 
         public static readonly Context __ = new Context();
@@ -37,8 +33,8 @@ namespace Xania.Graphs
         public GraphTraversal Append(IStep expr)
         {
             if (expr is Values)
-                return new GraphTraversal (Steps.Append(expr)) { Selector = null };
-            return new GraphTraversal(Steps.Append(expr)) { Selector = Selector };
+                return new GraphTraversal (Steps.Append(expr)) { };
+            return new GraphTraversal(Steps.Append(expr)) { };
         }
 
         public GraphTraversal Bind(GraphTraversal other)
@@ -50,18 +46,15 @@ namespace Xania.Graphs
                 if (!otherSteps.Any(e => e is Select s && s.Label.Equals(l.Value)))
                     return new GraphTraversal(Steps.Concat(otherSteps))
                     {
-                        Selector = other.Selector
                     };
                 if (otherSteps.FirstOrDefault() is Select f && f.Label.Equals(l.Value))
                     return new GraphTraversal(Steps.Concat(otherSteps.Skip(1)))
                     {
-                        Selector = other.Selector
                     };
             }
 
             return new GraphTraversal(Steps.Concat(otherSteps))
             {
-                Selector = other.Selector
             };
         }
     }

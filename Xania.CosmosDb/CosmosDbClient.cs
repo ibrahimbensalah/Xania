@@ -215,9 +215,6 @@ namespace Xania.CosmosDb
         public async Task<IEnumerable<Object>> ExecuteAsync(GraphTraversal traversal, Type elementType)
         {
             var gremlin = $"g.{traversal}";
-            if (traversal.Selector != null)
-                gremlin += "." + traversal.Selector;
-
             return (await ExecuteGremlinAsync(gremlin)).OfType<JObject>()
                 .Select(e => ConvertToObject(e, elementType));
         }

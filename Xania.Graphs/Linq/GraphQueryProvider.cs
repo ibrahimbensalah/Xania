@@ -48,14 +48,14 @@ namespace Xania.Graphs.Linq
                 //    .Select(result => Client.ConvertToObject(result, elementType));
                 var items = _client.ExecuteAsync(traversal, elementType).Result;
 
-                return (TResult) resultType.CreateCollection(items.ToArray());
+                return (TResult)resultType.CreateCollection(items.ToArray());
             }
             else
             {
                 var result = _client.ExecuteAsync(traversal, typeof(TResult)).Result.SingleOrDefault();
                 if (result == null)
                     return default(TResult);
-                return (TResult) result.Convert(typeof(TResult));
+                return (TResult)result.Convert(typeof(TResult));
             }
         }
 
@@ -189,7 +189,8 @@ namespace Xania.Graphs.Linq
                                 return args[0].Append(Values(memberName));
                             else
                                 return args[0].Append(Out(memberName));
-                            });
+                        }
+                        );
                     }
                 }
                 else if (item is NewExpression newExpression)
@@ -202,17 +203,14 @@ namespace Xania.Graphs.Linq
 
                     yield return (newExpression.Arguments.Count, args =>
                     {
-                        var dict = newExpression.Members.Zip(args, (method, arg) => (method.Name.ToCamelCase(), arg))
-                            .ToDictionary(e=> e.Item1, e=>e.Item2);
+                        var dict = newExpression.Members
+                            .Zip(args, (method, arg) => (method.Name.ToCamelCase(), arg))
+                            .ToDictionary(e => e.Item1, e => e.Item2);
 
                         var project = new Project(dict);
 
-                        return new GraphTraversal(Enumerable.Empty<IStep>())
-                        {
-                            Selector = new GremlinSelector(project.ToString())
-                        };
-                    }
-                    );
+                        return new GraphTraversal(project);
+                    });
                 }
                 else
                 {
