@@ -159,7 +159,7 @@ namespace Xania.Graphs
             var modelProperties = TypeDescriptor.GetProperties(model).OfType<PropertyDescriptor>()
                 .ToDictionary(e => e.Name, StringComparer.InvariantCultureIgnoreCase);
             var idProperty = modelProperties.ContainsKey("Id") ? modelProperties["Id"] : null;
-            idProperty?.SetValue(model, vertex.Id.Convert(idProperty.PropertyType));
+            idProperty?.SetValue(model, vertex.Id.ConvertMany(idProperty.PropertyType));
 
             foreach (var p in vertex.Properties)
             {

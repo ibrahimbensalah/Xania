@@ -200,7 +200,7 @@ namespace Xania.Graphs.Runtime.Tests
                     e => t => e.Value.Convert(t),
                     StringComparer.InvariantCultureIgnoreCase
                 );
-            valueFactories.Add("id", v.Id.Convert);
+            valueFactories.Add("id", v.Id.ConvertMany);
             return elementType.CreateInstance(valueFactories);
         }
 
@@ -258,8 +258,14 @@ namespace Xania.Graphs.Runtime.Tests
                 if (step is Project project)
                 {
                     var parameter = Expression.Parameter(typeof(Vertex));
-                    var select = project.Dict.ToDictionary(kvp => kvp.Key, kvp => Execute(parameter, kvp.Value));
-                    return new ObjectsResult(select);
+
+                    var xmap = project.Dict.ToDictionary(kvp => kvp.Key, kvp =>
+                    {
+                        var selectExpr = Execute(parameter, kvp.Value);
+                        return Expression.Lambda<Func<Vertex, object>>(selectExpr, parameter).Compile();
+                    });
+
+                    return new ObjectsResult(_vertices.Select(v => xmap.ToDictionary(kvp => kvp.Key, kvp => kvp.Value(v))));
                 }
 
                 if (step is Where where)
@@ -281,19 +287,26 @@ namespace Xania.Graphs.Runtime.Tests
                     if (src.Type == typeof(Vertex))
                         return GetExpression(src, st);
 
-                    var p = Expression.Parameter(typeof(Vertex));
-                    var stepExpr = GetExpression(p, st);
+                    var vertexParam = Expression.Parameter(typeof(Vertex));
+                    var stepExpr = GetExpression(vertexParam, st);
 
                     if (stepExpr.Type == typeof(IEnumerable<Vertex>))
                     {
-                        var selectorLambda = Expression.Lambda<Func<Vertex, IEnumerable<Vertex>>>(stepExpr, p);
+                        var selectorLambda = Expression.Lambda<Func<Vertex, IEnumerable<Vertex>>>(stepExpr, vertexParam);
                         var selectManyMethod = SelectMany_TSource_2<Vertex, Vertex>();
                         return Expression.Call(null, selectManyMethod, src, selectorLambda);
                     }
 
+                    if (stepExpr.Type == typeof(string))
+                    {
+                        var selectorLambda = Expression.Lambda(stepExpr, vertexParam);
+                        var selectMethod = Select_TSource_2<Vertex, string>();
+                        return Expression.Call(null, selectMethod, src, selectorLambda);
+                    }
+
                     if (stepExpr.Type == typeof(bool))
                     {
-                        var selectorLambda = Expression.Lambda<Func<Vertex, bool>>(stepExpr, p);
+                        var selectorLambda = Expression.Lambda(stepExpr, vertexParam);
                         var anyMethod = Any_TSource_1<Vertex>();
                         return Expression.Call(null, anyMethod, src, selectorLambda);
                     }
@@ -368,10 +381,14 @@ namespace Xania.Graphs.Runtime.Tests
 
                 if (step is Values values)
                 {
+                    if (values.Name.Equals("id", StringComparison.InvariantCultureIgnoreCase))
+                        return Expression.Property(source, nameof(Vertex.Id));
+
                     Expression<Func<Vertex, Object>> q = from =>
                         from.Properties
                             .Where(e => e.Name.Equals(values.Name, StringComparison.InvariantCultureIgnoreCase))
-                            .Select(e => e.Value).SingleOrDefault();
+                            .Select(e => e.Value.ToClType()).SingleOrDefault();
+
                     return new ReplaceVisitor(q.Parameters[0], source).VisitAndConvert(q.Body);
                 }
 
@@ -390,6 +407,11 @@ namespace Xania.Graphs.Runtime.Tests
                  (s_SelectMany_TSource_2 = new Func<IEnumerable<TSource>, Func<TSource, IEnumerable<TResult>>, IEnumerable<TResult>>(Enumerable.SelectMany).GetMethodInfo().GetGenericMethodDefinition()))
                 .MakeGenericMethod(typeof(TSource), typeof(TResult));
 
+            private static MethodInfo s_Select_TSource_2;
+            public static MethodInfo Select_TSource_2<TSource, TResult>() =>
+                (s_Select_TSource_2 ??
+                 (s_Select_TSource_2 = new Func<IEnumerable<TSource>, Func<TSource, TResult>, IEnumerable<TResult>>(Enumerable.Select).GetMethodInfo().GetGenericMethodDefinition()))
+                .MakeGenericMethod(typeof(TSource), typeof(TResult));
 
             private static MethodInfo s_Where_TSource_1;
             public static MethodInfo Where_TSource_1<TSource>() =>
@@ -409,11 +431,11 @@ namespace Xania.Graphs.Runtime.Tests
 
     internal class ObjectsResult : InMemoryGraphDbContext.IExecuteResult
     {
-        public Dictionary<string, Expression> Dict { get; }
+        public IEnumerable<Dictionary<string, object>> Objects { get; }
 
-        public ObjectsResult(Dictionary<string, Expression> dict)
+        public ObjectsResult(IEnumerable<Dictionary<string, object>> objects)
         {
-            Dict = dict;
+            Objects = objects;
         }
 
         public InMemoryGraphDbContext.IExecuteResult Execute(IStep step)
@@ -423,7 +445,7 @@ namespace Xania.Graphs.Runtime.Tests
 
         public IEnumerable<object> OfType(Type elementType, Graph graph)
         {
-            throw new NotImplementedException();
+            return Objects.Select(e => e.ConvertDictionary(elementType));
         }
     }
 

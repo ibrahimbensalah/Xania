@@ -29,17 +29,11 @@ namespace Xania.Reflection
 
             if (source is IDictionary<string, Object> dict)
             {
-                var valueFactories = dict
-                    .ToDictionary<KeyValuePair<string, object>, string, Func<Type, object>>(
-                        e => e.Key,
-                        e => t => e.Value.Convert(t),
-                        StringComparer.InvariantCultureIgnoreCase
-                    );
-                return targetType.CreateInstance(valueFactories);
+                return ConvertDictionary(dict, targetType);
             }
 
             if (source is IEnumerable enumerable)
-                return Convert(enumerable, targetType);
+                return ConvertMany(enumerable, targetType);
 
             //var value = typeof(string) != modelProperty.PropertyType &&
             //            typeof(IEnumerable).IsAssignableFrom(modelProperty.PropertyType)
@@ -65,7 +59,7 @@ namespace Xania.Reflection
             throw new NotImplementedException();
         }
 
-        public static object Convert(this IEnumerable source, Type targetType)
+        public static object ConvertMany(this IEnumerable source, Type targetType)
         {
             if (source == null)
                 return null;
@@ -87,6 +81,17 @@ namespace Xania.Reflection
                 return Convert(item, targetType);
 
             return null;
+        }
+
+        public static object ConvertDictionary(this IDictionary<string, object> dict, Type targetType)
+        {
+            var valueFactories = dict
+                .ToDictionary<KeyValuePair<string, object>, string, Func<Type, object>>(
+                    e => e.Key,
+                    e => t => e.Value.Convert(t),
+                    StringComparer.InvariantCultureIgnoreCase
+                );
+            return targetType.CreateInstance(valueFactories);
         }
     }
 }
