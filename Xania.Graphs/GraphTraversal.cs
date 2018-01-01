@@ -43,19 +43,38 @@ namespace Xania.Graphs
 
             if (Steps.LastOrDefault() is Alias l)
             {
-                if (!otherSteps.Any(e => e is Select s && s.Label.Equals(l.Value)))
-                    return new GraphTraversal(Steps.Concat(otherSteps))
-                    {
-                    };
-                if (otherSteps.FirstOrDefault() is Select f && f.Label.Equals(l.Value))
-                    return new GraphTraversal(Steps.Concat(otherSteps.Skip(1)))
-                    {
-                    };
+                return new GraphTraversal(Steps.Concat(Optimize(otherSteps, l.Value)));
             }
 
             return new GraphTraversal(Steps.Concat(otherSteps))
             {
             };
+        }
+
+        private static IEnumerable<IStep> Optimize(IEnumerable<IStep> otherSteps, string @alias)
+        {
+            var otherFirst = otherSteps.FirstOrDefault();
+            if (otherFirst is Select select)
+            {
+                if (@select.Label.Equals(alias))
+                    return otherSteps.Skip(1);
+            }
+            else if (otherFirst is Project project)
+            {
+                var o = new Project(project.Dict.ToDictionary(e => e.Key, e => Optimize(e.Value, alias)));
+                return otherSteps.Skip(1).Prepend(o);
+            }
+
+            return otherSteps;
+        }
+
+        private static GraphTraversal Optimize(GraphTraversal traversal, string alias)
+        {
+            var steps = Optimize(traversal.Steps, alias);
+            if (steps.Any())
+                return new GraphTraversal(steps);
+            else
+                return new GraphTraversal(__);
         }
     }
 }

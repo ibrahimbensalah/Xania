@@ -1,14 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace Xania.Graphs
+namespace Xania.Graphs.Structure
 {
-    public class Vertex
+    public class Vertex : GraphObject
     {
         public string Id { get; set; } = Guid.NewGuid().ToString();
         public string Label { get; set; }
-
-        public HashSet<Property> Properties { get; } = new HashSet<Property>();
 
         public Vertex(string label)
         {
@@ -18,6 +16,17 @@ namespace Xania.Graphs
         public override string ToString()
         {
             return $"V['{Id}']";
+        }
+
+        public override object ToClType()
+        {
+            var dict = new Dictionary<string, object>
+            {
+                {"id", Id},
+                {"label", Label}
+            };
+            ToClType(dict);
+            return dict;
         }
     }
 }

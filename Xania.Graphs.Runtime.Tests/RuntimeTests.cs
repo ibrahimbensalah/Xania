@@ -10,6 +10,7 @@ using FluentAssertions;
 using Newtonsoft.Json;
 using NUnit.Framework;
 using Xania.Graphs.Linq;
+using Xania.Graphs.Structure;
 using Xania.Models;
 using Xania.Reflection;
 using TypeExtensions = Xania.Reflection.TypeExtensions;
@@ -168,8 +169,8 @@ namespace Xania.Graphs.Runtime.Tests
         public InMemoryGraphDbContext(Graph graph)
         {
             _graph = graph;
-            var v = graph.Vertices.Where(e => e.Id.Equals("4")).ToArray();
-            Console.WriteLine(JsonConvert.SerializeObject(graph, Formatting.Indented));
+            var array = graph.Vertices.Select(e => e.ToClType()).ToArray();
+            Console.WriteLine(JsonConvert.SerializeObject(array, Formatting.Indented));
         }
 
         public Task<IEnumerable<object>> ExecuteAsync(GraphTraversal traversal, Type elementType)
@@ -275,7 +276,7 @@ namespace Xania.Graphs.Runtime.Tests
 
             private Expression Execute(Expression parameter, GraphTraversal traversal)
             {
-                return traversal.Steps.Aggregate<IStep, Expression>(parameter, (src, st) =>
+                return traversal.Steps.Aggregate(parameter, (src, st) =>
                 {
                     if (src.Type == typeof(Vertex))
                         return GetExpression(src, st);
@@ -333,9 +334,13 @@ namespace Xania.Graphs.Runtime.Tests
 
                         var propertyValueExpr =
                             Expression.Property(propertyParam, typeof(Property), nameof(Property.Value));
-                        var valueExpr = GetExpression(propertyValueExpr, has.CompareStep);
+                        var valueExpr =
+                            Expression.Call(propertyValueExpr, nameof(GraphValue.ToClType), new Type[0]);
 
-                        var propertyLambda = Expression.Lambda(Expression.And(equalName, valueExpr), propertyParam);
+
+                        var valueCompareExpr = GetExpression(valueExpr, has.CompareStep);
+
+                        var propertyLambda = Expression.Lambda(Expression.And(equalName, valueCompareExpr), propertyParam);
 
                         var anyMethod = Any_TSource_1<Property>();
                         return Expression.Call(null, anyMethod, propertiesExpr, propertyLambda);
@@ -359,15 +364,15 @@ namespace Xania.Graphs.Runtime.Tests
                 {
                     Expression<Func<Vertex, IEnumerable<Vertex>>> q = from => _graph.Out(from, O.EdgeLabel);
                     return new ReplaceVisitor(q.Parameters[0], source).VisitAndConvert(q.Body);
-                    // source.SelectMany(e => e.O.Edgelabel)
-                    //var r =
-                    //    _vertices.SelectMany(from =>
-                    //            _graph.Edges.Where(edge =>
-                    //                edge.Label.Equals(O.EdgeLabel, StringComparison.InvariantCultureIgnoreCase) &&
-                    //                edge.OutV.Equals(from.Id, StringComparison.InvariantCultureIgnoreCase)))
-                    //        .Select(edge => _graph.Vertices.Single(to => to.Id.Equals(edge.InV)));
+                }
 
-                    //return new VerticesResult(r, _graph);
+                if (step is Values values)
+                {
+                    Expression<Func<Vertex, Object>> q = from =>
+                        from.Properties
+                            .Where(e => e.Name.Equals(values.Name, StringComparison.InvariantCultureIgnoreCase))
+                            .Select(e => e.Value).SingleOrDefault();
+                    return new ReplaceVisitor(q.Parameters[0], source).VisitAndConvert(q.Body);
                 }
 
                 throw new NotImplementedException($"GetExpression {step.GetType()}");

@@ -4,7 +4,7 @@ using System.Linq;
 
 namespace Xania.Graphs
 {
-    public class Project: IStep
+    public class Project : IStep
     {
         public Dictionary<string, GraphTraversal> Dict { get; }
 
@@ -15,8 +15,15 @@ namespace Xania.Graphs
 
         public override string ToString()
         {
-            return $"project({Dict.Keys.Select(e => $"'{e}'").Join(", ")})" +
-                   $".by(coalesce({Dict.Values.Join(", constant())).by(coalesce(")}, constant()))";
+            return $"project({Dict.Keys.Select(e => $"'{e}'").Join(", ")})." + Dict.Values.Select(By).Join(".");
+            // $".by(coalesce({Dict.Values.Join(", constant())).by(coalesce(")}, constant()))";
+        }
+
+        public string By(GraphTraversal traversal)
+        {
+            if (traversal.Steps.Count() == 1 && traversal.Steps.First() is Context)
+                return $"by({GraphTraversal.__})";
+            return $"by(coalesce({traversal}, constant()))";
         }
     }
 }

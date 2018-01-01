@@ -10,6 +10,11 @@ namespace Xania.Graphs
         {
             return new GraphTraversal(expr);
         }
+
+        public static IEnumerable<T> AsEnumerable<T>(this T item)
+        {
+            yield return item;
+        }
     }
 
     public class AppendEnumerable<T>: IEnumerable<T>

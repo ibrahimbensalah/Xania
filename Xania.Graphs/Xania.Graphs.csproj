@@ -57,6 +57,10 @@
     <Compile Include="OrderBy.cs" />
     <Compile Include="Project.cs" />
     <Compile Include="Runtime\GraphProcessor.cs" />
+    <Compile Include="Structure\GraphObject.cs" />
+    <Compile Include="Structure\GraphList.cs" />
+    <Compile Include="Structure\GraphPrimitive.cs" />
+    <Compile Include="Structure\GraphValue.cs" />
     <Compile Include="TraversalExtensions.cs" />
     <Compile Include="Helper.cs" />
     <Compile Include="IGraphDataContext.cs" />
@@ -64,13 +68,13 @@
     <Compile Include="IStep.cs" />
     <Compile Include="Out.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Property.cs" />
+    <Compile Include="Structure\Property.cs" />
     <Compile Include="Edge.cs" />
     <Compile Include="Scope.cs" />
     <Compile Include="Select.cs" />
     <Compile Include="Term.cs" />
     <Compile Include="Values.cs" />
-    <Compile Include="Vertex.cs" />
+    <Compile Include="Structure\Vertex.cs" />
     <Compile Include="Where.cs" />
   </ItemGroup>
   <ItemGroup>

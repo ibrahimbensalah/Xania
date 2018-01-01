@@ -1,13 +1,13 @@
 ﻿using System;
 
-namespace Xania.Graphs
+namespace Xania.Graphs.Structure
 {
     public class Property
     {
-        public object Value { get; }
+        public GraphValue Value { get; }
         public string Name { get; }
 
-        public Property(string name, object value)
+        public Property(string name, GraphValue value)
         {
             Value = value;
             Name = name.ToCamelCase();
@@ -20,8 +20,8 @@ namespace Xania.Graphs
 
         public override bool Equals(object obj)
         {
-            if (obj is Property)
-                return ((Property)obj).Name.Equals(Name, StringComparison.InvariantCultureIgnoreCase);
+            if (obj is Property property)
+                return property.Name.Equals(Name, StringComparison.InvariantCultureIgnoreCase);
             return false;
         }
     }

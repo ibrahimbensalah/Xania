@@ -43,6 +43,8 @@ namespace Xania.CosmosDb.Tests.Gremlin
         [Test]
         public void FilterByFirstName()
         {
+            Db.Log += Console.WriteLine;
+
             var array =
                 from p in People
                 where p.FirstName == "Ibrahim"
@@ -76,8 +78,10 @@ namespace Xania.CosmosDb.Tests.Gremlin
         [Test]
         public void GremlinTest()
         {
+            Db.Log += Console.WriteLine;
+
             Db.ExecuteGremlinAsync(
-                "g.V().hasLabel('person')"
+                "g.V().hasLabel('person').has('id', eq('1')).as('p').project('composite').by(coalesce(project('person').by(__), constant()))"
             ).Wait();
         }
 
@@ -184,6 +188,8 @@ namespace Xania.CosmosDb.Tests.Gremlin
         [Test]
         public void SelectCustomResultWithNested()
         {
+            Db.Log += Console.WriteLine;
+
             var view =
             (from p in People
                 where p.Id == 1

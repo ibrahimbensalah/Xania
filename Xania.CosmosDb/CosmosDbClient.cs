@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using Microsoft.Azure.Documents;
 using Microsoft.Azure.Documents.Client;
 using Xania.Graphs;
+using Xania.Graphs.Structure;
 using Xania.Reflection;
 using GraphTraversal = Xania.Graphs.GraphTraversal;
 
@@ -87,20 +88,6 @@ namespace Xania.CosmosDb
             {
                 var vertexJson = (JObject)token;
                 var type = vertexJson.Value<string>("type");
-                //if (string.Equals(type, "edge"))
-                //{
-                //    var relationJson = vertexJson;
-                //    var id = relationJson.Value<string>("id");
-                //    var label = relationJson.Value<string>("label");
-                //    var targetId = relationJson.Value<string>("inV");
-                //    var sourceId = relationJson.Value<string>("outV");
-
-                //    var relation = new Relation(sourceId, label, targetId)
-                //    {
-                //        Id = id
-                //    };
-                //    return relation;
-                //}
 
                 if (string.Equals(type, "vertex"))
                 {

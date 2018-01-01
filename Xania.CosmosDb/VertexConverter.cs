@@ -1,8 +1,8 @@
 ﻿using System;
-using Microsoft.Azure.Documents.SystemFunctions;
+using System.Collections.Generic;
+using System.Linq;
 using Newtonsoft.Json;
-using Xania.Graphs;
-using Xania.Reflection;
+using Xania.Graphs.Structure;
 
 namespace Xania.CosmosDb
 {
@@ -30,16 +30,22 @@ namespace Xania.CosmosDb
             {
                 writer.WritePropertyName(prop.Name);
                 writer.WriteStartArray();
-                var v = prop.Value;
+                foreach (var v in ToObject(prop.Value))
                 {
                     writer.WriteStartObject();
                     writer.WritePropertyName("_value");
-                    if (v == null)
-                        writer.WriteNull();
-                    else if (v.GetType().IsPrimitive())
+                    if (v is IDictionary<string, object> dict)
+                    {
+                        writer.WriteStartObject();
+                        foreach (var kvp in dict)
+                        {
+                            writer.WritePropertyName(kvp.Key);
+                            serializer.Serialize(writer, kvp.Value);
+                        }
+                        writer.WriteEndObject();
+                    }
+                    else
                         writer.WriteValue(v);
-                    else 
-                        serializer.Serialize(writer, v);
                     writer.WritePropertyName("id");
                     writer.WriteValue(Guid.NewGuid());
                     writer.WriteEndObject();
@@ -47,6 +53,13 @@ namespace Xania.CosmosDb
                 writer.WriteEndArray();
             }
             writer.WriteEndObject();
+        }
+
+        private IEnumerable<object> ToObject(GraphValue value)
+        {
+            if (value is GraphList l)
+                return l.Items.Select(e => e.ToClType());
+            return new[] { value.ToClType() };
         }
     }
 }
