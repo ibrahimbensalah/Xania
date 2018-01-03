@@ -132,9 +132,9 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Xania.Models\Xania.Models.csproj">
-      <Project>{734CB10C-3CD7-48A9-97EC-F83F7D242437}</Project>
-      <Name>Xania.Models</Name>
+    <ProjectReference Include="..\Xania.Invoice.Domain\Xania.Invoice.Domain.csproj">
+      <Project>{629A36A0-0780-4CFD-A3EC-FAA2DBE65753}</Project>
+      <Name>Xania.Invoice.Domain</Name>
     </ProjectReference>
     <ProjectReference Include="..\Xania.QL\Xania.QL.csproj">
       <Project>{A8A25CB8-661C-4050-B7E4-C2C8380526B4}</Project>

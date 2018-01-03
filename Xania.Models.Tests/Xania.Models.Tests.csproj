@@ -265,13 +265,13 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\Xania.Invoice.Domain\Xania.Invoice.Domain.csproj">
+      <Project>{629A36A0-0780-4CFD-A3EC-FAA2DBE65753}</Project>
+      <Name>Xania.Invoice.Domain</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Xania.Models.DocumentDB\Xania.Models.DocumentDB.csproj">
       <Project>{A0C38B29-4D13-42D5-A8C6-F1C1F41D0117}</Project>
       <Name>Xania.Models.DocumentDB</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Xania.Models\Xania.Models.csproj">
-      <Project>{734cb10c-3cd7-48a9-97ec-f83f7d242437}</Project>
-      <Name>Xania.Models</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

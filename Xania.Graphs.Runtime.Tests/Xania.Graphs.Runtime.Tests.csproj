@@ -53,9 +53,6 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="..\Xania.CosmosDb\VertexConverter.cs">
-      <Link>VertexConverter.cs</Link>
-    </Compile>
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RuntimeTests.cs" />
     <Compile Include="SelectTests.cs" />
@@ -68,9 +65,9 @@
       <Project>{597c682a-53cd-4bdd-a042-913e45a3eaf0}</Project>
       <Name>Xania.Graphs</Name>
     </ProjectReference>
-    <ProjectReference Include="..\Xania.Models\Xania.Models.csproj">
-      <Project>{734CB10C-3CD7-48A9-97EC-F83F7D242437}</Project>
-      <Name>Xania.Models</Name>
+    <ProjectReference Include="..\Xania.Invoice.Domain\Xania.Invoice.Domain.csproj">
+      <Project>{629A36A0-0780-4CFD-A3EC-FAA2DBE65753}</Project>
+      <Name>Xania.Invoice.Domain</Name>
     </ProjectReference>
     <ProjectReference Include="..\Xania.Reflection\Xania.Reflection.csproj">
       <Project>{6320F29A-F0C9-48E7-BF6E-A56B0B448352}</Project>

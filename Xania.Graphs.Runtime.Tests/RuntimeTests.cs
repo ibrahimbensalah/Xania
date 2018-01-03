@@ -3,15 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using System.Security.Principal;
-using System.Text;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Newtonsoft.Json;
 using NUnit.Framework;
 using Xania.Graphs.Linq;
 using Xania.Graphs.Structure;
-using Xania.Models;
+using Xania.Invoice.Domain;
 using Xania.Reflection;
 using TypeExtensions = Xania.Reflection.TypeExtensions;
 
@@ -176,280 +174,245 @@ namespace Xania.Graphs.Runtime.Tests
         public Task<IEnumerable<object>> ExecuteAsync(GraphTraversal traversal, Type elementType)
         {
             var graph = _graph;
-            IExecuteResult result = new VerticesResult(graph.Vertices, graph);
             Console.WriteLine(traversal);
 
-            var aliases = new Dictionary<string, IExecuteResult>();
-
-            foreach (var step in traversal.Steps)
-            {
-                if (step is Alias a)
-                    aliases[a.Value] = result;
-                else
-                    result = result.Execute(step);
-            }
+            var result = new VerticesResult(graph.Vertices, graph).Execute(traversal);
 
             return Task.FromResult(result.OfType(elementType, graph));
         }
 
-        private object CreateInstance(Vertex v, Type elementType)
-        {
-            var valueFactories = v.Properties
-                .ToDictionary<Property, string, Func<Type, object>>(
-                    e => e.Name,
-                    e => t => e.Value.Convert(t),
-                    StringComparer.InvariantCultureIgnoreCase
-                );
-            valueFactories.Add("id", v.Id.ConvertMany);
-            return elementType.CreateInstance(valueFactories);
-        }
-
-
-        public interface IExecuteResult
-        {
-            IExecuteResult Execute(IStep step);
-            IEnumerable<object> OfType(Type elementType, Graph graph);
-        }
-
-        private class VerticesResult : IExecuteResult
-        {
-            private readonly IEnumerable<Vertex> _vertices;
-            private readonly Graph _graph;
-
-            public VerticesResult(IEnumerable<Vertex> vertices, Graph graph)
-            {
-                _vertices = vertices;
-                _graph = graph;
-            }
-
-            public IExecuteResult Execute(IStep step)
-            {
-                if (step is V V)
-                {
-                    var r = _vertices.Where(vertex =>
-                        vertex.Label.Equals(V.Label, StringComparison.InvariantCultureIgnoreCase));
-                    return new VerticesResult(r, _graph);
-                }
-
-                if (step is Values values)
-                {
-                    var x = _vertices.Select(vtx =>
-                        vtx.Properties.Where(p => p.Name.Equals(values.Name, StringComparison.InvariantCultureIgnoreCase))
-                            .Select(e => e.Value).SingleOrDefault());
-
-                    return new ValuesResult(x);
-                }
-
-                if (step is Out O)
-                {
-                    var r = _vertices.SelectMany(from => _graph.Out(from, O.EdgeLabel));
-                    return new VerticesResult(r, _graph);
-                }
-
-                if (step is Has has)
-                {
-                    var par = Expression.Parameter(typeof(Vertex));
-                    var lambda = Expression.Lambda<Func<Vertex, bool>>(GetExpression(par, has), par).Compile();
-                    var r = _vertices.Where(lambda);
-                    return new VerticesResult(r, _graph);
-                }
-
-
-                if (step is Project project)
-                {
-                    var parameter = Expression.Parameter(typeof(Vertex));
-
-                    var xmap = project.Dict.ToDictionary(kvp => kvp.Key, kvp =>
-                    {
-                        var selectExpr = Execute(parameter, kvp.Value);
-                        return Expression.Lambda<Func<Vertex, object>>(selectExpr, parameter).Compile();
-                    });
-
-                    return new ObjectsResult(_vertices.Select(v => xmap.ToDictionary(kvp => kvp.Key, kvp => kvp.Value(v))));
-                }
-
-                if (step is Where where)
-                {
-                    var parameter = Expression.Parameter(typeof(Vertex));
-                    var predicateExpr = Execute(parameter, where.Predicate);
-
-                    var lambda = Expression.Lambda<Func<Vertex, bool>>(predicateExpr, parameter).Compile();
-                    return new VerticesResult(_vertices.Where(lambda), _graph);
-                }
-
-                throw new NotImplementedException($"Execute {step.GetType()}");
-            }
-
-            private Expression Execute(Expression parameter, GraphTraversal traversal)
-            {
-                return traversal.Steps.Aggregate(parameter, (src, st) =>
-                {
-                    if (src.Type == typeof(Vertex))
-                        return GetExpression(src, st);
-
-                    var vertexParam = Expression.Parameter(typeof(Vertex));
-                    var stepExpr = GetExpression(vertexParam, st);
-
-                    if (stepExpr.Type == typeof(IEnumerable<Vertex>))
-                    {
-                        var selectorLambda = Expression.Lambda<Func<Vertex, IEnumerable<Vertex>>>(stepExpr, vertexParam);
-                        var selectManyMethod = SelectMany_TSource_2<Vertex, Vertex>();
-                        return Expression.Call(null, selectManyMethod, src, selectorLambda);
-                    }
-
-                    if (stepExpr.Type == typeof(string))
-                    {
-                        var selectorLambda = Expression.Lambda(stepExpr, vertexParam);
-                        var selectMethod = Select_TSource_2<Vertex, string>();
-                        return Expression.Call(null, selectMethod, src, selectorLambda);
-                    }
-
-                    if (stepExpr.Type == typeof(bool))
-                    {
-                        var selectorLambda = Expression.Lambda(stepExpr, vertexParam);
-                        var anyMethod = Any_TSource_1<Vertex>();
-                        return Expression.Call(null, anyMethod, src, selectorLambda);
-                    }
-
-                    throw new NotImplementedException();
-                    //if (stepExpr.Type == typeof(bool))
-                    //{
-                    //    return stepExpr;
-                    //}
-                    //else
-                    //{
-                    //    return stepExpr;
-                    //    //var selectorLambda = Expression.Lambda<Func<Vertex, IEnumerable<Vertex>>>(selectorBody, p);
-                    //    //var selectManyMethod = SelectMany_TSource_2<Vertex, Vertex>();
-                    //    //return Expression.Call(null, selectManyMethod, src, selectorLambda);
-                    //}
-                });
-            }
-
-            private Expression GetExpression(Expression source, IStep step)
-            {
-                if (step is Has has)
-                {
-                    if (has.Property.Equals("id", StringComparison.InvariantCultureIgnoreCase))
-                    {
-                        var idExpr = Expression.Property(source, nameof(Vertex.Id));
-                        return GetExpression(idExpr, has.CompareStep);
-                    }
-                    else
-                    {
-                        var propertiesExpr = Expression.Property(source, "Properties");
-
-                        var propertyParam = Expression.Parameter(typeof(Property));
-
-                        var propertyNameExpr =
-                            Expression.Property(propertyParam, typeof(Property), nameof(Property.Name));
-                        var equalName = Expression.Equal(propertyNameExpr, Expression.Constant(has.Property));
-
-                        var propertyValueExpr =
-                            Expression.Property(propertyParam, typeof(Property), nameof(Property.Value));
-                        var valueExpr =
-                            Expression.Call(propertyValueExpr, nameof(GraphValue.ToClType), new Type[0]);
-
-
-                        var valueCompareExpr = GetExpression(valueExpr, has.CompareStep);
-
-                        var propertyLambda = Expression.Lambda(Expression.And(equalName, valueCompareExpr), propertyParam);
-
-                        var anyMethod = Any_TSource_1<Property>();
-                        return Expression.Call(null, anyMethod, propertiesExpr, propertyLambda);
-                    }
-                }
-
-                if (step is Eq eq)
-                {
-                    Func<Object, Object, bool> equals = Object.Equals;
-                    return Expression.Call(null, equals.Method, source, GetExpression(null, eq.Steps.Single()));
-                    // return Expression.Equal(source, GetExpression(null, eq.Steps.Single()));
-                }
-
-                if (step is Const cons)
-                    return Expression.Constant(cons.Value);
-
-                if (step is Context)
-                    return source;
-
-                if (step is Out O)
-                {
-                    Expression<Func<Vertex, IEnumerable<Vertex>>> q = from => _graph.Out(from, O.EdgeLabel);
-                    return new ReplaceVisitor(q.Parameters[0], source).VisitAndConvert(q.Body);
-                }
-
-                if (step is Values values)
-                {
-                    if (values.Name.Equals("id", StringComparison.InvariantCultureIgnoreCase))
-                        return Expression.Property(source, nameof(Vertex.Id));
-
-                    Expression<Func<Vertex, Object>> q = from =>
-                        from.Properties
-                            .Where(e => e.Name.Equals(values.Name, StringComparison.InvariantCultureIgnoreCase))
-                            .Select(e => e.Value.ToClType()).SingleOrDefault();
-
-                    return new ReplaceVisitor(q.Parameters[0], source).VisitAndConvert(q.Body);
-                }
-
-                throw new NotImplementedException($"GetExpression {step.GetType()}");
-            }
-
-            public IEnumerable<object> OfType(Type elementType, Graph graph)
-            {
-                var cache = new Dictionary<Vertex, object>();
-                return _vertices.Select(v => graph.ToObject(v, elementType, cache));
-            }
-
-            private static MethodInfo s_SelectMany_TSource_2;
-            public static MethodInfo SelectMany_TSource_2<TSource, TResult>() =>
-                (s_SelectMany_TSource_2 ??
-                 (s_SelectMany_TSource_2 = new Func<IEnumerable<TSource>, Func<TSource, IEnumerable<TResult>>, IEnumerable<TResult>>(Enumerable.SelectMany).GetMethodInfo().GetGenericMethodDefinition()))
-                .MakeGenericMethod(typeof(TSource), typeof(TResult));
-
-            private static MethodInfo s_Select_TSource_2;
-            public static MethodInfo Select_TSource_2<TSource, TResult>() =>
-                (s_Select_TSource_2 ??
-                 (s_Select_TSource_2 = new Func<IEnumerable<TSource>, Func<TSource, TResult>, IEnumerable<TResult>>(Enumerable.Select).GetMethodInfo().GetGenericMethodDefinition()))
-                .MakeGenericMethod(typeof(TSource), typeof(TResult));
-
-            private static MethodInfo s_Where_TSource_1;
-            public static MethodInfo Where_TSource_1<TSource>() =>
-                (s_Where_TSource_1 ??
-                 (s_Where_TSource_1 = new Func<IEnumerable<TSource>, Func<TSource, bool>, IEnumerable<TSource>>(Enumerable.Where).GetMethodInfo().GetGenericMethodDefinition()))
-                .MakeGenericMethod(typeof(TSource));
-
-            private static MethodInfo s_Any_TSource_1;
-            public static MethodInfo Any_TSource_1<TSource>() =>
-                (s_Any_TSource_1 ??
-                 (s_Any_TSource_1 = new Func<IEnumerable<TSource>, Func<TSource, bool>, bool>(Enumerable.Any)
-                     .GetMethodInfo().GetGenericMethodDefinition()))
-                .MakeGenericMethod(typeof(TSource));
-
-        }
     }
 
-    internal class ObjectsResult : InMemoryGraphDbContext.IExecuteResult
+    public class VerticesResult : IExecuteResult
     {
-        public IEnumerable<Dictionary<string, object>> Objects { get; }
+        private readonly IEnumerable<Vertex> _vertices;
+        private readonly Graph _graph;
 
-        public ObjectsResult(IEnumerable<Dictionary<string, object>> objects)
+        public VerticesResult(IEnumerable<Vertex> vertices, Graph graph)
+        {
+            _vertices = vertices;
+            _graph = graph;
+        }
+
+        public IExecuteResult Execute(IStep step)
+        {
+            if (step is Alias)
+                return this;
+
+            if (step is V V)
+            {
+                var r = _vertices.Where(vertex =>
+                    vertex.Label.Equals(V.Label, StringComparison.InvariantCultureIgnoreCase));
+                return new VerticesResult(r, _graph);
+            }
+
+            if (step is Values values)
+            {
+                var x = _vertices.Select(vtx =>
+                    vtx.Properties.Where(p => p.Name.Equals(values.Name, StringComparison.InvariantCultureIgnoreCase))
+                        .Select(e => e.Value).SingleOrDefault());
+
+                return new ValuesResult(x);
+            }
+
+            if (step is Out O)
+            {
+                var r = _vertices.SelectMany(from => _graph.Out(from, O.EdgeLabel));
+                return new VerticesResult(r, _graph);
+            }
+
+            if (step is Has has)
+            {
+                var par = Expression.Parameter(typeof(Vertex));
+                var lambda = Expression.Lambda<Func<Vertex, bool>>(GetExpression(par, has), par).Compile();
+                var r = _vertices.Where(lambda);
+                return new VerticesResult(r, _graph);
+            }
+
+
+            if (step is Project project)
+            {
+                var parameter = Expression.Parameter(typeof(Vertex));
+
+                var properties = _vertices.Select(
+                    vertex =>
+                    {
+                        var xr = new VerticesResult(new[] { vertex }, _graph);
+                        return project.Dict.ToDictionary(kvp => kvp.Key, kvp => xr.Execute(kvp.Value));
+                    });
+
+                return new ObjectsResult(properties);
+            }
+
+            if (step is Where where)
+            {
+                var parameter = Expression.Parameter(typeof(Vertex));
+                var predicateExpr = GetExpression(parameter, where.Predicate);
+
+                var lambda = Expression.Lambda<Func<Vertex, bool>>(predicateExpr, parameter).Compile();
+                return new VerticesResult(_vertices.Where(lambda), _graph);
+            }
+
+            throw new NotImplementedException($"Execute {step.GetType()}");
+        }
+
+        private Expression GetExpression(Expression source, GraphTraversal traversal)
+        {
+            return traversal.Steps.Aggregate(source, (src, st) =>
+            {
+                if (src.Type == typeof(Vertex))
+                    return GetExpression(src, st);
+
+                var vertexParam = Expression.Parameter(typeof(Vertex));
+                var stepExpr = GetExpression(vertexParam, st);
+
+                if (stepExpr.Type == typeof(IEnumerable<Vertex>))
+                {
+                    var selectorLambda = Expression.Lambda<Func<Vertex, IEnumerable<Vertex>>>(stepExpr, vertexParam);
+                    var selectManyMethod = SelectMany_TSource_2<Vertex, Vertex>();
+                    return Expression.Call(null, selectManyMethod, src, selectorLambda);
+                }
+
+                if (stepExpr.Type == typeof(string))
+                {
+                    var selectorLambda = Expression.Lambda(stepExpr, vertexParam);
+                    var selectMethod = Select_TSource_2<Vertex, string>();
+                    return Expression.Call(null, selectMethod, src, selectorLambda);
+                }
+
+                if (stepExpr.Type == typeof(bool))
+                {
+                    var selectorLambda = Expression.Lambda(stepExpr, vertexParam);
+                    var anyMethod = Any_TSource_1<Vertex>();
+                    return Expression.Call(null, anyMethod, src, selectorLambda);
+                }
+
+                throw new NotImplementedException();
+            });
+        }
+
+        private Expression GetExpression(Expression source, IStep step)
+        {
+            if (step is Has has)
+            {
+                if (has.Property.Equals("id", StringComparison.InvariantCultureIgnoreCase))
+                {
+                    var idExpr = Expression.Property(source, nameof(Vertex.Id));
+                    return GetExpression(idExpr, has.CompareStep);
+                }
+                else
+                {
+                    var propertiesExpr = Expression.Property(source, "Properties");
+
+                    var propertyParam = Expression.Parameter(typeof(Property));
+
+                    var propertyNameExpr =
+                        Expression.Property(propertyParam, typeof(Property), nameof(Property.Name));
+                    var equalName = Expression.Equal(propertyNameExpr, Expression.Constant(has.Property));
+
+                    var propertyValueExpr =
+                        Expression.Property(propertyParam, typeof(Property), nameof(Property.Value));
+                    var valueExpr =
+                        Expression.Call(propertyValueExpr, nameof(GraphValue.ToClType), new Type[0]);
+
+
+                    var valueCompareExpr = GetExpression(valueExpr, has.CompareStep);
+
+                    var propertyLambda = Expression.Lambda(Expression.And(equalName, valueCompareExpr), propertyParam);
+
+                    var anyMethod = Any_TSource_1<Property>();
+                    return Expression.Call(null, anyMethod, propertiesExpr, propertyLambda);
+                }
+            }
+
+            if (step is Eq eq)
+            {
+                Func<Object, Object, bool> equals = Equals;
+                return Expression.Call(null, equals.Method, source, GetExpression(null, eq.Steps.Single()));
+                // return Expression.Equal(source, GetExpression(null, eq.Steps.Single()));
+            }
+
+            if (step is Const cons)
+                return Expression.Constant(cons.Value);
+
+            if (step is Context)
+                return source;
+
+            if (step is Out O)
+            {
+                Expression<Func<Vertex, IEnumerable<Vertex>>> q = from => _graph.Out(from, O.EdgeLabel);
+                return new ReplaceVisitor(q.Parameters[0], source).VisitAndConvert(q.Body);
+            }
+
+            if (step is Values values)
+            {
+                if (values.Name.Equals("id", StringComparison.InvariantCultureIgnoreCase))
+                    return Expression.Property(source, nameof(Vertex.Id));
+
+                Expression<Func<Vertex, Object>> q = from =>
+                    from.Properties
+                        .Where(e => e.Name.Equals(values.Name, StringComparison.InvariantCultureIgnoreCase))
+                        .Select(e => e.Value.ToClType()).SingleOrDefault();
+
+                return new ReplaceVisitor(q.Parameters[0], source).VisitAndConvert(q.Body);
+            }
+
+            throw new NotImplementedException($"GetExpression {step.GetType()}");
+        }
+
+        public IEnumerable<object> OfType(Type elementType, Graph graph)
+        {
+            var cache = new Dictionary<Vertex, object>();
+            return _vertices.Select(v => graph.ToObject(v, elementType, cache));
+        }
+
+        private static MethodInfo s_SelectMany_TSource_2;
+        public static MethodInfo SelectMany_TSource_2<TSource, TResult>() =>
+            (s_SelectMany_TSource_2 ??
+             (s_SelectMany_TSource_2 = new Func<IEnumerable<TSource>, Func<TSource, IEnumerable<TResult>>, IEnumerable<TResult>>(Enumerable.SelectMany).GetMethodInfo().GetGenericMethodDefinition()))
+            .MakeGenericMethod(typeof(TSource), typeof(TResult));
+
+        private static MethodInfo s_Select_TSource_2;
+        public static MethodInfo Select_TSource_2<TSource, TResult>() =>
+            (s_Select_TSource_2 ??
+             (s_Select_TSource_2 = new Func<IEnumerable<TSource>, Func<TSource, TResult>, IEnumerable<TResult>>(Enumerable.Select).GetMethodInfo().GetGenericMethodDefinition()))
+            .MakeGenericMethod(typeof(TSource), typeof(TResult));
+
+        private static MethodInfo s_Any_TSource_1;
+        public static MethodInfo Any_TSource_1<TSource>() =>
+            (s_Any_TSource_1 ??
+             (s_Any_TSource_1 = new Func<IEnumerable<TSource>, Func<TSource, bool>, bool>(Enumerable.Any)
+                 .GetMethodInfo().GetGenericMethodDefinition()))
+            .MakeGenericMethod(typeof(TSource));
+
+    }
+
+    internal class ObjectsResult : IExecuteResult
+    {
+        public IEnumerable<Dictionary<string, IExecuteResult>> Objects { get; }
+
+        public ObjectsResult(IEnumerable<Dictionary<string, IExecuteResult>> objects)
         {
             Objects = objects;
         }
 
-        public InMemoryGraphDbContext.IExecuteResult Execute(IStep step)
+        public IExecuteResult Execute(IStep step)
         {
             throw new NotImplementedException();
         }
 
         public IEnumerable<object> OfType(Type elementType, Graph graph)
         {
-            return Objects.Select(e => e.ConvertDictionary(elementType));
+            return Objects.Select(e => GetFactories(e, graph)).Select(elementType.CreateInstance);
+        }
+
+        public IDictionary<string, Func<Type, object>> GetFactories(IDictionary<string, IExecuteResult> properties, Graph graph)
+        {
+            return properties.ToDictionary<KeyValuePair<string, IExecuteResult>, string, Func<Type, object>>(e => e.Key, e => t => e.Value.OfType(t, graph), StringComparer.InvariantCultureIgnoreCase);
         }
     }
 
-    internal class ValuesResult : InMemoryGraphDbContext.IExecuteResult
+    internal class ValuesResult : IExecuteResult
     {
         public IEnumerable<object> Values { get; }
 
@@ -458,13 +421,15 @@ namespace Xania.Graphs.Runtime.Tests
             Values = values.ToArray();
         }
 
-        public InMemoryGraphDbContext.IExecuteResult Execute(IStep step)
+        public IExecuteResult Execute(IStep step)
         {
             if (step is Out o)
             {
-                var r = Values.OfType<IDictionary<string, object>>().Where(e => e.ContainsKey(o.EdgeLabel)).Select(e => e[o.EdgeLabel]);
+                var r = Values.OfType<IDictionary<string, object>>().Where(e => e.ContainsKey(o.EdgeLabel))
+                    .Select(e => e[o.EdgeLabel]);
                 return new ValuesResult(r);
             }
+
             throw new NotImplementedException("Execute ");
         }
 
@@ -501,4 +466,19 @@ namespace Xania.Graphs.Runtime.Tests
             return base.Visit(node);
         }
     }
+
+    public static class ExecuteResultExtensions
+    {
+        public static IExecuteResult Execute(this IExecuteResult result, GraphTraversal traversal)
+        {
+            return traversal.Steps.Aggregate(result, (r, step) => r.Execute(step));
+        }
+    }
+
+    public interface IExecuteResult
+    {
+        IExecuteResult Execute(IStep traversal);
+        IEnumerable<object> OfType(Type elementType, Graph graph);
+    }
+
 }

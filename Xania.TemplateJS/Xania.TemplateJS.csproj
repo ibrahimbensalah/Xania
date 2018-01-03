@@ -58,8 +58,8 @@
   <ItemGroup>
     <ProjectReference Include="..\Xania.CosmosDb\Xania.CosmosDb.csproj" />
     <ProjectReference Include="..\Xania.DataAccess\Xania.DataAccess.csproj" />
+    <ProjectReference Include="..\Xania.Invoice.Domain\Xania.Invoice.Domain.csproj" />
     <ProjectReference Include="..\Xania.Models.DocumentDB\Xania.Models.DocumentDB.csproj" />
-    <ProjectReference Include="..\Xania.Models\Xania.Models.csproj" />
     <ProjectReference Include="..\Xania.QL\Xania.QL.csproj" />
   </ItemGroup>
 

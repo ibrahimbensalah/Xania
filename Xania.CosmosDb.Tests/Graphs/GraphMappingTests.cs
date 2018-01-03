@@ -8,7 +8,7 @@ using NUnit.Framework;
 using Xania.CosmosDb.Tests.Gremlin;
 using Xania.Data.DocumentDB;
 using Xania.Graphs;
-using Xania.Models;
+using Xania.Invoice.Domain;
 
 namespace Xania.CosmosDb.Tests.Graphs
 {

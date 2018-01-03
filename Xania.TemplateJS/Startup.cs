@@ -21,7 +21,7 @@ using Xania.Data.DocumentDB;
 using Xania.DataAccess;
 using Xania.Graphs;
 using Xania.Graphs.Linq;
-using Xania.Models;
+using Xania.Invoice.Domain;
 using Xania.TemplateJS.Controllers;
 using Xania.TemplateJS.Reporting;
 
@@ -88,7 +88,7 @@ namespace Xania.TemplateJS
                 companyStore.Add(company);
             }
 
-            services.AddTransient<IObjectStore<Invoice>>(ctx => dataContext.Store<Invoice>());
+            services.AddTransient<IObjectStore<Invoice.Domain.Invoice>>(ctx => dataContext.Store<Invoice.Domain.Invoice>());
             services.AddTransient<IObjectStore<Company>>(ctx => companyStore);
             services.AddTransient<IObjectStore<TimeDeclaration>>(ctx => dataContext.Store<TimeDeclaration>());
             services.AddTransient<IObjectStore<TimeSheet>>(ctx => dataContext.Store<TimeSheet>());

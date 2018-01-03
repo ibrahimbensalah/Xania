@@ -8,7 +8,7 @@ using System.Reflection.Emit;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Xania.DataAccess;
-using Xania.Models;
+using Xania.Invoice.Domain;
 using Xania.QL;
 using Xania.TemplateJS.Reporting;
 
@@ -17,10 +17,10 @@ namespace Xania.TemplateJS.Controllers
     [Route("api/[controller]")]
     public class InvoiceController : Controller
     {
-        private readonly IObjectStore<Invoice> _invoiceStore;
+        private readonly IObjectStore<Invoice.Domain.Invoice> _invoiceStore;
         private readonly IObjectStore<Company> _companyStore;
 
-        public InvoiceController(IObjectStore<Invoice> invoiceStore, IObjectStore<Company> companyStore)
+        public InvoiceController(IObjectStore<Invoice.Domain.Invoice> invoiceStore, IObjectStore<Company> companyStore)
         {
             _invoiceStore = invoiceStore;
             _companyStore = companyStore;
@@ -84,7 +84,7 @@ namespace Xania.TemplateJS.Controllers
         }
 
         [HttpPost]
-        public async Task<Invoice> Add([FromBody]Invoice invoice)
+        public async Task<Invoice.Domain.Invoice> Add([FromBody]Invoice.Domain.Invoice invoice)
         {
             if (invoice == null)
                 throw new NullReferenceException();
@@ -94,7 +94,7 @@ namespace Xania.TemplateJS.Controllers
         }
 
         [HttpPut, Route("{invoiceNumber}")]
-        public async Task<Invoice> Update(string invoiceNumber, [FromBody]Invoice invoice)
+        public async Task<Invoice.Domain.Invoice> Update(string invoiceNumber, [FromBody]Invoice.Domain.Invoice invoice)
         {
             if (invoice == null)
                 throw new NullReferenceException();
@@ -104,7 +104,7 @@ namespace Xania.TemplateJS.Controllers
         }
 
         [HttpPost, Route("{invoiceNumber}")]
-        public Invoice Get(string invoiceNumber)
+        public Invoice.Domain.Invoice Get(string invoiceNumber)
         {
             return 
                 _invoiceStore.FirstOrDefault(x => string.Equals(x.InvoiceNumber, invoiceNumber, StringComparison.OrdinalIgnoreCase))
@@ -112,7 +112,7 @@ namespace Xania.TemplateJS.Controllers
         }
 
         [HttpPut, Route("{invoiceNumber}/close")]
-        public async Task<Invoice> Close(string invoiceNumber, [FromBody]Invoice invoice)
+        public async Task<Invoice.Domain.Invoice> Close(string invoiceNumber, [FromBody]Invoice.Domain.Invoice invoice)
         {
             invoice.InvoiceDate = DateTime.UtcNow;
             await _invoiceStore.UpdateAsync(invoice);

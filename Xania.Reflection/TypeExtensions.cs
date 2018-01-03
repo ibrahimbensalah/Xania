@@ -108,7 +108,7 @@ namespace Xania.Reflection
             return CreateInstance(type, factories);
         }
 
-        public static object CreateInstance(this Type type, Dictionary<string, Func<Type, object>> properties)
+        public static object CreateInstance(this Type type, IDictionary<string, Func<Type, object>> properties)
         {
             if (type.IsAnonymousType())
             {

@@ -5,6 +5,7 @@ using System.Text;
 using Microsoft.Extensions.Configuration;
 using NUnit.Framework;
 using Xania.Data.DocumentDB;
+using Xania.Invoice.Domain;
 
 namespace Xania.Models.Tests
 {
@@ -26,9 +27,9 @@ namespace Xania.Models.Tests
         {
             using (var db = new XaniaDataContext(_endpointUrl, _primaryKey))
             {
-                var store = db.Store<Invoice>();
+                var store = db.Store<Invoice.Domain.Invoice>();
 
-                store.AddAsync(new Invoice {Description = "test item"}).Wait();
+                store.AddAsync(new Invoice.Domain.Invoice {Description = "test item"}).Wait();
 
                 var queryable = store.Query().Where(e => e.Description.Equals("test item"));
                 Console.WriteLine(queryable.ToString());
@@ -47,15 +48,15 @@ namespace Xania.Models.Tests
         {
             using (var db = new XaniaDataContext(_endpointUrl, _primaryKey))
             {
-                var invoiceStore = db.Store<Invoice>();
-                invoiceStore.AddAsync(new Invoice
+                var invoiceStore = db.Store<Invoice.Domain.Invoice>();
+                invoiceStore.AddAsync(new Invoice.Domain.Invoice
                 {
                     Id = ToGuid(4),
                     Description = "invoice 1",
                     InvoiceNumber = "201701",
                     CompanyId = ToGuid(1)
                 }).Wait();
-                invoiceStore.AddAsync(new Invoice
+                invoiceStore.AddAsync(new Invoice.Domain.Invoice
                 {
                     Id = ToGuid(5),
                     Description = "invoice 2",
@@ -63,7 +64,7 @@ namespace Xania.Models.Tests
                     CompanyId = ToGuid(2),
                     InvoiceDate = DateTime.Now
                 }).Wait();
-                invoiceStore.AddAsync(new Invoice
+                invoiceStore.AddAsync(new Invoice.Domain.Invoice
                 {
                     Id = ToGuid(6),
                     Description = "invoice 3",
@@ -124,7 +125,7 @@ namespace Xania.Models.Tests
         {
             using (var db = new XaniaDataContext(_endpointUrl, _primaryKey))
             {
-                db.Store<Invoice>().DeleteAsync(invoice => true).Wait();
+                db.Store<Invoice.Domain.Invoice>().DeleteAsync(invoice => true).Wait();
             }
             
         }

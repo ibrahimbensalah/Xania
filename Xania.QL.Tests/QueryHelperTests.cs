@@ -9,8 +9,8 @@ using System.Net.Http.Formatting;
 using System.Text;
 using FluentAssertions;
 using NUnit.Framework;
+using Xania.Invoice.Domain;
 using Xania.QL.Tests.Properties;
-using Xania.Models;
 using Xania.Reflection;
 using Xania.TemplateJS.Reporting;
 
@@ -18,9 +18,9 @@ namespace Xania.QL.Tests
 {
     public class QueryHelperTests
     {
-        private readonly IEnumerable<Invoice> _invoiceStore = new[]
+        private readonly IEnumerable<Invoice.Domain.Invoice> _invoiceStore = new[]
         {
-            new Invoice {CompanyId = 1.ToGuid()}
+            new Invoice.Domain.Invoice {CompanyId = 1.ToGuid()}
         };
 
         private readonly IEnumerable<Company> _companyStore = new[]
@@ -146,7 +146,7 @@ namespace Xania.QL.Tests
             var context = new QueryContext
             {
                 {"c", (new Company {Id = 1.ToGuid(), Name = "Xania"})},
-                {"i", (new Invoice {CompanyId = 1.ToGuid(), InvoiceNumber = "2017001"})}
+                {"i", (new Invoice.Domain.Invoice {CompanyId = 1.ToGuid(), InvoiceNumber = "2017001"})}
             };
 
             var record = GetRecord(GetMemberBind("invoiceId", GetMember(GetIdentifier("i"), "Id")),
@@ -163,7 +163,7 @@ namespace Xania.QL.Tests
             var context = new QueryContext
             {
                 {"c", new Company {Id = 1.ToGuid(), Name = "Xania"}},
-                {"i", new Invoice {CompanyId = 1.ToGuid(), InvoiceNumber = "2017001"}}
+                {"i", new Invoice.Domain.Invoice {CompanyId = 1.ToGuid(), InvoiceNumber = "2017001"}}
             };
 
             var equal = GetEqual(GetMember(GetIdentifier("c"), "Id"), GetMember(GetIdentifier("i"), "CompanyId"));

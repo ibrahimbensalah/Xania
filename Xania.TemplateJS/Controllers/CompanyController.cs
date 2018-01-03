@@ -2,7 +2,7 @@
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Xania.DataAccess;
-using Xania.Models;
+using Xania.Invoice.Domain;
 using Xania.QL;
 
 namespace Xania.TemplateJS.Controllers

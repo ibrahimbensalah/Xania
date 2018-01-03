@@ -306,13 +306,13 @@
       <Project>{597c682a-53cd-4bdd-a042-913e45a3eaf0}</Project>
       <Name>Xania.Graphs</Name>
     </ProjectReference>
+    <ProjectReference Include="..\Xania.Invoice.Domain\Xania.Invoice.Domain.csproj">
+      <Project>{629A36A0-0780-4CFD-A3EC-FAA2DBE65753}</Project>
+      <Name>Xania.Invoice.Domain</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Xania.Models.DocumentDB\Xania.Models.DocumentDB.csproj">
       <Project>{A0C38B29-4D13-42D5-A8C6-F1C1F41D0117}</Project>
       <Name>Xania.Models.DocumentDB</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Xania.Models\Xania.Models.csproj">
-      <Project>{734CB10C-3CD7-48A9-97EC-F83F7D242437}</Project>
-      <Name>Xania.Models</Name>
     </ProjectReference>
     <ProjectReference Include="..\Xania.Reflection\Xania.Reflection.csproj">
       <Project>{6320f29a-f0c9-48e7-bf6e-a56b0b448352}</Project>

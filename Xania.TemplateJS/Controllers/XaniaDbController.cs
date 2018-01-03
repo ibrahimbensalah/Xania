@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json.Converters;
 using Xania.DataAccess;
-using Xania.Models;
+using Xania.Invoice.Domain;
 using Xania.QL;
 using Xania.Reflection;
 
@@ -20,7 +20,7 @@ namespace Xania.TemplateJS.Controllers
         private readonly QueryContext _storeContext;
 
         public XaniaDbController(
-            IObjectStore<Invoice> invoiceStore, 
+            IObjectStore<Invoice.Domain.Invoice> invoiceStore, 
             IObjectStore<Company> companyStore, 
             IObjectStore<TimeSheet> timeSheetStore,
             IObjectStore<TimeDeclaration> declarationStore)
