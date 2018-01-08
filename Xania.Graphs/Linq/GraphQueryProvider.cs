@@ -47,12 +47,11 @@ namespace Xania.Graphs.Linq
                 //var items = _client.ExecuteGremlinAsync(gremlin).Result.OfType<JObject>()
                 //    .Select(result => Client.ConvertToObject(result, elementType));
                 var items = _client.ExecuteAsync(traversal, elementType).Result;
-
                 return (TResult)resultType.CreateCollection(items.ToArray());
             }
             else
             {
-                var result = _client.ExecuteAsync(traversal, typeof(TResult)).Result.SingleOrDefault();
+                var result = _client.ExecuteAsync(traversal, typeof(TResult)).Result;
                 if (result == null)
                     return default(TResult);
                 return (TResult)result.Convert(typeof(TResult));

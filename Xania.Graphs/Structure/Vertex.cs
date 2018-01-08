@@ -29,5 +29,11 @@ namespace Xania.Graphs.Structure
             ToClType(dict);
             return dict;
         }
+
+        public override object ToClrType(Type elementType, Graph graph)
+        {
+            var cache = new Dictionary<Vertex, object>();
+            return graph.ToObject(this, elementType, cache);
+        }
     }
 }

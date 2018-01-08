@@ -18,6 +18,19 @@ namespace Xania.Graphs.Structure
             return dict;
         }
 
+        public override IExecuteResult Execute(IStep step)
+        {
+            if (step is Out @out)
+            {
+                return
+                    Properties
+                        .Where(p => p.Name.Equals(@out.EdgeLabel, StringComparison.InvariantCultureIgnoreCase))
+                        .Select(p => p.Value)
+                        .SingleOrDefault();
+            }
+            throw new NotImplementedException($"GraphObject.Execute {step}");
+        }
+
         protected void ToClType(IDictionary<string, object> dict)
         {
             foreach (var v in Properties.Select(e => new KeyValuePair<string, object>(e.Name, e.Value.ToClType())))

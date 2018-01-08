@@ -21,6 +21,9 @@ namespace Xania.Reflection
             if (targetType == null)
                 throw new InvalidOperationException();
 
+            if (source.GetType() == targetType)
+                return source;
+
             if (targetType == typeof(Guid))
                 return ConvertToGuid(source);
 

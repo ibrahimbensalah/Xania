@@ -5,6 +5,7 @@ using FluentAssertions;
 using Newtonsoft.Json;
 using NUnit.Framework;
 using Xania.Graphs.Linq;
+using Xania.Graphs.Structure;
 using Xania.Invoice.Domain;
 
 namespace Xania.Graphs.Runtime.Tests

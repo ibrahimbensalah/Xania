@@ -129,7 +129,7 @@ namespace Xania.Reflection
             }
 
             {
-                var instance = Activator.CreateInstance(type);
+                var instance = Activator.CreateInstance(type.GetKnownConcrete());
 
                 foreach (var prop in TypeDescriptor.GetProperties(type).OfType<PropertyDescriptor>())
                 {
@@ -154,6 +154,11 @@ namespace Xania.Reflection
 
                 return instance;
             }
+        }
+
+        public static Type GetKnownConcrete(this Type type)
+        {
+            return typeof(Collection<>).MapTo(type) ?? type;
         }
 
 

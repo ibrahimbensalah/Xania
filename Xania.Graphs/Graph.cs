@@ -156,7 +156,7 @@ namespace Xania.Graphs
                 return model;
             cache.Add(vertex, model = modelType.CreateInstance(new Dictionary<string,object>()));
 
-            var modelProperties = TypeDescriptor.GetProperties(model).OfType<PropertyDescriptor>()
+            var modelProperties = TypeDescriptor.GetProperties(modelType).OfType<PropertyDescriptor>()
                 .ToDictionary(e => e.Name, StringComparer.InvariantCultureIgnoreCase);
             var idProperty = modelProperties.ContainsKey("Id") ? modelProperties["Id"] : null;
             idProperty?.SetValue(model, vertex.Id.ConvertMany(idProperty.PropertyType));
