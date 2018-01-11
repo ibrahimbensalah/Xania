@@ -17,7 +17,7 @@ namespace Xania.Graphs.Structure
             return Value;
         }
 
-        public override IExecuteResult Execute(IStep step)
+        public override IExecuteResult Execute(IStep step, GraphExecutionContext ctx)
         {
             throw new NotImplementedException();
         }

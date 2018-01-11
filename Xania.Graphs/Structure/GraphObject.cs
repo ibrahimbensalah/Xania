@@ -18,7 +18,7 @@ namespace Xania.Graphs.Structure
             return dict;
         }
 
-        public override IExecuteResult Execute(IStep step)
+        public override IExecuteResult Execute(IStep step, GraphExecutionContext ctx)
         {
             if (step is Out @out)
             {

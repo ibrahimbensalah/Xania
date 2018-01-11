@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
 using Xania.Graphs.Linq;
@@ -13,7 +14,7 @@ namespace Xania.Graphs.Structure
     /// <summary>
     /// Discriminated Union
     /// </summary>
-    public abstract class GraphValue: IExecuteResult
+    public abstract class GraphValue : IExecuteResult
     {
         public static GraphPrimitive<int> Int(int value)
         {
@@ -22,7 +23,7 @@ namespace Xania.Graphs.Structure
 
         public abstract object ToClType();
 
-        public abstract IExecuteResult Execute(IStep step);
+        public abstract IExecuteResult Execute(IStep step, GraphExecutionContext ctx);
 
         public virtual object ToClrType(Type elementType, Graph graph)
         {
@@ -47,19 +48,26 @@ namespace Xania.Graphs.Structure
         {
             Console.WriteLine(traversal);
 
-            var executeResult = new ListResult(_graph.Vertices.Select(e => new VertexResult(e, _graph)), _graph).Execute(traversal);
+            var result = 
+                new ListResult(_graph.Vertices.Select(e => new VertexResult(e, _graph)), _graph)
+                    .Execute(traversal, new GraphExecutionContext())
+                    .ToClrType(elementType, _graph);
 
-            if (executeResult is ListResult list)
-            {
-                var result = list.Items.Select(e => e.ToClrType(elementType, _graph));
-                return Task.FromResult(result);
-            }
+            return Task.FromResult((IEnumerable<object>) result);
 
-            if (executeResult is VerticesResult vertices)
-            {
-                var result = vertices.ToClrType(elementType, _graph) as IEnumerable<object>;
-                return Task.FromResult(result);
-            }
+            //if (executeResult is ListResult list)
+            //{
+            //    // var result = list.Items.Select(e => e.ToClrType(elementType, _graph));
+            //    var result = executeResult.ToClrType(elementType, _graph) as IEnumerable<object>;
+            //    return Task.FromResult(result);
+            //}
+
+            //if (executeResult is VerticesResult vertices)
+            //{
+            //    var result = vertices.ToClrType(elementType, _graph) as IEnumerable<object>;
+            //    return Task.FromResult(result);
+            //}
+
             throw new NotSupportedException($"ExecuteAsync {traversal} -> {elementType}");
         }
 
@@ -76,7 +84,7 @@ namespace Xania.Graphs.Structure
             _graph = graph;
         }
 
-        public IExecuteResult Execute(IStep step)
+        public IExecuteResult Execute(IStep step, GraphExecutionContext ctx)
         {
             if (step is V || step is Has || step is Where)
             {
@@ -87,7 +95,7 @@ namespace Xania.Graphs.Structure
                 //    return new VerticesResult(_vertices.Where(lambda), _graph);
 
                 var items = Items.Where(itemResult =>
-                    Equals(itemResult.Execute(step).ToClrType(typeof(bool), _graph), true)
+                    Equals(itemResult.Execute(step, ctx).ToClrType(typeof(bool), _graph), true)
                 );
                 return new ListResult(items, _graph);
             }
@@ -95,7 +103,7 @@ namespace Xania.Graphs.Structure
 
             if (step is Values values)
             {
-                var items = Items.Select(itemResult => itemResult.Execute(step));
+                var items = Items.Select(itemResult => itemResult.Execute(step, ctx));
                 return new ListResult(items, _graph);
             }
 
@@ -103,7 +111,7 @@ namespace Xania.Graphs.Structure
             {
                 var r = Items.SelectMany(from =>
                 {
-                    var result = from.Execute(step);
+                    var result = from.Execute(step, ctx);
                     if (result is VerticesResult verticesResult)
                         return verticesResult.Vertices;
                     if (result is GraphList list)
@@ -119,15 +127,10 @@ namespace Xania.Graphs.Structure
             if (step is Project project)
             {
                 var properties = Items.Select(vertex => new ObjectResult(
-                    project.Dict.ToDictionary(kvp => kvp.Key, kvp => vertex.Execute(kvp.Value))
+                    project.Dict.ToDictionary(kvp => kvp.Key, kvp => vertex.Execute(kvp.Value, ctx))
                 ));
 
                 return new ListResult(properties, _graph);
-            }
-
-            if (step is Select select)
-            {
-                throw new NotImplementedException($"Execute {step.GetType()}");
             }
 
             throw new NotImplementedException($"Execute {step.GetType()}");
@@ -135,11 +138,9 @@ namespace Xania.Graphs.Structure
 
         public object ToClrType(Type elementType, Graph graph)
         {
-            var values = Items.Select(e => e.ToClrType(elementType, graph));
-            if (elementType.IsEnumerable())
-                return values;
+            // var result = list.Items.Select(e => e.ToClrType(elementType, _graph));
 
-            return values.SingleOrDefault();
+            return Items.Select(e => e.ToClrType(elementType, graph));
         }
     }
 
@@ -154,12 +155,12 @@ namespace Xania.Graphs.Structure
             _graph = graph;
         }
 
-        public IExecuteResult Execute(IStep step)
+        public IExecuteResult Execute(IStep step, GraphExecutionContext ctx)
         {
-            return Execute(_vertex, step, _graph);
+            return Execute(_vertex, step, _graph, ctx);
         }
 
-        public static IExecuteResult Execute(Vertex vertex, IStep step, Graph graph)
+        public static IExecuteResult Execute(Vertex vertex, IStep step, Graph graph, GraphExecutionContext ctx)
         {
             if (step is Values values)
             {
@@ -203,7 +204,7 @@ namespace Xania.Graphs.Structure
 
             if (step is Project project)
             {
-                var projection = project.Dict.ToDictionary(kvp => kvp.Key, kvp => vertex.Execute(kvp.Value));
+                var projection = project.Dict.ToDictionary(kvp => kvp.Key, kvp => vertex.Execute(kvp.Value, ctx));
                 return new ObjectResult(projection);
             }
 
@@ -331,7 +332,7 @@ namespace Xania.Graphs.Structure
             Value = value;
         }
 
-        public IExecuteResult Execute(IStep step)
+        public IExecuteResult Execute(IStep step, GraphExecutionContext ctx)
         {
             throw new NotImplementedException();
         }
@@ -351,7 +352,7 @@ namespace Xania.Graphs.Structure
             _value = value;
         }
 
-        public IExecuteResult Execute(IStep step)
+        public IExecuteResult Execute(IStep step, GraphExecutionContext ctx)
         {
             throw new NotImplementedException();
         }
@@ -373,7 +374,7 @@ namespace Xania.Graphs.Structure
             _graph = graph;
         }
 
-        public IExecuteResult Execute(IStep step)
+        public IExecuteResult Execute(IStep step, GraphExecutionContext ctx)
         {
             if (step is V V)
             {
@@ -384,7 +385,7 @@ namespace Xania.Graphs.Structure
 
             if (step is Values values)
             {
-                var x = Vertices.Select(vtx => VertexResult.Execute(vtx, step, _graph));
+                var x = Vertices.Select(vtx => VertexResult.Execute(vtx, step, _graph, ctx));
 
                 return new ListResult(x, _graph);
             }
@@ -412,7 +413,7 @@ namespace Xania.Graphs.Structure
                     vertex =>
                     {
                         var xr = new VertexResult(vertex, _graph);
-                        return project.Dict.ToDictionary(kvp => kvp.Key, kvp => xr.Execute(kvp.Value));
+                        return project.Dict.ToDictionary(kvp => kvp.Key, kvp => xr.Execute(kvp.Value, ctx));
                     });
 
                 return new ObjectsResult(properties);
@@ -579,7 +580,7 @@ namespace Xania.Graphs.Structure
             Properties = properties;
         }
 
-        public IExecuteResult Execute(IStep step)
+        public IExecuteResult Execute(IStep step, GraphExecutionContext ctx)
         {
             throw new NotImplementedException();
         }
@@ -595,9 +596,18 @@ namespace Xania.Graphs.Structure
                 properties
                     .ToDictionary<KeyValuePair<string, IExecuteResult>, string, Func<Type, object>>(
                         e => e.Key,
-                        e => t => e.Value.ToClrType(t, graph),
+                        e => t => Convert2(t, e.Value.ToClrType(t, graph)),
                         StringComparer.InvariantCultureIgnoreCase
                     );
+        }
+
+        private object Convert2(Type type, object obj)
+        {
+            if (!type.IsEnumerable())
+                if (obj is IEnumerable<object> enumerable)
+                    return enumerable.SingleOrDefault();
+
+            return obj;
         }
     }
 
@@ -610,7 +620,7 @@ namespace Xania.Graphs.Structure
             Objects = objects;
         }
 
-        public IExecuteResult Execute(IStep step)
+        public IExecuteResult Execute(IStep step, GraphExecutionContext ctx)
         {
             throw new NotImplementedException();
         }
@@ -635,7 +645,7 @@ namespace Xania.Graphs.Structure
             Values = values.ToArray();
         }
 
-        public IExecuteResult Execute(IStep step)
+        public IExecuteResult Execute(IStep step, GraphExecutionContext ctx)
         {
             if (step is Out o)
             {
@@ -683,24 +693,57 @@ namespace Xania.Graphs.Structure
 
     public static class ExecuteResultExtensions
     {
-        public static IExecuteResult Execute(this IExecuteResult result, GraphTraversal traversal)
+        public static IExecuteResult Execute(this IExecuteResult input, GraphTraversal traversal, GraphExecutionContext context)
         {
-            return traversal.Steps.Aggregate(result, (r, step) =>
+            var (result, _) = traversal.Steps.Aggregate((input:input, context:context), (__, step) =>
             {
+                var (r, ctx) = __;
                 if (step is Alias a)
-                    return r;
+                    return (r, ctx.Alias(a.Value, r));
 
                 if (step is Context)
-                    return r;
+                    return __;
 
-                return r.Execute(step);
+                if (step is Select select)
+                {
+                    return (ctx.Select(select.Label), ctx);
+                }
+
+                return (r.Execute(step, ctx), ctx);
             });
+
+            return result;
+        }
+    }
+
+    public class GraphExecutionContext
+    {
+        public IEnumerable<(string name, IExecuteResult result)> Mappings { get; }
+
+        public GraphExecutionContext()
+            : this(new (string name, IExecuteResult result)[0])
+        {
+        }
+        public GraphExecutionContext(IEnumerable<(string name, IExecuteResult result)> mappings)
+        {
+            this.Mappings = mappings;
+        }
+
+        public GraphExecutionContext Alias(string name, IExecuteResult result)
+        {
+            return new GraphExecutionContext( Mappings.Prepend((name, result)) );
+        }
+
+        public IExecuteResult Select(string name)
+        {
+            return Mappings.Where(e => e.name.Equals(name, StringComparison.InvariantCultureIgnoreCase))
+                .Select(e => e.result).First();
         }
     }
 
     public interface IExecuteResult
     {
-        IExecuteResult Execute(IStep step);
+        IExecuteResult Execute(IStep step, GraphExecutionContext ctx);
         object ToClrType(Type elementType, Graph graph);
     }
 }
