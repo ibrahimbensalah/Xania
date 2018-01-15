@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 
 namespace Xania.Graphs.Structure
 {
@@ -17,7 +18,7 @@ namespace Xania.Graphs.Structure
             return Value;
         }
 
-        public override IExecuteResult Execute(IStep step, GraphExecutionContext ctx)
+        public override IExecuteResult Execute(IStep step, IEnumerable<(string name, IExecuteResult result)> mappings)
         {
             throw new NotImplementedException();
         }

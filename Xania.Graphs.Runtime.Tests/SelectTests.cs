@@ -1,5 +1,9 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
+using System.Reflection;
+using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
 using FluentAssertions;
 using Newtonsoft.Json;
@@ -23,12 +27,12 @@ namespace Xania.Graphs.Runtime.Tests
         [Test]
         public void TraverseComplexTypeTest()
         {
-            var persons =
+            var lines =
                 from p in People
                 where p.Id == 1
                 from l in p.HQ.Lines
                 select l;
-            var line = persons.Should().ContainSingle().Subject;
+            var line = lines.ToArray().Should().ContainSingle().Subject;
 
             line.Value.Should().Be("Punter 315");
             line.Type.Should().Be(AddressType.Street);
@@ -54,7 +58,7 @@ namespace Xania.Graphs.Runtime.Tests
                 from p in People
                 where p.Id == 1
                 select p;
-            var person = persons.Should().ContainSingle().Subject;
+            var person = persons.ToArray().Should().ContainSingle().Subject;
 
             AssertIbrahim(person);
         }
@@ -66,7 +70,7 @@ namespace Xania.Graphs.Runtime.Tests
                 from p in People
                 where p.FirstName == "Ibrahim"
                 select p;
-            var person = array.Should().ContainSingle().Subject;
+            var person = array.ToArray().Should().ContainSingle().Subject;
 
             AssertIbrahim(person);
         }
@@ -88,7 +92,7 @@ namespace Xania.Graphs.Runtime.Tests
                 where p.Friend.Id == 2
                 select p;
 
-            var person = persons.Should().ContainSingle().Subject;
+            var person = persons.ToArray().Should().ContainSingle().Subject;
             AssertIbrahim(person);
         }
 
@@ -100,7 +104,7 @@ namespace Xania.Graphs.Runtime.Tests
                 where p.Id == 1
                 from f in p.Friends
                 select f;
-            var ibrahimsFriend = persons.Should().ContainSingle().Subject;
+            var ibrahimsFriend = persons.ToArray().Should().ContainSingle().Subject;
             ibrahimsFriend.Id.Should().Be(2);
         }
 
@@ -117,13 +121,13 @@ namespace Xania.Graphs.Runtime.Tests
         [Test]
         public void SelectFriendOfFriendsOfFriends()
         {
-            var persons =
+            var distantFriends =
                 from p in People
                 from f in p.Friends
                 from g in f.Friends
                 from h in p.Friends
                 select h.Friend;
-            Console.WriteLine(JsonConvert.SerializeObject(persons, Formatting.Indented));
+            Console.WriteLine(JsonConvert.SerializeObject(distantFriends, Formatting.Indented));
         }
 
         [Test]
@@ -132,6 +136,7 @@ namespace Xania.Graphs.Runtime.Tests
             var anonType = new { a = 1, b = 2 }.GetType();
             anonType.CustomAttributes.Select(e => e.AttributeType).Should().Contain(typeof(CompilerGeneratedAttribute));
         }
+
 
         [Test]
         public void SelectEveryBody()

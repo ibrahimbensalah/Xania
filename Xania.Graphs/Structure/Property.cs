@@ -4,11 +4,13 @@ namespace Xania.Graphs.Structure
 {
     public class Property
     {
-        public GraphValue Value { get; }
+        public object Value { get; }
         public string Name { get; }
 
-        public Property(string name, GraphValue value)
+        public Property(string name, object value)
         {
+            if (value is GraphValue)
+                throw new NotSupportedException();
             Value = value;
             Name = name.ToCamelCase();
         }

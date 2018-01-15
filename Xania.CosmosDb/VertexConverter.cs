@@ -30,26 +30,27 @@ namespace Xania.CosmosDb
             {
                 writer.WritePropertyName(prop.Name);
                 writer.WriteStartArray();
-                foreach (var v in ToObject(prop.Value))
-                {
-                    writer.WriteStartObject();
-                    writer.WritePropertyName("_value");
-                    if (v is IDictionary<string, object> dict)
-                    {
-                        writer.WriteStartObject();
-                        foreach (var kvp in dict)
-                        {
-                            writer.WritePropertyName(kvp.Key);
-                            serializer.Serialize(writer, kvp.Value);
-                        }
-                        writer.WriteEndObject();
-                    }
-                    else
-                        writer.WriteValue(v);
-                    writer.WritePropertyName("id");
-                    writer.WriteValue(Guid.NewGuid());
-                    writer.WriteEndObject();
-                }
+                throw new NotImplementedException();
+                //foreach (var v in ToObject(prop.Value))
+                //{
+                //    writer.WriteStartObject();
+                //    writer.WritePropertyName("_value");
+                //    if (v is IDictionary<string, object> dict)
+                //    {
+                //        writer.WriteStartObject();
+                //        foreach (var kvp in dict)
+                //        {
+                //            writer.WritePropertyName(kvp.Key);
+                //            serializer.Serialize(writer, kvp.Value);
+                //        }
+                //        writer.WriteEndObject();
+                //    }
+                //    else
+                //        writer.WriteValue(v);
+                //    writer.WritePropertyName("id");
+                //    writer.WriteValue(Guid.NewGuid());
+                //    writer.WriteEndObject();
+                //}
                 writer.WriteEndArray();
             }
             writer.WriteEndObject();

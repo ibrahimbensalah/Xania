@@ -46,7 +46,7 @@ namespace Xania.Graphs.Linq
 
                 //var items = _client.ExecuteGremlinAsync(gremlin).Result.OfType<JObject>()
                 //    .Select(result => Client.ConvertToObject(result, elementType));
-                var items = _client.ExecuteAsync(traversal, elementType).Result;
+                var items = _client.ExecuteAsync(traversal, elementType).Result.ToArray();
                 return (TResult)resultType.CreateCollection(items.ToArray());
             }
             else
@@ -311,7 +311,7 @@ namespace Xania.Graphs.Linq
                         right.Steps;
 
                     var reverseTail = left.Steps.Take(left.Steps.Count() - 1);
-                    var reverseHead = new Has(values.Name, new Eq(rightSteps));
+                    var reverseHead = new Has(values.Name, new Eq(rightSteps.SingleOrDefault()));
 
                     return new GraphTraversal(reverseTail).Append(reverseHead);
                 }

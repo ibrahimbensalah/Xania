@@ -17,7 +17,7 @@ namespace Xania.Graphs.Structure
             return Items.Select(e => e.ToClType());
         }
 
-        public override IExecuteResult Execute(IStep step, GraphExecutionContext ctx)
+        public override IExecuteResult Execute(IStep step, IEnumerable<(string name, IExecuteResult result)> mappings)
         {
             throw new System.NotImplementedException();
         }

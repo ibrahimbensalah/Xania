@@ -69,7 +69,7 @@ namespace Xania.Reflection
             if (targetType == null)
                 throw new InvalidOperationException();
             if (source is string str)
-                return Convert(str as object, targetType);
+                return Convert(str, targetType);
             if (targetType.IsEnumerable())
             {
                 var elementType = targetType.GetItemType();

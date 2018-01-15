@@ -2,16 +2,18 @@
 
 namespace Xania.Graphs
 {
-    public class Eq : Call
+    public class Eq : IStep
     {
-        public Eq(params IStep[] steps) :
-            base("eq", steps)
+        public IStep Value { get; }
+
+        public Eq(IStep value)
         {
+            Value = value;
         }
 
-        public Eq(IEnumerable<IStep> steps) :
-            base("eq", steps)
+        public override string ToString()
         {
+            return $"eq({Value})";
         }
     }
 }

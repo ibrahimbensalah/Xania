@@ -3,6 +3,8 @@ using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
+using System.Linq.Expressions;
+using Xania.Graphs.Linq;
 using Xania.Graphs.Structure;
 using Xania.Reflection;
 
@@ -10,8 +12,8 @@ namespace Xania.Graphs
 {
     public class Graph
     {
-        public HashSet<Vertex> Vertices { get; } = new HashSet<Vertex>();
-        public HashSet<Edge> Edges { get; } = new HashSet<Edge>();
+        public IDbSet<Vertex> Vertices { get; } = new InMemoryDbSet<Vertex>();
+        public IDbSet<Edge> Edges { get; } = new InMemoryDbSet<Edge>();
 
         public static Graph FromObject(params Object[] models)
         {
@@ -85,7 +87,7 @@ namespace Xania.Graphs
                     if (IsVertexType(prop.PropertyType))
                         outE.AddRange(Unfold(v).Select(e => (vertex, prop.Name, e)));
                     else
-                        vertex.Properties.Add(new Property(prop.Name, v));
+                        vertex.Properties.Add(new Property(prop.Name, v.ToClType()));
                 }
             }
             return (vertex, outE);
@@ -130,7 +132,7 @@ namespace Xania.Graphs
                     var(c, E) = ConvertValue(propValue, prop.PropertyType, cache);
                     if (E.Any())
                         throw new InvalidOperationException();
-                    container.Properties.Add(new Property(prop.Name.ToCamelCase(), c));
+                    container.Properties.Add(new Property(prop.Name.ToCamelCase(), c.ToClType()));
                 }
             }
 
@@ -168,7 +170,7 @@ namespace Xania.Graphs
                     continue;
 
                 var modelProperty = modelProperties[p.Name];
-                modelProperty.SetValue(model, p.Value.ToClType().Convert(modelProperty.PropertyType));
+                modelProperty.SetValue(model, p.Value.Convert(modelProperty.PropertyType));
             }
 
             foreach (var rel in Edges.Where(e => string.Equals(e.OutV, vertex.Id)))
@@ -215,6 +217,31 @@ namespace Xania.Graphs
                     edge.Label.Equals(edgeLabel, StringComparison.InvariantCultureIgnoreCase) &&
                     edge.OutV.Equals(from.Id, StringComparison.InvariantCultureIgnoreCase)).ToArray();
             return edges.Select(e => Vertices.Single(to => to.Id.Equals(e.InV))).ToArray();
+        }
+    }
+
+    public interface IDbSet<T>: IQueryable<T>
+    {
+        void Add(T item);
+    }
+
+    public class InMemoryDbSet<T> : EnumerableQuery<T>, IDbSet<T>
+    {
+        private readonly HashSet<T> _inner;
+
+        public InMemoryDbSet()
+            : this(new HashSet<T>())
+        {
+        }
+
+        private InMemoryDbSet(HashSet<T> hashSet) : base(hashSet)
+        {
+            _inner = hashSet;
+        }
+
+        public void Add(T item)
+        {
+            _inner.Add(item);
         }
     }
 }

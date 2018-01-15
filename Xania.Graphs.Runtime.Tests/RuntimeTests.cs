@@ -104,7 +104,7 @@ namespace Xania.Graphs.Runtime.Tests
     {
         public static Graph GetPeople()
         {
-            var friend = new Person { Id = 2 };
+            var friend = new Person { Id = 2, FirstName = "Mr Robot"};
             var ibrahim = new Person
             {
                 Id = 1,

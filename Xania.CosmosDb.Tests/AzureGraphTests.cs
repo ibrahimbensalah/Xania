@@ -21,10 +21,10 @@ namespace Xania.CosmosDb.Tests
             };
 
             var graph = Graph.FromObject(model);
-            graph.Vertices.Count.Should().Be(2);
+            graph.Vertices.Count().Should().Be(2);
             graph.Vertices.Select(e => e.Label).All(e => e.Equals(nameof(Person).ToCamelCase())).Should().BeTrue();
             var subject = graph.Vertices.SelectMany(v => v.Properties).Should().Contain(e => "firstName".Equals(e.Name)).Subject;
-            subject.Value.ToClType().Should().Be("Ibrahim");
+            subject.Value.Should().Be("Ibrahim");
 
             var friend = graph.Edges.Should().ContainSingle().Which;
             friend.Label.Should().Be("friend");
@@ -96,8 +96,8 @@ namespace Xania.CosmosDb.Tests
             };
 
             var g = Graph.FromObject(model);
-            g.Vertices.Count.Should().Be(4);
-            g.Edges.Count.Should().Be(3);
+            g.Vertices.Count().Should().Be(4);
+            g.Edges.Count().Should().Be(3);
 
             var clone = g.ToObjects<Person>().Single(e => e.Id == 1);
 
