@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace Xania.Graphs
@@ -6,6 +7,7 @@ namespace Xania.Graphs
     public class GraphTraversal
     {
         public IEnumerable<IStep> Steps { get; }
+        public Type StepType => Steps.Last().Type;
 
         public GraphTraversal(IStep step)
             : this(new[] { step })
@@ -27,8 +29,6 @@ namespace Xania.Graphs
             if (Steps.Any())
                 yield return $"{string.Join(".", Steps.Select(e => e.ToString()))}";
         }
-
-        public static readonly Context __ = new Context();
 
         public GraphTraversal Append(IStep expr)
         {
@@ -70,11 +70,11 @@ namespace Xania.Graphs
 
         private static GraphTraversal Optimize(GraphTraversal traversal, string alias)
         {
-            var steps = Optimize(traversal.Steps, alias);
+            var steps = Optimize(traversal.Steps, alias).ToArray();
             if (steps.Any())
                 return new GraphTraversal(steps);
             else
-                return new GraphTraversal(__);
+                return new GraphTraversal(new Context(traversal.StepType));
         }
     }
 }

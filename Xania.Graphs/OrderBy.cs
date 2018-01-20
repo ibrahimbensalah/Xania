@@ -26,5 +26,7 @@ namespace Xania.Graphs
 
             return gremlin;
         }
+
+        public Type Type => _traversal.StepType;
     }
 }

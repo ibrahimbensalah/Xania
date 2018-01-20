@@ -23,5 +23,10 @@ namespace Xania.Graphs
         {
             return source.Aggregate(new StringBuilder(), (sb, e) => sb.Length > 0 ? sb.Append(separator).Append(e) : sb.Append(e)).ToString();
         }
+
+        public static Type GetType(this GraphTraversal graphTraversal)
+        {
+            return graphTraversal.Steps.Last().Type;
+        }
     }
 }

@@ -1,12 +1,15 @@
-﻿namespace Xania.Graphs
+﻿using System;
+
+namespace Xania.Graphs
 {
     public class Values : IStep
     {
         public string Name { get; }
 
-        public Values(string name)
+        public Values(string name, Type type)
         {
             Name = name;
+            Type = type;
         }
 
         public override string ToString()
@@ -15,6 +18,8 @@
                 return "id()";
             return $"values('{Name}')";
         }
+
+        public Type Type { get; }
     }
 
     public static class StringExtensions

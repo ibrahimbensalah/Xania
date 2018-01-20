@@ -19,10 +19,11 @@ namespace Xania.Graphs.Linq
             .MakeGenericMethod(sourceType, resultType);
 
         private static MethodInfo s_SelectMany_TSource_2;
-        public static MethodInfo SelectMany_TSource_2<TSource, TResult>() =>
+        public static MethodInfo SelectMany_TSource_2<TSource, TResult>() => SelectMany_TSource_2(typeof(TSource), typeof(TResult));
+        public static MethodInfo SelectMany_TSource_2(Type sourceType, Type resultType) =>
             (s_SelectMany_TSource_2 ??
-             (s_SelectMany_TSource_2 = new Func<IQueryable<TSource>, Expression<Func<TSource, IEnumerable<TResult>>>, IQueryable<TResult>>(Queryable.SelectMany).GetMethodInfo().GetGenericMethodDefinition()))
-            .MakeGenericMethod(typeof(TSource), typeof(TResult));
+             (s_SelectMany_TSource_2 = new Func<IQueryable<int>, Expression<Func<int, IEnumerable<int>>>, IQueryable<int>>(Queryable.SelectMany).GetMethodInfo().GetGenericMethodDefinition()))
+            .MakeGenericMethod(sourceType, resultType);
 
         private static MethodInfo s_Where_TSource_1;
         public static MethodInfo Where_TSource_1<TSource>() =>
@@ -54,5 +55,24 @@ namespace Xania.Graphs.Linq
         {
             collection.Add(item);
         }
+    }
+
+    public static class EnumerableHelper
+    {
+        private static MethodInfo s_Select_TSource_2;
+        public static MethodInfo
+            Select_TSource_2<TSource, TResult>() => Select_TSource_2(typeof(TSource), typeof(TResult));
+        public static MethodInfo Select_TSource_2(Type sourceType, Type resultType) =>
+            (s_Select_TSource_2 ??
+             (s_Select_TSource_2 = new Func<IEnumerable<int>, Func<int, double>, IEnumerable<double>>(Enumerable.Select).GetMethodInfo().GetGenericMethodDefinition()))
+            .MakeGenericMethod(sourceType, resultType);
+
+        private static MethodInfo s_FirstOrDefault;
+        public static MethodInfo FirstOrDefault<TSource>() => FirstOrDefault(typeof(TSource));
+        public static MethodInfo FirstOrDefault(Type sourceType) =>
+            (s_FirstOrDefault ??
+             (s_FirstOrDefault = new Func<IEnumerable<int>, int>(Enumerable.FirstOrDefault).GetMethodInfo()
+                 .GetGenericMethodDefinition()))
+            .MakeGenericMethod(sourceType);
     }
 }

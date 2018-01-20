@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 
 namespace Xania.Graphs
 {
@@ -8,6 +9,7 @@ namespace Xania.Graphs
 
         public Bind(IStep[] expressions)
         {
+            throw new NotImplementedException();
             Expressions = expressions;
         }
 
@@ -15,5 +17,7 @@ namespace Xania.Graphs
         {
             return string.Join(".", Expressions.Select(e => e.ToString()));
         }
+
+        public Type Type { get; }
     }
 }

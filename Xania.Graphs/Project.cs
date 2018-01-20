@@ -22,8 +22,10 @@ namespace Xania.Graphs
         public string By(GraphTraversal traversal)
         {
             if (traversal.Steps.Count() == 1 && traversal.Steps.First() is Context)
-                return $"by({GraphTraversal.__})";
+                return $"by(__)";
             return $"by(coalesce({traversal}, constant()))";
         }
+
+        public Type Type { get; } = typeof(IDictionary<string, object>);
     }
 }

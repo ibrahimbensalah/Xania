@@ -158,7 +158,7 @@ namespace Xania.Graphs.Linq
                         if (queryableType != null)
                         {
                             var itemType = queryableType.GenericTypeArguments[0];
-                            yield return (0, _ => Vertex(itemType.Name.ToCamelCase()));
+                            yield return (0, _ => Vertex(itemType));
                         }
                         else if (valueType.IsPrimitive || value is string)
                         {
@@ -173,7 +173,7 @@ namespace Xania.Graphs.Linq
                 else if (item is MemberExpression memberExpression)
                 {
                     if (memberExpression.Expression.Type.IsAnonymousType())
-                        yield return (0, args => new GraphTraversal(new Select(memberExpression.Member.Name)));
+                        yield return (0, args => new GraphTraversal(new Select(memberExpression.Member.Name, memberExpression.Type)));
                     else
                     {
                         var isValues = memberExpression.Type.IsPrimitive() || memberExpression.Type.IsComplexType();
@@ -185,9 +185,9 @@ namespace Xania.Graphs.Linq
                         yield return (1, args =>
                         {
                             if (isValues)
-                                return args[0].Append(Values(memberName));
+                                return args[0].Append(Values(memberName, memberExpression.Type));
                             else
-                                return args[0].Append(Out(memberName));
+                                return args[0].Append(Out(memberName, memberExpression.Type));
                         }
                         );
                     }
@@ -209,7 +209,8 @@ namespace Xania.Graphs.Linq
                         var project = new Project(dict);
 
                         return new GraphTraversal(project);
-                    });
+                    }
+                    );
                 }
                 else
                 {
@@ -224,7 +225,7 @@ namespace Xania.Graphs.Linq
             var predicate = GetSingleParameterLambda(methodCall.Arguments[1]);
             stack.Push(source);
             stack.Push(predicate.Body);
-            return (2, args => args[0].Append(As(predicate.Parameters[0].Name)).Bind(args[1]));
+            return (2, args => args[0].Append(As(predicate.Parameters[0].Name, predicate.Parameters[0].Type)).Bind(args[1]));
         }
 
         private static (int, Func<GraphTraversal[], GraphTraversal>) Where(MethodCallExpression methodCall, Stack<Expression> stack)
@@ -234,7 +235,7 @@ namespace Xania.Graphs.Linq
             stack.Push(source);
             stack.Push(predicate.Body);
             return (2, args => Where(args[0],
-                args[1].Replace(By.Select(predicate.Parameters[0].Name), GraphTraversal.__)
+                args[1].Replace(By.Select(predicate.Parameters[0].Name), new Context(source.Type))
             ));
         }
 
@@ -245,7 +246,9 @@ namespace Xania.Graphs.Linq
             stack.Push(source);
             stack.Push(predicate.Body);
 
-            return (2, args => args[0].Append(new OrderBy(ascending, args[1].Replace(By.Select(predicate.Parameters[0].Name), GraphTraversal.__))));
+            return (2, args => args[0].Append(new OrderBy(ascending,
+                        args[1].Replace(By.Select(predicate.Parameters[0].Name), new Context(source.Type))))
+                );
         }
 
         private static (int, Func<GraphTraversal[], GraphTraversal>) Drop(MethodCallExpression methodCall, Stack<Expression> stack)
@@ -276,10 +279,10 @@ namespace Xania.Graphs.Linq
                     .ToArray();
 
                 var source = selectorParameters.Length > 1
-                    ? args[0].Append(As(selectorParameters[1].Name))
+                    ? args[0].Append(As(selectorParameters[1].Name, selectorParameters[1].Type))
                     : args[0];
 
-                var collection = args[1].Append(As(selectorParameters[0].Name));
+                var collection = args[1].Append(As(selectorParameters[0].Name, selectorParameters[0].Type));
                 var selector = args[2];
 
                 return source
@@ -291,14 +294,14 @@ namespace Xania.Graphs.Linq
 
         private static GraphTraversal Parameter(ParameterExpression parameter)
         {
-            return new Select(parameter.Name).ToTraversal();
+            return new Select(parameter.Name, parameter.Type).ToTraversal();
         }
 
         private static GraphTraversal Where(GraphTraversal source, GraphTraversal predicate)
         {
             if (predicate.Steps.ElementAtOrDefault(0) is Context && !predicate.Steps.Any(e => e is Out))
                 return new GraphTraversal(source.Steps.Concat(predicate.Steps.Skip(1)));
-            return source.Append(new Where(predicate));
+            return source.Append(new Where(predicate, source.GetType()));
         }
         private static GraphTraversal Binary(ExpressionType oper, GraphTraversal left, GraphTraversal right)
         {
@@ -346,19 +349,19 @@ namespace Xania.Graphs.Linq
             }
         }
 
-        public static Out Out(string edgeLabel)
+        public static Out Out(string edgeLabel, Type type)
         {
-            return new Out(edgeLabel);
+            return new Out(edgeLabel, type);
         }
 
-        public static Values Values(string name)
+        public static Values Values(string name, Type type)
         {
-            return new Values(name);
+            return new Values(name, type);
         }
 
-        public static IStep As(string name)
+        public static IStep As(string name, Type type)
         {
-            return new Alias(name);
+            return new Alias(name, type);
         }
 
         public static Const Const(object value)
@@ -386,9 +389,9 @@ namespace Xania.Graphs.Linq
             return new Bind(list.ToArray());
         }
 
-        public static GraphTraversal Vertex(string label)
+        public static GraphTraversal Vertex(Type type)
         {
-            return new GraphTraversal(new V(label));
+            return new GraphTraversal(new V(type));
         }
     }
 
@@ -396,22 +399,32 @@ namespace Xania.Graphs.Linq
     {
         public string Label { get; }
 
-        public V(string label)
+        public V(Type type)
         {
-            Label = label;
+            Label = type.Name.ToCamelCase();
+            Type = type;
         }
 
         public override string ToString()
         {
             return $"V().hasLabel('{Label}')";
         }
+
+        public Type Type { get; }
     }
 
     public class Drop : IStep
     {
+        public Drop()
+        {
+            Type = typeof(int);
+        }
+
         public override string ToString()
         {
             return "drop()";
         }
+
+        public Type Type { get; }
     }
 }

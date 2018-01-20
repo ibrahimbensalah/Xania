@@ -22,14 +22,16 @@ namespace Xania.DbMigrator
             new DbMigrationServices(connectionString).ExportBacpac(bacPacFile);
         }
 
-        public static async Task ResetDatabaseAsync(string connectionString)
+        public static void ResetDatabase(string connectionString)
         {
             var services = new DbMigrationServices(connectionString);
-            await services.ResetDatabaseAsync();
+            services.ResetDatabase();
         }
 
         public static void Restore(string bacpacFile, string connectionString)
         {
+            ResetDatabase(connectionString);
+
             var bacPacFile = bacpacFile ?? "Xania.DbMigrator.bacpac";
             var services = new DbMigrationServices(connectionString);
             services.ImportBacpac(bacPacFile);
@@ -69,7 +71,10 @@ namespace Xania.DbMigrator
             var dbDeployOptions = new DacDeployOptions
             {
                 BlockOnPossibleDataLoss = false,
-                ScriptDatabaseOptions = false
+                ScriptDatabaseOptions = false,
+                IgnoreComments = true,
+                GenerateSmartDefaults = false,
+                
             };
 
             var sql = new SqlConnectionStringBuilder(targetConnectionString);
@@ -94,6 +99,8 @@ namespace Xania.DbMigrator
 
             if (operations.Any())
             {
+                var deployScript = dbServices.GenerateDeployScript(package, sql.InitialCatalog, options: dbDeployOptions);
+                Console.Out.WriteLine(deployScript);
                 Console.Error.WriteLine(@"Validation failed: One or more pending database operation were found.");
                 return false;
             }
@@ -108,42 +115,66 @@ namespace Xania.DbMigrator
                 new DbMigrationServices(connectionString).PublishDacpac(dacpacFile);
         }
 
-        private static async Task InitAsync(string connectionString)
+        private static void Init(string connectionString)
         {
             Console.WriteLine(@"Init Start");
             using (var sql = new SqlConnection(connectionString))
             {
                 Console.WriteLine($@"Connect to {connectionString}");
-                await sql.OpenAsync();
+                sql.Open();
 
                 Console.WriteLine($@"Ensure Migration Objects");
                 var initTrans = sql.BeginTransaction();
-                await EnsureDbMigrationObjectsAsync(sql, initTrans);
+                EnsureDbMigrationObjects(sql, initTrans);
                 Console.WriteLine($@"Commit");
                 initTrans.Commit();
+                sql.Close();
             }
             Console.WriteLine(@"Init End");
         }
 
-        public static void Upgrade(string connectionString, IEnumerable<IDbMigration> upgradeScripts)
+        public static void GetPendingScripts(string connectionString, IEnumerable<IDbMigration> upgradeScripts)
         {
-            UpgradeAsync(connectionString, upgradeScripts).Wait();
-        }
-
-        public static async Task UpgradeAsync(string connectionString, IEnumerable<IDbMigration> upgradeScripts)
-        {
-            await InitAsync(connectionString);
+            Init(connectionString);
 
             foreach (var migration in upgradeScripts.OrderBy(x => x.Id))
             {
                 Console.WriteLine($@"Execute migration {migration.Id}");
                 using (var conn = new SqlConnection(connectionString))
                 {
-                    await conn.OpenAsync();
+                    conn.OpenAsync();
                     var scriptTrans = conn.BeginTransaction(IsolationLevel.ReadUncommitted);
                     try
                     {
-                        await migration.ExecuteAsync(conn, scriptTrans);
+                        migration.Execute(conn, scriptTrans);
+
+                        scriptTrans.Commit();
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.Error.WriteLine(ex);
+                        scriptTrans.Rollback();
+                        throw;
+                    }
+                    conn.Close();
+                }
+            }
+        }
+
+        public static void Upgrade(string connectionString, IEnumerable<IDbMigration> upgradeScripts)
+        {
+            Init(connectionString);
+
+            foreach (var migration in upgradeScripts.OrderBy(x => x.Id))
+            {
+                Console.WriteLine($@"Execute migration {migration.Id}");
+                using (var conn = new SqlConnection(connectionString))
+                {
+                    conn.Open();
+                    var scriptTrans = conn.BeginTransaction(IsolationLevel.ReadUncommitted);
+                    try
+                    {
+                        migration.Execute(conn, scriptTrans);
 
                         scriptTrans.Commit();
                     }
@@ -158,20 +189,20 @@ namespace Xania.DbMigrator
             }
         }
 
-        private static async Task EnsureDbMigrationObjectsAsync(SqlConnection sql, SqlTransaction trans)
+        private static void EnsureDbMigrationObjects(SqlConnection sql, SqlTransaction trans)
         {
-            if (!await ObjectExistsAsync(sql, trans, "[dbo].[DbMigrationHistory]"))
-                await new TransactSql(Resources.DbMigrationHistory).ExecuteAsync(sql, trans);
+            if (!ObjectExists(sql, trans, "[dbo].[DbMigrationHistory]"))
+                new TransactSql(Resources.DbMigrationHistory).Execute(sql, trans);
         }
 
-        private static async Task<bool> ObjectExistsAsync(SqlConnection sql, SqlTransaction trans, string objectName)
+        private static bool ObjectExists(SqlConnection sql, SqlTransaction trans, string objectName)
         {
             var cmd = sql.CreateCommand();
             cmd.Transaction = trans;
             cmd.CommandText = $"SELECT OBJECT_ID('{objectName}')";
             cmd.CommandType = CommandType.Text;
 
-            var scalar = await cmd.ExecuteScalarAsync();
+            var scalar = cmd.ExecuteScalar();
             return scalar != null && !Convert.IsDBNull(scalar);
         }
     }
@@ -188,14 +219,14 @@ namespace Xania.DbMigrator
 
         public string Id { get; }
 
-        public async Task ExecuteAsync(SqlConnection conn, SqlTransaction trans)
+        public void Execute(SqlConnection conn, SqlTransaction trans)
         {
             var migrateCmd = conn.CreateCommand();
             migrateCmd.Transaction = trans;
             migrateCmd.CommandText = "SELECT Script FROM dbo.DbMigrationHistory WHERE Id = @Id";
             migrateCmd.Parameters.AddWithValue("@Id", Id);
 
-            var actualScript = await migrateCmd.ExecuteScalarAsync();
+            var actualScript = migrateCmd.ExecuteScalar();
             if (Convert.IsDBNull(actualScript) || actualScript == null)
             {
                 var addMigrateCmd = conn.CreateCommand();
@@ -204,9 +235,9 @@ namespace Xania.DbMigrator
                     "INSERT INTO dbo.DbMigrationHistory (Id, [Date], Script) VALUES (@Id, GETDATE(), @Script)";
                 addMigrateCmd.Parameters.AddWithValue("@Id", Id);
                 addMigrateCmd.Parameters.AddWithValue("@Script", Script);
-                await addMigrateCmd.ExecuteNonQueryAsync();
+                addMigrateCmd.ExecuteNonQuery();
 
-                await new TransactSql(Script).ExecuteAsync(conn, trans);
+                new TransactSql(Script).Execute(conn, trans);
             }
             else if (!string.Equals(actualScript, Script))
             {
@@ -308,9 +339,10 @@ namespace Xania.DbMigrator
 
         public string Id { get; }
 
-        public Task ExecuteAsync(SqlConnection conn, SqlTransaction trans)
+        public void Execute(SqlConnection conn, SqlTransaction trans)
         {
-            return Task.WhenAll(_list.Select(e => e.ExecuteAsync(conn, trans)).ToArray());
+            foreach(var e in _list)
+                e.Execute(conn, trans);
         }
 
         public override string ToString()

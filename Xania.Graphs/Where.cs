@@ -6,14 +6,17 @@ namespace Xania.Graphs
     {
         public GraphTraversal Predicate { get; }
 
-        public Where(GraphTraversal predicate)
+        public Where(GraphTraversal predicate, Type type)
         {
             Predicate = predicate;
+            Type = type;
         }
 
         public override string ToString()
         {
             return $"where({Predicate})";
         }
+
+        public Type Type { get; }
     }
 }

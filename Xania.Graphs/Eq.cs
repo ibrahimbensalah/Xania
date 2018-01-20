@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 
 namespace Xania.Graphs
 {
@@ -15,5 +16,7 @@ namespace Xania.Graphs
         {
             return $"eq({Value})";
         }
+
+        public Type Type => typeof(bool);
     }
 }

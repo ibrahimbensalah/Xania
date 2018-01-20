@@ -6,6 +6,6 @@ namespace Xania.DbMigrator
     public interface IDbMigration
     {
         string Id { get; }
-        Task ExecuteAsync(SqlConnection conn, SqlTransaction trans);
+        void Execute(SqlConnection conn, SqlTransaction trans);
     }
 }

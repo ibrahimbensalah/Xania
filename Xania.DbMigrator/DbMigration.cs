@@ -26,7 +26,7 @@ namespace Xania.DbMigrator
         }
 
         public string Id { get; }
-        public abstract Task ExecuteAsync(SqlConnection conn, SqlTransaction trans);
+        public abstract void Execute(SqlConnection conn, SqlTransaction trans);
 
         protected TransactSql ResourceScript(string scriptName)
         {

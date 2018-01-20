@@ -1,6 +1,9 @@
-﻿namespace Xania.Graphs
+﻿using System;
+
+namespace Xania.Graphs
 {
     public interface IStep
     {
+        Type Type { get; }
     }
 }

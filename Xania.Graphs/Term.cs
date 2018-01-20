@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace Xania.Graphs
@@ -10,11 +11,14 @@ namespace Xania.Graphs
         public Term(IEnumerable<IStep> steps)
         {
             _steps = steps;
+            throw new NotImplementedException();
         }
 
         public override string ToString()
         {
             return string.Join(".", _steps.Select(e => e.ToString()));
         }
+
+        public Type Type { get; }
     }
 }

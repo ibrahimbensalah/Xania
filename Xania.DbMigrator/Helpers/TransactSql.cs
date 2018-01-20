@@ -35,6 +35,25 @@ namespace Xania.DbMigrator.Helpers
             }
         }
 
+        public string Execute(SqlConnection conn, SqlTransaction trans)
+        {
+            foreach (var part in Regex.Split(_script, @"^\s*GO\s*$", RegexOptions.Multiline | RegexOptions.IgnoreCase).Select(e => e.Trim()))
+            {
+                if (string.IsNullOrEmpty(part))
+                    continue;
+
+                var cmd = conn.CreateCommand();
+                cmd.Transaction = trans;
+                cmd.CommandText = part;
+                cmd.CommandType = CommandType.Text;
+                cmd.CommandTimeout = 600;
+
+                cmd.ExecuteNonQuery();
+            }
+
+            return _script;
+        }
+
         public async Task<string> ExecuteAsync(SqlConnection conn, SqlTransaction trans)
         {
             foreach (var part in Regex.Split(_script, @"^\s*GO\s*$", RegexOptions.Multiline | RegexOptions.IgnoreCase).Select(e => e.Trim()))

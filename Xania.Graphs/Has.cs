@@ -1,4 +1,6 @@
-﻿namespace Xania.Graphs
+﻿using System;
+
+namespace Xania.Graphs
 {
     public class Has : IStep
     {
@@ -15,5 +17,7 @@
         {
             return $"has('{Property}', {CompareStep})";
         }
+
+        public Type Type => typeof(bool);
     }
 }

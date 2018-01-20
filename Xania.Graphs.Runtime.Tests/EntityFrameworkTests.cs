@@ -7,7 +7,6 @@ using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Console;
 using NUnit.Framework;
 
 namespace Xania.Graphs.Runtime.Tests
@@ -47,11 +46,11 @@ namespace Xania.Graphs.Runtime.Tests
             private static DbContextOptions GetOptions()
             {
                 var ob = new DbContextOptionsBuilder<WorldDbContext>();
-                ob.UseLoggerFactory(new LoggerFactory(new[]
+                ob.UseLoggerFactory(new LoggerFactory(new ILoggerProvider[]
                 {
-                    new ConsoleLoggerProvider((category, level)
-                        => category == DbLoggerCategory.Database.Command.Name
-                           && level == LogLevel.Information, true)
+                    //new ConsoleLoggerProvider((category, level)
+                    //    => category == DbLoggerCategory.Database.Command.Name
+                    //       && level == LogLevel.Information, true)
                 }));
                 ob.UseSqlServer("server=.;database=test;integrated security=true;", GetSqlServerOptions);
                 return ob.Options;

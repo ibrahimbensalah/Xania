@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace Xania.Graphs
@@ -12,6 +13,8 @@ namespace Xania.Graphs
         {
             MethodName = methodName;
             Steps = steps;
+
+            throw new NotImplementedException();
         }
 
         public Call(string methodName, IEnumerable<IStep> steps)
@@ -24,5 +27,7 @@ namespace Xania.Graphs
         {
             return $"{MethodName}({string.Join(",", Steps.Select(e => e.ToString()))})";
         }
+
+        public Type Type { get; }
     }
 }

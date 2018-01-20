@@ -26,21 +26,16 @@ namespace Xania.DbMigrator.Helpers
 
         public void ResetDatabase()
         {
-            ResetDatabaseAsync().Wait();
-        }
-
-        public async Task ResetDatabaseAsync()
-        {
             using (var conn = new SqlConnection(_masterConnectionString))
             {
-                await conn.OpenAsync();
+                conn.Open();
                 if (!CreateDatabaseIfNotExists(conn, _databaseName))
                 {
                     conn.ChangeDatabase(_databaseName);
                     Console.WriteLine($@"Truncate database {_databaseName}");
                     using (var trans = conn.BeginTransaction())
                     {
-                        await new TransactSql(Resources.truncate_db).ExecuteAsync(conn, trans);
+                        new TransactSql(Resources.truncate_db).Execute(conn, trans);
                         trans.Commit();
                     }
                 }
@@ -48,12 +43,31 @@ namespace Xania.DbMigrator.Helpers
             }
         }
 
+        //public async Task ResetDatabaseAsync()
+        //{
+        //    using (var conn = new SqlConnection(_masterConnectionString))
+        //    {
+        //        // await conn.OpenAsync();
+        //        //if (!CreateDatabaseIfNotExists(conn, _databaseName))
+        //        //{
+        //        //    conn.ChangeDatabase(_databaseName);
+        //        //    Console.WriteLine($@"Truncate database {_databaseName}");
+        //        //    using (var trans = conn.BeginTransaction())
+        //        //    {
+        //        //        await new TransactSql(Resources.truncate_db).ExecuteAsync(conn, trans);
+        //        //        trans.Commit();
+        //        //    }
+        //        //}
+        //        conn.Close();
+        //    }
+        //}
+
         public void ImportBacpac(string bacpacFileName)
         {
             Console.WriteLine($@"Restoring backup....");
 
             var dbServices = new DacServices(_connectionString);
-            dbServices.ImportBacpac(BacPackage.Load(bacpacFileName), _databaseName);
+            dbServices.ImportBacpac(BacPackage.Load(bacpacFileName), _databaseName, new DacImportOptions{});
         }
 
         public bool CreateDatabaseIfNotExists(string connectionString, string databaseName)
@@ -118,6 +132,15 @@ namespace Xania.DbMigrator.Helpers
             var dbServices = new DacServices(_connectionString);
             dbServices.Message += (sender, evt) => Console.WriteLine(evt.Message);
             dbServices.ExportBacpac(bacpacFile, _databaseName);
+        }
+
+        public void ExtractSchema(string dacpacFile, string applicationName)
+        {
+            Console.WriteLine($@"Generating schema....");
+
+            var dbServices = new DacServices(_connectionString);
+            dbServices.Message += (sender, evt) => Console.WriteLine(evt.Message);
+            dbServices.Extract(dacpacFile, _databaseName, applicationName, new Version(1, 0));
         }
 
         public void PublishDacpac(string dacpacFile)

@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -71,6 +72,7 @@ namespace Xania.Graphs
         public Const(object value)
         {
             Value = value;
+            Type = value.GetType();
         }
 
         public override string ToString()
@@ -80,5 +82,7 @@ namespace Xania.Graphs
             return Value?.ToString() ?? string.Empty;
             // return JsonConvert.SerializeObject(Value);
         }
+
+        public Type Type { get; }
     }
 }
