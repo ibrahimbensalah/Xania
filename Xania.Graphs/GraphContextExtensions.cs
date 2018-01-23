@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System.Linq;
 using Xania.Graphs.Linq;
 using Xania.Graphs.Structure;
 
@@ -31,8 +29,8 @@ namespace Xania.Graphs
                     return (q, t, m);
                 }
 
-                var stepQuery = r.Next(t, step);
-                return (stepQuery.Query(r.Expression), step.Type, m);
+                var next = r.Next(t, step).Query(r.Expression);
+                return (next, step.Type, m);
             });
             
             return result;

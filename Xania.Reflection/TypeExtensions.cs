@@ -35,6 +35,31 @@ namespace Xania.Reflection
             return !(type.IsInterface || type.IsAbstract || type.GetConstructors().Length == 0);
         }
 
+        public static Type MapFrom(this Type templateType, Type targetType)
+        {
+            if (targetType.ContainsGenericParameters)
+                return null;
+
+            var stack = new Stack<Type>();
+            stack.Push(targetType);
+
+            while (stack.Count > 0)
+            {
+                var type = stack.Pop();
+                if (type.IsGenericType && type.GetGenericTypeDefinition() == templateType)
+                    return type;
+
+                if (type.BaseType != null)
+                    stack.Push(type.BaseType);
+
+                foreach(var i in type.GetInterfaces())
+                    stack.Push(i);
+            }
+
+            return null;
+        }
+
+
         public static Type MapTo(this Type templateType, Type targetType)
         {
             if (targetType.ContainsGenericParameters)

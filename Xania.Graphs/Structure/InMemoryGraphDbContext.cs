@@ -32,7 +32,7 @@ namespace Xania.Graphs.Structure
                 new (string name, IGraphQuery result)[0]
             );
 
-            return Task.FromResult((IEnumerable<object>)q.Execute(elementType));
+            return Task.FromResult((IEnumerable<object>) q.Execute(elementType));
         }
     }
 
@@ -45,20 +45,39 @@ namespace Xania.Graphs.Structure
         {
             _graph = graph;
             Expression = expr;
-            Execute(typeof(object));
         }
 
         public object Execute(Type elementType)
         {
-            var f = Expression.Lambda<Func<IQueryable<Vertex>>>(Expression).Compile();
-            return f().Select(v => v.ToClrType(elementType, _graph));
+            // throw new NotImplementedException();
+
+            var selectMethod = QueryableHelper.Select_TSource_2(typeof(Vertex), elementType);
+
+            var vertexParam = Expression.Parameter(typeof(Vertex));
+            var selectExpr = Expression.Lambda(Expression.New(elementType), vertexParam);
+
+            var f = Expression.Lambda<Func<object>>(Expression.Call(selectMethod, Expression, selectExpr)).Compile();
+            return f();
+
+
+
+            //var f = Expression.Lambda<Func<IQueryable<Vertex>>>(Expression).Compile();
+            //return f().Select(v => v.ToClrType(elementType, _graph));
+        }
+
+        public static Expression GetVertextExpression(Type elementType)
+        {
+            var vertexParam = Expression.Parameter(typeof(Vertex));
+
+            return Expression.New(elementType);
         }
 
         public IStepQuery Next(Type sourceType, IStep step)
         {
             if (step is V vertex)
             {
-                return new FilterStep<Vertex>(_graph, x => x.Label.Equals(vertex.Label, StringComparison.InvariantCultureIgnoreCase));
+                return new FilterStep<Vertex>(_graph,
+                    x => x.Label.Equals(vertex.Label, StringComparison.InvariantCultureIgnoreCase));
             }
 
             if (step is Has has)
@@ -68,34 +87,39 @@ namespace Xania.Graphs.Structure
 
             if (step is Where where)
             {
-                return new FilterStep<Vertex>(_graph, GetVertexPredicate(@where.Predicate, new(string name, Expression result)[0]));
+                return new FilterStep<Vertex>(_graph,
+                    GetVertexPredicate(@where.Predicate, new(string name, Expression result)[0]));
             }
 
             if (step is Out @out)
             {
-                return new OutStep(_graph, GetOutExpression(@out));
+                return new SelectManyStep(_graph, GetOutExpression(@out));
             }
 
             if (step is Project project)
             {
                 var param = Expression.Parameter(typeof(Vertex));
                 var listInit = GetProjectionExpression(param, project);
-                return new ProjectStep(_graph, Expression.Lambda(listInit, param));
+                return new SelectStep(_graph, Expression.Lambda(listInit, param));
             }
 
             if (step is Values values)
             {
-                Expression<Func<Vertex, object>> q = v => v.Properties.Where(p => p.Name.Equals(values.Name)); // .Select(p => p.Value).FirstOrDefault();
+                Expression<Action<Vertex>> query =
+                    // .Select(p => p.Value).FirstOrDefault()
+                    v => v.Properties.Where(p => p.Name.Equals(values.Name))
+                        .Select(p => p.Value.Convert(step.Type));
 
-                var param = Expression.Parameter(typeof(Property));
+                var param = Expression.Parameter(typeof(Object));
                 var selectExpr = Expression.Call(
-                    EnumerableHelper.Select_TSource_2(typeof(Property), step.Type),
-                    q.Body,
-                    Expression.Lambda(Expression.Convert(Expression.Property(param, "Value"), step.Type), param)
+                    EnumerableHelper.Select_TSource_2(typeof(Object), step.Type),
+                    query.Body,
+                    Expression.Lambda(Expression.Convert(param, step.Type), param)
                 );
 
                 var firstMethod = EnumerableHelper.FirstOrDefault(step.Type);
-                return new ProjectStep(_graph, Expression.Lambda(Expression.Call(firstMethod, selectExpr), q.Parameters));
+                return new SelectStep(_graph,
+                    Expression.Lambda(Expression.Call(firstMethod, selectExpr), query.Parameters));
             }
 
             throw new NotImplementedException($"VertextQuery.Execute {step.GetType()}");
@@ -116,7 +140,6 @@ namespace Xania.Graphs.Structure
                         Expression.Convert(expr, typeof(object))
                     );
                 });
-
 
             return Expression.ListInit(
                 Expression.New(typeof(Dictionary<string, object>)),
@@ -142,7 +165,8 @@ namespace Xania.Graphs.Structure
             return Expression.Lambda<Func<Vertex, bool>>(body, param);
         }
 
-        private Expression GetExpression(Expression param, GraphTraversal traversal, IEnumerable<(string name, Expression result)> mappings)
+        private Expression GetExpression(Expression param, GraphTraversal traversal,
+            IEnumerable<(string name, Expression result)> mappings)
         {
             var body = traversal.Steps.Aggregate((input: param, mappings: mappings), (__, step) =>
             {
@@ -225,12 +249,20 @@ namespace Xania.Graphs.Structure
         }
     }
 
-    internal class ProjectStep : IStepQuery
+    internal class ValuesStep : IStepQuery
+    {
+        public IGraphQuery Query(Expression sourceExpr)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    internal class SelectStep : IStepQuery
     {
         private readonly Graph _graph;
         private readonly LambdaExpression _selectorExpr;
 
-        public ProjectStep(Graph graph, LambdaExpression selectorExpr)
+        public SelectStep(Graph graph, LambdaExpression selectorExpr)
         {
             _graph = graph;
             _selectorExpr = selectorExpr;
@@ -246,12 +278,12 @@ namespace Xania.Graphs.Structure
         }
     }
 
-    internal class OutStep : IStepQuery
+    internal class MemberStep : IStepQuery
     {
         private readonly Graph _graph;
         private readonly LambdaExpression _selectorExpr;
 
-        public OutStep(Graph graph, LambdaExpression selectorExpr)
+        public MemberStep(Graph graph, LambdaExpression selectorExpr)
         {
             _graph = graph;
             _selectorExpr = selectorExpr;
@@ -262,8 +294,53 @@ namespace Xania.Graphs.Structure
             var sourceType = _selectorExpr.Parameters[0].Type;
             var resultType = _selectorExpr.Body.Type.GetItemType();
             var manyMethod = QueryableHelper.SelectMany_TSource_2(sourceType, resultType);
-            var many = Expression.Call(manyMethod, sourceExpr, _selectorExpr);
+
+            var body = ToEnumerable(_selectorExpr.Body);
+
+            var many = Expression.Call(manyMethod, sourceExpr, Expression.Lambda(body, _selectorExpr.Parameters));
+            return new AnonymousQuery(_graph, many);
+        }
+
+        private Expression ToEnumerable(Expression expr)
+        {
+            var enumerableType = typeof(IEnumerable<>).MapFrom(expr.Type);
+            if (enumerableType == expr.Type)
+                return expr;
+
+            return Expression.Convert(expr, enumerableType);
+        }
+    }
+
+    internal class SelectManyStep : IStepQuery
+    {
+        private readonly Graph _graph;
+        private readonly LambdaExpression _selectorExpr;
+
+        public SelectManyStep(Graph graph, LambdaExpression selectorExpr)
+        {
+            _graph = graph;
+            _selectorExpr = selectorExpr;
+        }
+
+        public IGraphQuery Query(Expression sourceExpr)
+        {
+            var sourceType = _selectorExpr.Parameters[0].Type;
+            var resultType = _selectorExpr.Body.Type.GetItemType();
+            var manyMethod = QueryableHelper.SelectMany_TSource_2(sourceType, resultType);
+
+            var body = ToEnumerable(_selectorExpr.Body);
+
+            var many = Expression.Call(manyMethod, sourceExpr, Expression.Lambda(body, _selectorExpr.Parameters));
             return new VertexQuery(_graph, many);
+        }
+
+        private Expression ToEnumerable(Expression expr)
+        {
+            var enumerableType = typeof(IEnumerable<>).MapFrom(expr.Type);
+            if (enumerableType == expr.Type)
+                return expr;
+
+            return Expression.Convert(expr, enumerableType);
         }
     }
 
@@ -287,49 +364,19 @@ namespace Xania.Graphs.Structure
 
     internal class ValuesQuery
     {
-        //private readonly Graph _graph;
-        //private readonly Expression _expression;
-
-        //public ValuesQuery(Graph graph, Expression expression)
-        //{
-        //    _graph = graph;
-        //    _expression = expression;
-        //}
-
-        //public object Execute(Type elementType)
-        //{
-        //    var f = Expression.Lambda<Func<IQueryable<object>>>(_expression).Compile();
-        //    return f();
-        //}
-
-        //public IStepQuery Next(IStep step)
-        //{
-        //    if (step is Out o)
-        //    {
-        //        var property = TypeDescriptor.GetProperties(_expression.Type)
-        //            .OfType<PropertyDescriptor>()
-        //            .First(p => p.Name.Equals(o.EdgeLabel, StringComparison.InvariantCultureIgnoreCase));
-
-        //        var propertyExpr = Expression.Property(_expression, property.Name);
-        //        return new ValuesQuery(_graph, propertyExpr).ToStepQuery();
-        //    }
-
-        //    throw new NotImplementedException($"{step.GetType()}");
-        //}
-
-        //public Expression Expression => _expression;
-
         public static object GetMember(object v, string name, Type memberType)
         {
             if (v is Vertex vtx && name.Equals("id", StringComparison.InvariantCultureIgnoreCase))
             {
                 return vtx.Id;
             }
+
             if (v is Vertex obj)
             {
                 return obj.Properties.Where(p => p.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase))
                     .Select(p => p.Value).FirstOrDefault();
             }
+
             throw new NotImplementedException();
         }
     }
@@ -349,10 +396,11 @@ namespace Xania.Graphs.Structure
         {
             var result = Expression.Lambda(_sourceExpr).Compile();
             var list = new List<object>();
-            foreach (var o in (IEnumerable<object>)result.DynamicInvoke())
+            foreach (var o in (IEnumerable<object>) result.DynamicInvoke())
             {
                 list.Add(o.Convert(elementType));
             }
+
             return list;
         }
 
@@ -367,8 +415,9 @@ namespace Xania.Graphs.Structure
                 var param = Expression.Parameter(sourceType);
                 var propertyExpr = Expression.Property(param, property.Name);
 
-                return new OutStep(_graph, Expression.Lambda(propertyExpr, param));
+                return new MemberStep(_graph, Expression.Lambda(propertyExpr, param));
             }
+
             throw new NotSupportedException($"{step.GetType()}");
         }
 

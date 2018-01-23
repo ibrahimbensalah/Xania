@@ -135,7 +135,7 @@ namespace Xania.Graphs.Runtime.Tests
         public Address HQ { get; set; }
         public string[] Tags { get; set; }
         public ICollection<Person> Friends { get; } = new List<Person>();
-    }
+   }
 
     public class Contract
     {

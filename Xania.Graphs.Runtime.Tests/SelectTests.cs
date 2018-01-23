@@ -32,7 +32,7 @@ namespace Xania.Graphs.Runtime.Tests
                 where p.Id == 1
                 from l in p.HQ.Lines
                 select l;
-            var line = lines.ToArray().Should().ContainSingle().Subject;
+            var line = lines.Should().ContainSingle().Subject;
 
             line.Value.Should().Be("Punter 315");
             line.Type.Should().Be(AddressType.Street);
@@ -121,13 +121,13 @@ namespace Xania.Graphs.Runtime.Tests
         [Test]
         public void SelectFriendOfFriendsOfFriends()
         {
-            var distantFriends =
+            var friendOfDistantFriends =
                 from p in People
                 from f in p.Friends
                 from g in f.Friends
                 from h in p.Friends
                 select h.Friend;
-            Console.WriteLine(JsonConvert.SerializeObject(distantFriends, Formatting.Indented));
+            Console.WriteLine(JsonConvert.SerializeObject(friendOfDistantFriends, Formatting.Indented));
         }
 
         [Test]

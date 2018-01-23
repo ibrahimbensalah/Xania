@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -39,6 +38,14 @@ namespace Xania.Graphs.Linq
                  new Func<IQueryable<int>, bool>(Queryable.Any)
                      .GetMethodInfo().GetGenericMethodDefinition()))
             .MakeGenericMethod(sourceType);
+    }
+
+    public static class GraphExpressions
+    {
+        public static Expression GetVertexExpression(Expression source)
+        {
+            return null;
+        }
     }
 
     public static class CollectionHelper
