@@ -3,6 +3,9 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Runtime.Remoting.Messaging;
+using System.Runtime.Remoting.Proxies;
+using System.Security.Permissions;
 using System.Threading.Tasks;
 using Xania.Graphs.Linq;
 using Xania.Reflection;
@@ -36,6 +39,13 @@ namespace Xania.Graphs.Structure
         }
     }
 
+    public class GraphSON
+    {
+        public Dictionary<string, object> Properties { get; set; }
+        public IQueryable<Edge> Relations { get; set; }
+        public string Id { get; set; }
+    }
+
     internal class VertexQuery : IGraphQuery
     {
         private readonly Graph _graph;
@@ -49,20 +59,62 @@ namespace Xania.Graphs.Structure
 
         public object Execute(Type elementType)
         {
-            // throw new NotImplementedException();
+            Expression<Func<Vertex, GraphSON>> propertiesExpr =
+                v => new GraphSON
+                {
+                    Id = v.Id,
+                    Properties = v.Properties.ToDictionary(p => p.Name, p => p.Value, StringComparer.InvariantCultureIgnoreCase),
+                    Relations = _graph.Edges.Where(edge => edge.OutV == v.Id)
+                };
 
-            var selectMethod = QueryableHelper.Select_TSource_2(typeof(Vertex), elementType);
+            var selectMethod = QueryableHelper.Select_TSource_2(typeof(Vertex), typeof(GraphSON));
 
-            var vertexParam = Expression.Parameter(typeof(Vertex));
-            var selectExpr = Expression.Lambda(Expression.New(elementType), vertexParam);
+            var f = Expression.Lambda(Expression.Call(selectMethod, Expression, propertiesExpr)).Compile();
+            var result = (IEnumerable<GraphSON>)f.DynamicInvoke();
 
-            var f = Expression.Lambda<Func<object>>(Expression.Call(selectMethod, Expression, selectExpr)).Compile();
-            return f();
+            var list = new List<object>();
 
+            foreach (var entry in result)
+            {
+                var valueFactories =
+                    entry.Properties
+                        .ToDictionary<KeyValuePair<string, object>, string, Func<Type, object>>(
+                            e => e.Key,
+                            e => t => e.Value.Convert(t),
+                            StringComparer.InvariantCultureIgnoreCase
+                        );
+                valueFactories.Add("id", t => entry.Id.Convert(t));
+                foreach(var edge in entry.Relations)
+                    valueFactories.Add(edge.Label, t =>
+                    {
+                        if (t.IsEnumerable())
+                        {
+                            var itemType = t.GetItemType();
+                            return new[] {Proxy(itemType, edge.InV)};
+                        }
+                        return Proxy(t, edge.InV);
+                    });
 
+                var entity = elementType.CreateInstance(valueFactories);
+                list.Add(entity);
+            }
+
+            return list;
 
             //var f = Expression.Lambda<Func<IQueryable<Vertex>>>(Expression).Compile();
             //return f().Select(v => v.ToClrType(elementType, _graph));
+        }
+
+        private static object Proxy(Type modelType, object targetId)
+        {
+            var relModelProperties = TypeDescriptor.GetProperties(modelType)
+                .OfType<PropertyDescriptor>()
+                .ToDictionary(e => e.Name, StringComparer.InvariantCultureIgnoreCase);
+            var relIdProperty = relModelProperties.ContainsKey("Id") ? relModelProperties["Id"] : null;
+
+            var id = relIdProperty == null ? null : targetId.Convert(relIdProperty?.PropertyType);
+
+            return new ShallowProxy(modelType, id).GetTransparentProxy();
         }
 
         public static Expression GetVertextExpression(Type elementType)
@@ -434,5 +486,38 @@ namespace Xania.Graphs.Structure
     public interface IStepQuery
     {
         IGraphQuery Query(Expression sourceExpr);
+    }
+
+    internal class ShallowProxy : RealProxy
+    {
+        private readonly object _id;
+
+        [PermissionSet(SecurityAction.LinkDemand)]
+        public ShallowProxy(Type myType, object id) : base(myType)
+        {
+            _id = id;
+        }
+
+        [SecurityPermission(SecurityAction.LinkDemand, Flags = SecurityPermissionFlag.Infrastructure)]
+        public override IMessage Invoke(IMessage myIMessage)
+        {
+            if (myIMessage is IMethodCallMessage)
+            {
+                var methodCall = (IMethodCallMessage)myIMessage;
+                if (methodCall.MethodName.Equals("GetType"))
+                    return new ReturnMessage(typeof(ShallowProxy), null, 0, methodCall.LogicalCallContext, methodCall);
+                if (methodCall.MethodName.Equals("get_Id", StringComparison.OrdinalIgnoreCase))
+                    return new ReturnMessage(_id, null, 0, methodCall.LogicalCallContext, methodCall);
+                if (methodCall.MethodName.Equals("ToString"))
+                    return new ReturnMessage(ToString(), null, 0, methodCall.LogicalCallContext, methodCall);
+            }
+
+            throw new InvalidOperationException("Cannot call shallow object");
+        }
+
+        public override string ToString()
+        {
+            return $"{{Id: {_id}}}";
+        }
     }
 }
