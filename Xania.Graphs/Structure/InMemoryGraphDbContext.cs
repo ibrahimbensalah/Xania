@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
@@ -7,6 +8,7 @@ using System.Runtime.Remoting.Messaging;
 using System.Runtime.Remoting.Proxies;
 using System.Security.Permissions;
 using System.Threading.Tasks;
+using Xania.Graphs;
 using Xania.Graphs.Linq;
 using Xania.Reflection;
 
@@ -32,77 +34,37 @@ namespace Xania.Graphs.Structure
 
             var q = new VertexQuery(_graph, Expression.Constant(_graph.Vertices)).Execute(
                 traversal,
-                new (string name, IGraphQuery result)[0]
+                new(string name, IGraphQuery result)[0]
             );
 
             return Task.FromResult((IEnumerable<object>) q.Execute(elementType));
         }
     }
 
-    public class GraphSON
+    public class GraphSON : IDictionary<string, Func<Type, object>>
     {
-        public Dictionary<string, object> Properties { get; set; }
-        public IQueryable<Edge> Relations { get; set; }
         public string Id { get; set; }
-    }
+        public Dictionary<string, object> Properties { get; set; }
+        public IEnumerable<Edge> Relations { get; set; }
 
-    internal class VertexQuery : IGraphQuery
-    {
-        private readonly Graph _graph;
-        public Expression Expression { get; }
-
-        public VertexQuery(Graph graph, Expression expr)
+        public IEnumerator<KeyValuePair<string, Func<Type, object>>> GetEnumerator()
         {
-            _graph = graph;
-            Expression = expr;
-        }
+            yield return new KeyValuePair<string, Func<Type, object>>("id", t => Id.Convert(t));
 
-        public object Execute(Type elementType)
-        {
-            Expression<Func<Vertex, GraphSON>> propertiesExpr =
-                v => new GraphSON
+            foreach (var p in Properties)
+                yield return new KeyValuePair<string, Func<Type, object>>(p.Key, t => p.Value.Convert(t));
+
+            foreach (var edge in Relations)
+                yield return new KeyValuePair<string, Func<Type, object>>(edge.Label, t =>
                 {
-                    Id = v.Id,
-                    Properties = v.Properties.ToDictionary(p => p.Name, p => p.Value, StringComparer.InvariantCultureIgnoreCase),
-                    Relations = _graph.Edges.Where(edge => edge.OutV == v.Id)
-                };
-
-            var selectMethod = QueryableHelper.Select_TSource_2(typeof(Vertex), typeof(GraphSON));
-
-            var f = Expression.Lambda(Expression.Call(selectMethod, Expression, propertiesExpr)).Compile();
-            var result = (IEnumerable<GraphSON>)f.DynamicInvoke();
-
-            var list = new List<object>();
-
-            foreach (var entry in result)
-            {
-                var valueFactories =
-                    entry.Properties
-                        .ToDictionary<KeyValuePair<string, object>, string, Func<Type, object>>(
-                            e => e.Key,
-                            e => t => e.Value.Convert(t),
-                            StringComparer.InvariantCultureIgnoreCase
-                        );
-                valueFactories.Add("id", t => entry.Id.Convert(t));
-                foreach(var edge in entry.Relations)
-                    valueFactories.Add(edge.Label, t =>
+                    if (t.IsEnumerable())
                     {
-                        if (t.IsEnumerable())
-                        {
-                            var itemType = t.GetItemType();
-                            return new[] {Proxy(itemType, edge.InV)};
-                        }
-                        return Proxy(t, edge.InV);
-                    });
+                        var itemType = t.GetItemType();
+                        return new[] {Proxy(itemType, edge.InV)};
+                    }
 
-                var entity = elementType.CreateInstance(valueFactories);
-                list.Add(entity);
-            }
-
-            return list;
-
-            //var f = Expression.Lambda<Func<IQueryable<Vertex>>>(Expression).Compile();
-            //return f().Select(v => v.ToClrType(elementType, _graph));
+                    return Proxy(t, edge.InV);
+                });
         }
 
         private static object Proxy(Type modelType, object targetId)
@@ -117,6 +79,125 @@ namespace Xania.Graphs.Structure
             return new ShallowProxy(modelType, id).GetTransparentProxy();
         }
 
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            return GetEnumerator();
+        }
+
+        public void Add(KeyValuePair<string, Func<Type, object>> item)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void Clear()
+        {
+            throw new NotImplementedException();
+        }
+
+        public bool Contains(KeyValuePair<string, Func<Type, object>> item)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void CopyTo(KeyValuePair<string, Func<Type, object>>[] array, int arrayIndex)
+        {
+            throw new NotImplementedException();
+        }
+
+        public bool Remove(KeyValuePair<string, Func<Type, object>> item)
+        {
+            throw new NotImplementedException();
+        }
+
+        public int Count { get; }
+        public bool IsReadOnly { get; }
+
+        public bool ContainsKey(string key)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void Add(string key, Func<Type, object> value)
+        {
+            throw new NotImplementedException();
+        }
+
+        public bool Remove(string key)
+        {
+            throw new NotImplementedException();
+        }
+
+        public bool TryGetValue(string key, out Func<Type, object> value)
+        {
+            foreach (var kvp in this)
+                if (kvp.Key.Equals(key, StringComparison.InvariantCultureIgnoreCase))
+                {
+                    value = kvp.Value;
+                    return true;
+                }
+
+            value = null;
+            return false;
+        }
+
+        public Func<Type, object> this[string key]
+        {
+            get { throw new NotImplementedException(); }
+            set { throw new NotImplementedException(); }
+        }
+
+        public ICollection<string> Keys { get; }
+        public ICollection<Func<Type, object>> Values { get; }
+    }
+
+    internal class VertexQuery : IGraphQuery
+    {
+        private readonly Graph _graph;
+        public Expression SourceExpression { get; }
+
+        public VertexQuery(Graph graph, Expression expr)
+        {
+            _graph = graph;
+            SourceExpression = expr;
+        }
+
+        public object Execute(Type elementType)
+        {
+            var graphsonExpr = GetGraphSONExpression();
+
+            var f = Expression.Lambda(graphsonExpr).Compile();
+            var result = (IEnumerable<GraphSON>) f.DynamicInvoke();
+
+            var list = new List<object>();
+
+            foreach (var entry in result)
+            {
+                var entity = elementType.CreateInstance(entry);
+                list.Add(entity);
+            }
+
+            return list;
+
+            //var f = Expression.Lambda<Func<IQueryable<Vertex>>>(Expression).Compile();
+            //return f().Select(v => v.ToClrType(elementType, _graph));
+        }
+
+        public Expression GetGraphSONExpression()
+        {
+            Expression<Func<Vertex, GraphSON>> propertiesExpr =
+                v => new GraphSON
+                {
+                    Id = v.Id,
+                    Properties =
+                        v.Properties.ToDictionary(p => p.Name, p => p.Value, StringComparer.InvariantCultureIgnoreCase),
+                    Relations = _graph.Edges.Where(edge => edge.OutV == v.Id)
+                };
+
+            var selectMethod = QueryableHelper.Select_TSource_2(typeof(Vertex), typeof(GraphSON));
+            var graphsonExpr = Expression.Call(selectMethod, SourceExpression, propertiesExpr);
+            return graphsonExpr;
+        }
+
         public static Expression GetVertextExpression(Type elementType)
         {
             var vertexParam = Expression.Parameter(typeof(Vertex));
@@ -124,54 +205,43 @@ namespace Xania.Graphs.Structure
             return Expression.New(elementType);
         }
 
-        public IStepQuery Next(Type sourceType, IStep step)
+        public IGraphQuery Next(Type sourceType, IStep step)
         {
             if (step is V vertex)
             {
                 return new FilterStep<Vertex>(_graph,
-                    x => x.Label.Equals(vertex.Label, StringComparison.InvariantCultureIgnoreCase));
+                        x => x.Label.Equals(vertex.Label, StringComparison.InvariantCultureIgnoreCase))
+                    .Query(SourceExpression);
             }
 
             if (step is Has has)
             {
-                return new FilterStep<Vertex>(_graph, GetPropertyPredicate(has.Property, has.CompareStep));
+                return new FilterStep<Vertex>(_graph, GetPropertyPredicate(has.Property, has.CompareStep)).Query(
+                    SourceExpression);
             }
 
             if (step is Where where)
             {
                 return new FilterStep<Vertex>(_graph,
-                    GetVertexPredicate(@where.Predicate, new(string name, Expression result)[0]));
+                        GetVertexPredicate(@where.Predicate, new(string name, Expression result)[0]))
+                    .Query(SourceExpression);
             }
 
             if (step is Out @out)
             {
-                return new SelectManyStep(_graph, GetOutExpression(@out));
+                return new SelectManyStep(_graph, @out).Query(SourceExpression);
             }
 
             if (step is Project project)
             {
                 var param = Expression.Parameter(typeof(Vertex));
                 var listInit = GetProjectionExpression(param, project);
-                return new SelectStep(_graph, Expression.Lambda(listInit, param));
+                return new SelectStep(_graph, Expression.Lambda(listInit, param)).Query(SourceExpression);
             }
 
             if (step is Values values)
             {
-                Expression<Action<Vertex>> query =
-                    // .Select(p => p.Value).FirstOrDefault()
-                    v => v.Properties.Where(p => p.Name.Equals(values.Name))
-                        .Select(p => p.Value.Convert(step.Type));
-
-                var param = Expression.Parameter(typeof(Object));
-                var selectExpr = Expression.Call(
-                    EnumerableHelper.Select_TSource_2(typeof(Object), step.Type),
-                    query.Body,
-                    Expression.Lambda(Expression.Convert(param, step.Type), param)
-                );
-
-                var firstMethod = EnumerableHelper.FirstOrDefault(step.Type);
-                return new SelectStep(_graph,
-                    Expression.Lambda(Expression.Call(firstMethod, selectExpr), query.Parameters));
+                return new ValuesStep(_graph, values.Name, values.Type).Query(SourceExpression);
             }
 
             throw new NotImplementedException($"VertextQuery.Execute {step.GetType()}");
@@ -179,11 +249,14 @@ namespace Xania.Graphs.Structure
 
         private Expression GetProjectionExpression(Expression param, Project project)
         {
+            var g = new LocalQuery(_graph, param);
             var addMethod = typeof(Dictionary<string, object>).GetMethod("Add");
 
             var bindings = project.Dict.Select(
                 kvp =>
                 {
+
+                    var x = g.Execute(kvp.Value, new(string name, IGraphQuery result)[0]);
                     var expr = GetExpression(param, kvp.Value, new(string name, Expression result)[0]);
 
                     return Expression.ElementInit(
@@ -232,7 +305,7 @@ namespace Xania.Graphs.Structure
                     if (x.Type != typeof(Vertex))
                         throw new NotSupportedException();
 
-                    var q = GetOutExpression(o);
+                    var q = SelectManyStep.GetOutExpression(_graph, o);
 
                     return (ReplaceVisitor.VisitAndConvert(q.Body, q.Parameters[0], x), m);
                 }
@@ -274,16 +347,6 @@ namespace Xania.Graphs.Structure
             return body.input;
         }
 
-        private Expression<Func<Vertex, IEnumerable<Vertex>>> GetOutExpression(Out @out)
-        {
-            return v =>
-                from edge in _graph.Edges
-                where edge.OutV.Equals(v.Id, StringComparison.InvariantCultureIgnoreCase) &&
-                      edge.Label.Equals(@out.EdgeLabel, StringComparison.InvariantCultureIgnoreCase)
-                join vertex in _graph.Vertices on edge.InV equals vertex.Id
-                select vertex;
-        }
-
         private Expression<Func<Vertex, bool>> GetPropertyPredicate(string propertyName, IStep compareStep)
         {
             if (compareStep is Eq eq)
@@ -301,11 +364,102 @@ namespace Xania.Graphs.Structure
         }
     }
 
-    internal class ValuesStep : IStepQuery
+    internal class LocalQuery : IGraphQuery
     {
+        public LocalQuery(Graph graph, Expression sourceExpression)
+        {
+            Graph = graph;
+            SourceExpression = sourceExpression;
+        }
+
+        public object Execute(Type elementType)
+        {
+            throw new NotImplementedException();
+        }
+
+        public IGraphQuery Next(Type sourceType, IStep step)
+        {
+            if (step is Values values)
+            {
+                return new ValuesStep(Graph, values.Name, values.Type).Local(SourceExpression);
+            }
+
+            if (step is Out @out)
+            {
+                return new SelectManyStep(Graph, @out).Local(SourceExpression);
+            }
+
+            throw new NotImplementedException($"Next {step}");
+        }
+
+        public Graph Graph { get; }
+        public Expression SourceExpression { get; }
+    }
+
+    internal class LocalStep : IStepQuery
+    {
+        public Expression Expression { get; }
+
+        public LocalStep(Expression expression)
+        {
+            Expression = expression;
+        }
+
         public IGraphQuery Query(Expression sourceExpr)
         {
             throw new NotImplementedException();
+        }
+
+        public IGraphQuery Local(Expression sourceExpr)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    internal class ValuesStep : IStepQuery
+    {
+        public Graph Graph { get; }
+        public string PropertyName { get; }
+        public Type PropertyType { get; }
+
+        public ValuesStep(Graph graph, string propertyName, Type propertyType)
+        {
+            Graph = graph;
+            PropertyName = propertyName;
+            PropertyType = propertyType;
+        }
+
+        public IGraphQuery Query(Expression sourceExpr)
+        {
+            Expression<Action<Vertex>> query =
+                v => v.Properties.Where(p => p.Name.Equals(PropertyName, StringComparison.InvariantCultureIgnoreCase))
+                    .Select(p => p.Value.Convert(PropertyType));
+
+            var param = Expression.Parameter(typeof(Object));
+            var selectExpr = Expression.Call(
+                EnumerableHelper.Select_TSource_2(typeof(Object), PropertyType),
+                query.Body,
+                Expression.Lambda(Expression.Convert(param, PropertyType), param)
+            );
+
+            var firstMethod = EnumerableHelper.FirstOrDefault(PropertyType);
+            var selectorExpr = Expression.Lambda(Expression.Call(firstMethod, selectExpr), query.Parameters);
+            var sourceType = sourceExpr.Type.GetItemType();
+            var selectMethod = QueryableHelper.Select_TSource_2(sourceType, selectorExpr.Body.Type);
+            var anoExpr = Expression.Call(selectMethod, sourceExpr, selectorExpr);
+
+            return new AnonymousQuery(Graph, anoExpr);
+        }
+
+        public IGraphQuery Local(Expression sourceExpr)
+        {
+            Expression<Action<Vertex>> query =
+                v => v.Properties.Where(p => p.Name.Equals(PropertyName, StringComparison.InvariantCultureIgnoreCase))
+                    .Select(p => p.Value.Convert(PropertyType)).FirstOrDefault();
+
+
+            var selectBody = new ReplaceVisitor(query.Parameters[0], sourceExpr).VisitAndConvert(query.Body);
+            return new LocalQuery(Graph, selectBody);
         }
     }
 
@@ -327,6 +481,11 @@ namespace Xania.Graphs.Structure
             var anoExpr = Expression.Call(selectMethod, sourceExpr, _selectorExpr);
 
             return new AnonymousQuery(_graph, anoExpr);
+        }
+
+        public IGraphQuery Local(Expression sourceExpr)
+        {
+            throw new NotImplementedException();
         }
     }
 
@@ -353,6 +512,11 @@ namespace Xania.Graphs.Structure
             return new AnonymousQuery(_graph, many);
         }
 
+        public IGraphQuery Local(Expression sourceExpr)
+        {
+            throw new NotImplementedException();
+        }
+
         private Expression ToEnumerable(Expression expr)
         {
             var enumerableType = typeof(IEnumerable<>).MapFrom(expr.Type);
@@ -374,6 +538,21 @@ namespace Xania.Graphs.Structure
             _selectorExpr = selectorExpr;
         }
 
+        public SelectManyStep(Graph graph, Out @out)
+            : this(graph, GetOutExpression(graph, @out))
+        {
+        }
+
+        public static Expression<Func<Vertex, IEnumerable<Vertex>>> GetOutExpression(Graph graph, Out @out)
+        {
+            return v =>
+                from edge in graph.Edges
+                where edge.OutV.Equals(v.Id, StringComparison.InvariantCultureIgnoreCase) &&
+                      edge.Label.Equals(@out.EdgeLabel, StringComparison.InvariantCultureIgnoreCase)
+                join vertex in graph.Vertices on edge.InV equals vertex.Id
+                select vertex;
+        }
+
         public IGraphQuery Query(Expression sourceExpr)
         {
             var sourceType = _selectorExpr.Parameters[0].Type;
@@ -384,6 +563,13 @@ namespace Xania.Graphs.Structure
 
             var many = Expression.Call(manyMethod, sourceExpr, Expression.Lambda(body, _selectorExpr.Parameters));
             return new VertexQuery(_graph, many);
+        }
+
+        public IGraphQuery Local(Expression sourceExpr)
+        {
+            var param = _selectorExpr.Parameters[0];
+            var localExpr = new ReplaceVisitor(param, sourceExpr).VisitAndConvert(_selectorExpr.Body);
+            return new VertexQuery(_graph, localExpr);
         }
 
         private Expression ToEnumerable(Expression expr)
@@ -412,6 +598,11 @@ namespace Xania.Graphs.Structure
             var whereMethod = QueryableHelper.Where_TSource_1<TElement>();
             return new VertexQuery(_graph, Expression.Call(whereMethod, sourceExpr, _predicate));
         }
+
+        public IGraphQuery Local(Expression sourceExpr)
+        {
+            throw new NotImplementedException();
+        }
     }
 
     internal class ValuesQuery
@@ -436,17 +627,16 @@ namespace Xania.Graphs.Structure
     internal class AnonymousQuery : IGraphQuery
     {
         private readonly Graph _graph;
-        private readonly Expression _sourceExpr;
 
         public AnonymousQuery(Graph graph, Expression sourceExpr)
         {
             _graph = graph;
-            _sourceExpr = sourceExpr;
+            SourceExpression = sourceExpr;
         }
 
         public object Execute(Type elementType)
         {
-            var result = Expression.Lambda(_sourceExpr).Compile();
+            var result = Expression.Lambda(SourceExpression).Compile();
             var list = new List<object>();
             foreach (var o in (IEnumerable<object>) result.DynamicInvoke())
             {
@@ -456,7 +646,7 @@ namespace Xania.Graphs.Structure
             return list;
         }
 
-        public IStepQuery Next(Type sourceType, IStep step)
+        public IGraphQuery Next(Type sourceType, IStep step)
         {
             if (step is Out o)
             {
@@ -467,25 +657,27 @@ namespace Xania.Graphs.Structure
                 var param = Expression.Parameter(sourceType);
                 var propertyExpr = Expression.Property(param, property.Name);
 
-                return new MemberStep(_graph, Expression.Lambda(propertyExpr, param));
+                return new MemberStep(_graph, Expression.Lambda(propertyExpr, param)).Query(SourceExpression);
             }
 
             throw new NotSupportedException($"{step.GetType()}");
         }
 
-        public Expression Expression => _sourceExpr;
+        public Expression SourceExpression { get; }
     }
+
 
     public interface IGraphQuery
     {
         object Execute(Type elementType);
-        IStepQuery Next(Type sourceType, IStep step);
-        Expression Expression { get; }
+        IGraphQuery Next(Type sourceType, IStep step);
+        Expression SourceExpression { get; }
     }
 
     public interface IStepQuery
     {
         IGraphQuery Query(Expression sourceExpr);
+        IGraphQuery Local(Expression sourceExpr);
     }
 
     internal class ShallowProxy : RealProxy
@@ -503,7 +695,7 @@ namespace Xania.Graphs.Structure
         {
             if (myIMessage is IMethodCallMessage)
             {
-                var methodCall = (IMethodCallMessage)myIMessage;
+                var methodCall = (IMethodCallMessage) myIMessage;
                 if (methodCall.MethodName.Equals("GetType"))
                     return new ReturnMessage(typeof(ShallowProxy), null, 0, methodCall.LogicalCallContext, methodCall);
                 if (methodCall.MethodName.Equals("get_Id", StringComparison.OrdinalIgnoreCase))

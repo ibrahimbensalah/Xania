@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.27130.2010
+VisualStudioVersion = 15.0.27130.2020
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{2E94C4D9-0FA1-4CEC-B1E2-1BD68156A10C}"
 EndProject
@@ -81,6 +81,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Xania.Graphs.Runtime.Tests", "Xania.Graphs.Runtime.Tests\Xania.Graphs.Runtime.Tests.csproj", "{F2FCC7FF-A28B-4286-B6D5-6F91E675AC7F}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Xania.Invoice.Domain", "Xania.Invoice.Domain\Xania.Invoice.Domain.csproj", "{629A36A0-0780-4CFD-A3EC-FAA2DBE65753}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "mapper", "mapper", "{9E57CBCA-A80D-469E-B2D7-D341415AFAB3}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -203,6 +205,7 @@ Global
 		{597C682A-53CD-4BDD-A042-913E45A3EAF0} = {D0B5A52A-3892-4034-91C5-74E4DBF1EEEF}
 		{F2FCC7FF-A28B-4286-B6D5-6F91E675AC7F} = {2E94C4D9-0FA1-4CEC-B1E2-1BD68156A10C}
 		{629A36A0-0780-4CFD-A3EC-FAA2DBE65753} = {301598A6-066F-4DA3-96EF-2083B462938A}
+		{9E57CBCA-A80D-469E-B2D7-D341415AFAB3} = {86173180-98EB-44E9-9911-8BF6C1755B91}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {8F4FAC4E-FF7F-4A0F-9F2D-40599DDE98BC}

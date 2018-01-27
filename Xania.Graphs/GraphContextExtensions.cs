@@ -29,7 +29,7 @@ namespace Xania.Graphs
                     return (q, t, m);
                 }
 
-                var next = r.Next(t, step).Query(r.Expression);
+                var next = r.Next(t, step);
                 return (next, step.Type, m);
             });
             

@@ -626,7 +626,7 @@ namespace Xania.Graphs.Structure
         }
     }
 
-    class ReplaceVisitor : ExpressionVisitor
+    public class ReplaceVisitor : ExpressionVisitor
     {
         private readonly Expression _source;
         private readonly Expression _target;
