@@ -10,6 +10,7 @@ using System.Security.Permissions;
 using System.Threading.Tasks;
 using Xania.Graphs;
 using Xania.Graphs.Linq;
+using Xania.ObjectMapper;
 using Xania.Reflection;
 
 namespace Xania.Graphs.Structure
@@ -41,21 +42,36 @@ namespace Xania.Graphs.Structure
         }
     }
 
-    public class GraphSON : IDictionary<string, Func<Type, object>>
+    public class GraphSON : IMap<string, object>
     {
         public string Id { get; set; }
         public Dictionary<string, object> Properties { get; set; }
         public IEnumerable<Edge> Relations { get; set; }
 
-        public IEnumerator<KeyValuePair<string, Func<Type, object>>> GetEnumerator()
+        public bool TryGetValue(string name, out object value)
         {
-            yield return new KeyValuePair<string, Func<Type, object>>("id", t => Id.Convert(t));
+            if (name.Equals("id", StringComparison.InvariantCultureIgnoreCase))
+            {
+                value = this.Id;
+                return true;
+            }
+
+            if (Properties.TryGetValue(name, out value))
+                return true;
+
+
+            return false;
+        }
+
+        public IEnumerator<KeyValuePair<string, object>> GetEnumerator()
+        {
+            yield return new KeyValuePair<string, object>("id", Id);
 
             foreach (var p in Properties)
-                yield return new KeyValuePair<string, Func<Type, object>>(p.Key, t => p.Value.Convert(t));
+                yield return new KeyValuePair<string, object>(p.Key, p.Value);
 
             foreach (var edge in Relations)
-                yield return new KeyValuePair<string, Func<Type, object>>(edge.Label, t =>
+                yield return new KeyValuePair<string, object>(edge.Label, new Func<Type, object>(t =>
                 {
                     if (t.IsEnumerable())
                     {
@@ -64,7 +80,7 @@ namespace Xania.Graphs.Structure
                     }
 
                     return Proxy(t, edge.InV);
-                });
+                }));
         }
 
         private static object Proxy(Type modelType, object targetId)
@@ -83,87 +99,22 @@ namespace Xania.Graphs.Structure
         {
             return GetEnumerator();
         }
-
-        public void Add(KeyValuePair<string, Func<Type, object>> item)
-        {
-            throw new NotImplementedException();
-        }
-
-        public void Clear()
-        {
-            throw new NotImplementedException();
-        }
-
-        public bool Contains(KeyValuePair<string, Func<Type, object>> item)
-        {
-            throw new NotImplementedException();
-        }
-
-        public void CopyTo(KeyValuePair<string, Func<Type, object>>[] array, int arrayIndex)
-        {
-            throw new NotImplementedException();
-        }
-
-        public bool Remove(KeyValuePair<string, Func<Type, object>> item)
-        {
-            throw new NotImplementedException();
-        }
-
-        public int Count { get; }
-        public bool IsReadOnly { get; }
-
-        public bool ContainsKey(string key)
-        {
-            throw new NotImplementedException();
-        }
-
-        public void Add(string key, Func<Type, object> value)
-        {
-            throw new NotImplementedException();
-        }
-
-        public bool Remove(string key)
-        {
-            throw new NotImplementedException();
-        }
-
-        public bool TryGetValue(string key, out Func<Type, object> value)
-        {
-            foreach (var kvp in this)
-                if (kvp.Key.Equals(key, StringComparison.InvariantCultureIgnoreCase))
-                {
-                    value = kvp.Value;
-                    return true;
-                }
-
-            value = null;
-            return false;
-        }
-
-        public Func<Type, object> this[string key]
-        {
-            get { throw new NotImplementedException(); }
-            set { throw new NotImplementedException(); }
-        }
-
-        public ICollection<string> Keys { get; }
-        public ICollection<Func<Type, object>> Values { get; }
     }
 
     internal class VertexQuery : IGraphQuery
     {
-        private readonly Graph _graph;
+        public Graph Graph { get; }
         public Expression SourceExpression { get; }
 
         public VertexQuery(Graph graph, Expression expr)
         {
-            _graph = graph;
+            Graph = graph;
             SourceExpression = expr;
         }
 
         public object Execute(Type elementType)
         {
-            var graphsonExpr = GetGraphSONExpression();
+            var graphsonExpr = GetGraphSONExpression(Graph.Edges, SourceExpression);
 
             var f = Expression.Lambda(graphsonExpr).Compile();
             var result = (IEnumerable<GraphSON>) f.DynamicInvoke();
@@ -182,7 +133,7 @@ namespace Xania.Graphs.Structure
             //return f().Select(v => v.ToClrType(elementType, _graph));
         }
 
-        public Expression GetGraphSONExpression()
+        public static Expression GetGraphSONExpression(IQueryable<Edge> edges, Expression sourceExpression)
         {
             Expression<Func<Vertex, GraphSON>> propertiesExpr =
                 v => new GraphSON
@@ -190,11 +141,11 @@ namespace Xania.Graphs.Structure
                     Id = v.Id,
                     Properties =
                         v.Properties.ToDictionary(p => p.Name, p => p.Value, StringComparer.InvariantCultureIgnoreCase),
-                    Relations = _graph.Edges.Where(edge => edge.OutV == v.Id)
+                    Relations = edges.Where(edge => edge.OutV == v.Id)
                 };
 
             var selectMethod = QueryableHelper.Select_TSource_2(typeof(Vertex), typeof(GraphSON));
-            var graphsonExpr = Expression.Call(selectMethod, SourceExpression, propertiesExpr);
+            var graphsonExpr = Expression.Call(selectMethod, sourceExpression, propertiesExpr);
             return graphsonExpr;
         }
 
@@ -209,39 +160,39 @@ namespace Xania.Graphs.Structure
         {
             if (step is V vertex)
             {
-                return new FilterStep<Vertex>(_graph,
+                return new FilterStep<Vertex>(Graph,
                         x => x.Label.Equals(vertex.Label, StringComparison.InvariantCultureIgnoreCase))
                     .Query(SourceExpression);
             }
 
             if (step is Has has)
             {
-                return new FilterStep<Vertex>(_graph, GetPropertyPredicate(has.Property, has.CompareStep)).Query(
+                return new FilterStep<Vertex>(Graph, GetPropertyPredicate(has.Property, has.CompareStep)).Query(
                     SourceExpression);
             }
 
             if (step is Where where)
             {
-                return new FilterStep<Vertex>(_graph,
+                return new FilterStep<Vertex>(Graph,
                         GetVertexPredicate(@where.Predicate, new(string name, Expression result)[0]))
                     .Query(SourceExpression);
             }
 
             if (step is Out @out)
             {
-                return new SelectManyStep(_graph, @out).Query(SourceExpression);
+                return new SelectManyStep(Graph, @out).Query(SourceExpression);
             }
 
             if (step is Project project)
             {
                 var param = Expression.Parameter(typeof(Vertex));
                 var listInit = GetProjectionExpression(param, project);
-                return new SelectStep(_graph, Expression.Lambda(listInit, param)).Query(SourceExpression);
+                return new SelectStep(Graph, Expression.Lambda(listInit, param)).Query(SourceExpression);
             }
 
             if (step is Values values)
             {
-                return new ValuesStep(_graph, values.Name, values.Type).Query(SourceExpression);
+                return new ValuesStep(Graph, values.Name, values.Type).Query(SourceExpression);
             }
 
             throw new NotImplementedException($"VertextQuery.Execute {step.GetType()}");
@@ -249,7 +200,7 @@ namespace Xania.Graphs.Structure
 
         private Expression GetProjectionExpression(Expression param, Project project)
         {
-            var g = new LocalQuery(_graph, param);
+            var g = new LocalQuery(Graph, param);
             var addMethod = typeof(Dictionary<string, object>).GetMethod("Add");
 
             var bindings = project.Dict.Select(
@@ -305,7 +256,7 @@ namespace Xania.Graphs.Structure
                     if (x.Type != typeof(Vertex))
                         throw new NotSupportedException();
 
-                    var q = SelectManyStep.GetOutExpression(_graph, o);
+                    var q = SelectManyStep.GetOutExpression(Graph, o);
 
                     return (ReplaceVisitor.VisitAndConvert(q.Body, q.Parameters[0], x), m);
                 }

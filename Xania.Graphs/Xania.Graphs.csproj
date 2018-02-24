@@ -80,6 +80,10 @@
     <Compile Include="Where.cs" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\ObjectMapper\src\Xania.ObjectMapper.csproj">
+      <Project>{27FE5CC3-77E0-4038-AF1C-264C10A7E5BD}</Project>
+      <Name>Xania.ObjectMapper</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Xania.Reflection\Xania.Reflection.csproj">
       <Project>{6320f29a-f0c9-48e7-bf6e-a56b0b448352}</Project>
       <Name>Xania.Reflection</Name>

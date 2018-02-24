@@ -31,17 +31,10 @@ namespace Xania.Reflection
                 return System.Convert.ChangeType(source, targetType);
 
             if (source is IDictionary<string, Object> dict)
-            {
                 return ConvertDictionary(dict, targetType);
-            }
 
             if (source is IEnumerable enumerable)
                 return ConvertMany(enumerable, targetType);
-
-            //var value = typeof(string) != modelProperty.PropertyType &&
-            //            typeof(IEnumerable).IsAssignableFrom(modelProperty.PropertyType)
-            //    ? values.ToArray()
-            //    : values.SingleOrDefault();
 
             if (targetType.IsEnumerable())
             {
