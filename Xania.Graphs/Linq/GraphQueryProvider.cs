@@ -188,8 +188,7 @@ namespace Xania.Graphs.Linq
                                 return args[0].Append(Values(memberName, memberExpression.Type));
                             else
                                 return args[0].Append(Out(memberName, memberExpression.Type));
-                        }
-                        );
+                        });
                     }
                 }
                 else if (item is NewExpression newExpression)

@@ -169,18 +169,20 @@ namespace Xania.Graphs.Runtime.Tests
         [Test]
         public void SelectCustomResultContainingOneVertex()
         {
-            var view =
-            (from p in People
-             where p.Id == 1
-             select new
-             {
-                 p.Friend
-             }).ToArray();
-
-            var ibrahim = view.Should().ContainSingle().Subject;
-            ibrahim.Friend.Id.Should().Be(2);
+            var view = (
+                from p in People
+                where p.Id == 1
+                select new
+                {
+                    p.Friend,
+                    CountFriends = p.Friends.Count
+                }).ToArray();
 
             Console.WriteLine(JsonConvert.SerializeObject(view, Formatting.Indented));
+            var ibrahim = view.Should().ContainSingle().Subject;
+            ibrahim.CountFriends.Should().Be(1);
+            // ibrahim.Friend.Id.Should().Be(2);
+
         }
 
         [Test]

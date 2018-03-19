@@ -38,6 +38,11 @@ namespace Xania.Graphs.Linq
                  new Func<IQueryable<int>, bool>(Queryable.Any)
                      .GetMethodInfo().GetGenericMethodDefinition()))
             .MakeGenericMethod(sourceType);
+
+        //private static MethodInfo s_SingleOrDefault_TSource_1;
+        //public static MethodInfo SingleOrDefault_TSource_1<TSource>() => SingleOrDefault_TSource_1(typeof(TSource));
+        //public static MethodInfo SingleOrDefault_TSource_1(Type sourceType) =>
+        //    (s_SingleOrDefault_TSource_1 ?? (s_SingleOrDefault_TSource_1 = new Func<>(Queryable.SingleOrDefault)))
     }
 
     public static class GraphExpressions

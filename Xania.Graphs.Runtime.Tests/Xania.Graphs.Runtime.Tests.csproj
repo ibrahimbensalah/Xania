@@ -234,10 +234,6 @@
       <Project>{629A36A0-0780-4CFD-A3EC-FAA2DBE65753}</Project>
       <Name>Xania.Invoice.Domain</Name>
     </ProjectReference>
-    <ProjectReference Include="..\Xania.Reflection\Xania.Reflection.csproj">
-      <Project>{6320F29A-F0C9-48E7-BF6E-A56B0B448352}</Project>
-      <Name>Xania.Reflection</Name>
-    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <WCFMetadata Include="Connected Services\" />

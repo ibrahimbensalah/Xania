@@ -10,8 +10,6 @@ using NUnit.Framework;
 using Xania.Graphs.Linq;
 using Xania.Graphs.Structure;
 using Xania.Invoice.Domain;
-using Xania.Reflection;
-using TypeExtensions = Xania.Reflection.TypeExtensions;
 
 namespace Xania.Graphs.Runtime.Tests
 {

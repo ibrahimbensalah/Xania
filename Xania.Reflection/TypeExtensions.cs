@@ -127,7 +127,7 @@ namespace Xania.Reflection
             throw new NotSupportedException($"CreateCollection {targetType.Name}");
         }
 
-        public static object CreateInstance(this Type type, IDictionary<string, object> properties)
+        public static object CreateInstance(this Type type, IEnumerable<KeyValuePair<string, object>> properties)
         {
             var factories = properties.ToDictionary<KeyValuePair<string, object>, string, Func<Type, object>>(kvp => kvp.Key, kvp => t => kvp.Value.Convert(t));
             return CreateInstance(type, factories);

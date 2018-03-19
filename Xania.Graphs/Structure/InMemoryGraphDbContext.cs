@@ -38,11 +38,11 @@ namespace Xania.Graphs.Structure
                 new(string name, IGraphQuery result)[0]
             );
 
-            return Task.FromResult((IEnumerable<object>) q.Execute(elementType));
+            return Task.FromResult((IEnumerable<object>)q.Execute(elementType));
         }
     }
 
-    public class GraphSON : IMap<string, object>
+    public class GraphSON : IEnumerable<KeyValuePair<string, object>>
     {
         public string Id { get; set; }
         public Dictionary<string, object> Properties { get; set; }
@@ -76,7 +76,7 @@ namespace Xania.Graphs.Structure
                     if (t.IsEnumerable())
                     {
                         var itemType = t.GetItemType();
-                        return new[] {Proxy(itemType, edge.InV)};
+                        return new[] { Proxy(itemType, edge.InV) };
                     }
 
                     return Proxy(t, edge.InV);
@@ -117,13 +117,14 @@ namespace Xania.Graphs.Structure
             var graphsonExpr = GetGraphSONExpression(Graph.Edges, SourceExpression);
 
             var f = Expression.Lambda(graphsonExpr).Compile();
-            var result = (IEnumerable<GraphSON>) f.DynamicInvoke();
+            var result = (IEnumerable<GraphSON>)f.DynamicInvoke();
 
             var list = new List<object>();
 
             foreach (var entry in result)
             {
-                var entity = elementType.CreateInstance(entry);
+                var entity = entry.MapTo(elementType);
+                // var entity = elementType.CreateInstance(entry);
                 list.Add(entity);
             }
 
@@ -207,8 +208,14 @@ namespace Xania.Graphs.Structure
                 kvp =>
                 {
 
-                    var x = g.Execute(kvp.Value, new(string name, IGraphQuery result)[0]);
+                    // var x = g.Execute(kvp.Value, new(string name, IGraphQuery result)[0]);
                     var expr = GetExpression(param, kvp.Value, new(string name, Expression result)[0]);
+                    if (!kvp.Value.StepType.IsEnumerable() && expr.Type.IsEnumerable())
+                    {
+                        var elementType = expr.Type.GetItemType();
+                        var firstMethod = EnumerableHelper.FirstOrDefault(elementType);
+                        expr = Expression.Call(firstMethod, expr);
+                    }
 
                     return Expression.ElementInit(
                         addMethod,
@@ -256,8 +263,7 @@ namespace Xania.Graphs.Structure
                     if (x.Type != typeof(Vertex))
                         throw new NotSupportedException();
 
-                    var q = SelectManyStep.GetOutExpression(Graph, o);
-
+                    var q = SelectManyStep.GetSelectManyExpression(Graph, o);
                     return (ReplaceVisitor.VisitAndConvert(q.Body, q.Parameters[0], x), m);
                 }
 
@@ -482,19 +488,21 @@ namespace Xania.Graphs.Structure
     {
         private readonly Graph _graph;
         private readonly LambdaExpression _selectorExpr;
+        public Type TargetType { get; }
 
-        public SelectManyStep(Graph graph, LambdaExpression selectorExpr)
+        public SelectManyStep(Graph graph, LambdaExpression selectorExpr, Type type)
         {
             _graph = graph;
             _selectorExpr = selectorExpr;
+            TargetType = type;
         }
 
         public SelectManyStep(Graph graph, Out @out)
-            : this(graph, GetOutExpression(graph, @out))
+            : this(graph, GetSelectManyExpression(graph, @out), @out.Type)
         {
         }
 
-        public static Expression<Func<Vertex, IEnumerable<Vertex>>> GetOutExpression(Graph graph, Out @out)
+        public static Expression<Func<Vertex, IEnumerable<Vertex>>> GetSelectManyExpression(Graph graph, Out @out)
         {
             return v =>
                 from edge in graph.Edges
@@ -589,9 +597,9 @@ namespace Xania.Graphs.Structure
         {
             var result = Expression.Lambda(SourceExpression).Compile();
             var list = new List<object>();
-            foreach (var o in (IEnumerable<object>) result.DynamicInvoke())
+            foreach (var o in (IEnumerable<object>)result.DynamicInvoke())
             {
-                list.Add(o.Convert(elementType));
+                list.Add(o.MapTo(elementType));
             }
 
             return list;
@@ -646,7 +654,7 @@ namespace Xania.Graphs.Structure
         {
             if (myIMessage is IMethodCallMessage)
             {
-                var methodCall = (IMethodCallMessage) myIMessage;
+                var methodCall = (IMethodCallMessage)myIMessage;
                 if (methodCall.MethodName.Equals("GetType"))
                     return new ReturnMessage(typeof(ShallowProxy), null, 0, methodCall.LogicalCallContext, methodCall);
                 if (methodCall.MethodName.Equals("get_Id", StringComparison.OrdinalIgnoreCase))
