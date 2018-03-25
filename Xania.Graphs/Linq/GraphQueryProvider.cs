@@ -37,7 +37,7 @@ namespace Xania.Graphs.Linq
             //if (!IsEnumerable)
             //    throw new NotImplementedException();
 
-            var traversal = Evaluate(expression);
+            var traversal = ToTraversal(expression);
 
             if (IsEnumerable)
             {
@@ -66,7 +66,7 @@ namespace Xania.Graphs.Linq
             }
         }
 
-        public static GraphTraversal Evaluate(Expression expression)
+        public static GraphTraversal ToTraversal(Expression expression)
         {
             /**
              * Evaluate expression
@@ -201,8 +201,8 @@ namespace Xania.Graphs.Linq
 
                     yield return (newExpression.Arguments.Count, args =>
                     {
-                        var dict = newExpression.Members
-                            .Zip(args, (method, arg) => (method.Name.ToCamelCase(), arg))
+                        var dict = newExpression.Members.Select(e=> e.Name.ToCamelCase())
+                            .Zip(args, (method, arg) => (method, arg))
                             .ToDictionary(e => e.Item1, e => e.Item2);
 
                         var project = new Project(dict);
@@ -342,6 +342,13 @@ namespace Xania.Graphs.Linq
                 }
                 throw new NotSupportedException("Where second argument not supported.");
             }
+            else if (expression is LambdaExpression lambda)
+            {
+                if (lambda.Parameters.Count != 1)
+                    throw new NotSupportedException("Parameters count more 1.");
+
+                return lambda;
+            }
             else
             {
                 throw new NotSupportedException("Where second argument not supported.");
@@ -366,26 +373,6 @@ namespace Xania.Graphs.Linq
         public static Const Const(object value)
         {
             return new Const(value);
-        }
-
-        public static Call Call(string methodName, IEnumerable<IStep> expressions)
-        {
-            return new Call(methodName, expressions);
-        }
-
-        public static Bind Bind(IStep expr1, IStep expr2)
-        {
-            return new Bind(new[] { expr1, expr2 });
-        }
-
-        public static Bind Bind(IStep head, IEnumerable<IStep> expressions)
-        {
-            if (head is Bind bind)
-                return new Bind(bind.Expressions.Concat(expressions).ToArray());
-            var list = new List<IStep> { head };
-            foreach (var expr in expressions)
-                list.Add(expr);
-            return new Bind(list.ToArray());
         }
 
         public static GraphTraversal Vertex(Type type)

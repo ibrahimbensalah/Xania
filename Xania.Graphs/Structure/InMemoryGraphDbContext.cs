@@ -8,7 +8,7 @@ using System.Runtime.Remoting.Messaging;
 using System.Runtime.Remoting.Proxies;
 using System.Security.Permissions;
 using System.Threading.Tasks;
-using Xania.Graphs;
+using Newtonsoft.Json;
 using Xania.Graphs.Linq;
 using Xania.ObjectMapper;
 using Xania.Reflection;
@@ -38,7 +38,7 @@ namespace Xania.Graphs.Structure
                 new(string name, IGraphQuery result)[0]
             );
 
-            return Task.FromResult((IEnumerable<object>)q.Execute(elementType));
+            return Task.FromResult((IEnumerable<object>) q.Execute(elementType));
         }
     }
 
@@ -52,7 +52,7 @@ namespace Xania.Graphs.Structure
         {
             if (name.Equals("id", StringComparison.InvariantCultureIgnoreCase))
             {
-                value = this.Id;
+                value = Id;
                 return true;
             }
 
@@ -76,7 +76,7 @@ namespace Xania.Graphs.Structure
                     if (t.IsEnumerable())
                     {
                         var itemType = t.GetItemType();
-                        return new[] { Proxy(itemType, edge.InV) };
+                        return new[] {Proxy(itemType, edge.InV)};
                     }
 
                     return Proxy(t, edge.InV);
@@ -90,7 +90,7 @@ namespace Xania.Graphs.Structure
                 .ToDictionary(e => e.Name, StringComparer.InvariantCultureIgnoreCase);
             var relIdProperty = relModelProperties.ContainsKey("Id") ? relModelProperties["Id"] : null;
 
-            var id = relIdProperty == null ? null : targetId.Convert(relIdProperty?.PropertyType);
+            var id = relIdProperty == null ? null : targetId.Convert(relIdProperty.PropertyType);
 
             return new ShallowProxy(modelType, id).GetTransparentProxy();
         }
@@ -117,7 +117,7 @@ namespace Xania.Graphs.Structure
             var graphsonExpr = GetGraphSONExpression(Graph.Edges, SourceExpression);
 
             var f = Expression.Lambda(graphsonExpr).Compile();
-            var result = (IEnumerable<GraphSON>)f.DynamicInvoke();
+            var result = (IEnumerable<GraphSON>) f.DynamicInvoke();
 
             var list = new List<object>();
 
@@ -152,8 +152,6 @@ namespace Xania.Graphs.Structure
 
         public static Expression GetVertextExpression(Type elementType)
         {
-            var vertexParam = Expression.Parameter(typeof(Vertex));
-
             return Expression.New(elementType);
         }
 
@@ -201,16 +199,14 @@ namespace Xania.Graphs.Structure
 
         private Expression GetProjectionExpression(Expression param, Project project)
         {
-            var g = new LocalQuery(Graph, param);
             var addMethod = typeof(Dictionary<string, object>).GetMethod("Add");
 
             var bindings = project.Dict.Select(
                 kvp =>
                 {
-
                     // var x = g.Execute(kvp.Value, new(string name, IGraphQuery result)[0]);
                     var expr = GetExpression(param, kvp.Value, new(string name, Expression result)[0]);
-                    if (!kvp.Value.StepType.IsEnumerable() && expr.Type.IsEnumerable())
+                    if (!kvp.Value.HasMany() && expr.Type.IsEnumerable())
                     {
                         var elementType = expr.Type.GetItemType();
                         var firstMethod = EnumerableHelper.FirstOrDefault(elementType);
@@ -595,9 +591,11 @@ namespace Xania.Graphs.Structure
 
         public object Execute(Type elementType)
         {
-            var result = Expression.Lambda(SourceExpression).Compile();
+            var func = Expression.Lambda(SourceExpression).Compile();
             var list = new List<object>();
-            foreach (var o in (IEnumerable<object>)result.DynamicInvoke())
+            var result = func.DynamicInvoke();
+            Console.WriteLine(JsonConvert.SerializeObject(result, Formatting.Indented));
+            foreach (var o in (IEnumerable<object>) result)
             {
                 list.Add(o.MapTo(elementType));
             }
@@ -654,7 +652,7 @@ namespace Xania.Graphs.Structure
         {
             if (myIMessage is IMethodCallMessage)
             {
-                var methodCall = (IMethodCallMessage)myIMessage;
+                var methodCall = (IMethodCallMessage) myIMessage;
                 if (methodCall.MethodName.Equals("GetType"))
                     return new ReturnMessage(typeof(ShallowProxy), null, 0, methodCall.LogicalCallContext, methodCall);
                 if (methodCall.MethodName.Equals("get_Id", StringComparison.OrdinalIgnoreCase))

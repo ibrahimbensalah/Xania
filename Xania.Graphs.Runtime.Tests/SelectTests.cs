@@ -175,12 +175,12 @@ namespace Xania.Graphs.Runtime.Tests
                 select new
                 {
                     p.Friend,
-                    CountFriends = p.Friends.Count
+                    FriendId = p.Friend.Id
                 }).ToArray();
 
             Console.WriteLine(JsonConvert.SerializeObject(view, Formatting.Indented));
             var ibrahim = view.Should().ContainSingle().Subject;
-            ibrahim.CountFriends.Should().Be(1);
+            ibrahim.FriendId.Should().Be(2);
             // ibrahim.Friend.Id.Should().Be(2);
 
         }
@@ -202,10 +202,17 @@ namespace Xania.Graphs.Runtime.Tests
         [Test]
         public void SelectCustomResultWithNested()
         {
-            var view =
-            (from p in People
-             where p.Id == 1
-             select new { Composite = new { Person = p } }).ToArray();
+            var view = (
+                from p in People
+                where p.Id == 1
+                select new
+                {
+                    Composite = new
+                    {
+                        Person = p
+                    }
+                }
+            ).ToArray();
 
             var ibrahim = view.Should().ContainSingle().Subject.Composite.Person;
             AssertIbrahim(ibrahim);

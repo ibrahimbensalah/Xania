@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Xania.Reflection;
 
 namespace Xania.Graphs
 {
@@ -19,6 +20,14 @@ namespace Xania.Graphs
             Steps = steps;
         }
 
+        public bool HasMany()
+        {
+            foreach (var step in Steps)
+                if (step is Out o && o.Type.IsEnumerable())
+                    return true;
+            return false;
+        }
+
         public override string ToString()
         {
             return ToGremlinSelector().Join(".");
@@ -27,7 +36,7 @@ namespace Xania.Graphs
         private IEnumerable<string> ToGremlinSelector()
         {
             if (Steps.Any())
-                yield return $"{string.Join(".", Steps.Select(e => e.ToString()))}";
+                yield return $"{String.Join(".", Steps.Select(e => e.ToString()))}";
         }
 
         public GraphTraversal Append(IStep expr)
@@ -39,7 +48,9 @@ namespace Xania.Graphs
 
         public GraphTraversal Bind(GraphTraversal other)
         {
-            var otherSteps = (other.Steps.FirstOrDefault() is Context) ? other.Steps.Skip(1).ToArray() : other.Steps.ToArray();
+            var otherSteps = (other.Steps.FirstOrDefault() is Context)
+                ? other.Steps.Skip(1).ToArray()
+                : other.Steps.ToArray();
 
             if (Steps.LastOrDefault() is Alias l)
             {
