@@ -176,18 +176,20 @@ namespace Xania.Graphs.Linq
                         yield return (0, args => new GraphTraversal(new Select(memberExpression.Member.Name, memberExpression.Type)));
                     else
                     {
-                        var isValues = memberExpression.Type.IsPrimitive() || memberExpression.Type.IsComplexType();
+                        var many = memberExpression.Type.IsEnumerable();
+
+                        var elementType = GetElementType(memberExpression.Type);
+                        var isValues = elementType.IsPrimitive() || elementType.IsComplexType();
 
                         var memberName = memberExpression.Member.Name.ToCamelCase();
                         stack.Push(memberExpression.Expression);
 
-
                         yield return (1, args =>
                         {
                             if (isValues)
-                                return args[0].Append(Values(memberName, memberExpression.Type));
-                            else
-                                return args[0].Append(Out(memberName, memberExpression.Type));
+                                return args[0].Append(Values(memberName, elementType));
+
+                            return args[0].Append(Out(memberName, elementType, many));
                         });
                     }
                 }
@@ -201,7 +203,7 @@ namespace Xania.Graphs.Linq
 
                     yield return (newExpression.Arguments.Count, args =>
                     {
-                        var dict = newExpression.Members.Select(e=> e.Name.ToCamelCase())
+                        var dict = newExpression.Members.Select(e => e.Name.ToCamelCase())
                             .Zip(args, (method, arg) => (method, arg))
                             .ToDictionary(e => e.Item1, e => e.Item2);
 
@@ -216,6 +218,13 @@ namespace Xania.Graphs.Linq
                     throw new NotImplementedException($"GetOperators {item}");
                 }
             }
+        }
+
+        private static Type GetElementType(Type type)
+        {
+            if (type == typeof(string))
+                return type;
+            return type.GetItemType() ?? type;
         }
 
         private static (int, Func<GraphTraversal[], GraphTraversal>) Select(MethodCallExpression methodCall, Stack<Expression> stack)
@@ -287,8 +296,7 @@ namespace Xania.Graphs.Linq
                 return source
                     .Bind(collection)
                     .Bind(selector);
-            }
-            );
+            });
         }
 
         private static GraphTraversal Parameter(ParameterExpression parameter)
@@ -355,9 +363,9 @@ namespace Xania.Graphs.Linq
             }
         }
 
-        public static Out Out(string edgeLabel, Type type)
+        public static Out Out(string edgeLabel, Type type, bool many)
         {
-            return new Out(edgeLabel, type);
+            return new Out(edgeLabel, type, many);
         }
 
         public static Values Values(string name, Type type)

@@ -247,7 +247,9 @@ namespace Xania.Reflection
                 if (i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IEnumerable<>))
                     return i.GenericTypeArguments[0];
             }
-            throw new InvalidOperationException("is not enumerable type " + enumerableType);
+
+            return null;
+            // throw new InvalidOperationException("is not enumerable type " + enumerableType);
         }
     }
 }

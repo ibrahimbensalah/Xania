@@ -686,7 +686,7 @@ namespace Xania.Graphs.Structure
         public static TResult Select<TResult>(this IEnumerable<(string name, TResult result)> mappings, string name)
         {
             return mappings.Where(e => e.name.Equals(name, StringComparison.InvariantCultureIgnoreCase))
-                .Select(e => e.result).First();
+                .Select(e => e.result).FirstOrDefault();
         }
     }
 

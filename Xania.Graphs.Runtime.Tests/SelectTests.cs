@@ -188,10 +188,13 @@ namespace Xania.Graphs.Runtime.Tests
         [Test]
         public void SelectCustomResultContainingManyVertices()
         {
-            var view =
-            (from p in People
-             where p.Id == 1
-             select new { p.Friends }).ToArray();
+            var view = (
+                from p in People
+                where p.Id == 1
+                select new
+                {
+                    p.Friends
+                }).ToArray();
 
             var ibrahim = view.Should().ContainSingle().Subject;
             ibrahim.Friends.Should().ContainSingle().Which.Id.Should().Be(2);

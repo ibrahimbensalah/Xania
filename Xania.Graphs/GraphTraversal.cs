@@ -20,14 +20,6 @@ namespace Xania.Graphs
             Steps = steps;
         }
 
-        public bool HasMany()
-        {
-            foreach (var step in Steps)
-                if (step is Out o && o.Type.IsEnumerable())
-                    return true;
-            return false;
-        }
-
         public override string ToString()
         {
             return ToGremlinSelector().Join(".");

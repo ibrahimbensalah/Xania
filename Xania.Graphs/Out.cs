@@ -7,11 +7,13 @@ namespace Xania.Graphs
     {
         public string EdgeLabel { get; }
         public Type Type { get; }
+        public bool Many { get; }
 
-        public Out(string edgeLabel, Type type)
+        public Out(string edgeLabel, Type type, bool many)
         {
             EdgeLabel = edgeLabel;
             Type = type;
+            Many = many;
         }
 
         public override string ToString()
@@ -24,8 +26,8 @@ namespace Xania.Graphs
                 var elementType = Type.GetItemType();
                 return $"out('{EdgeLabel}').hasLabel('{elementType.Name.ToCamelCase()}')";
             }
-            else
-                return $"out('{EdgeLabel}').hasLabel('{Type.Name.ToCamelCase()}')";
+
+            return $"out('{EdgeLabel}').hasLabel('{Type.Name.ToCamelCase()}')";
         }
     }
 }
