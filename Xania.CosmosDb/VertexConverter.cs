@@ -51,7 +51,7 @@ namespace Xania.CosmosDb
                 //    writer.WriteValue(Guid.NewGuid());
                 //    writer.WriteEndObject();
                 //}
-                writer.WriteEndArray();
+                //writer.WriteEndArray();
             }
             writer.WriteEndObject();
         }

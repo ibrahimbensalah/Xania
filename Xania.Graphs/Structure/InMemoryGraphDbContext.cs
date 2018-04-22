@@ -34,8 +34,7 @@ namespace Xania.Graphs.Structure
             Console.WriteLine(traversal);
 
             var q = new VertexQuery(_graph, Expression.Constant(_graph.Vertices)).Execute(
-                traversal,
-                new(string name, IGraphQuery result)[0]
+                traversal
             );
 
             return Task.FromResult((IEnumerable<object>) q.Execute(elementType));
@@ -163,7 +162,7 @@ namespace Xania.Graphs.Structure
             return Expression.New(elementType);
         }
 
-        public IGraphQuery Next(Type sourceType, IStep step)
+        public IGraphQuery Next(Type sourceType, IStep step, IEnumerable<(string name, Expression result)> mappings)
         {
             if (step is V vertex)
             {
@@ -193,7 +192,7 @@ namespace Xania.Graphs.Structure
             if (step is Project project)
             {
                 var param = Expression.Parameter(typeof(Vertex));
-                var listInit = GetProjectionExpression(param, project);
+                var listInit = GetProjectionExpression(param, project, mappings);
                 return new SelectStep(Graph, Expression.Lambda(listInit, param)).Query(SourceExpression);
             }
 
@@ -205,7 +204,8 @@ namespace Xania.Graphs.Structure
             throw new NotImplementedException($"VertextQuery.Execute {step.GetType()}");
         }
 
-        private Expression GetProjectionExpression(Expression param, Project project)
+        private Expression GetProjectionExpression(Expression param, Project project,
+            IEnumerable<(string name, Expression result)> mappings)
         {
             var addMethod = typeof(Dictionary<string, object>).GetMethod("Add");
 
@@ -213,7 +213,7 @@ namespace Xania.Graphs.Structure
                 kvp =>
                 {
                     // var x = g.Execute(kvp.Value, new(string name, IGraphQuery result)[0]);
-                    var expr = GetExpression(param, kvp.Value, new(string name, Expression result)[0]);
+                    var expr = GetExpression(param, kvp.Value, mappings);
 
                     if (TakeFirst(kvp.Value))
                     {
@@ -323,7 +323,7 @@ namespace Xania.Graphs.Structure
 
                 if (step is Project project)
                 {
-                    return (GetProjectionExpression(x, project), m);
+                    return (GetProjectionExpression(x, project, m), m);
                 }
 
                 //if (step is First)
@@ -369,7 +369,7 @@ namespace Xania.Graphs.Structure
             throw new NotImplementedException();
         }
 
-        public IGraphQuery Next(Type sourceType, IStep step)
+        public IGraphQuery Next(Type sourceType, IStep step, IEnumerable<(string name, Expression result)> mappings)
         {
             if (step is Values values)
             {
@@ -645,7 +645,7 @@ namespace Xania.Graphs.Structure
             return list;
         }
 
-        public IGraphQuery Next(Type sourceType, IStep step)
+        public IGraphQuery Next(Type sourceType, IStep step, IEnumerable<(string name, Expression result)> mappings)
         {
             if (step is Out o)
             {
@@ -677,7 +677,7 @@ namespace Xania.Graphs.Structure
     public interface IGraphQuery
     {
         object Execute(Type elementType);
-        IGraphQuery Next(Type sourceType, IStep step);
+        IGraphQuery Next(Type sourceType, IStep step, IEnumerable<(string name, Expression result)> mappings);
         Expression SourceExpression { get; }
     }
 

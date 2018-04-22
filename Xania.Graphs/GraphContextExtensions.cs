@@ -1,4 +1,6 @@
-﻿using System.Linq;
+﻿using System.Collections.Generic;
+using System.Linq;
+using System.Linq.Expressions;
 using Xania.Graphs.Linq;
 using Xania.Graphs.Structure;
 
@@ -11,14 +13,14 @@ namespace Xania.Graphs
             return new GraphQueryable<TModel>(new GraphQueryProvider(client));
         }
 
-        public static IGraphQuery Execute(this IGraphQuery g, GraphTraversal traversal, (string name, IGraphQuery result)[] maps = null)
+        public static IGraphQuery Execute(this IGraphQuery g, GraphTraversal traversal)
         {
-            maps = maps ?? new(string name, IGraphQuery result)[0];
+            var maps = new(string name, IGraphQuery expr)[0];
             var (result, _, _) = traversal.Steps.Aggregate((g, typeof(object), maps), (__, step) =>
             {
-                var (r, t, m) = __;
+                var (query, t, m) = __;
                 if (step is Alias a)
-                    return (r, t, m.Prepend((a.Value, r)).ToArray());
+                    return (query, t, m.Prepend((a.Value, query)).ToArray());
 
                 if (step is Context)
                     return __;
@@ -29,7 +31,7 @@ namespace Xania.Graphs
                     return (q, t, m);
                 }
 
-                var next = r.Next(t, step);
+                var next = query.Next(t, step, m.Select(x => (x.name, x.expr.SourceExpression)));
                 return (next, step.Type, m);
             });
             
