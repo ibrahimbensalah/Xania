@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
+using Xania.Graphs.Structure;
 using Xania.Reflection;
 
 namespace Xania.Graphs.Linq
@@ -96,7 +97,7 @@ namespace Xania.Graphs.Linq
         {
             var cache = new Dictionary<ParameterExpression, GraphTraversal>();
             var stack = new Stack<Expression>();
-            stack.Push(root);
+            Push(stack, root);
             while (stack.Count > 0)
             {
                 var item = stack.Pop();
@@ -132,7 +133,7 @@ namespace Xania.Graphs.Linq
                 }
                 else if (item is UnaryExpression unaryExpression)
                 {
-                    stack.Push(unaryExpression.Operand);
+                    Push(stack, unaryExpression.Operand);
                 }
                 else if (item is LambdaExpression)
                 {
@@ -140,8 +141,8 @@ namespace Xania.Graphs.Linq
                 }
                 else if (item is BinaryExpression binaryExpression)
                 {
-                    stack.Push(binaryExpression.Left);
-                    stack.Push(binaryExpression.Right);
+                    Push(stack, binaryExpression.Left);
+                    Push(stack, binaryExpression.Right);
                     yield return (2, args => Binary(binaryExpression.NodeType, args[0], args[1]));
                 }
                 else if (item is ParameterExpression param)
@@ -182,7 +183,7 @@ namespace Xania.Graphs.Linq
                         var isValues = elementType.IsPrimitive() || elementType.IsComplexType();
 
                         var memberName = memberExpression.Member.Name.ToCamelCase();
-                        stack.Push(memberExpression.Expression);
+                        Push(stack, memberExpression.Expression);
 
                         yield return (1, args =>
                         {
@@ -190,7 +191,8 @@ namespace Xania.Graphs.Linq
                                 return args[0].Append(Values(memberName, elementType));
 
                             return args[0].Append(Out(memberName, elementType, many));
-                        });
+                        }
+                        );
                     }
                 }
                 else if (item is NewExpression newExpression)
@@ -199,7 +201,7 @@ namespace Xania.Graphs.Linq
                         throw new NotSupportedException($"GetOperators {newExpression}");
 
                     foreach (var arg in newExpression.Arguments)
-                        stack.Push(arg);
+                        Push(stack, arg);
 
                     yield return (newExpression.Arguments.Count, args =>
                     {
@@ -231,17 +233,22 @@ namespace Xania.Graphs.Linq
         {
             var source = methodCall.Arguments[0];
             var predicate = GetSingleParameterLambda(methodCall.Arguments[1]);
-            stack.Push(source);
-            stack.Push(predicate.Body);
+            Push(stack, source);
+            Push(stack, predicate.Body);
             return (2, args => args[0].Append(As(predicate.Parameters[0].Name, predicate.Parameters[0].Type)).Bind(args[1]));
+        }
+
+        private static void Push(Stack<Expression> stack, Expression expr)
+        {
+            stack.Push(expr);
         }
 
         private static (int, Func<GraphTraversal[], GraphTraversal>) Where(MethodCallExpression methodCall, Stack<Expression> stack)
         {
             var source = methodCall.Arguments[0];
             var predicate = GetSingleParameterLambda(methodCall.Arguments[1]);
-            stack.Push(source);
-            stack.Push(predicate.Body);
+            Push(stack, source);
+            Push(stack, predicate.Body);
             return (2, args => Where(args[0],
                 args[1].Replace(By.Select(predicate.Parameters[0].Name), new Context(source.Type))
             ));
@@ -251,8 +258,8 @@ namespace Xania.Graphs.Linq
         {
             var source = methodCall.Arguments[0];
             var predicate = GetSingleParameterLambda(methodCall.Arguments[1]);
-            stack.Push(source);
-            stack.Push(predicate.Body);
+            Push(stack, source);
+            Push(stack, predicate.Body);
 
             return (2, args => args[0].Append(new OrderBy(ascending,
                         args[1].Replace(By.Select(predicate.Parameters[0].Name), new Context(source.Type))))
@@ -261,7 +268,7 @@ namespace Xania.Graphs.Linq
 
         private static (int, Func<GraphTraversal[], GraphTraversal>) Drop(MethodCallExpression methodCall, Stack<Expression> stack)
         {
-            stack.Push(methodCall.Arguments[0]);
+            Push(stack, methodCall.Arguments[0]);
             return (1, args => args[0].Append(new Drop()));
         }
 
@@ -272,12 +279,12 @@ namespace Xania.Graphs.Linq
                 ? (LambdaExpression)u.Operand
                 : throw new NotSupportedException();
             var selectorLambda = methodCall.Arguments[2] is UnaryExpression s
-                ? (LambdaExpression)s.Operand
+                ? Flatten((LambdaExpression)s.Operand)
                 : throw new NotSupportedException();
 
-            stack.Push(sourceExpr);
-            stack.Push(collectionLambda.Body);
-            stack.Push(selectorLambda.Body);
+            Push(stack, sourceExpr);
+            Push(stack, collectionLambda.Body);
+            Push(stack, selectorLambda.Body);
 
             return (3, args =>
             {
@@ -296,11 +303,48 @@ namespace Xania.Graphs.Linq
                 return source
                     .Bind(collection)
                     .Bind(selector);
+            }
+            );
+        }
+
+        private static LambdaExpression Flatten(LambdaExpression lambda)
+        {
+            var body = ReplaceVisitor2.VisitAndConvert(lambda.Body, expr =>
+            {
+                if (expr.Type.IsAnonymousType() && expr is NewExpression newX && newX.Members.Count == 2)
+                {
+                    return Expression.New()
+                }
+
+                if (expr is MemberExpression mem && mem.Expression is ParameterExpression par && par.Type.IsAnonymousType())
+                {
+                    return Expression.Parameter(mem.Member.DeclaringType, mem.Member.Name);
+                }
+
+                return expr;
             });
+            //{
+            //    var curr = stack.Pop();
+            //    if (curr.Type.IsAnonymousType())
+            //    {
+            //        foreach (var propertyInfo in curr.Type.GetProperties())
+            //        {
+            //        }
+            //    }
+            //}
+
+
+            return lambda;
+            // return Expression.Lambda(body, parameters);
+
         }
 
         private static GraphTraversal Parameter(ParameterExpression parameter)
         {
+
+            if (parameter.Type.IsAnonymousType())
+                return new Select("anonymous", parameter.Type).ToTraversal();
+
             return new Select(parameter.Name, parameter.Type).ToTraversal();
         }
 

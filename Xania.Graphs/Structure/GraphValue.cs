@@ -659,6 +659,31 @@ namespace Xania.Graphs.Structure
         }
     }
 
+    public class ReplaceVisitor2: ExpressionVisitor
+    {
+        private readonly Func<Expression, Expression> _converter;
+
+        public ReplaceVisitor2(Func<Expression, Expression> converter)
+        {
+            _converter = converter;
+        }
+
+        public static Expression VisitAndConvert(Expression body, Func<Expression, Expression> converter)
+        {
+            return new ReplaceVisitor2(converter).VisitAndConvert(body);
+        }
+
+        internal Expression VisitAndConvert(Expression root)
+        {
+            return Visit(root);
+        }
+
+        public override Expression Visit(Expression node)
+        {
+            return base.Visit(_converter(node));
+        }
+    }
+
     public static class ExecuteResultExtensions
     {
         public static IExecuteResult Execute(this IExecuteResult input, GraphTraversal traversal, IEnumerable<(string name, IExecuteResult result)> mappings)
