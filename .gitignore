@@ -255,4 +255,3 @@ _Pvt_Extensions
 **/*.map
 /Xania.TemplateJS/wwwroot/jspm_packages
 /Xania.TemplateJS/package-lock.json
-/ObjectMapper
