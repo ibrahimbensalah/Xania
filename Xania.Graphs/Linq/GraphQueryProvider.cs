@@ -278,66 +278,89 @@ namespace Xania.Graphs.Linq
             var collectionLambda = methodCall.Arguments[1] is UnaryExpression u
                 ? (LambdaExpression)u.Operand
                 : throw new NotSupportedException();
+
             var selectorLambda = methodCall.Arguments[2] is UnaryExpression s
-                ? Flatten((LambdaExpression)s.Operand)
+                ? (LambdaExpression)s.Operand
                 : throw new NotSupportedException();
+
+            bool isAdhocSelector = IsSelectManySelector(selectorLambda.Body);
 
             Push(stack, sourceExpr);
             Push(stack, collectionLambda.Body);
-            Push(stack, selectorLambda.Body);
 
-            return (3, args =>
+            if (isAdhocSelector)
             {
-                var selectorParameters = selectorLambda.Parameters
-                    .Where(e => !e.Type.IsAnonymousType())
-                    .Reverse().Take(2)
-                    .ToArray();
+                return (2, args =>
+                {
+                    var sourceParam = selectorLambda.Parameters[0];
+                    var source = args[0].Append(As(sourceParam.Name, sourceParam.Type));
+                    var collectionParam = selectorLambda.Parameters[1];
+                    var collection = args[1].Append(As(collectionParam.Name, collectionParam.Type));
 
-                var source = selectorParameters.Length > 1
-                    ? args[0].Append(As(selectorParameters[1].Name, selectorParameters[1].Type))
-                    : args[0];
-
-                var collection = args[1].Append(As(selectorParameters[0].Name, selectorParameters[0].Type));
-                var selector = args[2];
-
-                return source
-                    .Bind(collection)
-                    .Bind(selector);
+                    return source
+                        .Bind(collection);
+                });
             }
-            );
-        }
-
-        private static LambdaExpression Flatten(LambdaExpression lambda)
-        {
-            var body = ReplaceVisitor2.VisitAndConvert(lambda.Body, expr =>
+            else
             {
-                if (expr.Type.IsAnonymousType() && expr is NewExpression newX && newX.Members.Count == 2)
+                Push(stack, selectorLambda.Body);
+                return (3, args =>
                 {
-                    return Expression.New()
-                }
+                    var selectorParameters = selectorLambda.Parameters
+                        .Where(e => !e.Type.IsAnonymousType())
+                        .Reverse().Take(2)
+                        .ToArray();
 
-                if (expr is MemberExpression mem && mem.Expression is ParameterExpression par && par.Type.IsAnonymousType())
-                {
-                    return Expression.Parameter(mem.Member.DeclaringType, mem.Member.Name);
-                }
+                    var source = selectorParameters.Length > 1
+                        ? args[0].Append(As(selectorParameters[1].Name, selectorParameters[1].Type))
+                        : args[0];
 
-                return expr;
-            });
-            //{
-            //    var curr = stack.Pop();
-            //    if (curr.Type.IsAnonymousType())
-            //    {
-            //        foreach (var propertyInfo in curr.Type.GetProperties())
-            //        {
-            //        }
-            //    }
-            //}
+                    var collection = args[1].Append(As(selectorParameters[0].Name, selectorParameters[0].Type));
+                    var selector = args[2];
 
-
-            return lambda;
-            // return Expression.Lambda(body, parameters);
-
+                    return source
+                        .Bind(collection)
+                        .Bind(selector);
+                });
+            }
         }
+
+        private static bool IsSelectManySelector(Expression expr)
+        {
+            return expr.Type.IsAnonymousType() && expr is NewExpression newX && newX.Members.Count == 2;
+        }
+
+        //private static LambdaExpression Flatten(LambdaExpression lambda)
+        //{
+        //    var body = ReplaceVisitor2.VisitAndConvert(lambda.Body, expr =>
+        //    {
+        //        if (expr.Type.IsAnonymousType() && expr is NewExpression newX && newX.Members.Count == 2)
+        //        {
+        //            return Expression.New()
+        //        }
+
+        //        if (expr is MemberExpression mem && mem.Expression is ParameterExpression par && par.Type.IsAnonymousType())
+        //        {
+        //            return Expression.Parameter(mem.Member.DeclaringType, mem.Member.Name);
+        //        }
+
+        //        return expr;
+        //    });
+        //    //{
+        //    //    var curr = stack.Pop();
+        //    //    if (curr.Type.IsAnonymousType())
+        //    //    {
+        //    //        foreach (var propertyInfo in curr.Type.GetProperties())
+        //    //        {
+        //    //        }
+        //    //    }
+        //    //}
+
+
+        //    return lambda;
+        //    // return Expression.Lambda(body, parameters);
+
+        //}
 
         private static GraphTraversal Parameter(ParameterExpression parameter)
         {
@@ -419,6 +442,9 @@ namespace Xania.Graphs.Linq
 
         public static IStep As(string name, Type type)
         {
+            if (type.IsAnonymousType())
+                return null;
+
             return new Alias(name, type);
         }
 

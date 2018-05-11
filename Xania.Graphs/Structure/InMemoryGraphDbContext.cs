@@ -180,7 +180,7 @@ namespace Xania.Graphs.Structure
             if (step is Where where)
             {
                 return new FilterStep<Vertex>(Graph,
-                        GetVertexPredicate(@where.Predicate, new(string name, Expression result)[0]))
+                        GetVertexPredicate(@where.Predicate, mappings))
                     .Query(SourceExpression);
             }
 

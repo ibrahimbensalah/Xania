@@ -123,10 +123,11 @@ namespace Xania.Graphs.Runtime.Tests
         {
             var friendOfDistantFriends =
                 from p in People
+                where p.Id == 3
                 from f in p.Friends
                 from g in f.Friends
                 from h in p.Friends
-                select h.Friend;
+                select p;
             Console.WriteLine(JsonConvert.SerializeObject(friendOfDistantFriends, Formatting.Indented));
         }
 

@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
 using Xania.Graphs.Linq;
@@ -32,6 +33,9 @@ namespace Xania.Graphs
                 }
 
                 var next = query.Next(t, step, m.Select(x => (x.name, x.expr.SourceExpression)));
+                if (next == null)
+                    Debugger.Break();
+
                 return (next, step.Type, m);
             });
             

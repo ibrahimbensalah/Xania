@@ -33,6 +33,8 @@ namespace Xania.Graphs
 
         public GraphTraversal Append(IStep expr)
         {
+            if (expr == null)
+                return this;
             if (expr is Values)
                 return new GraphTraversal (Steps.Append(expr)) { };
             return new GraphTraversal(Steps.Append(expr)) { };
