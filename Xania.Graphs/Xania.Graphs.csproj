@@ -61,6 +61,7 @@
     <Compile Include="Structure\GraphObject.cs" />
     <Compile Include="Structure\GraphList.cs" />
     <Compile Include="Structure\GraphPrimitive.cs" />
+    <Compile Include="Structure\GraphSON.cs" />
     <Compile Include="Structure\GraphValue.cs" />
     <Compile Include="Structure\InMemoryGraphDbContext.cs" />
     <Compile Include="Linq\QueryableHelper.cs" />

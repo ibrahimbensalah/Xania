@@ -22,15 +22,4 @@ namespace Xania.Graphs.Structure
             throw new System.NotImplementedException();
         }
     }
-
-    //public class SubGraph: GraphValue
-    //{
-    //    public Vertex Pivot { get; }
-    //    public ICollection<(Vertex, string, Vertex)> Out { get; } = new List<(Vertex, string, Vertex)>();
-
-    //    public SubGraph(Vertex pivot)
-    //    {
-    //        Pivot = pivot;
-    //    }
-    //}
 }

@@ -44,13 +44,9 @@ namespace Xania.CosmosDb
             };
             var settings = new JsonSerializerSettings
             {
-                ContractResolver = new CamelCasePropertyNamesContractResolver(),
-                Converters = { new VertexConverter() }
+                ContractResolver = new CamelCasePropertyNamesContractResolver()
             };
             _client = new DocumentClient(new Uri(endpointUrl), primaryKey, settings, connectionPolicy);
-
-            // _client.OpenAsync().Wait();
-            // CreateDatabaseIfNotExistsAsync(databaseId).Wait();
 
             _collection = _client.CreateDocumentCollectionIfNotExistsAsync(
                 UriFactory.CreateDatabaseUri(databaseId),

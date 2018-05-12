@@ -249,7 +249,6 @@
     <Compile Include="ShallowProxy.cs" />
     <Compile Include="StringExtensions.cs" />
     <Compile Include="AST\ThisStepVisitor.cs" />
-    <Compile Include="VertexConverter.cs" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Gremlin\" />

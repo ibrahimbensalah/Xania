@@ -87,4 +87,22 @@ namespace Xania.Graphs.Linq
                  .GetGenericMethodDefinition()))
             .MakeGenericMethod(sourceType);
     }
+
+    public static class DictionaryHelper
+    {
+        private static readonly Type _instance = typeof(Dictionary<,>);
+
+        public static MethodInfo Add<TKey, TValue>() => Add(typeof(TKey), typeof(TValue));
+        public static MethodInfo Add(Type keyType, Type valueType)
+        {
+            return _instance.MakeGenericType(keyType, valueType).GetMethod("Add");
+        }
+
+        //(s_Add ??
+            // (s_Add = new Action<int, int>(_instance.Add).GetMethodInfo()
+            //     .GetGenericMethodDefinition()))
+            //.MakeGenericMethod(keyType, valueType);
+
+
+    }
 }
