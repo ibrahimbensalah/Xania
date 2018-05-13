@@ -1,26 +1,38 @@
 ﻿using System;
-using System.Collections.Generic;
+using Xania.Graphs.Linq;
 
 namespace Xania.Graphs.Structure
 {
-    public class GraphPrimitive<T> : GraphValue
+    public class GraphPrimitive: GraphValue
     {
-        public GraphPrimitive(T value)
+        public GraphPrimitive(Type type, object value)
         {
+            Type = type;
             Value = value;
         }
 
-        public T Value { get; }
+        public Type Type { get; }
+        public object Value { get; }
 
-
-        public override object ToClType()
+        public override bool Equals(object obj)
         {
-            return Value;
+            if (obj == null)
+                return false;
+
+            return Value.Equals(obj);
         }
 
-        public override IExecuteResult Execute(IStep step, IEnumerable<(string name, IExecuteResult result)> mappings)
+        protected bool Equals(GraphPrimitive other)
         {
-            throw new NotImplementedException();
+            return Equals(Type, other.Type) && Equals(Value, other.Value);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                return ((Type != null ? Type.GetHashCode() : 0) * 397) ^ (Value != null ? Value.GetHashCode() : 0);
+            }
         }
     }
 }

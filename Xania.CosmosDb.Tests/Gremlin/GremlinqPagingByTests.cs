@@ -1,5 +1,4 @@
 ﻿using System.Linq;
-using Xania.Graphs;
 
 namespace Xania.CosmosDb.Tests.Gremlin
 {

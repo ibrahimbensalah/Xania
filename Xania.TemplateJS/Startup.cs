@@ -10,20 +10,14 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Azure.Documents.Client;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Serialization;
 using Xania.CosmosDb;
 using Xania.Data.DocumentDB;
 using Xania.DataAccess;
-using Xania.Graphs;
-using Xania.Graphs.Linq;
 using Xania.Invoice.Domain;
 using Xania.TemplateJS.Controllers;
-using Xania.TemplateJS.Reporting;
 
 
 namespace Xania.TemplateJS

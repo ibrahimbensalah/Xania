@@ -3,7 +3,6 @@ using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
-using System.Linq.Expressions;
 using Xania.Graphs.Linq;
 using Xania.Graphs.Structure;
 using Xania.Reflection;
@@ -44,19 +43,19 @@ namespace Xania.Graphs
             if (cache.TryGetValue(obj, out var result))
                 return (result, empty);
             if (valueType == typeof(string))
-                return (new GraphPrimitive<string>((string)obj), empty);
+                return (new GraphPrimitive(typeof(string), obj), empty);
             if (valueType == typeof(int))
-                return (new GraphPrimitive<int>((int)obj), empty);
+                return (new GraphPrimitive(typeof(int), obj), empty);
             if (valueType == typeof(float))
-                return (new GraphPrimitive<float>((float)obj), empty);
+                return (new GraphPrimitive(typeof(float), obj), empty);
             if (valueType == typeof(double))
-                return (new GraphPrimitive<double>((double)obj), empty);
+                return (new GraphPrimitive(typeof(double), obj), empty);
             if (valueType == typeof(decimal))
-                return (new GraphPrimitive<decimal>((decimal)obj), empty);
+                return (new GraphPrimitive(typeof(decimal), obj), empty);
             if( valueType == typeof(DateTime))
-                return (new GraphPrimitive<DateTime>((DateTime)obj), empty);
+                return (new GraphPrimitive(typeof(DateTime), obj), empty);
             if( valueType == typeof(DateTimeOffset))
-                return (new GraphPrimitive<DateTimeOffset>((DateTimeOffset)obj), empty);
+                return (new GraphPrimitive(typeof(DateTimeOffset), obj), empty);
             if (valueType.IsEnumerable())
             {
                 var elementType = valueType.GetItemType();
@@ -87,13 +86,13 @@ namespace Xania.Graphs
                     if (IsVertexType(prop.PropertyType))
                         outE.AddRange(Unfold(v).Select(e => (vertex, prop.Name, e)));
                     else
-                        vertex.Properties.Add(new Property(prop.Name, v.ToClType()));
+                        vertex.Properties.Add(new Property(prop.Name, v));
                 }
             }
             return (vertex, outE);
         }
 
-        private static IEnumerable<Vertex> Unfold(GraphValue obj)
+        private static IEnumerable<Vertex> Unfold(object obj)
         {
             if (obj is GraphList list)
                 return list.Items.OfType<Vertex>();
@@ -132,7 +131,7 @@ namespace Xania.Graphs
                     var(c, E) = ConvertValue(propValue, prop.PropertyType, cache);
                     if (E.Any())
                         throw new InvalidOperationException();
-                    container.Properties.Add(new Property(prop.Name.ToCamelCase(), c.ToClType()));
+                    container.Properties.Add(new Property(prop.Name.ToCamelCase(), c));
                 }
             }
 
@@ -170,7 +169,7 @@ namespace Xania.Graphs
                     continue;
 
                 var modelProperty = modelProperties[p.Name];
-                modelProperty.SetValue(model, p.Value.Convert(modelProperty.PropertyType));
+                modelProperty.SetValue(model, Convert2(p.Value2, modelProperty.PropertyType));
             }
 
             foreach (var rel in Edges.Where(e => string.Equals(e.OutV, vertex.Id)))
@@ -190,6 +189,11 @@ namespace Xania.Graphs
                 }
             }
             return model;
+        }
+
+        private object Convert2(GraphValue value, Type type)
+        {
+            throw new NotImplementedException();
         }
 
         private void Add(object collection, object toObject, Type elementType)

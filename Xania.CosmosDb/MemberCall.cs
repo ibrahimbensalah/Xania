@@ -1,8 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-using Xania.CosmosDb.AST;
-
-namespace Xania.CosmosDb
+﻿namespace Xania.CosmosDb
 {
     //internal class MemberCall : LinqExpr
     //{

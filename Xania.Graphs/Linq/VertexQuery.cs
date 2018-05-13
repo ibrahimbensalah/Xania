@@ -1,45 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Runtime.Remoting.Messaging;
-using System.Runtime.Remoting.Proxies;
-using System.Security.Permissions;
-using System.Threading.Tasks;
 using Newtonsoft.Json;
-using Xania.Graphs.Linq;
+using Xania.Graphs.Structure;
 using Xania.ObjectMapper;
 using Xania.Reflection;
 
-namespace Xania.Graphs.Structure
+namespace Xania.Graphs.Linq
 {
-    public class InMemoryGraphDbContext : IGraphDataContext
-    {
-        private readonly Graph _graph;
-
-        public InMemoryGraphDbContext(params object[] models)
-            : this(Graph.FromObject(models))
-        {
-        }
-
-        public InMemoryGraphDbContext(Graph graph)
-        {
-            _graph = graph;
-        }
-
-        public Task<IEnumerable<object>> ExecuteAsync(GraphTraversal traversal, Type elementType)
-        {
-            Console.WriteLine(traversal);
-
-            var q =
-                new VertexQuery(_graph, Expression.Constant(_graph.Vertices))
-                    .Execute(traversal);
-
-            return Task.FromResult((IEnumerable<object>) q.Execute(elementType));
-        }
-    }
-
     internal class VertexQuery : IGraphQuery
     {
         public Graph Graph { get; }
@@ -64,6 +33,7 @@ namespace Xania.Graphs.Structure
 
                 foreach (var entry in enumerable)
                 {
+                    Console.WriteLine(JsonConvert.SerializeObject(entry, Formatting.Indented));
                     var entity = mapper.MapTo(entry, elementType);
                     list.Add(entity);
                 }
@@ -131,7 +101,7 @@ namespace Xania.Graphs.Structure
                 Expression<Func<Vertex, IEnumerable<object>>> query =
                     v => v.Properties
                         .Where(p => p.Name.Equals(propertyName, StringComparison.InvariantCultureIgnoreCase))
-                        .Select(p => p.Value.Convert(propertyType));
+                        .Select(p => MappableVertex.ToClType(p.Value2).Convert(propertyType));
 
                 var param = Expression.Parameter(typeof(Object));
                 var selectExpr = Expression.Call(
@@ -261,14 +231,15 @@ namespace Xania.Graphs.Structure
                     }
                 }
 
+                var list = m.ToArray();
                 if (step is Select select)
                 {
-                    return (m.Select(select.Label), m);
+                    return (list.Select(select.Label), list);
                 }
 
                 if (step is Project project)
                 {
-                    return (GetProjectionExpression(x, project, m), m);
+                    return (GetProjectionExpression(x, project, list), list);
                 }
 
                 //if (step is First)
@@ -291,187 +262,14 @@ namespace Xania.Graphs.Structure
                 {
                     if (propertyName.Equals("id", StringComparison.InvariantCultureIgnoreCase))
                         return v => v != null && v.Id.Equals(cons.Value);
-                    else
-                        return v => v != null && v.Properties.Any(p =>
-                            p.Name.Equals(propertyName, StringComparison.InvariantCultureIgnoreCase) &&
-                            p.Value.Equals(cons.Value));
+
+                    return v => v != null &&
+                                v.Properties.Any(p =>
+                                    p.Name.Equals(propertyName, StringComparison.InvariantCultureIgnoreCase) &&
+                                    p.Value2.Equals(cons.Value));
                 }
 
             throw new NotImplementedException();
-        }
-    }
-
-    internal class MemberStep
-    {
-        public static AnonymousQuery Query(Graph graph, LambdaExpression selectorExpr, Expression sourceExpr)
-        {
-            var sourceType = selectorExpr.Parameters[0].Type;
-            var resultType = selectorExpr.Body.Type.GetItemType();
-            var manyMethod = QueryableHelper.SelectMany_TSource_2(sourceType, resultType);
-
-            var body = ToEnumerable(selectorExpr.Body);
-
-            var many = Expression.Call(manyMethod, sourceExpr, Expression.Lambda(body, selectorExpr.Parameters));
-            return new AnonymousQuery(graph, many);
-        }
-
-        private static Expression ToEnumerable(Expression expr)
-        {
-            var enumerableType = typeof(IEnumerable<>).MapFrom(expr.Type);
-            if (enumerableType == expr.Type)
-                return expr;
-
-            return Expression.Convert(expr, enumerableType);
-        }
-    }
-
-    internal class SelectManyStep
-    {
-        public static IGraphQuery Query(Graph graph, Out @out, Expression sourceExpr)
-        {
-            var _selectorExpr = GetSelectManyExpression(graph, @out);
-
-            var sourceType = _selectorExpr.Parameters[0].Type;
-            var resultType = _selectorExpr.Body.Type.GetItemType();
-            var manyMethod = QueryableHelper.SelectMany_TSource_2(sourceType, resultType);
-
-            var body = ToEnumerable(_selectorExpr.Body);
-
-            var many = Expression.Call(manyMethod, sourceExpr, Expression.Lambda(body, _selectorExpr.Parameters));
-            return new VertexQuery(graph, many);
-        }
-
-        public static Expression<Func<Vertex, IEnumerable<Vertex>>> GetSelectManyExpression(Graph graph, Out @out)
-        {
-            return v =>
-                from edge in graph.Edges
-                where edge.OutV.Equals(v.Id, StringComparison.InvariantCultureIgnoreCase) &&
-                      edge.Label.Equals(@out.EdgeLabel, StringComparison.InvariantCultureIgnoreCase)
-                join vertex in graph.Vertices on edge.InV equals vertex.Id
-                select vertex;
-        }
-
-        private static Expression ToEnumerable(Expression expr)
-        {
-            var enumerableType = typeof(IEnumerable<>).MapFrom(expr.Type);
-            if (enumerableType == expr.Type)
-                return expr;
-
-            return Expression.Convert(expr, enumerableType);
-        }
-    }
-
-    internal class ValuesQuery
-    {
-        public static object GetMember(object v, string name, Type memberType)
-        {
-            if (v is Vertex vtx && name.Equals("id", StringComparison.InvariantCultureIgnoreCase))
-            {
-                return vtx.Id;
-            }
-
-            if (v is Vertex obj)
-            {
-                return obj.Properties.Where(p => p.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase))
-                    .Select(p => p.Value).FirstOrDefault();
-            }
-
-            throw new NotImplementedException();
-        }
-    }
-
-    internal class AnonymousQuery : IGraphQuery
-    {
-        private readonly Graph _graph;
-
-        public AnonymousQuery(Graph graph, Expression sourceExpr)
-        {
-            _graph = graph;
-            SourceExpression = sourceExpr;
-        }
-
-        public object Execute(Type elementType)
-        {
-            var func = Expression.Lambda(SourceExpression).Compile();
-            var list = new List<object>();
-            var result = func.DynamicInvoke();
-            Console.WriteLine(JsonConvert.SerializeObject(result, Formatting.Indented));
-
-            var mapper = new Mapper(new VertexMappingResolver(_graph));
-
-            foreach (var o in (IEnumerable<object>) result)
-            {
-                list.Add(mapper.MapTo(o, elementType));
-            }
-
-            return list;
-        }
-
-        public IGraphQuery Next(Type sourceType, IStep step, IEnumerable<(string name, Expression result)> mappings)
-        {
-            if (step is Out o)
-            {
-                return SelectProperty(sourceType, o.EdgeLabel);
-            }
-            if (step is Values val)
-            {
-                return SelectProperty(sourceType, val.Name);
-            }
-
-            throw new NotSupportedException($"{step.GetType()}");
-        }
-
-        private IGraphQuery SelectProperty(Type sourceType, string propertyName)
-        {
-            var property = TypeDescriptor.GetProperties(sourceType)
-                .OfType<PropertyDescriptor>()
-                .First(p => p.Name.Equals(propertyName, StringComparison.InvariantCultureIgnoreCase));
-
-            var param = Expression.Parameter(sourceType);
-            var propertyExpr = Expression.Property(param, property.Name);
-
-            return MemberStep.Query(_graph, Expression.Lambda(propertyExpr, param), SourceExpression);
-        }
-
-        public Expression SourceExpression { get; }
-    }
-
-    public interface IGraphQuery
-    {
-        object Execute(Type elementType);
-        IGraphQuery Next(Type sourceType, IStep step, IEnumerable<(string name, Expression result)> mappings);
-        Expression SourceExpression { get; }
-    }
-
-    internal class ShallowProxy : RealProxy
-    {
-        private readonly object _id;
-
-        [PermissionSet(SecurityAction.LinkDemand)]
-        public ShallowProxy(Type myType, object id) : base(myType)
-        {
-            _id = id;
-        }
-
-        [SecurityPermission(SecurityAction.LinkDemand, Flags = SecurityPermissionFlag.Infrastructure)]
-        public override IMessage Invoke(IMessage myIMessage)
-        {
-            if (myIMessage is IMethodCallMessage methodCall)
-            {
-                if (methodCall.MethodName.Equals("GetType"))
-                    return new ReturnMessage(typeof(ShallowProxy), null, 0, methodCall.LogicalCallContext, methodCall);
-                if (methodCall.MethodName.Equals("get_Id", StringComparison.OrdinalIgnoreCase))
-                    return new ReturnMessage(_id, null, 0, methodCall.LogicalCallContext, methodCall);
-                if (methodCall.MethodName.Equals("ToString"))
-                    return new ReturnMessage(ToString(), null, 0, methodCall.LogicalCallContext, methodCall);
-            }
-
-            throw new InvalidOperationException("Cannot call shallow object");
-        }
-
-        public override string ToString()
-        {
-            return $"{{Id: {_id}}}";
         }
     }
 }

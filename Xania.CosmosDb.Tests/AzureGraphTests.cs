@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Linq;
 using FluentAssertions;
-using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
 using NUnit.Framework;
 using Xania.Graphs;
+using Xania.Graphs.Structure;
 
 namespace Xania.CosmosDb.Tests
 {
@@ -24,7 +24,7 @@ namespace Xania.CosmosDb.Tests
             graph.Vertices.Count().Should().Be(2);
             graph.Vertices.Select(e => e.Label).All(e => e.Equals(nameof(Person).ToCamelCase())).Should().BeTrue();
             var subject = graph.Vertices.SelectMany(v => v.Properties).Should().Contain(e => "firstName".Equals(e.Name)).Subject;
-            subject.Value.Should().Be("Ibrahim");
+            subject.Value2.Should().BeOfType<GraphPrimitive>().Subject.Value.Should().Be("Ibrahim");
 
             var friend = graph.Edges.Should().ContainSingle().Which;
             friend.Label.Should().Be("friend");

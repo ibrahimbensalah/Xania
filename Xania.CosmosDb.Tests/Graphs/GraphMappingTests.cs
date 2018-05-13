@@ -1,13 +1,8 @@
-﻿using System;
-using System.Linq;
-using FluentAssertions;
+﻿using FluentAssertions;
 using Microsoft.Extensions.Configuration;
-using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using NUnit.Framework;
-using Xania.CosmosDb.Tests.Gremlin;
 using Xania.Data.DocumentDB;
-using Xania.Graphs;
 using Xania.Invoice.Domain;
 
 namespace Xania.CosmosDb.Tests.Graphs

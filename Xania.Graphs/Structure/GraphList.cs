@@ -1,9 +1,9 @@
 ﻿using System.Collections.Generic;
-using System.Linq;
+using Xania.Graphs.Linq;
 
 namespace Xania.Graphs.Structure
 {
-    public class GraphList : GraphValue
+    public class GraphList: GraphValue
     {
         public GraphList(IList<GraphValue> items)
         {
@@ -11,15 +11,5 @@ namespace Xania.Graphs.Structure
         }
 
         public IList<GraphValue> Items { get; }
-
-        public override object ToClType()
-        {
-            return Items.Select(e => e.ToClType());
-        }
-
-        public override IExecuteResult Execute(IStep step, IEnumerable<(string name, IExecuteResult result)> mappings)
-        {
-            throw new System.NotImplementedException();
-        }
     }
 }

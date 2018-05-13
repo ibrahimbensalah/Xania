@@ -1,11 +1,10 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace Xania.Graphs
 {
-    public static class Helper
+    public static class GraphExtensions
     {
         public static GraphTraversal ToTraversal(this IStep expr)
         {
@@ -41,6 +40,7 @@ namespace Xania.Graphs
             return GetEnumerator();
         }
     }
+
     public class PrependEnumerable<T>: IEnumerable<T>
     {
         private readonly IEnumerable<T> _source;
@@ -80,7 +80,6 @@ namespace Xania.Graphs
             if (Value is string str)
                 return $"'{str}'";
             return Value?.ToString() ?? string.Empty;
-            // return JsonConvert.SerializeObject(Value);
         }
 
         public Type Type { get; }

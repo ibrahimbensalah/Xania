@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
-using Xania.Graphs.Structure;
 using Xania.Reflection;
 
 namespace Xania.Graphs.Linq
@@ -33,7 +32,7 @@ namespace Xania.Graphs.Linq
 
         public TResult Execute<TResult>(Expression expression)
         {
-            bool IsEnumerable = (typeof(TResult).Name == "IEnumerable`1");
+            bool IsEnumerable = typeof(TResult).Name == "IEnumerable`1";
 
             //if (!IsEnumerable)
             //    throw new NotImplementedException();
@@ -112,9 +111,13 @@ namespace Xania.Graphs.Linq
                     {
                         yield return Where(methodCall, stack);
                     }
+                    else if (methodName.Equals("SelectMany") && methodCall.Arguments.Count == 2)
+                    {
+                        yield return SelectMany2(methodCall, stack);
+                    }
                     else if (methodName.Equals("SelectMany") && methodCall.Arguments.Count == 3)
                     {
-                        yield return SelectMany(methodCall, stack);
+                        yield return SelectMany3(methodCall, stack);
                     }
                     else if (methodName.Equals("OrderBy") && methodCall.Arguments.Count == 2)
                     {
@@ -272,7 +275,26 @@ namespace Xania.Graphs.Linq
             return (1, args => args[0].Append(new Drop()));
         }
 
-        private static (int, Func<GraphTraversal[], GraphTraversal>) SelectMany(MethodCallExpression methodCall, Stack<Expression> stack)
+        private static (int, Func<GraphTraversal[], GraphTraversal>) SelectMany2(MethodCallExpression methodCall, Stack<Expression> stack)
+        {
+            var sourceExpr = methodCall.Arguments[0];
+            var collectionLambda = methodCall.Arguments[1] is UnaryExpression u
+                ? (LambdaExpression)u.Operand
+                : throw new NotSupportedException();
+
+            Push(stack, sourceExpr);
+            Push(stack, collectionLambda.Body);
+
+            return (2, args =>
+            {
+                var source = args[0];
+                var collection = args[1];
+
+                return source.Bind(collection);
+            });
+        }
+
+        private static (int, Func<GraphTraversal[], GraphTraversal>) SelectMany3(MethodCallExpression methodCall, Stack<Expression> stack)
         {
             var sourceExpr = methodCall.Arguments[0];
             var collectionLambda = methodCall.Arguments[1] is UnaryExpression u
@@ -299,7 +321,8 @@ namespace Xania.Graphs.Linq
 
                     return source
                         .Bind(collection);
-                });
+                }
+                );
             }
             else
             {
@@ -321,7 +344,8 @@ namespace Xania.Graphs.Linq
                     return source
                         .Bind(collection)
                         .Bind(selector);
-                });
+                }
+                );
             }
         }
 

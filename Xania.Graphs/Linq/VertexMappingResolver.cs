@@ -2,10 +2,11 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
+using Xania.Graphs.Structure;
 using Xania.ObjectMapper;
 using Xania.Reflection;
 
-namespace Xania.Graphs.Structure
+namespace Xania.Graphs.Linq
 {
     internal class VertexMappingResolver : IMappingResolver
     {
@@ -45,7 +46,7 @@ namespace Xania.Graphs.Structure
             yield return new KeyValuePair<string, object>("id", _vertex.Id);
 
             foreach (var p in _vertex.Properties)
-                yield return new KeyValuePair<string, object>(p.Name, p.Value);
+                yield return new KeyValuePair<string, object>(p.Name, ToClType(p.Value2));
 
             var relations = _graph.Edges.Where(edge => edge.OutV == _vertex.Id);
             foreach (var edge in relations)
@@ -59,6 +60,31 @@ namespace Xania.Graphs.Structure
 
                     return Proxy(t, edge.InV);
                 }));
+        }
+
+        public static object ToClType(GraphValue result)
+        {
+            if (result is GraphList list)
+            {
+                return list.Items.Select(ToClType);
+            }
+
+            if (result is GraphObject obj)
+            {
+                var dict = new Dictionary<string, object>();
+
+                foreach (var v in obj.Properties.Select(e => new KeyValuePair<string, GraphValue>(e.Name, e.Value2)))
+                    dict.Add(v.Key, ToClType(v.Value));
+
+                return dict;
+            }
+
+            if (result is GraphPrimitive prim)
+            {
+                return prim.Value;
+            }
+
+            throw new NotImplementedException($"ToClType {result.GetType()}");
         }
 
         private static object Proxy(Type modelType, object targetId)

@@ -86,6 +86,20 @@ namespace Xania.Graphs.Linq
              (s_FirstOrDefault = new Func<IEnumerable<int>, int>(Enumerable.FirstOrDefault).GetMethodInfo()
                  .GetGenericMethodDefinition()))
             .MakeGenericMethod(sourceType);
+
+
+        private static MethodInfo s_SelectMany_TSource_2;
+        public static MethodInfo SelectMany_TSource_2<TSource, TResult>() =>
+            (s_SelectMany_TSource_2 ??
+             (s_SelectMany_TSource_2 = new Func<IEnumerable<TSource>, Func<TSource, IEnumerable<TResult>>, IEnumerable<TResult>>(Enumerable.SelectMany).GetMethodInfo().GetGenericMethodDefinition()))
+            .MakeGenericMethod(typeof(TSource), typeof(TResult));
+
+        private static MethodInfo s_Any_TSource_1;
+        public static MethodInfo Any_TSource_1<TSource>() =>
+            (s_Any_TSource_1 ??
+             (s_Any_TSource_1 = new Func<IEnumerable<TSource>, Func<TSource, bool>, bool>(Enumerable.Any)
+                 .GetMethodInfo().GetGenericMethodDefinition()))
+            .MakeGenericMethod(typeof(TSource));
     }
 
     public static class DictionaryHelper

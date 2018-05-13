@@ -1,15 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Linq.Expressions;
-using System.Reflection;
-using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
 using FluentAssertions;
 using Newtonsoft.Json;
 using NUnit.Framework;
 using Xania.Graphs.Linq;
-using Xania.Graphs.Structure;
 using Xania.Invoice.Domain;
 
 namespace Xania.Graphs.Runtime.Tests
@@ -41,14 +36,13 @@ namespace Xania.Graphs.Runtime.Tests
         [Test]
         public void NoFilter()
         {
-            var persons = People.ToArray();
-            var person1 = persons.Single(e => e.Id == 1);
-            var person2 = persons.Single(e => e.Id == 2);
+            //var friends = People.Where(e => e.Id == 1).SelectMany(e => e.Friends).Select(e => e.Id).ToArray();
+            //var person2 = People.Where(e => e.Id == 2).ToArray().Single();
 
-            // person1.Friends.Should().Contain(person2);
+            //friends.Should().Contain(person2.Id);
 
-            var person3 = persons.Single(e => e.Id == 3);
-            // person3.Friends.Should().Contain(person2);
+            //var person3 = People.Where(e => e.Id == 3).ToArray().Single();
+            //person3.Friends.Should().Contain(person2);
         }
 
         [Test]

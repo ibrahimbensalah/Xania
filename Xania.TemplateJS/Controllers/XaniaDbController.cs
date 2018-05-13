@@ -6,7 +6,6 @@ using System.Reflection;
 using System.Reflection.Emit;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
-using Newtonsoft.Json.Converters;
 using Xania.DataAccess;
 using Xania.Invoice.Domain;
 using Xania.QL;

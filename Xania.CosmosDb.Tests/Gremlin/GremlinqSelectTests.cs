@@ -4,7 +4,6 @@ using System.Runtime.CompilerServices;
 using FluentAssertions;
 using Newtonsoft.Json;
 using NUnit.Framework;
-using Xania.Graphs;
 
 namespace Xania.CosmosDb.Tests.Gremlin
 {

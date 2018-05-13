@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 
 namespace Xania.Graphs.Structure
 {
@@ -17,23 +16,6 @@ namespace Xania.Graphs.Structure
         public override string ToString()
         {
             return $"V['{Id}']";
-        }
-
-        public override object ToClType()
-        {
-            var dict = new Dictionary<string, object>
-            {
-                {"id", Id},
-                {"label", Label}
-            };
-            ToClType(dict);
-            return dict;
-        }
-
-        public override object ToClrType(Type elementType, Graph graph)
-        {
-            var cache = new Dictionary<Vertex, object>();
-            return graph.ToObject(this, elementType, cache);
         }
     }
 }

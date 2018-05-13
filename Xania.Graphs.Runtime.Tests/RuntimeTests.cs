@@ -1,14 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Linq.Expressions;
-using System.Reflection;
-using System.Threading.Tasks;
 using FluentAssertions;
-using Newtonsoft.Json;
 using NUnit.Framework;
-using Xania.Graphs.Linq;
-using Xania.Graphs.Structure;
 using Xania.Invoice.Domain;
 
 namespace Xania.Graphs.Runtime.Tests

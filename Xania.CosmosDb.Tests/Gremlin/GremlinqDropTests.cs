@@ -1,7 +1,6 @@
 ﻿using System.Linq;
 using FluentAssertions;
 using NUnit.Framework;
-using Xania.Graphs;
 
 namespace Xania.CosmosDb.Tests.Gremlin
 {

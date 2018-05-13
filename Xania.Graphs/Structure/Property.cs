@@ -1,17 +1,16 @@
 ﻿using System;
+using Xania.Graphs.Linq;
 
 namespace Xania.Graphs.Structure
 {
     public class Property
     {
-        public object Value { get; }
         public string Name { get; }
+        public GraphValue Value2 { get; }
 
-        public Property(string name, object value)
+        public Property(string name, GraphValue value)
         {
-            if (value is GraphValue)
-                throw new NotSupportedException();
-            Value = value;
+            Value2 = value;
             Name = name.ToCamelCase();
         }
 

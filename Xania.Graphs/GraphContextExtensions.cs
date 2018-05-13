@@ -1,17 +1,14 @@
-﻿using System.Collections.Generic;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Linq;
-using System.Linq.Expressions;
 using Xania.Graphs.Linq;
-using Xania.Graphs.Structure;
 
 namespace Xania.Graphs
 {
     public static class GraphContextExtensions
     {
-        public static GraphQueryable<TModel> Set<TModel>(this IGraphDataContext client)
+        public static GraphQueryable<TModel> Set<TModel>(this IGraphDataContext dataContext)
         {
-            return new GraphQueryable<TModel>(new GraphQueryProvider(client));
+            return new GraphQueryable<TModel>(new GraphQueryProvider(dataContext));
         }
 
         public static IGraphQuery Execute(this IGraphQuery g, GraphTraversal traversal)
@@ -28,8 +25,9 @@ namespace Xania.Graphs
 
                 if (step is Select select)
                 {
-                    var q = m.Select(select.Label);
-                    return (q, t, m);
+                    m.Select(select.Label);
+                    // var q = m.Select(select.Label);
+                    return __;
                 }
 
                 var next = query.Next(t, step, m.Select(x => (x.name, x.expr.SourceExpression)));
