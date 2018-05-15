@@ -138,58 +138,58 @@ namespace Xania.Graphs
             return root;
         }
 
-        public IEnumerable<TModel> ToObjects<TModel>() where TModel : new()
-        {
-            return ToObjects(typeof(TModel)).OfType<TModel>();
-        }
+        //public IEnumerable<TModel> ToObjects<TModel>() where TModel : new()
+        //{
+        //    return ToObjects(typeof(TModel)).OfType<TModel>();
+        //}
 
-        public IEnumerable ToObjects(Type modelType)
-        {
-            var cache = new Dictionary<Vertex, object>();
-            var label = modelType.IsAnonymousType() ? null : modelType.Name.ToCamelCase();
-            foreach (var vertex in Vertices.Where(e => string.Equals(e.Label, label)))
-                yield return ToObject(vertex, modelType, cache);
-        }
+        //public IEnumerable ToObjects(Type modelType)
+        //{
+        //    var cache = new Dictionary<Vertex, object>();
+        //    var label = modelType.IsAnonymousType() ? null : modelType.Name.ToCamelCase();
+        //    foreach (var vertex in Vertices.Where(e => string.Equals(e.Label, label)))
+        //        yield return ToObject(vertex, modelType, cache);
+        //}
 
-        public Object ToObject(Vertex vertex, Type modelType, IDictionary<Vertex, object> cache)
-        {
-            if (cache.TryGetValue(vertex, out var model))
-                return model;
-            cache.Add(vertex, model = modelType.CreateInstance(new Dictionary<string,object>()));
+        //public Object ToObject(Vertex vertex, Type modelType, IDictionary<Vertex, object> cache)
+        //{
+        //    if (cache.TryGetValue(vertex, out var model))
+        //        return model;
+        //    cache.Add(vertex, model = modelType.CreateInstance(new Dictionary<string,object>()));
 
-            var modelProperties = TypeDescriptor.GetProperties(modelType).OfType<PropertyDescriptor>()
-                .ToDictionary(e => e.Name, StringComparer.InvariantCultureIgnoreCase);
-            var idProperty = modelProperties.ContainsKey("Id") ? modelProperties["Id"] : null;
-            idProperty?.SetValue(model, vertex.Id.ConvertMany(idProperty.PropertyType));
+        //    var modelProperties = TypeDescriptor.GetProperties(modelType).OfType<PropertyDescriptor>()
+        //        .ToDictionary(e => e.Name, StringComparer.InvariantCultureIgnoreCase);
+        //    var idProperty = modelProperties.ContainsKey("Id") ? modelProperties["Id"] : null;
+        //    idProperty?.SetValue(model, vertex.Id.ConvertMany(idProperty.PropertyType));
 
-            foreach (var p in vertex.Properties)
-            {
-                // var values = p.Values.Select(e => e.Item2);
-                if (!modelProperties.ContainsKey(p.Name))
-                    continue;
+        //    foreach (var p in vertex.Properties)
+        //    {
+        //        // var values = p.Values.Select(e => e.Item2);
+        //        if (!modelProperties.ContainsKey(p.Name))
+        //            continue;
 
-                var modelProperty = modelProperties[p.Name];
-                modelProperty.SetValue(model, Convert2(p.Value2, modelProperty.PropertyType));
-            }
+        //        var modelProperty = modelProperties[p.Name];
+        //        modelProperty.SetValue(model, Convert2(p.Value, modelProperty.PropertyType));
+        //    }
 
-            foreach (var rel in Edges.Where(e => string.Equals(e.OutV, vertex.Id)))
-            {
-                var target = Vertices.SingleOrDefault(e => e.Id.Equals(rel.InV));
-                var modelProperty = modelProperties[rel.Label];
-                if (typeof(IEnumerable).IsAssignableFrom(modelProperty.PropertyType))
-                {
-                    var elementType = modelProperty.PropertyType.GetItemType();
-                    if (target != null)
-                        Add(modelProperty.GetValue(model), ToObject(target, elementType, cache), elementType);
-                }
-                else
-                {
-                    if (target != null)
-                        modelProperty.SetValue(model, ToObject(target, modelProperty.PropertyType, cache));
-                }
-            }
-            return model;
-        }
+        //    foreach (var rel in Edges.Where(e => string.Equals(e.OutV, vertex.Id)))
+        //    {
+        //        var target = Vertices.SingleOrDefault(e => e.Id.Equals(rel.InV));
+        //        var modelProperty = modelProperties[rel.Label];
+        //        if (typeof(IEnumerable).IsAssignableFrom(modelProperty.PropertyType))
+        //        {
+        //            var elementType = modelProperty.PropertyType.GetItemType();
+        //            if (target != null)
+        //                Add(modelProperty.GetValue(model), ToObject(target, elementType, cache), elementType);
+        //        }
+        //        else
+        //        {
+        //            if (target != null)
+        //                modelProperty.SetValue(model, ToObject(target, modelProperty.PropertyType, cache));
+        //        }
+        //    }
+        //    return model;
+        //}
 
         private object Convert2(GraphValue value, Type type)
         {

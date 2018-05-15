@@ -16,7 +16,7 @@ namespace Xania.Graphs.Linq
             if (v is Vertex obj)
             {
                 return obj.Properties.Where(p => p.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase))
-                    .Select(p => p.Value2).FirstOrDefault();
+                    .Select(p => p.Value).FirstOrDefault();
             }
 
             throw new NotImplementedException();

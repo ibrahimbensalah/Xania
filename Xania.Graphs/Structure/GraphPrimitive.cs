@@ -34,5 +34,10 @@ namespace Xania.Graphs.Structure
                 return ((Type != null ? Type.GetHashCode() : 0) * 397) ^ (Value != null ? Value.GetHashCode() : 0);
             }
         }
+
+        public override string ToString()
+        {
+            return Value.ToString();
+        }
     }
 }

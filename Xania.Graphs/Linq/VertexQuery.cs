@@ -101,7 +101,7 @@ namespace Xania.Graphs.Linq
                 Expression<Func<Vertex, IEnumerable<object>>> query =
                     v => v.Properties
                         .Where(p => p.Name.Equals(propertyName, StringComparison.InvariantCultureIgnoreCase))
-                        .Select(p => MappableVertex.ToClType(p.Value2).Convert(propertyType));
+                        .Select(p => MappableVertex.ToClType(p.Value.Value).Convert(propertyType));
 
                 var param = Expression.Parameter(typeof(Object));
                 var selectExpr = Expression.Call(
@@ -224,11 +224,9 @@ namespace Xania.Graphs.Linq
                         return (andX, m);
                         // return (ReplaceVisitor.VisitAndConvert(mx.Body, mx.Parameters[0], x), m);
                     }
-                    else
-                    {
-                        var whereMethod = QueryableHelper.Where_TSource_1<Vertex>();
-                        return (Expression.Call(whereMethod, x, p), m);
-                    }
+
+                    var whereMethod = QueryableHelper.Where_TSource_1<Vertex>();
+                    return (Expression.Call(whereMethod, x, p), m);
                 }
 
                 var list = m.ToArray();
@@ -263,10 +261,11 @@ namespace Xania.Graphs.Linq
                     if (propertyName.Equals("id", StringComparison.InvariantCultureIgnoreCase))
                         return v => v != null && v.Id.Equals(cons.Value);
 
+                    var checksum = Property.GenerateHash(cons.Value);
                     return v => v != null &&
                                 v.Properties.Any(p =>
                                     p.Name.Equals(propertyName, StringComparison.InvariantCultureIgnoreCase) &&
-                                    p.Value2.Equals(cons.Value));
+                                    p.Value.Id.Equals(checksum));
                 }
 
             throw new NotImplementedException();
