@@ -60,7 +60,6 @@
     <Compile Include="Runtime\GraphProcessor.cs" />
     <Compile Include="Linq\AnonymousQuery.cs" />
     <Compile Include="ExecuteResultExtensions.cs" />
-    <Compile Include="Linq\ConsResult.cs" />
     <Compile Include="Structure\GraphObject.cs" />
     <Compile Include="Structure\GraphList.cs" />
     <Compile Include="Structure\GraphPrimitive.cs" />
