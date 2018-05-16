@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
+using Xania.Graphs.Structure;
 using Xania.Reflection;
 
 namespace Xania.Graphs.Linq
@@ -166,7 +167,7 @@ namespace Xania.Graphs.Linq
                         }
                         else if (valueType.IsPrimitive || value is string)
                         {
-                            yield return (0, _ => Const(constantExpression.Value).ToTraversal());
+                            yield return (0, _ => Const(value).ToTraversal());
                         }
                         else
                         {
@@ -408,7 +409,7 @@ namespace Xania.Graphs.Linq
                 if (left.Steps.Last() is Values values)
                 {
                     var rightSteps = values.Name.Equals("id", StringComparison.OrdinalIgnoreCase) ?
-                        right.Steps.Select(e => e is Const cons ? new Const(cons.Value.ToString()) : e) :
+                        right.Steps.Select(e => e is Const cons ? Const(cons.Value) : e) :
                         right.Steps;
 
                     var reverseTail = left.Steps.Take(left.Steps.Count() - 1);

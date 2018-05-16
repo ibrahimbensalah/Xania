@@ -1,6 +1,11 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
+using System.Security.Cryptography;
+using System.Text;
+using Xania.Graphs.Linq;
+using Xania.Graphs.Structure;
 
 namespace Xania.Graphs
 {
@@ -14,6 +19,64 @@ namespace Xania.Graphs
         public static IEnumerable<T> AsEnumerable<T>(this T item)
         {
             yield return item;
+        }
+
+        public static string GenerateChecksum(this object value)
+        {
+            if (value is string str)
+                return str;
+            if (value.GetType().IsPrimitive)
+                return value.ToString();
+            if (value is GraphPrimitive prim)
+                return prim.Value.ToString();
+            if (value is GraphObject obj)
+                return obj.Properties.SelectMany(p => GetBytes(p.Value.Value)).ComputeHash().Format();
+            if (value is GraphList list)
+                return list.Items.SelectMany(GetBytes).ComputeHash().Format();
+
+            throw new NotImplementedException("GenerateChecksum: " + value.GetType());
+        }
+
+        public static byte[] GenerateHash(this object value)
+        {
+            if (value is GraphValue gv)
+                return gv.GetBytes().ComputeHash();
+
+            if (value is string str)
+                return GenerateHash(new GraphPrimitive(typeof(string), str));
+
+            throw new NotImplementedException("GenerateHash: " + value.GetType());
+        }
+
+        public static IEnumerable<byte> GetBytes(this GraphValue value)
+        {
+            if (value is GraphPrimitive prim)
+                return Encoding.UTF8.GetBytes(prim.Value.ToString());
+            if (value is GraphObject obj)
+                return obj.Properties.SelectMany(p => GetBytes(p.Value.Value));
+            if (value is GraphList list)
+                return list.Items.SelectMany(GetBytes);
+
+            throw new NotImplementedException("GetBytes: " + value.GetType());
+        }
+
+        public static byte[] ComputeHash(this IEnumerable<byte> bytes)
+        {
+            using (var sha = SHA256.Create())
+            {
+                // Convert the input string to a byte array and compute the hash.
+                return sha.ComputeHash(bytes.ToArray());
+            }
+        }
+
+        public static string Format(this byte[] data)
+        {
+            StringBuilder sb = new StringBuilder();
+
+            foreach (var t in data)
+                sb.Append(t.ToString("x2"));
+
+            return sb.ToString();
         }
     }
 

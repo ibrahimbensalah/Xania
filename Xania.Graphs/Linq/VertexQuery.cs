@@ -258,10 +258,10 @@ namespace Xania.Graphs.Linq
             if (compareStep is Eq eq)
                 if (eq.Value is Const cons)
                 {
+                    var checksum = cons.Value.GenerateChecksum();
                     if (propertyName.Equals("id", StringComparison.InvariantCultureIgnoreCase))
-                        return v => v != null && v.Id.Equals(cons.Value);
+                        return v => v != null && v.Id.Equals(checksum);
 
-                    var checksum = Property.GenerateHash(cons.Value);
                     return v => v != null &&
                                 v.Properties.Any(p =>
                                     p.Name.Equals(propertyName, StringComparison.InvariantCultureIgnoreCase) &&
