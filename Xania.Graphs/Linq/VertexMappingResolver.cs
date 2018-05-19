@@ -46,7 +46,7 @@ namespace Xania.Graphs.Linq
             yield return new KeyValuePair<string, object>("id", _vertex.Id);
 
             foreach (var p in _vertex.Properties)
-                yield return new KeyValuePair<string, object>(p.Name, ToClType(p.Value.Value));
+                yield return new KeyValuePair<string, object>(p.Name, ToClType(p.Value));
 
             var relations = _graph.Edges.Where(edge => edge.OutV == _vertex.Id);
             foreach (var edge in relations)
@@ -74,7 +74,7 @@ namespace Xania.Graphs.Linq
                 var dict = new Dictionary<string, object>();
 
                 foreach (var property in obj.Properties)
-                    dict.Add(property.Name, ToClType(property.Value.Value));
+                    dict.Add(property.Name, ToClType(property.Value));
 
                 return dict;
             }

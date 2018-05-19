@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -25,11 +26,12 @@ namespace Xania.Graphs.Linq
             .MakeGenericMethod(sourceType, resultType);
 
         private static MethodInfo s_Where_TSource_1;
-        public static MethodInfo Where_TSource_1<TSource>() =>
+        public static MethodInfo Where_TSource_1<TSource>() => Where_TSource_1(typeof(TSource));
+        public static MethodInfo Where_TSource_1(Type sourceType) =>
             (s_Where_TSource_1 ?? (s_Where_TSource_1 =
-                 new Func<IQueryable<TSource>, Expression<Func<TSource, bool>>, IQueryable<TSource>>(Queryable.Where)
+                 new Func<IQueryable<int>, Expression<Func<int, bool>>, IQueryable<int>>(Queryable.Where)
                      .GetMethodInfo().GetGenericMethodDefinition()))
-            .MakeGenericMethod(typeof(TSource));
+            .MakeGenericMethod(sourceType);
 
         private static MethodInfo s_Any_TSource_1;
         public static MethodInfo Any_TSource_1<TSource>() => Any_TSource_1(typeof(TSource));
@@ -43,6 +45,14 @@ namespace Xania.Graphs.Linq
         //public static MethodInfo SingleOrDefault_TSource_1<TSource>() => SingleOrDefault_TSource_1(typeof(TSource));
         //public static MethodInfo SingleOrDefault_TSource_1(Type sourceType) =>
         //    (s_SingleOrDefault_TSource_1 ?? (s_SingleOrDefault_TSource_1 = new Func<>(Queryable.SingleOrDefault)))
+
+        private static MethodInfo s_OfType_TSource_1;
+        public static MethodInfo
+            OfType_TSource_1<TResult>() => OfType_TSource_1(typeof(TResult));
+        public static MethodInfo OfType_TSource_1(Type resultType) =>
+            (s_OfType_TSource_1 ??
+             (s_OfType_TSource_1 = new Func<IQueryable, IQueryable<int>>(Queryable.OfType<int>).GetMethodInfo().GetGenericMethodDefinition()))
+            .MakeGenericMethod(resultType);
     }
 
     public static class GraphExpressions
@@ -100,6 +110,22 @@ namespace Xania.Graphs.Linq
              (s_Any_TSource_1 = new Func<IEnumerable<TSource>, Func<TSource, bool>, bool>(Enumerable.Any)
                  .GetMethodInfo().GetGenericMethodDefinition()))
             .MakeGenericMethod(typeof(TSource));
+
+        private static MethodInfo s_OfType_TSource_1;
+        public static MethodInfo
+            OfType_TSource_1<TResult>() => OfType_TSource_1(typeof(TResult));
+        public static MethodInfo OfType_TSource_1(Type resultType) =>
+            (s_OfType_TSource_1 ??
+             (s_OfType_TSource_1 = new Func<IEnumerable, IEnumerable<int>>(Enumerable.OfType<int>).GetMethodInfo().GetGenericMethodDefinition()))
+            .MakeGenericMethod(resultType);
+
+        private static MethodInfo s_Where_TSource_1;
+        public static MethodInfo Where_TSource_1<TSource>() => Where_TSource_1(typeof(TSource));
+        public static MethodInfo Where_TSource_1(Type sourceType) =>
+            (s_Where_TSource_1 ?? (s_Where_TSource_1 =
+                 new Func<IEnumerable<int>, Func<int, bool>, IEnumerable<int>>(Enumerable.Where)
+                     .GetMethodInfo().GetGenericMethodDefinition()))
+            .MakeGenericMethod(sourceType);
     }
 
     public static class DictionaryHelper

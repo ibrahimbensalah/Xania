@@ -242,7 +242,7 @@ namespace Xania.Reflection
 
         public static Type GetItemType(this Type enumerableType)
         {
-            foreach (var i in enumerableType.GetInterfaces())
+            foreach (var i in new []{ enumerableType }.Concat(enumerableType.GetInterfaces()))
             {
                 if (i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IEnumerable<>))
                     return i.GenericTypeArguments[0];

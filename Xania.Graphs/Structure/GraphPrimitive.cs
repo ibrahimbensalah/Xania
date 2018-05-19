@@ -24,7 +24,7 @@ namespace Xania.Graphs.Structure
 
         protected bool Equals(GraphPrimitive other)
         {
-            return Equals(Type, other.Type) && Equals(Value, other.Value);
+            return Type == other.Type && Equals(Value, other.Value);
         }
 
         public override int GetHashCode()

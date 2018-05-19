@@ -53,6 +53,7 @@
     <Compile Include="GraphTraversal.cs" />
     <Compile Include="GremlinSelector.cs" />
     <Compile Include="Has.cs" />
+    <Compile Include="Linq\ExpressionFluentExtenstions.cs" />
     <Compile Include="Linq\GraphQueryable.cs" />
     <Compile Include="Linq\GraphQueryProvider.cs" />
     <Compile Include="OrderBy.cs" />

@@ -10,12 +10,12 @@ namespace Xania.Graphs.Structure
     public class Property
     {
         public string Name { get; }
-        public PropertyValue Value { get; }
+        public GraphValue Value { get; }
 
         public Property(string name, GraphValue value)
         {
-            Value = new PropertyValue {Value = value, Id = value.GenerateChecksum()};
             Name = name.ToCamelCase();
+            Value = value;
         }
 
         public override int GetHashCode()
@@ -29,11 +29,5 @@ namespace Xania.Graphs.Structure
                 return property.Name.Equals(Name, StringComparison.InvariantCultureIgnoreCase);
             return false;
         }
-    }
-
-    public class PropertyValue
-    {
-        public GraphValue Value { get; set; }
-        public string Id { get; set; }
     }
 }

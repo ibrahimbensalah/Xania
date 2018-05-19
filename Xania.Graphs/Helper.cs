@@ -30,7 +30,7 @@ namespace Xania.Graphs
             if (value is GraphPrimitive prim)
                 return prim.Value.ToString();
             if (value is GraphObject obj)
-                return obj.Properties.SelectMany(p => GetBytes(p.Value.Value)).ComputeHash().Format();
+                return obj.Properties.SelectMany(p => GetBytes(p.Value)).ComputeHash().Format();
             if (value is GraphList list)
                 return list.Items.SelectMany(GetBytes).ComputeHash().Format();
 
@@ -53,7 +53,7 @@ namespace Xania.Graphs
             if (value is GraphPrimitive prim)
                 return Encoding.UTF8.GetBytes(prim.Value.ToString());
             if (value is GraphObject obj)
-                return obj.Properties.SelectMany(p => GetBytes(p.Value.Value));
+                return obj.Properties.SelectMany(p => GetBytes(p.Value));
             if (value is GraphList list)
                 return list.Items.SelectMany(GetBytes);
 

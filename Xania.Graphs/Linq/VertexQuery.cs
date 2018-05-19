@@ -101,7 +101,7 @@ namespace Xania.Graphs.Linq
                 Expression<Func<Vertex, IEnumerable<object>>> query =
                     v => v.Properties
                         .Where(p => p.Name.Equals(propertyName, StringComparison.InvariantCultureIgnoreCase))
-                        .Select(p => MappableVertex.ToClType(p.Value.Value).Convert(propertyType));
+                        .Select(p => MappableVertex.ToClType(p.Value).Convert(propertyType));
 
                 var param = Expression.Parameter(typeof(Object));
                 var selectExpr = Expression.Call(
@@ -258,14 +258,21 @@ namespace Xania.Graphs.Linq
             if (compareStep is Eq eq)
                 if (eq.Value is Const cons)
                 {
-                    var checksum = cons.Value.GenerateChecksum();
                     if (propertyName.Equals("id", StringComparison.InvariantCultureIgnoreCase))
-                        return v => v != null && v.Id.Equals(checksum);
+                    {
+                        var id = cons.Value.ToString();
+                        return v => v != null && v.Id.Equals(id);
+                    }
 
-                    return v => v != null &&
-                                v.Properties.Any(p =>
-                                    p.Name.Equals(propertyName, StringComparison.InvariantCultureIgnoreCase) &&
-                                    p.Value.Id.Equals(checksum));
+                    var vertX = Expression.Parameter(typeof(Vertex));
+                    return Expression.And(
+                        vertX.NotNull(),
+                        vertX.Property(nameof(Vertex.Properties))
+                            .Where<Property>(e => e.Name.Equals(propertyName, StringComparison.InvariantCultureIgnoreCase))
+                            .Select<Property, GraphValue>(e => e.Value)
+                            .OfType<GraphPrimitive>()
+                            .Any<GraphPrimitive>(gp => Equals(gp.Value, cons.Value))
+                    ).ToLambda<Func<Vertex, bool>>(vertX);
                 }
 
             throw new NotImplementedException();
