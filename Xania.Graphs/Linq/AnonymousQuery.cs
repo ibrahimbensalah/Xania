@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
@@ -25,9 +26,9 @@ namespace Xania.Graphs.Linq
             var result = func.DynamicInvoke();
             Console.WriteLine(JsonConvert.SerializeObject(result, Formatting.Indented));
 
-            var mapper = new Mapper(new VertexMappingResolver(_graph));
+            var mapper = new Mapper(new GraphMappingResolver(_graph));
 
-            foreach (var o in (IEnumerable<object>) result)
+            foreach (var o in (IEnumerable) result)
             {
                 list.Add(mapper.MapTo(o, elementType));
             }

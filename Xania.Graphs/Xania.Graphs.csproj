@@ -54,8 +54,11 @@
     <Compile Include="GremlinSelector.cs" />
     <Compile Include="Has.cs" />
     <Compile Include="Linq\ExpressionFluentExtenstions.cs" />
+    <Compile Include="Linq\GraphMappingResolver.cs" />
     <Compile Include="Linq\GraphQueryable.cs" />
     <Compile Include="Linq\GraphQueryProvider.cs" />
+    <Compile Include="Linq\ValuesQuery.cs" />
+    <Compile Include="Linq\MappableObject.cs" />
     <Compile Include="OrderBy.cs" />
     <Compile Include="Project.cs" />
     <Compile Include="Runtime\GraphProcessor.cs" />
@@ -71,12 +74,11 @@
     <Compile Include="Linq\QueryableHelper.cs" />
     <Compile Include="Linq\MemberStep.cs" />
     <Compile Include="Linq\SelectManyStep.cs" />
-    <Compile Include="Linq\ValuesQuery.cs" />
     <Compile Include="Linq\ReplaceVisitor.cs" />
     <Compile Include="Linq\ListResult.cs" />
     <Compile Include="Linq\IExecuteResult.cs" />
     <Compile Include="Structure\ShallowProxy.cs" />
-    <Compile Include="Linq\VertexMappingResolver.cs" />
+    <Compile Include="Linq\MappableVertex.cs" />
     <Compile Include="Linq\VertexQuery.cs" />
     <Compile Include="TraversalExtensions.cs" />
     <Compile Include="Helper.cs" />

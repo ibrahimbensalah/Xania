@@ -8,24 +8,7 @@ using Xania.Reflection;
 
 namespace Xania.Graphs.Linq
 {
-    internal class VertexMappingResolver : IMappingResolver
-    {
-        private readonly Graph _graph;
-
-        public VertexMappingResolver(Graph graph)
-        {
-            _graph = graph;
-        }
-
-        public IOption<IMappable> Resolve(object obj)
-        {
-            return obj is Vertex vertex
-                ? (IOption<IMappable>) new MappableVertex(_graph, vertex).Some()
-                : Option<IMappable>.None();
-        }
-    }
-
-    internal class MappableVertex: IMappable
+    internal class MappableVertex : IMappable
     {
         private readonly Graph _graph;
         private readonly Vertex _vertex;

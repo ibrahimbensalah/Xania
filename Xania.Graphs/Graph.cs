@@ -42,20 +42,16 @@ namespace Xania.Graphs
             var empty = Enumerable.Empty<(Vertex, string, Vertex)>();
             if (cache.TryGetValue(obj, out var result))
                 return (result, empty);
-            if (valueType == typeof(string))
-                return (new GraphPrimitive(typeof(string), obj), empty);
-            if (valueType == typeof(int))
-                return (new GraphPrimitive(typeof(int), obj), empty);
-            if (valueType == typeof(float))
-                return (new GraphPrimitive(typeof(float), obj), empty);
-            if (valueType == typeof(double))
-                return (new GraphPrimitive(typeof(double), obj), empty);
-            if (valueType == typeof(decimal))
-                return (new GraphPrimitive(typeof(decimal), obj), empty);
-            if( valueType == typeof(DateTime))
-                return (new GraphPrimitive(typeof(DateTime), obj), empty);
-            if( valueType == typeof(DateTimeOffset))
-                return (new GraphPrimitive(typeof(DateTimeOffset), obj), empty);
+            if (valueType == typeof(string) ||
+                valueType == typeof(int) ||
+                valueType == typeof(float) ||
+                valueType == typeof(double) ||
+                valueType == typeof(decimal) ||
+                valueType == typeof(DateTime) ||
+                valueType == typeof(DateTimeOffset) || 
+                valueType.IsEnum)
+                return (new GraphPrimitive(valueType, obj), empty);
+
             if (valueType.IsEnumerable())
             {
                 var elementType = valueType.GetItemType();

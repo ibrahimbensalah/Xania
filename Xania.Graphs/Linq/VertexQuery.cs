@@ -25,7 +25,7 @@ namespace Xania.Graphs.Linq
             var f = Expression.Lambda(SourceExpression).Compile();
             var result = f.DynamicInvoke();
 
-            var mapper = new Mapper(new VertexMappingResolver(Graph));
+            var mapper = new Mapper(new GraphMappingResolver(Graph));
 
             if (result is IEnumerable<Vertex> enumerable)
             {
@@ -40,10 +40,8 @@ namespace Xania.Graphs.Linq
 
                 return list;
             }
-            else
-            {
-                return mapper.MapTo(result, elementType);
-            }
+
+            return mapper.MapTo(result, elementType);
         }
 
         public static Expression GetVertextExpression(Type elementType)
@@ -61,8 +59,9 @@ namespace Xania.Graphs.Linq
         {
             if (step is V vertex)
             {
-                return FilterStep((Vertex x) =>
-                    x != null && x.Label.Equals(vertex.Label, StringComparison.InvariantCultureIgnoreCase));
+                var v = Expression.Parameter(typeof(Vertex), "e");
+                return FilterStep(v.NotNull().And(v.Property(nameof(Vertex.Label)).StringEqual(vertex.Label))
+                    .ToLambda<Func<Vertex, bool>>(v));
             }
 
             if (step is Has has)
@@ -82,7 +81,7 @@ namespace Xania.Graphs.Linq
 
             if (step is Project project)
             {
-                var param = Expression.Parameter(typeof(Vertex));
+                var param = Expression.Parameter(typeof(Vertex), "e");
                 var projectionExpression = GetProjectionExpression(param, project, mappings);
                 var selectorExpr = Expression.Lambda(projectionExpression, param);
 
@@ -94,28 +93,32 @@ namespace Xania.Graphs.Linq
 
             if (step is Values values)
             {
-                var propertyType = values.Type;
-                var propertyName = values.Name;
-                var sourceExpr = SourceExpression;
+                var propertyNames = values.Name.Split('.');
+                var propertyName = propertyNames.First();
+                if (propertyName.Equals("id", StringComparison.InvariantCultureIgnoreCase))
+                {
+                    return new AnonymousQuery(Graph, SourceExpression.Select((Vertex v) => v.Id));
+                }
+                else
+                {
+                    var paramVertex = Expression.Parameter(typeof(Vertex), "e");
+                    var valueSelectorExpr =
+                        propertyNames.Skip(1).Aggregate(
+                            paramVertex.Property(nameof(Vertex.Properties))
+                                .Where<Property>(p => p.Property(nameof(Property.Name)).StringEqual(propertyName))
+                                .Select((Property p) => p.Value)
+                            ,
+                            (propertyValues, memberName) =>
+                                propertyValues
+                                    .OfType<GraphObject>()
+                                    .SelectMany((GraphObject o) => o.Properties)
+                                    .Where<Property>(p =>
+                                        p.Property(nameof(Property.Name)).StringEqual(memberName))
+                                    .Select((Property p) => p.Value)
+                        ).OfType<GraphList>().SelectMany((GraphList x) => x.Items);
 
-                Expression<Func<Vertex, IEnumerable<object>>> query =
-                    v => v.Properties
-                        .Where(p => p.Name.Equals(propertyName, StringComparison.InvariantCultureIgnoreCase))
-                        .Select(p => MappableVertex.ToClType(p.Value).Convert(propertyType));
-
-                var param = Expression.Parameter(typeof(Object));
-                var selectExpr = Expression.Call(
-                    EnumerableHelper.Select_TSource_2(typeof(Object), propertyType),
-                    query.Body,
-                    Expression.Lambda(Expression.Convert(param, propertyType), param)
-                );
-
-                var firstMethod = EnumerableHelper.FirstOrDefault(propertyType);
-                var selectorExpr = Expression.Lambda(Expression.Call(firstMethod, selectExpr), query.Parameters);
-                var selectMethod = QueryableHelper.Select_TSource_2(typeof(Vertex), selectorExpr.Body.Type);
-                var anoExpr = Expression.Call(selectMethod, sourceExpr, selectorExpr);
-
-                return new AnonymousQuery(Graph, anoExpr);
+                    return new ValuesQuery(Graph, SourceExpression.SelectMany(paramVertex, valueSelectorExpr));
+                }
             }
 
             throw new NotImplementedException($"VertextQuery.Execute {step.GetType()}");
@@ -165,7 +168,7 @@ namespace Xania.Graphs.Linq
         private Expression<Func<Vertex, bool>> GetVertexPredicate(GraphTraversal traversal,
             IEnumerable<(string name, Expression result)> mappings)
         {
-            ParameterExpression param = Expression.Parameter(typeof(Vertex));
+            ParameterExpression param = Expression.Parameter(typeof(Vertex), "e");
             var body = GetExpression(param, traversal, mappings);
 
             if (body.Type.IsEnumerable())
@@ -261,10 +264,12 @@ namespace Xania.Graphs.Linq
                     if (propertyName.Equals("id", StringComparison.InvariantCultureIgnoreCase))
                     {
                         var id = cons.Value.ToString();
-                        return v => v != null && v.Id.Equals(id);
+
+                        var v = Expression.Parameter(typeof(Vertex), "e");
+                        return v.NotNull().And(v.Property(nameof(Vertex.Id)).StringEqual(id)).ToLambda<Func<Vertex, bool>>(v);
                     }
 
-                    var vertX = Expression.Parameter(typeof(Vertex));
+                    var vertX = Expression.Parameter(typeof(Vertex), "e");
                     return Expression.And(
                         vertX.NotNull(),
                         vertX.Property(nameof(Vertex.Properties))

@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace Xania.Graphs.Linq
+﻿namespace Xania.Graphs.Linq
 {
     public abstract class GraphValue
     {

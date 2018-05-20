@@ -22,7 +22,7 @@ namespace Xania.Graphs.Linq
         public static MethodInfo s_Equals_2 = new Func<object, object, bool>(Equals).GetMethodInfo();
         public static MethodInfo s_StringEquals_3 = new Func<string, string, StringComparison, bool>(string.Equals).GetMethodInfo();
 
-        public static Expression Equal(this Expression expr, string value)
+        public static Expression StringEqual(this Expression expr, string value)
         {
             return Expression.Call(s_StringEquals_3, expr, Expression.Constant(value), Expression.Constant(StringComparison.InvariantCultureIgnoreCase));
         }
@@ -47,10 +47,15 @@ namespace Xania.Graphs.Linq
             return Expression.NotEqual(expr, Expression.Constant(null));
         }
 
-        public static Expression Where<TSource>(this Expression sourceExpr,
-            Expression<Func<TSource, bool>> predicateExpr)
+        public static Expression Where<TSource>(this Expression sourceExpr, Expression<Func<TSource, bool>> predicateExpr)
         {
             return Where(sourceExpr, predicateExpr as LambdaExpression);
+        }
+
+        public static Expression Where<TSource>(this Expression sourceExpr, Func<ParameterExpression, Expression> predicateExpr)
+        {
+            var parameter = Expression.Parameter(typeof(TSource));
+            return Where(sourceExpr, Expression.Lambda(predicateExpr(parameter), parameter));
         }
 
         public static Expression Where(this Expression sourceExpr, LambdaExpression predicateExpr)
@@ -101,6 +106,19 @@ namespace Xania.Graphs.Linq
                 ;
 
             return Expression.Call(methodInfo, sourceExpression);
+        }
+
+        public static Expression SelectMany<TSource, TResult>(this Expression sourceExpression, Expression<Func<TSource, IEnumerable<TResult>>> selectorLambda)
+        {
+            var methodInfo = EnumerableHelper.SelectMany_TSource_2<TSource, TResult>();
+            return Expression.Call(methodInfo, sourceExpression, selectorLambda);
+        }
+
+        public static Expression SelectMany(this Expression sourceExpression, ParameterExpression paramExpression,
+            Expression collectorExpression)
+        {
+            var methodInfo = QueryableHelper.SelectMany_TSource_2(paramExpression.Type, collectorExpression.Type.GetItemType());
+            return Expression.Call(methodInfo, sourceExpression, Expression.Lambda(collectorExpression, paramExpression));
         }
     }
 }

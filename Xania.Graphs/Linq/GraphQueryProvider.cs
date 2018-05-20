@@ -186,17 +186,27 @@ namespace Xania.Graphs.Linq
                         var elementType = GetElementType(memberExpression.Type);
                         var isValues = elementType.IsPrimitive() || elementType.IsComplexType();
 
-                        var memberName = memberExpression.Member.Name.ToCamelCase();
-                        Push(stack, memberExpression.Expression);
-
-                        yield return (1, args =>
+                        var (memberExprs, instanceExpr) = Split(memberExpression);
+                        if (!memberExprs.Any())
                         {
-                            if (isValues)
-                                return args[0].Append(Values(memberName, elementType));
-
-                            return args[0].Append(Out(memberName, elementType, many));
+                            Push(stack, memberExpression.Expression);
+                            yield return (1, args => args[0].Append(Out(memberExpression.Member.Name, elementType, many)));
                         }
-                        );
+                        else
+                        {
+                            Push(stack, instanceExpr);
+
+                            yield return (1, args =>
+                            {
+                                var memberNames = memberExprs.Aggregate(Enumerable.Empty<string>(),
+                                    (a, m) => a.Append(m.Member.Name.ToCamelCase())).Reverse().Join(".");
+
+                                if (isValues)
+                                    return args[0].Append(Values(memberNames, elementType));
+
+                                return args[0].Append(Out(memberNames, elementType, many));
+                            });
+                        }
                     }
                 }
                 else if (item is NewExpression newExpression)
@@ -223,6 +233,27 @@ namespace Xania.Graphs.Linq
                 {
                     throw new NotImplementedException($"GetOperators {item}");
                 }
+            }
+        }
+
+        private static (MemberExpression[] memberExprs, Expression instanceExpr) Split(MemberExpression memberExpression)
+        {
+            var elementType = GetElementType(memberExpression.Type);
+            var isValues = elementType.IsPrimitive() || elementType.IsComplexType();
+            if (isValues)
+            {
+                var instanceExpr = memberExpression.Expression;
+                if (instanceExpr is MemberExpression parentExpression)
+                {
+                    var p = Split(parentExpression);
+                    return (p.memberExprs.Prepend(memberExpression).ToArray(), p.instanceExpr);
+                }
+
+                return (new[] {memberExpression}, instanceExpr);
+            }
+            else
+            {
+                return (new MemberExpression[0], memberExpression);
             }
         }
 
@@ -402,18 +433,15 @@ namespace Xania.Graphs.Linq
                 return new GraphTraversal(source.Steps.Concat(predicate.Steps.Skip(1)));
             return source.Append(new Where(predicate, source.GetType()));
         }
+
         private static GraphTraversal Binary(ExpressionType oper, GraphTraversal left, GraphTraversal right)
         {
             if (oper == ExpressionType.Equal)
             {
                 if (left.Steps.Last() is Values values)
                 {
-                    var rightSteps = values.Name.Equals("id", StringComparison.OrdinalIgnoreCase) ?
-                        right.Steps.Select(e => e is Const cons ? Const(cons.Value) : e) :
-                        right.Steps;
-
                     var reverseTail = left.Steps.Take(left.Steps.Count() - 1);
-                    var reverseHead = new Has(values.Name, new Eq(rightSteps.SingleOrDefault()));
+                    var reverseHead = new Has(values.Name, new Eq(right.Steps.SingleOrDefault()));
 
                     return new GraphTraversal(reverseTail).Append(reverseHead);
                 }
