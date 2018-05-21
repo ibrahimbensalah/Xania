@@ -130,12 +130,12 @@ namespace Xania.Graphs.Linq
 
     public static class DictionaryHelper
     {
-        private static readonly Type _instance = typeof(Dictionary<,>);
+        private static readonly Type Instance = typeof(Dictionary<,>);
 
         public static MethodInfo Add<TKey, TValue>() => Add(typeof(TKey), typeof(TValue));
         public static MethodInfo Add(Type keyType, Type valueType)
         {
-            return _instance.MakeGenericType(keyType, valueType).GetMethod("Add");
+            return Instance.MakeGenericType(keyType, valueType).GetMethod("Add");
         }
 
         //(s_Add ??
