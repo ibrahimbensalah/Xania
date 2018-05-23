@@ -12,11 +12,25 @@ using Xania.Graphs.EntityFramework.Tests.Relational;
 using Xania.Graphs.Structure;
 using Xania.Invoice.Domain;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Xania.Graphs.EntityFramework.Tests
 {
     public class UnitTest1
     {
+        private readonly ITestOutputHelper _output;
+        private LoggerFactory _loggerFactory;
+
+        public UnitTest1(ITestOutputHelper output)
+        {
+            _output = output;
+            _loggerFactory = new LoggerFactory(new[]
+            {
+                new XunitLoggerProvider(_output),
+            });
+
+        }
+
         [Fact]
         public void Test1()
         {
@@ -35,7 +49,7 @@ namespace Xania.Graphs.EntityFramework.Tests
                 }
             );
 
-            using (var db = new Relational.GraphDbContext())
+            using (var db = new Relational.GraphDbContext(_loggerFactory))
             {
                 db.Database.EnsureDeleted();
                 db.Database.EnsureCreated();
@@ -46,7 +60,7 @@ namespace Xania.Graphs.EntityFramework.Tests
                         new Relational.Vertex { Id = v.Id, Label = v.Label }
                     );
                     var propertiesStack = new Stack<(string, IEnumerable<Structure.Property>)>();
-                    propertiesStack.Push((Guid.NewGuid().ToString(), v.Properties));
+                    propertiesStack.Push((v.Id, v.Properties));
 
                     while (propertiesStack.Count > 0)
                     {
@@ -54,11 +68,11 @@ namespace Xania.Graphs.EntityFramework.Tests
                         foreach (var p in properties)
                         {
                             var property =
-                                new Relational.Property {Name = p.Name, ObjectId = objectId, ValueId = Guid.NewGuid().ToString() };
+                                new Relational.Property { Name = p.Name, ObjectId = objectId, ValueId = Guid.NewGuid().ToString() };
                             db.Properties.Add(property);
 
                             var valuesStack = new Stack<(string, GraphValue)>();
-                            valuesStack.Push( (property.ValueId, p.Value) );
+                            valuesStack.Push((property.ValueId, p.Value));
 
                             while (valuesStack.Count > 0)
                             {
@@ -81,9 +95,9 @@ namespace Xania.Graphs.EntityFramework.Tests
                                     foreach (var item in list.Items)
                                     {
                                         var itemId = Guid.NewGuid().ToString();
-                                        db.Items.Add(new Item {Id = itemId, ObjectId = objectId});
+                                        db.Items.Add(new Item { Id = itemId, ObjectId = objectId });
 
-                                        valuesStack.Push( (itemId, item) );
+                                        valuesStack.Push((itemId, item));
                                     }
                                 }
                             }
@@ -92,15 +106,29 @@ namespace Xania.Graphs.EntityFramework.Tests
                 }
                 db.SaveChanges();
             }
+        }
 
-            using (var db = new GraphDbContext())
+        [Fact]
+        public void Read()
+        {
+            using (var db = new GraphDbContext(_loggerFactory))
             {
-
-
                 var persons =
-                    from v in db.Vertices
-                    select new Structure.Vertex(v.Label);
-                Console.WriteLine(persons.ToString());
+                    (from v in db.Vertices
+                    select new 
+                    {
+                        Id = v.Id,
+                        Label = v.Label,
+                        Properties = 
+                            from p in db.Properties
+                            where p.ObjectId == v.Id
+                            select new
+                            {
+                                Name = p.Name
+                            }
+                    }
+                    ).ToArray();
+                _output.WriteLine(JsonConvert.SerializeObject(persons, Formatting.Indented));
 
                 persons.Should().HaveCount(3);
 
@@ -120,21 +148,24 @@ namespace Xania.Graphs.EntityFramework.Tests
     {
         public class GraphDbContext : DbContext
         {
+            private readonly ILoggerFactory _loggerFactory;
+
+            public GraphDbContext(ILoggerFactory loggerFactory)
+            {
+                _loggerFactory = loggerFactory;
+            }
+
             public DbSet<Vertex> Vertices { get; set; }
             public DbSet<Property> Properties { get; set; }
             public DbSet<Primitive> Primitives { get; set; }
             public DbSet<Item> Items { get; set; }
 
-            public static readonly LoggerFactory MyLoggerFactory = new LoggerFactory(new[]
-            {
-                new ConsoleLoggerProvider((category, level) => true, true)
-            });
-
             protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
             {
                 optionsBuilder
-                    .UseLoggerFactory(MyLoggerFactory)
-                    .UseSqlServer(@"Server=(localdb)\mssqllocaldb;Database=GraphDb;Trusted_Connection=True;");
+                    .UseSqlServer(@"Server=(localdb)\mssqllocaldb;Database=GraphDb;Trusted_Connection=True;")
+                    .UseLoggerFactory(_loggerFactory)
+                    ;
             }
 
             protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -185,4 +216,51 @@ namespace Xania.Graphs.EntityFramework.Tests
         }
     }
 
+    public class XunitLoggerProvider : ILoggerProvider
+    {
+        private readonly ITestOutputHelper _testOutputHelper;
+
+        public XunitLoggerProvider(ITestOutputHelper testOutputHelper)
+        {
+            _testOutputHelper = testOutputHelper;
+        }
+
+        public ILogger CreateLogger(string categoryName)
+            => new XunitLogger(_testOutputHelper, categoryName);
+
+        public void Dispose()
+        { }
+    }
+
+    public class XunitLogger : ILogger
+    {
+        private readonly ITestOutputHelper _testOutputHelper;
+        private readonly string _categoryName;
+
+        public XunitLogger(ITestOutputHelper testOutputHelper, string categoryName)
+        {
+            _testOutputHelper = testOutputHelper;
+            _categoryName = categoryName;
+        }
+
+        public IDisposable BeginScope<TState>(TState state)
+            => NoopDisposable.Instance;
+
+        public bool IsEnabled(LogLevel logLevel)
+            => true;
+
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception exception, Func<TState, Exception, string> formatter)
+        {
+            _testOutputHelper.WriteLine($"{_categoryName} [{eventId}] {formatter(state, exception)}");
+            if (exception != null)
+                _testOutputHelper.WriteLine(exception.ToString());
+        }
+
+        private class NoopDisposable : IDisposable
+        {
+            public static NoopDisposable Instance = new NoopDisposable();
+            public void Dispose()
+            { }
+        }
+    }
 }

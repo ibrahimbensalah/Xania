@@ -5,6 +5,6 @@ namespace Xania.Graphs.Structure
 {
     public class GraphObject : GraphValue
     {
-        public HashSet<Property> Properties { get; } = new HashSet<Property>();
+        public ICollection<Property> Properties { get; } = new HashSet<Property>();
     }
 }
