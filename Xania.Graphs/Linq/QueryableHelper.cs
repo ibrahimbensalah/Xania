@@ -25,6 +25,16 @@ namespace Xania.Graphs.Linq
              (s_SelectMany_TSource_2 = new Func<IQueryable<int>, Expression<Func<int, IEnumerable<int>>>, IQueryable<int>>(Queryable.SelectMany).GetMethodInfo().GetGenericMethodDefinition()))
             .MakeGenericMethod(sourceType, resultType);
 
+        private static MethodInfo s_Join_TSource_4;
+        public static MethodInfo Join_TSource_4<TOuter, TInner, TKey, TResult>() => Join_TSource_4(typeof(TOuter), typeof(TInner), typeof(TKey), typeof(TResult));
+        public static MethodInfo Join_TSource_4(Type outerType, Type innerType, Type keyType, Type resultType) =>
+            (s_Join_TSource_4 ??
+             (s_Join_TSource_4 = 
+                 new Func<IQueryable<int>, IEnumerable<float>, Expression<Func<int, string>>,
+                     Expression<Func<float, string>>, Expression<Func<int, float, double>>, IQueryable<double>>(
+                     Queryable.Join).GetMethodInfo())
+            .MakeGenericMethod(outerType, innerType, keyType, resultType));
+
         private static MethodInfo s_Where_TSource_1;
         public static MethodInfo Where_TSource_1<TSource>() => Where_TSource_1(typeof(TSource));
         public static MethodInfo Where_TSource_1(Type sourceType) =>

@@ -1,14 +1,11 @@
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
+using System.Linq.Expressions;
 using FluentAssertions;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Console;
 using Newtonsoft.Json;
-using Xania.Graphs.EntityFramework.Tests.Relational;
+using Xania.Graphs.EntityFramework.Tests.Relational.Queries;
 using Xania.Graphs.Structure;
 using Xania.Invoice.Domain;
 using Xunit;
@@ -19,7 +16,7 @@ namespace Xania.Graphs.EntityFramework.Tests
     public class UnitTest1
     {
         private readonly ITestOutputHelper _output;
-        private LoggerFactory _loggerFactory;
+        private readonly LoggerFactory _loggerFactory;
 
         public UnitTest1(ITestOutputHelper output)
         {
@@ -28,26 +25,12 @@ namespace Xania.Graphs.EntityFramework.Tests
             {
                 new XunitLoggerProvider(_output),
             });
-
         }
 
         [Fact]
-        public void Test1()
+        public void InitializeDb()
         {
-            var graph = Graph.FromObject(
-                new Person
-                {
-                    Id = 1,
-                    Name = "Person 1",
-                    Friends = new[] { new Person { Id = 2, Name = "Person 2" }, new Person { Id = 3, Name = "Person 3" } },
-                    Lines = new List<AddressLine>
-                    {
-                        new AddressLine { Value = "Punter 315", Type = AddressType.Street },
-                        new AddressLine { Value = "Amstelveen", Type = AddressType.Location },
-                        new AddressLine { Value = "1186PW", Type = AddressType.ZipCode },
-                    }
-                }
-            );
+            var graph = GetGraph();
 
             using (var db = new Relational.GraphDbContext(_loggerFactory))
             {
@@ -80,7 +63,7 @@ namespace Xania.Graphs.EntityFramework.Tests
 
                                 if (value is Structure.GraphPrimitive prim)
                                 {
-                                    db.Primitives.Add(new Primitive
+                                    db.Primitives.Add(new Relational.Primitive
                                     {
                                         Id = valueId,
                                         Value = JsonConvert.SerializeObject(prim.Value)
@@ -95,7 +78,7 @@ namespace Xania.Graphs.EntityFramework.Tests
                                     foreach (var item in list.Items)
                                     {
                                         var itemId = Guid.NewGuid().ToString();
-                                        db.Items.Add(new Item { Id = itemId, ObjectId = objectId });
+                                        db.Items.Add(new Relational.Item { Id = itemId, ObjectId = objectId });
 
                                         valuesStack.Push((itemId, item));
                                     }
@@ -108,159 +91,62 @@ namespace Xania.Graphs.EntityFramework.Tests
             }
         }
 
-        [Fact]
-        public void Read()
+        private static Graph GetGraph()
         {
-            using (var db = new GraphDbContext(_loggerFactory))
-            {
-                var persons =
-                    (from v in db.Vertices
-                    select new 
+            var graph = Graph.FromObject(
+                new Person
+                {
+                    Id = 1,
+                    Name = "Person 1",
+                    Friends = new[] {new Person {Id = 2, Name = "Person 2"}, new Person {Id = 3, Name = "Person 3"}},
+                    Lines = new List<AddressLine>
                     {
-                        Id = v.Id,
-                        Label = v.Label,
-                        Properties = 
-                            from p in db.Properties
-                            where p.ObjectId == v.Id
-                            select new
-                            {
-                                Name = p.Name
-                            }
+                        new AddressLine {Value = "Punter 315", Type = AddressType.Street},
+                        new AddressLine {Value = "Amstelveen", Type = AddressType.Location},
+                        new AddressLine {Value = "1186 PW", Type = AddressType.ZipCode},
                     }
-                    ).ToArray();
-                _output.WriteLine(JsonConvert.SerializeObject(persons, Formatting.Indented));
-
-                persons.Should().HaveCount(3);
-
-            }
+                }
+            );
+            return graph;
         }
-    }
 
-    public class Person
-    {
-        public int Id { get; set; }
-        public ICollection<Person> Friends { get; set; }
-        public string Name { get; set; }
-        public ICollection<AddressLine> Lines { get; set; } = new Collection<AddressLine>();
-    }
-
-    namespace Relational
-    {
-        public class GraphDbContext : DbContext
+        [Fact]
+        public void ReadVertex1()
         {
-            private readonly ILoggerFactory _loggerFactory;
-
-            public GraphDbContext(ILoggerFactory loggerFactory)
+            using (var db = new Relational.GraphDbContext(_loggerFactory))
             {
-                _loggerFactory = loggerFactory;
+                var vertices = new DbQueryable<Vertex>(new DbQueryProvider(db));
+                var result = vertices.Where(v => v.Id.Equals("1")).Select(v => v.Id).ToArray();
+
+                _output.WriteLine(JsonConvert.SerializeObject(result, Formatting.Indented));
+
+                result.Should().HaveCount(1);
             }
+        }
 
-            public DbSet<Vertex> Vertices { get; set; }
-            public DbSet<Property> Properties { get; set; }
-            public DbSet<Primitive> Primitives { get; set; }
-            public DbSet<Item> Items { get; set; }
-
-            protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+        [Fact]
+        public void ReadVertexProperties()
+        {
+            using (var db = new Relational.GraphDbContext(_loggerFactory))
             {
-                optionsBuilder
-                    .UseSqlServer(@"Server=(localdb)\mssqllocaldb;Database=GraphDb;Trusted_Connection=True;")
-                    .UseLoggerFactory(_loggerFactory)
-                    ;
-            }
+                var vertices = new DbQueryable<Vertex>(new DbQueryProvider(db));
+                var result = vertices.Where(v => v.Id.Equals("1")).SelectMany(v => v.Properties).ToArray();
 
-            protected override void OnModelCreating(ModelBuilder modelBuilder)
-            {
-                modelBuilder.Entity<Property>()
-                    .HasKey(e => new { e.ObjectId, e.Name });
+                _output.WriteLine(JsonConvert.SerializeObject(result, Formatting.Indented));
+
+                result.Should().HaveCount(3);
             }
         }
 
-        public class Property
+        public static Expression<Func<Person, bool>> PersonFilter
         {
-            public string Name { get; set; }
-            public string ObjectId { get; set; }
-            public string ValueId { get; set; }
+            get { return Projection((Person p) => p.Name.StartsWith("Hallo")); }
         }
 
-        public interface IGraphValue
+        private static Expression<Func<TSource, TResult>> Projection<TSource, TResult>(Expression<Func<TSource, TResult>> expr)
         {
-            string Id { get; set; }
-        }
-
-        public class Primitive : IGraphValue
-        {
-            public string Value { get; set; }
-            public string Id { get; set; }
-        }
-
-        public interface IGraphObject : IGraphValue
-        {
-            HashSet<Property> Properties { get; }
-        }
-
-        public class GraphObject : IGraphValue
-        {
-            public string Id { get; set; }
-        }
-
-        public class Vertex
-        {
-            public string Id { get; set; }
-            public string Label { get; set; }
-        }
-
-        public class Item
-        {
-            public string Id { get; set; }
-            public string ObjectId { get; set; }
+            return expr;
         }
     }
 
-    public class XunitLoggerProvider : ILoggerProvider
-    {
-        private readonly ITestOutputHelper _testOutputHelper;
-
-        public XunitLoggerProvider(ITestOutputHelper testOutputHelper)
-        {
-            _testOutputHelper = testOutputHelper;
-        }
-
-        public ILogger CreateLogger(string categoryName)
-            => new XunitLogger(_testOutputHelper, categoryName);
-
-        public void Dispose()
-        { }
-    }
-
-    public class XunitLogger : ILogger
-    {
-        private readonly ITestOutputHelper _testOutputHelper;
-        private readonly string _categoryName;
-
-        public XunitLogger(ITestOutputHelper testOutputHelper, string categoryName)
-        {
-            _testOutputHelper = testOutputHelper;
-            _categoryName = categoryName;
-        }
-
-        public IDisposable BeginScope<TState>(TState state)
-            => NoopDisposable.Instance;
-
-        public bool IsEnabled(LogLevel logLevel)
-            => true;
-
-        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception exception, Func<TState, Exception, string> formatter)
-        {
-            _testOutputHelper.WriteLine($"{_categoryName} [{eventId}] {formatter(state, exception)}");
-            if (exception != null)
-                _testOutputHelper.WriteLine(exception.ToString());
-        }
-
-        private class NoopDisposable : IDisposable
-        {
-            public static NoopDisposable Instance = new NoopDisposable();
-            public void Dispose()
-            { }
-        }
-    }
 }

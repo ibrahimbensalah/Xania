@@ -50,7 +50,7 @@ namespace Xania.Graphs
                 valueType == typeof(DateTime) ||
                 valueType == typeof(DateTimeOffset) || 
                 valueType.IsEnum)
-                return (new GraphPrimitive(valueType, obj), empty);
+                return (new GraphPrimitive(obj), empty);
 
             if (valueType.IsEnumerable())
             {

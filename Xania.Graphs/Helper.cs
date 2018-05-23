@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
-using Xania.Graphs.Linq;
 using Xania.Graphs.Structure;
 
 namespace Xania.Graphs
@@ -43,7 +42,7 @@ namespace Xania.Graphs
                 return gv.GetBytes().ComputeHash();
 
             if (value is string str)
-                return GenerateHash(new GraphPrimitive(typeof(string), str));
+                return GenerateHash(new GraphPrimitive(str));
 
             throw new NotImplementedException("GenerateHash: " + value.GetType());
         }

@@ -9,12 +9,14 @@ namespace Xania.Graphs.Structure
 {
     public class Property
     {
-        public string Name { get; }
+        private string _name;
+        public string Name => _name;
+
         public GraphValue Value { get; }
 
         public Property(string name, GraphValue value)
         {
-            Name = name.ToCamelCase();
+            _name = name.ToCamelCase();
             Value = value;
         }
 

@@ -27,6 +27,11 @@ namespace Xania.Graphs.Linq
             return Expression.Call(s_StringEquals_3, expr, Expression.Constant(value), Expression.Constant(StringComparison.InvariantCultureIgnoreCase));
         }
 
+        public static Expression StringEqual(this Expression expr, Expression valueExpr)
+        {
+            return Expression.Call(s_StringEquals_3, expr, valueExpr, Expression.Constant(StringComparison.InvariantCultureIgnoreCase));
+        }
+
         public static Expression Equal(this Expression expr, object value)
         {
             return Expression.Call(s_Equals_2, expr, Expression.Constant(value));
@@ -119,6 +124,17 @@ namespace Xania.Graphs.Linq
         {
             var methodInfo = QueryableHelper.SelectMany_TSource_2(paramExpression.Type, collectorExpression.Type.GetItemType());
             return Expression.Call(methodInfo, sourceExpression, Expression.Lambda(collectorExpression, paramExpression));
+        }
+
+        public static Expression Join(this Expression outerExpression, Expression innerExpression, Expression outerKeySelector, Expression innerKeySelector, Expression resultExpression)
+        {
+            var outerType = outerExpression.Type.GetItemType();
+            var innerType = innerExpression.Type.GetItemType();
+            var keyType = ((outerKeySelector as UnaryExpression)?.Operand as LambdaExpression ?? outerKeySelector as LambdaExpression)?.Body.Type;
+            var resultType  = ((resultExpression as UnaryExpression)?.Operand as LambdaExpression ?? resultExpression as LambdaExpression)?.Body.Type;
+
+            var methodInfo = QueryableHelper.Join_TSource_4(outerType, innerType, keyType, resultType);
+            return Expression.Call(methodInfo, outerExpression, innerExpression, outerKeySelector, innerKeySelector, resultExpression);
         }
     }
 }
