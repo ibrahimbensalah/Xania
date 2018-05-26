@@ -9,7 +9,7 @@ using Xania.ObjectMapper;
 
 namespace Xania.Graphs.EntityFramework.Tests.Relational.Queries
 {
-    public class DbQueryProvider: IQueryProvider
+    public class DbQueryProvider : IQueryProvider
     {
         private readonly GraphDbContext _dbContext;
 
@@ -48,14 +48,16 @@ namespace Xania.Graphs.EntityFramework.Tests.Relational.Queries
             {
                 var instanceX = Transform(m.Object, map);
                 var args = m.Arguments.Select(expression1 => Transform(expression1, map)).ToArray();
-                //if (m.Method.Name.Equals("SelectMany") && m.Method.DeclaringType == typeof(Queryable))
-                //{
-                //    var unaryX = args[1] as UnaryExpression;
-                //    return args[0].SelectMany(unaryX.Operand as LambdaExpression);
-                //}
+                var argTypes = args.Select(a => a.Type).ToArray();
 
-                var method = Transform(m.Method);
-                return Expression.Call(instanceX, method, args);
+                //return instanceX != null
+                //        ? Expression.Call(instanceX, m.Method.Name, argTypes, args)
+                //        : Expression.Call(m.Method.DeclaringType, m.Method.Name, argTypes, args)
+                //    ;
+
+                var methodInfo = m.Method.FindOverload(argTypes);
+
+                return Expression.Call(instanceX, methodInfo, args);
             }
             if (expression is ConstantExpression cons)
                 if (cons.Value is IQueryable<Structure.Vertex>)

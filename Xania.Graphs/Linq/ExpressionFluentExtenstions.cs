@@ -136,5 +136,81 @@ namespace Xania.Graphs.Linq
             var methodInfo = QueryableHelper.Join_TSource_4(outerType, innerType, keyType, resultType);
             return Expression.Call(methodInfo, outerExpression, innerExpression, outerKeySelector, innerKeySelector, resultExpression);
         }
+
+        public static MethodInfo FindOverload(this MethodInfo method, Type[] argTypes)
+        {
+            var overloads =
+                    from m in method.DeclaringType.GetMethods()
+                    where m.Name.Equals(method.Name)
+                    let paramTypes = m.GetParameters().Select(e => e.ParameterType).ToArray()
+                    let match = MatchTypes(paramTypes, argTypes)
+                    where match != null
+                    orderby match
+                    select m
+                ;
+            var first = overloads.FirstOrDefault();
+            if (first == null)
+                return null;
+            return first;
+        }
+
+        private static int? MatchTypes(Type[] paramTypes, Type[] argTypes)
+        {
+            if (paramTypes.Length != argTypes.Length)
+                return null;
+
+            var priority = 0;
+            for (var i = 0; i < paramTypes.Length; i++)
+            {
+                var argType = argTypes[i];
+                var paramType = paramTypes[i];
+
+                var match = argType.FindBase(paramType);
+                if (match == null)
+                    return null;
+
+                priority += match.Value.Item1;
+            }
+
+            return priority;
+        }
+
+        private static (int, Type[])? FindBase(this Type argType, Type paramType)
+        {
+            if (argType == null)
+                return null;
+
+            if (paramType == argType)
+                return (0, new Type[0]);
+            if (paramType.ContainsGenericParameters)
+            {
+                if (paramType.MapTo(argType) != null)
+                    return (0, new Type[0]);
+            }
+
+            var matches = (
+                from b in GetParentTypes(argType)
+                let match = FindBase(b, paramType)
+                where match != null
+                orderby match.Value.Item1
+                select match.Value.Item1
+            ).ToArray();
+
+            if (!matches.Any())
+                return null;
+
+            return (1 + matches.Min(), new Type[0]);
+        }
+
+        private static IEnumerable<Type> GetParentTypes(Type type)
+        {
+            if (type.BaseType != null)
+                yield return type.BaseType;
+
+            foreach (var i in type.GetInterfaces().Except(type.BaseType?.GetInterfaces() ?? Enumerable.Empty<Type>()))
+            {
+                yield return i;
+            }
+        }
     }
 }
