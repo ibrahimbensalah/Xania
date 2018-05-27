@@ -35,7 +35,8 @@ namespace Xania.Graphs.EntityFramework.Tests.Relational.Queries
 
         public TResult Execute<TResult>(Expression expression)
         {
-            var func = Expression.Lambda(Transform(expression, null)).Compile();
+            var dbExpression = Transform(expression, null);
+            var func = Expression.Lambda(dbExpression).Compile();
             var result = func.DynamicInvoke();
             return result.MapTo<TResult>();
         }
@@ -55,7 +56,9 @@ namespace Xania.Graphs.EntityFramework.Tests.Relational.Queries
                 //        : Expression.Call(m.Method.DeclaringType, m.Method.Name, argTypes, args)
                 //    ;
 
-                var methodInfo = m.Method.FindOverload(argTypes);
+                var methodInfo = m.Method.DeclaringType.FindOverload(m.Method.Name, argTypes);
+
+                // methodInfo.GetParameters().Select((p, idx) => Expression.Convert(args[idx]))
 
                 return Expression.Call(instanceX, methodInfo, args);
             }
@@ -78,8 +81,9 @@ namespace Xania.Graphs.EntityFramework.Tests.Relational.Queries
             {
                 var map2 = lambda.Parameters.ToDictionary(p => p, p => Expression.Parameter(Transform(p.Type), p.Name));
                 var body = Transform(lambda.Body, map2);
-
-                return Expression.Lambda(body, map2.Values);
+                var delegateType = Transform(lambda.Type);
+                
+                return Expression.Lambda(delegateType, body, map2.Values);
             }
 
             if (expression is MemberExpression member)
@@ -94,7 +98,7 @@ namespace Xania.Graphs.EntityFramework.Tests.Relational.Queries
                     var selectorLambda = p.Property(nameof(Property.ObjectId)).StringEqual(instanceX.Property(nameof(Vertex.Id)))
                         .ToLambda<Func<Property, bool>>(p);
 
-                    return Expression.Constant(_dbContext.Properties.Where(selectorLambda));
+                    return Expression.Constant(_dbContext.Properties).Where(selectorLambda);
 
                     //return instanceX.SelectMany((Vertex v) => 
                     //    _dbContext.Properties.Where(p => p.ObjectId == v.Id));

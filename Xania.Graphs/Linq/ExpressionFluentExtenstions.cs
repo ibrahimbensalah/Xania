@@ -131,75 +131,142 @@ namespace Xania.Graphs.Linq
             var outerType = outerExpression.Type.GetItemType();
             var innerType = innerExpression.Type.GetItemType();
             var keyType = ((outerKeySelector as UnaryExpression)?.Operand as LambdaExpression ?? outerKeySelector as LambdaExpression)?.Body.Type;
-            var resultType  = ((resultExpression as UnaryExpression)?.Operand as LambdaExpression ?? resultExpression as LambdaExpression)?.Body.Type;
+            var resultType = ((resultExpression as UnaryExpression)?.Operand as LambdaExpression ?? resultExpression as LambdaExpression)?.Body.Type;
 
             var methodInfo = QueryableHelper.Join_TSource_4(outerType, innerType, keyType, resultType);
             return Expression.Call(methodInfo, outerExpression, innerExpression, outerKeySelector, innerKeySelector, resultExpression);
         }
 
-        public static MethodInfo FindOverload(this MethodInfo method, Type[] argTypes)
+        public static MethodInfo FindOverload(this Type declaringType, string methodName, params Type[] argTypes)
         {
             var overloads =
-                    from m in method.DeclaringType.GetMethods()
-                    where m.Name.Equals(method.Name)
+                    from m in declaringType.GetMethods()
+                    where m.Name.Equals(methodName)
                     let paramTypes = m.GetParameters().Select(e => e.ParameterType).ToArray()
-                    let match = MatchTypes(paramTypes, argTypes)
+                    let match = InferTypeArguments(argTypes, paramTypes)
                     where match != null
-                    orderby match
-                    select m
+                    orderby match?.level
+                    select (m, match?.map)
                 ;
-            var first = overloads.FirstOrDefault();
+
+            var first = overloads.FirstOrNull();
             if (first == null)
                 return null;
-            return first;
+
+            var methodInfo = first.Value.Item1;
+            var genericArgs = first.Value.Item2;
+
+            if (methodInfo.IsGenericMethod)
+            {
+                var types =
+                    methodInfo
+                        .GetGenericArguments()
+                        .Select(a => genericArgs
+                            .Where(e => e.genericType == a)
+                            .Select(e => e.argType)
+                            .First())
+                        .ToArray();
+                ;
+
+                return methodInfo.MakeGenericMethod(types);
+            }
+            else
+            {
+                if (genericArgs.Any())
+                    throw new InvalidOperationException("Non generic method is not expected to have generic arguments");
+                return methodInfo;
+            }
         }
 
-        private static int? MatchTypes(Type[] paramTypes, Type[] argTypes)
+        private static (int level, (Type genericType, Type argType)[] map)? InferTypeArguments(Type[] argTypes, Type[] genericTypes)
         {
-            if (paramTypes.Length != argTypes.Length)
+            if (genericTypes.Length != argTypes.Length)
                 return null;
 
-            var priority = 0;
-            for (var i = 0; i < paramTypes.Length; i++)
-            {
-                var argType = argTypes[i];
-                var paramType = paramTypes[i];
+            var inf =
+                    genericTypes
+                        .Select((genericType, idx) => argTypes[idx].InferTypeArguments(genericType))
+                ;
 
-                var match = argType.FindBase(paramType);
-                if (match == null)
+            return inf.Aggregate((nx, ny) =>
+            {
+                if (nx == null || ny == null)
                     return null;
 
-                priority += match.Value.Item1;
-            }
+                var x = nx.Value;
+                var y = ny.Value;
 
-            return priority;
+                var level = Math.Min(x.level, y.level);
+
+                var map = x.map.Concat(y.map).Aggregate(
+                    new(Type, Type)[0],
+                    (acc, m) =>
+                    {
+                        if (acc == null)
+                            return null;
+
+                        var matches = (from p in acc where p.Item1 == m.genericType select p).ToArray();
+
+                        if (!matches.Any())
+                            return acc.Append(m).ToArray();
+
+                        return matches.Any(e => e.Item2 != m.argType) ? null : acc;
+                    }
+                );
+
+                if (map == null)
+                    return null;
+
+                return (level, map.ToArray());
+            });
         }
 
-        private static (int, Type[])? FindBase(this Type argType, Type paramType)
+        private static (int level, (Type, Type)[] map) empty = (0, new(Type, Type)[0]);
+
+        public static (int level, (Type genericType, Type argType)[] map)? InferTypeArguments(this Type argType, Type genericType)
         {
             if (argType == null)
                 return null;
 
-            if (paramType == argType)
-                return (0, new Type[0]);
-            if (paramType.ContainsGenericParameters)
+            if (genericType == argType)
+                return empty;
+
+            if (genericType.IsGenericParameter)
+                return (0, new[] { (genericType, argType) });
+
+            if (genericType.ContainsGenericParameters && argType.IsGenericType)
             {
-                if (paramType.MapTo(argType) != null)
-                    return (0, new Type[0]);
+                if (argType.GetGenericTypeDefinition() == genericType.GetGenericTypeDefinition())
+                {
+                    var gtmap =
+                            genericType.GenericTypeArguments
+                                .Select((gt, idx) => InferTypeArguments(argType.GenericTypeArguments[idx], gt))
+                                .NotNull()
+                        ;
+
+                    return gtmap.Aggregate(empty, (x, y) =>
+                    {
+                        var level = Math.Min(x.level, y.level);
+                        var map = x.map.Concat(y.map).ToArray();
+
+                        return (level, map);
+                    });
+                }
             }
 
             var matches = (
                 from b in GetParentTypes(argType)
-                let match = FindBase(b, paramType)
+                let match = InferTypeArguments(b, genericType)
                 where match != null
-                orderby match.Value.Item1
-                select match.Value.Item1
+                orderby match?.level
+                select match
             ).ToArray();
 
-            if (!matches.Any())
+            var first = matches.FirstOrDefault();
+            if (first == null)
                 return null;
 
-            return (1 + matches.Min(), new Type[0]);
+            return (1 + first.Value.level, first.Value.map);
         }
 
         private static IEnumerable<Type> GetParentTypes(Type type)
@@ -211,6 +278,26 @@ namespace Xania.Graphs.Linq
             {
                 yield return i;
             }
+        }
+
+        private static IEnumerable<T> NotNull<T>(this IEnumerable<T?> enumerable)
+            where T : struct
+        {
+            return enumerable.Where(e => e != null).Select(e => e.Value);
+        }
+
+        private static IEnumerable<T> NotNull<T>(this IEnumerable<T> enumerable)
+            where T : class
+        {
+            return enumerable.Where(e => e != null);
+        }
+
+        private static T? FirstOrNull<T>(this IEnumerable<T> enumerable)
+            where T : struct
+        {
+            var arr = enumerable.Take(1).ToArray();
+            if (arr.Any()) return arr[0];
+            return null;
         }
     }
 }

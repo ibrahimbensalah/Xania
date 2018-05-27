@@ -3,13 +3,17 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using FluentAssertions;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
+using Xania.Graphs.EntityFramework.Tests.Relational;
 using Xania.Graphs.EntityFramework.Tests.Relational.Queries;
+using Xania.Graphs.Linq;
 using Xania.Graphs.Structure;
 using Xania.Invoice.Domain;
 using Xunit;
 using Xunit.Abstractions;
+using Vertex = Xania.Graphs.Structure.Vertex;
 
 namespace Xania.Graphs.EntityFramework.Tests
 {
@@ -115,12 +119,16 @@ namespace Xania.Graphs.EntityFramework.Tests
         {
             using (var db = new Relational.GraphDbContext(_loggerFactory))
             {
-                var vertices = new DbQueryable<Vertex>(new DbQueryProvider(db));
-                var result = vertices.Where(v => v.Id.Equals("1")).Select(v => v.Id).ToArray();
+                Expression<Func<int, IQueryable<Relational.Property>>> q = e => db.Vertices.SelectMany(v => db.Properties.Where(p => p.ObjectId == v.Id));
 
-                _output.WriteLine(JsonConvert.SerializeObject(result, Formatting.Indented));
+                _output.WriteLine(q.Body.ToString());
 
-                result.Should().HaveCount(1);
+                //var vertices = new DbQueryable<Vertex>(new DbQueryProvider(db));
+                //var result = vertices.Where(v => v.Id.Equals("1")).Select(v => v.Id).ToArray();
+
+                //_output.WriteLine(JsonConvert.SerializeObject(result, Formatting.Indented));
+
+                //result.Should().HaveCount(1);
             }
         }
 
@@ -138,14 +146,14 @@ namespace Xania.Graphs.EntityFramework.Tests
             }
         }
 
-        public static Expression<Func<Person, bool>> PersonFilter
+        [Fact]
+        public void InferTypeArgumentTest()
         {
-            get { return Projection((Person p) => p.Name.StartsWith("Hallo")); }
-        }
+            var method = typeof(Queryable).FindOverload("SelectMany", typeof(DbSet<Relational.Vertex>),
+                typeof(Expression<Func<Relational.Vertex, IQueryable<Xania.Graphs.EntityFramework.Tests.Relational.Property>>>));
 
-        private static Expression<Func<TSource, TResult>> Projection<TSource, TResult>(Expression<Func<TSource, TResult>> expr)
-        {
-            return expr;
+            method.ContainsGenericParameters.Should().BeFalse();
+            method.Should().NotBeNull();
         }
     }
 

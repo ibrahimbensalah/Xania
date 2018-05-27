@@ -59,7 +59,6 @@ namespace Xania.Reflection
             return null;
         }
 
-
         public static Type MapTo(this Type templateType, Type targetType)
         {
             if (targetType.ContainsGenericParameters)
