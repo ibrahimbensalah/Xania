@@ -6,6 +6,7 @@ using System.Reflection;
 using System.Text;
 using Xania.Graphs.Linq;
 using Xania.ObjectMapper;
+using Xania.Reflection;
 
 namespace Xania.Graphs.EntityFramework.Tests.Relational.Queries
 {
@@ -95,7 +96,9 @@ namespace Xania.Graphs.EntityFramework.Tests.Relational.Queries
                 if (memberName.Equals("Properties"))
                 {
                     var p = Expression.Parameter(typeof(Property), "p");
-                    var selectorLambda = p.Property(nameof(Property.ObjectId)).StringEqual(instanceX.Property(nameof(Vertex.Id)))
+                    var selectorLambda = 
+                        Expression.Equal(p.Property(nameof(Property.ObjectId)), instanceX.Property(nameof(Vertex.Id)))
+                        // p.Property(nameof(Property.ObjectId)).Equal(instanceX.Property(nameof(Vertex.Id)))
                         .ToLambda<Func<Property, bool>>(p);
 
                     return Expression.Constant(_dbContext.Properties).Where(selectorLambda);
@@ -118,31 +121,27 @@ namespace Xania.Graphs.EntityFramework.Tests.Relational.Queries
                     return param;
                 }
 
+            if (expression is NewExpression newExpr)
+            {
+                var parameters = newExpr.Constructor.GetParameters();
+                var bindings =
+                    newExpr.Arguments.Select(e => Transform(e, map)).Zip(parameters,
+                        (a, p) =>
+                            Expression.ElementInit(
+                                DictionaryHelper.Add<string, object>(),
+                                Expression.Constant(p.Name),
+                                Expression.Convert(a, typeof(object))
+                            )
+                    );
+
+
+                return Expression.ListInit(
+                    Expression.New(typeof(Dictionary<string, object>)),
+                    bindings
+                );
+            }
 
             throw new NotImplementedException(expression.GetType().Name);
-        }
-
-        public Expression<Func<TSource, TResult>> Projection<TSource, TResult>(Expression<Func<TSource, TResult>> expr)
-        {
-            return expr;
-        }
-
-        private MethodInfo Transform(MethodInfo method)
-        {
-            if (method.DeclaringType == typeof(Queryable))
-            {
-                var def = method.GetGenericMethodDefinition();
-                var typeArguments = method.GetGenericArguments()
-                        .Select(Transform)
-                        .ToArray()
-                    ;
-                return def.MakeGenericMethod(typeArguments);
-            }
-            else if (method.Name == "Equals")
-            {
-                return method;
-            }
-            throw new NotImplementedException(method.Name);
         }
 
         private Type Transform(Type type)
@@ -155,6 +154,9 @@ namespace Xania.Graphs.EntityFramework.Tests.Relational.Queries
 
             if (type == typeof(string) || type.IsPrimitive || type.IsEnum)
                 return type;
+
+            if (type.IsAnonymousType())
+                return typeof(Dictionary<string, object>);
 
             if (type.IsGenericType)
             {

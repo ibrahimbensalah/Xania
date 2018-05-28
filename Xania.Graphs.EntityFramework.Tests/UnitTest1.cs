@@ -142,6 +142,27 @@ namespace Xania.Graphs.EntityFramework.Tests
 
                 _output.WriteLine(JsonConvert.SerializeObject(result, Formatting.Indented));
 
+                result.Should().HaveCount(2);
+            }
+        }
+
+        [Fact]
+        public void ReadComplexObject()
+        {
+            using (var db = new Relational.GraphDbContext(_loggerFactory))
+            {
+                var vertices = new DbQueryable<Vertex>(new DbQueryProvider(db));
+                var result =
+                    (from v in vertices
+                        select new
+                        {
+                            Id = v.Id,
+                            Count = v.Properties.Count()
+                        }
+                    ).ToArray();
+
+                _output.WriteLine(JsonConvert.SerializeObject(result, Formatting.Indented));
+
                 result.Should().HaveCount(3);
             }
         }
