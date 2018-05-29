@@ -3,9 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using Newtonsoft.Json;
+using Xania.Graphs.Gremlin;
 using Xania.Graphs.Structure;
 using Xania.ObjectMapper;
 using Xania.Reflection;
+using Values = Xania.Graphs.Gremlin.Values;
 
 namespace Xania.Graphs.Linq
 {

@@ -1,14 +1,14 @@
 ﻿using System.Diagnostics;
 using System.Linq;
-using Xania.Graphs.Linq;
+using Xania.Graphs.Gremlin;
 
-namespace Xania.Graphs
+namespace Xania.Graphs.Linq
 {
     public static class GraphContextExtensions
     {
-        public static GraphQueryable<TModel> Set<TModel>(this IGraphDataContext dataContext)
+        public static GenericQueryable<TModel> Set<TModel>(this IGraphDataContext dataContext)
         {
-            return new GraphQueryable<TModel>(new GraphQueryProvider(dataContext));
+            return new GenericQueryable<TModel>(new GremlinQueryProvider(dataContext));
         }
 
         public static IGraphQuery Execute(this IGraphQuery g, GraphTraversal traversal)

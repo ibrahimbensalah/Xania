@@ -41,13 +41,13 @@ namespace Xania.CosmosDb
 
         public Task DeleteAsync(Expression<Func<T, bool>> condition)
         {
-            new GraphQueryable<T>(new GraphQueryProvider(client)).Where(condition).Drop();
+            new GenericQueryable<T>(new GremlinQueryProvider(client)).Where(condition).Drop();
             return Task.CompletedTask;
         }
 
         public IQueryable<T> Query()
         {
-            return new GraphQueryable<T>(new GraphQueryProvider(client));
+            return new GenericQueryable<T>(new GremlinQueryProvider(client));
         }
     }
 }

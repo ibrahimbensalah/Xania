@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Xania.Graphs.Gremlin;
 using Xania.Graphs.Linq;
 
 namespace Xania.Graphs

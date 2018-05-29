@@ -6,15 +6,15 @@ using System.Linq.Expressions;
 
 namespace Xania.Graphs.Linq
 {
-    public class GraphQueryable<TModel> : IOrderedQueryable<TModel>
+    public class GenericQueryable<TModel> : IOrderedQueryable<TModel>
     {
-        public GraphQueryable(IQueryProvider provider)
+        public GenericQueryable(IQueryProvider provider)
         {
             Provider = provider;
             Expression = Expression.Constant(this);
         }
 
-        public GraphQueryable(IQueryProvider queryProvider, Expression expression)
+        public GenericQueryable(IQueryProvider queryProvider, Expression expression)
         {
             Provider = queryProvider;
             Expression = expression;

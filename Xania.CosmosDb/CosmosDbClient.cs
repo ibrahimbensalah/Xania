@@ -13,7 +13,7 @@ using Microsoft.Azure.Documents.Client;
 using Xania.Graphs;
 using Xania.Graphs.Structure;
 using Xania.Reflection;
-using GraphTraversal = Xania.Graphs.GraphTraversal;
+using GraphTraversal = Xania.Graphs.Gremlin.GraphTraversal;
 
 namespace Xania.CosmosDb
 {

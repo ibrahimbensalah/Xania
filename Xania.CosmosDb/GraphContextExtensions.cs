@@ -8,9 +8,9 @@ namespace Xania.CosmosDb
 {
     public static class GraphContextExtensions
     {
-        public static GraphQueryable<TModel> Set<TModel>(this CosmosDbClient client)
+        public static GenericQueryable<TModel> Set<TModel>(this CosmosDbClient client)
         {
-            return new GraphQueryable<TModel>(new GraphQueryProvider(client));
+            return new GenericQueryable<TModel>(new GremlinQueryProvider(client));
         }
 
         private static MethodInfo s_Drop_TSource_1;

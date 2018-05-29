@@ -1,7 +1,7 @@
 ﻿using System;
 using Xania.Reflection;
 
-namespace Xania.Graphs
+namespace Xania.Graphs.Gremlin
 {
     public class Out : IStep
     {

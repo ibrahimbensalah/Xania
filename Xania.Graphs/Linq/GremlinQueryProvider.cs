@@ -2,16 +2,17 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
-using Xania.Graphs.Structure;
+using Xania.Graphs.Gremlin;
 using Xania.Reflection;
+using Xania.ObjectMapper;
 
 namespace Xania.Graphs.Linq
 {
-    public class GraphQueryProvider : IQueryProvider
+    public class GremlinQueryProvider : IQueryProvider
     {
         private readonly IGraphDataContext _client;
 
-        public GraphQueryProvider(IGraphDataContext client)
+        public GremlinQueryProvider(IGraphDataContext client)
         {
             _client = client;
         }
@@ -23,7 +24,7 @@ namespace Xania.Graphs.Linq
 
         public IQueryable<TElement> CreateQuery<TElement>(Expression expression)
         {
-            return new GraphQueryable<TElement>(this, expression);
+            return new GenericQueryable<TElement>(this, expression);
         }
 
         public object Execute(Expression expression)
@@ -34,10 +35,6 @@ namespace Xania.Graphs.Linq
         public TResult Execute<TResult>(Expression expression)
         {
             bool IsEnumerable = typeof(TResult).Name == "IEnumerable`1";
-
-            //if (!IsEnumerable)
-            //    throw new NotImplementedException();
-
             var traversal = ToTraversal(expression);
 
             if (IsEnumerable)
@@ -45,17 +42,16 @@ namespace Xania.Graphs.Linq
                 var resultType = typeof(IQueryable<>).MapTo(typeof(TResult));
                 var elementType = resultType.GenericTypeArguments[0];
 
-                //var items = _client.ExecuteGremlinAsync(gremlin).Result.OfType<JObject>()
-                //    .Select(result => Client.ConvertToObject(result, elementType));
                 var items = _client.ExecuteAsync(traversal, elementType).Result.ToArray();
-                return (TResult)resultType.CreateCollection(items.ToArray());
+                return items.MapTo<TResult>();
+                // return (TResult)resultType.CreateCollection(items.ToArray());
             }
             else
             {
                 var result = _client.ExecuteAsync(traversal, typeof(TResult)).Result;
-                if (result == null)
-                    return default(TResult);
-                return (TResult)result.Convert(typeof(TResult));
+                if (result == null) return default(TResult);
+                return result.MapTo<TResult>();
+                // return (TResult)result.MapTo(typeof(TResult));
             }
         }
 
@@ -159,7 +155,7 @@ namespace Xania.Graphs.Linq
                     if (value != null)
                     {
                         var valueType = value.GetType();
-                        var queryableType = typeof(GraphQueryable<>).MapTo(valueType);
+                        var queryableType = typeof(IQueryable<>).MapFrom(valueType);
                         if (queryableType != null)
                         {
                             var itemType = queryableType.GenericTypeArguments[0];
@@ -218,16 +214,16 @@ namespace Xania.Graphs.Linq
                         Push(stack, arg);
 
                     yield return (newExpression.Arguments.Count, args =>
-                    {
-                        var dict = newExpression.Members.Select(e => e.Name.ToCamelCase())
-                            .Zip(args, (method, arg) => (method, arg))
-                            .ToDictionary(e => e.Item1, e => e.Item2);
+                            {
+                                var dict = newExpression.Members.Select(e => e.Name.ToCamelCase())
+                                    .Zip(args, (method, arg) => (method, arg))
+                                    .ToDictionary(e => e.Item1, e => e.Item2);
 
-                        var project = new Project(dict);
+                                var project = new Project(dict);
 
-                        return new GraphTraversal(project);
-                    }
-                    );
+                                return new GraphTraversal(project);
+                            }
+                        );
                 }
                 else
                 {
@@ -297,7 +293,7 @@ namespace Xania.Graphs.Linq
             Push(stack, predicate.Body);
 
             return (2, args => args[0].Append(new OrderBy(ascending,
-                        args[1].Replace(By.Select(predicate.Parameters[0].Name), new Context(source.Type))))
+                    args[1].Replace(By.Select(predicate.Parameters[0].Name), new Context(source.Type))))
                 );
         }
 
@@ -345,39 +341,39 @@ namespace Xania.Graphs.Linq
             if (isAdhocSelector)
             {
                 return (2, args =>
-                {
-                    var sourceParam = selectorLambda.Parameters[0];
-                    var source = args[0].Append(As(sourceParam.Name, sourceParam.Type));
-                    var collectionParam = selectorLambda.Parameters[1];
-                    var collection = args[1].Append(As(collectionParam.Name, collectionParam.Type));
+                        {
+                            var sourceParam = selectorLambda.Parameters[0];
+                            var source = args[0].Append(As(sourceParam.Name, sourceParam.Type));
+                            var collectionParam = selectorLambda.Parameters[1];
+                            var collection = args[1].Append(As(collectionParam.Name, collectionParam.Type));
 
-                    return source
-                        .Bind(collection);
-                }
-                );
+                            return source
+                                .Bind(collection);
+                        }
+                    );
             }
             else
             {
                 Push(stack, selectorLambda.Body);
                 return (3, args =>
-                {
-                    var selectorParameters = selectorLambda.Parameters
-                        .Where(e => !e.Type.IsAnonymousType())
-                        .Reverse().Take(2)
-                        .ToArray();
+                        {
+                            var selectorParameters = selectorLambda.Parameters
+                                .Where(e => !e.Type.IsAnonymousType())
+                                .Reverse().Take(2)
+                                .ToArray();
 
-                    var source = selectorParameters.Length > 1
-                        ? args[0].Append(As(selectorParameters[1].Name, selectorParameters[1].Type))
-                        : args[0];
+                            var source = selectorParameters.Length > 1
+                                ? args[0].Append(As(selectorParameters[1].Name, selectorParameters[1].Type))
+                                : args[0];
 
-                    var collection = args[1].Append(As(selectorParameters[0].Name, selectorParameters[0].Type));
-                    var selector = args[2];
+                            var collection = args[1].Append(As(selectorParameters[0].Name, selectorParameters[0].Type));
+                            var selector = args[2];
 
-                    return source
-                        .Bind(collection)
-                        .Bind(selector);
-                }
-                );
+                            return source
+                                .Bind(collection)
+                                .Bind(selector);
+                        }
+                    );
             }
         }
 
@@ -510,38 +506,5 @@ namespace Xania.Graphs.Linq
         {
             return new GraphTraversal(new V(type));
         }
-    }
-
-    public class V : IStep
-    {
-        public string Label { get; }
-
-        public V(Type type)
-        {
-            Label = type.Name.ToCamelCase();
-            Type = type;
-        }
-
-        public override string ToString()
-        {
-            return $"V().hasLabel('{Label}')";
-        }
-
-        public Type Type { get; }
-    }
-
-    public class Drop : IStep
-    {
-        public Drop()
-        {
-            Type = typeof(int);
-        }
-
-        public override string ToString()
-        {
-            return "drop()";
-        }
-
-        public Type Type { get; }
     }
 }

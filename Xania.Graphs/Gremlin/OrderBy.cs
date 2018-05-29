@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Linq;
 
-namespace Xania.Graphs
+namespace Xania.Graphs.Gremlin
 {
     public class OrderBy : IStep
     {

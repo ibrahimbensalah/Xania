@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Xania.Graphs
+namespace Xania.Graphs.Gremlin
 {
     public class Eq : IStep
     {

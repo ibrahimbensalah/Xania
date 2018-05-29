@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using FluentAssertions;
 using NUnit.Framework;
+using Xania.Graphs.Linq;
 using Xania.Invoice.Domain;
 
 namespace Xania.Graphs.Runtime.Tests
@@ -42,7 +43,7 @@ namespace Xania.Graphs.Runtime.Tests
         public void QueryBasicTest()
         {
             // arrange
-            var db = new InMemoryGraphDbContext(xania);
+            var db = new InMemoryGraphDataContext(xania);
             var companies = db.Set<Company>();
 
             // act
@@ -60,7 +61,7 @@ namespace Xania.Graphs.Runtime.Tests
         {
             // arrange
             var contract = new Contract(xania, rider);
-            var db = new InMemoryGraphDbContext(contract);
+            var db = new InMemoryGraphDataContext(contract);
             var contracts = db.Set<Contract>();
 
             // act
@@ -78,7 +79,7 @@ namespace Xania.Graphs.Runtime.Tests
         public void QueryFilterTest()
         {
             // arrange
-            var db = new InMemoryGraphDbContext(xania, rider);
+            var db = new InMemoryGraphDataContext(xania, rider);
             var companies = db.Set<Company>();
 
             // act

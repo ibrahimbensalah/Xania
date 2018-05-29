@@ -2,20 +2,21 @@
 using System.Collections.Generic;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
+using Xania.Graphs.Gremlin;
 using Xania.Graphs.Linq;
 
 namespace Xania.Graphs
 {
-    public class InMemoryGraphDbContext : IGraphDataContext
+    public class InMemoryGraphDataContext : IGraphDataContext
     {
         private readonly Graph _graph;
 
-        public InMemoryGraphDbContext(params object[] models)
+        public InMemoryGraphDataContext(params object[] models)
             : this(Graph.FromObject(models))
         {
         }
 
-        public InMemoryGraphDbContext(Graph graph)
+        public InMemoryGraphDataContext(Graph graph)
         {
             _graph = graph;
         }

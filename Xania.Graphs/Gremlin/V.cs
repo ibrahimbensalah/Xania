@@ -1,20 +1,20 @@
 ﻿using System;
 
-namespace Xania.Graphs
+namespace Xania.Graphs.Gremlin
 {
-    public class Select: IStep
+    public class V : IStep
     {
         public string Label { get; }
 
-        public Select(string label, Type type)
+        public V(Type type)
         {
-            Label = label;
+            Label = type.Name.ToCamelCase();
             Type = type;
         }
 
         public override string ToString()
         {
-            return $"select('{Label}')";
+            return $"V().hasLabel('{Label}')";
         }
 
         public Type Type { get; }

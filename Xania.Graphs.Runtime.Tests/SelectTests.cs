@@ -13,8 +13,8 @@ namespace Xania.Graphs.Runtime.Tests
     public class SelectTests
     {
         private readonly Graph Graph = TestData.GetPeople();
-        private InMemoryGraphDbContext Db => new InMemoryGraphDbContext(Graph);
-        private GraphQueryable<Person> People => Db.Set<Person>();
+        private InMemoryGraphDataContext Data => new InMemoryGraphDataContext(Graph);
+        private GenericQueryable<Person> People => Data.Set<Person>();
 
         [Test]
         public void Debug()

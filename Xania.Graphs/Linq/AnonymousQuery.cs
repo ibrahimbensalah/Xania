@@ -5,7 +5,9 @@ using System.ComponentModel;
 using System.Linq;
 using System.Linq.Expressions;
 using Newtonsoft.Json;
+using Xania.Graphs.Gremlin;
 using Xania.ObjectMapper;
+using Values = Xania.Graphs.Gremlin.Values;
 
 namespace Xania.Graphs.Linq
 {

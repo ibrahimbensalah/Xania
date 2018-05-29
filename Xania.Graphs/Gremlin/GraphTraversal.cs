@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Xania.Graphs
+namespace Xania.Graphs.Gremlin
 {
     public class GraphTraversal
     {

@@ -18,11 +18,11 @@ namespace Xania.Graphs.Linq
             if (obj is Vertex vertex)
                 return new MappableVertex(_graph, vertex).Some();
             if (obj is GraphPrimitive prim) 
-                return new MappablePrimitive(prim.Value).Some();
+                return new DefaultMappable(prim.Value).Some();
             if (obj is GraphObject value)
                 return new MappableObject(value).Some();
             if (obj is GraphList list)
-                return new MappableEnumerable(list.Items).Some();
+                return new DefaultMappable(list.Items).Some();
 
             if (obj is GraphValue)
                 throw new NotImplementedException($"Resolve {obj.GetType()}");

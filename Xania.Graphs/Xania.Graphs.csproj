@@ -44,24 +44,24 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Alias.cs" />
-    <Compile Include="Eq.cs" />
-    <Compile Include="GraphContextExtensions.cs" />
-    <Compile Include="Context.cs" />
+    <Compile Include="Gremlin\Alias.cs" />
+    <Compile Include="Gremlin\Eq.cs" />
+    <Compile Include="Linq\GraphContextExtensions.cs" />
+    <Compile Include="Gremlin\Context.cs" />
     <Compile Include="Graph.cs" />
     <Compile Include="GraphQueryableExtensions.cs" />
-    <Compile Include="GraphTraversal.cs" />
-    <Compile Include="GremlinSelector.cs" />
-    <Compile Include="Has.cs" />
+    <Compile Include="Gremlin\GraphTraversal.cs" />
+    <Compile Include="Gremlin\V.cs" />
+    <Compile Include="Gremlin\Has.cs" />
     <Compile Include="Linq\ExpressionFluentExtenstions.cs" />
     <Compile Include="Linq\GraphMappingResolver.cs" />
-    <Compile Include="Linq\GraphQueryable.cs" />
-    <Compile Include="Linq\GraphQueryProvider.cs" />
+    <Compile Include="Linq\GenericQueryable.cs" />
+    <Compile Include="Gremlin\Drop.cs" />
+    <Compile Include="Linq\GremlinQueryProvider.cs" />
     <Compile Include="Linq\ValuesQuery.cs" />
     <Compile Include="Linq\MappableObject.cs" />
-    <Compile Include="OrderBy.cs" />
-    <Compile Include="Project.cs" />
-    <Compile Include="Runtime\GraphProcessor.cs" />
+    <Compile Include="Gremlin\OrderBy.cs" />
+    <Compile Include="Gremlin\Project.cs" />
     <Compile Include="Linq\AnonymousQuery.cs" />
     <Compile Include="ExecuteResultExtensions.cs" />
     <Compile Include="Structure\GraphObject.cs" />
@@ -80,20 +80,18 @@
     <Compile Include="Structure\ShallowProxy.cs" />
     <Compile Include="Linq\MappableVertex.cs" />
     <Compile Include="Linq\VertexQuery.cs" />
-    <Compile Include="TraversalExtensions.cs" />
+    <Compile Include="Gremlin\TraversalExtensions.cs" />
     <Compile Include="Helper.cs" />
     <Compile Include="IGraphDataContext.cs" />
-    <Compile Include="IStep.cs" />
-    <Compile Include="Out.cs" />
+    <Compile Include="Gremlin\IStep.cs" />
+    <Compile Include="Gremlin\Out.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Structure\Property.cs" />
     <Compile Include="Edge.cs" />
-    <Compile Include="Scope.cs" />
-    <Compile Include="Select.cs" />
-    <Compile Include="Term.cs" />
-    <Compile Include="Values.cs" />
+    <Compile Include="Gremlin\Select.cs" />
+    <Compile Include="Gremlin\Values.cs" />
     <Compile Include="Structure\Vertex.cs" />
-    <Compile Include="Where.cs" />
+    <Compile Include="Gremlin\Where.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\ObjectMapper\src\Xania.ObjectMapper.csproj">
