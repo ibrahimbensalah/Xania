@@ -35,6 +35,9 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="dotMemory.Unit, Version=111.0.0.0, Culture=neutral, PublicKeyToken=1010a0d8d6380325, processorArchitecture=MSIL">
+      <HintPath>..\packages\JetBrains.dotMemoryUnit.3.0.20171219.105559\lib\net35\dotMemory.Unit.dll</HintPath>
+    </Reference>
     <Reference Include="FluentAssertions, Version=5.3.0.0, Culture=neutral, PublicKeyToken=33f2691a05b67b6a, processorArchitecture=MSIL">
       <HintPath>..\packages\FluentAssertions.5.3.0\lib\net47\FluentAssertions.dll</HintPath>
     </Reference>
@@ -142,8 +145,10 @@
   <ItemGroup>
     <Compile Include="EntityFrameworkTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="RuntimeBaseTests.cs" />
     <Compile Include="RuntimeTests.cs" />
-    <Compile Include="SelectTests.cs" />
+    <Compile Include="SelectBaseTests.cs" />
+    <Compile Include="SelectTeests.cs" />
     <Compile Include="TraversalTests.cs" />
   </ItemGroup>
   <ItemGroup>

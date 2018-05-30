@@ -3,12 +3,18 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using Newtonsoft.Json;
 using Xania.Reflection;
 
 namespace Xania.Graphs.Linq
 {
     public static class ExpressionFluentExtenstions
     {
+        public static UnaryExpression Quote(this Expression expression)
+        {
+            return Expression.Quote(expression);
+        }
+
         public static MemberExpression Property(this Expression expr, string name)
         {
             return Expression.Property(expr, name);
@@ -99,18 +105,62 @@ namespace Xania.Graphs.Linq
 
         public static Expression Select<TSource, TResult>(this Expression sourceExpression, Expression<Func<TSource, TResult>> selectorLambda)
         {
-            var methodInfo = EnumerableHelper.Select_TSource_2<TSource, TResult>();
-            return Expression.Call(methodInfo, sourceExpression, selectorLambda);
+            var sourceType = sourceExpression.Type;
+            if (sourceType == typeof(TSource))
+            {
+                return ReplaceVisitor.VisitAndConvert(selectorLambda.Body, selectorLambda.Parameters[0],
+                    sourceExpression);
+            }
+
+            var queryableType = typeof(IQueryable<>).MapFrom(sourceType);
+            if (queryableType != null)
+            {
+                var methodInfo = QueryableHelper.Select_TSource_2<TSource, TResult>();
+                return Expression.Call(methodInfo, sourceExpression, selectorLambda);
+            }
+
+            var enumerableType = typeof(IEnumerable<>).MapFrom(sourceType);
+            if (enumerableType != null)
+            {
+                var methodInfo = EnumerableHelper.Select_TSource_2<TSource, TResult>();
+                return Expression.Call(methodInfo, sourceExpression, selectorLambda);
+            }
+
+            throw new InvalidOperationException($"Select <{sourceType.Name}, _>");
+        }
+
+        public static Expression Contains(this Expression sourceExpression, Expression valueExpression)
+        {
+            var methodInfo = EnumerableHelper.Contains_TSource_1(valueExpression.Type);
+            return Expression.Call(methodInfo, sourceExpression, valueExpression);
+        }
+
+        public static Expression Debug(this Expression expr)
+        {
+            var method = typeof(ExpressionFluentExtenstions).GetMethod(nameof(DebugValue));
+            var debugMethod = method.MakeGenericMethod(expr.Type);
+            return Expression.Call(debugMethod, expr);
+        }
+
+        public static T DebugValue<T>(T value)
+        {
+            Console.WriteLine(JsonConvert.SerializeObject(value, Formatting.Indented));
+            return value;
+        }
+
+        public static Expression OfType(this Expression sourceExpression, Type type)
+        {
+            var methodInfo = typeof(IQueryable).IsAssignableFrom(sourceExpression.Type)
+                    ? QueryableHelper.OfType_TSource_1(type)
+                    : EnumerableHelper.OfType_TSource_1(type)
+                ;
+
+            return Expression.Call(methodInfo, sourceExpression);
         }
 
         public static Expression OfType<T>(this Expression sourceExpression)
         {
-            var methodInfo = typeof(IQueryable).IsAssignableFrom(sourceExpression.Type)
-                    ? QueryableHelper.OfType_TSource_1(typeof(T))
-                    : EnumerableHelper.OfType_TSource_1(typeof(T))
-                ;
-
-            return Expression.Call(methodInfo, sourceExpression);
+            return OfType(sourceExpression, typeof(T));
         }
 
         public static Expression SelectMany<TSource, TResult>(this Expression sourceExpression, Expression<Func<TSource, IEnumerable<TResult>>> selectorLambda)
@@ -183,10 +233,7 @@ namespace Xania.Graphs.Linq
             if (genericTypes.Length != argTypes.Length)
                 return null;
 
-            var inf =
-                    genericTypes
-                        .Select((genericType, idx) => argTypes[idx].InferTypeArguments(genericType))
-                ;
+            var inf = genericTypes.Select((genericType, idx) => argTypes[idx].InferTypeArguments(genericType));
 
             return inf.Aggregate((nx, ny) =>
             {

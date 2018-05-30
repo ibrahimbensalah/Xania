@@ -32,7 +32,7 @@ namespace Xania.Graphs.Linq
              (s_Join_TSource_4 = 
                  new Func<IQueryable<int>, IEnumerable<float>, Expression<Func<int, string>>,
                      Expression<Func<float, string>>, Expression<Func<int, float, double>>, IQueryable<double>>(
-                     Queryable.Join).GetMethodInfo())
+                     Queryable.Join).GetMethodInfo().GetGenericMethodDefinition())
             .MakeGenericMethod(outerType, innerType, keyType, resultType));
 
         private static MethodInfo s_Where_TSource_1;
@@ -91,6 +91,14 @@ namespace Xania.Graphs.Linq
 
     public static class EnumerableHelper
     {
+        private static MethodInfo s_Contains_TSource_1;
+        public static MethodInfo
+            Contains_TSource_1<TSource>() => Contains_TSource_1(typeof(TSource));
+        public static MethodInfo Contains_TSource_1(Type sourceType) =>
+            (s_Contains_TSource_1 ??
+             (s_Contains_TSource_1 = new Func<IEnumerable<int>, int, bool>(Enumerable.Contains).GetMethodInfo().GetGenericMethodDefinition()))
+            .MakeGenericMethod(sourceType);
+
         private static MethodInfo s_Select_TSource_2;
         public static MethodInfo
             Select_TSource_2<TSource, TResult>() => Select_TSource_2(typeof(TSource), typeof(TResult));

@@ -10,49 +10,9 @@ using Xania.Invoice.Domain;
 
 namespace Xania.Graphs.Runtime.Tests
 {
-    public class SelectTests
+    public abstract class SelectBaseTests
     {
-        private readonly Graph Graph = TestData.GetPeople();
-        private InMemoryGraphDataContext Data => new InMemoryGraphDataContext(Graph);
-        private GenericQueryable<Person> People => Data.Set<Person>();
-
-        [Test]
-        public void Debug()
-        {
-            var result =
-                Graph.Vertices
-                    .Where(e => Equals(e.Label, "person"))
-                    .Where(e => Equals(e.Id, "1"))
-                    .SelectMany(
-                        e => e.Properties
-                            .Where(Param_0 => Equals(Param_0.Name, "hQ"))
-                            .Select(p => p.Value)
-                            .OfType<GraphObject>()
-                            .SelectMany(o => o.Properties)
-                            .Where(Param_1 => Equals(Param_1.Name, "lines"))
-                            .Select(p => p.Value)
-                            .OfType<GraphList>()
-                            .SelectMany(x => x.Items)
-                    );
-
-            var result2 =
-                Graph.Vertices
-                    .Where(e => Equals(e.Label, "person"))
-                    .Where(e => Equals(e.Id, "1"))
-                    .SelectMany(
-                        e => e.Properties
-                            .Where(Param_0 => Equals(Param_0.Name, "hQ"))
-                            .Select(p => p.Value)
-                            .OfType<GraphObject>()
-                            .SelectMany(o => o.Properties)
-                            .Where(Param_1 => Equals(Param_1.Name, "lines"))
-                            .Select(p => p.Value)
-                            .OfType<GraphList>()
-                            .SelectMany(x => x.Items)
-                    );
-
-            Console.WriteLine(JsonConvert.SerializeObject(result2, Formatting.Indented));
-        }
+        protected abstract IQueryable<Person> People { get; } // Data.Set<Person>();
 
         /// <summary>
         /// This example showing by the test is the single reason I decided to create my own Graph implementation
@@ -133,8 +93,25 @@ namespace Xania.Graphs.Runtime.Tests
                 where p.Friend.Id == 2
                 select p;
 
-            var person = persons.ToArray().Should().ContainSingle().Subject;
-            AssertIbrahim(person);
+            // var persons = persons.ToArray(); // .Should().ContainSingle().Subject;
+            Console.WriteLine(JsonConvert.SerializeObject(persons));
+            // AssertIbrahim(person);
+
+            var g = TestData.GetPeople();
+
+            var q =
+                from outV in g.Vertices
+                where outV.Label.Equals("person", StringComparison.InvariantCultureIgnoreCase)
+                join outE in g.Edges on outV.Id equals outE.OutV
+                where outE.Label.Equals("friend", StringComparison.CurrentCultureIgnoreCase)
+                join inV in g.Vertices on outE.InV equals inV.Id
+                where inV.Label.Equals("person", StringComparison.InvariantCultureIgnoreCase)
+                select inV;
+
+            //var expression = q.Expression;
+
+            //Console.WriteLine(JsonConvert.SerializeObject(q, Formatting.Indented));
+
         }
 
         [Test]

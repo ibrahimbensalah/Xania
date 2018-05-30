@@ -37,6 +37,9 @@ namespace Xania.Reflection
 
         public static Type MapFrom(this Type templateType, Type targetType)
         {
+            if (templateType == targetType)
+                return targetType;
+
             if (targetType.ContainsGenericParameters)
                 return null;
 

@@ -11,6 +11,11 @@ namespace Xania.Graphs.Linq
             return new GenericQueryable<TModel>(new GremlinQueryProvider(dataContext));
         }
 
+        public static IQueryable<TModel> Set<TModel>(this Graph graph)
+        {
+            return new GenericQueryable<TModel>(new GraphQueryProvider(graph));
+        }
+
         public static IGraphQuery Execute(this IGraphQuery g, GraphTraversal traversal)
         {
             var maps = new(string name, IGraphQuery expr)[0];

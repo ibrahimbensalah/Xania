@@ -57,6 +57,7 @@
     <Compile Include="Linq\GraphMappingResolver.cs" />
     <Compile Include="Linq\GenericQueryable.cs" />
     <Compile Include="Gremlin\Drop.cs" />
+    <Compile Include="Linq\GraphQueryProvider.cs" />
     <Compile Include="Linq\GremlinQueryProvider.cs" />
     <Compile Include="Linq\ValuesQuery.cs" />
     <Compile Include="Linq\MappableObject.cs" />
