@@ -27,10 +27,7 @@ namespace Xania.Graphs.Structure
 
         public override int GetHashCode()
         {
-            unchecked
-            {
-                return Value != null ? Value.GetHashCode() : 0;
-            }
+            return Value != null ? Value.GetHashCode() : 0;
         }
 
         public override string ToString()

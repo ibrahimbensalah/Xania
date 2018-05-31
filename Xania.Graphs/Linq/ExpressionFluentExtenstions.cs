@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -18,6 +19,33 @@ namespace Xania.Graphs.Linq
         public static MemberExpression Property(this Expression expr, string name)
         {
             return Expression.Property(expr, name);
+        }
+
+        public static MethodInfo s_Convert_1 = new Func<string, int>(Convert<string, int>).GetMethodInfo().GetGenericMethodDefinition();
+        public static Expression Convert(this Expression expr, Type type)
+        {
+            if (expr.Type == type)
+                return expr;
+
+            var methodInfo = s_Convert_1.MakeGenericMethod(expr.Type, type);
+            return Expression.Call(methodInfo, expr);
+        }
+
+        private static TR Convert<TI, TR>(this TI value)
+        {
+            var inputConverter = TypeDescriptor.GetConverter(typeof(TI));
+            if (inputConverter.CanConvertTo(typeof(TR)))
+            {
+                return (TR)inputConverter.ConvertTo(value, typeof(TR));
+            }
+
+            var resultConverter = TypeDescriptor.GetConverter(typeof(TR));
+            if (resultConverter.CanConvertFrom(typeof(TI)))
+            {
+                return (TR)resultConverter.ConvertFrom(value);
+            }
+
+            return default(TR);
         }
 
         public static UnaryExpression As<T>(this Expression expr)
@@ -101,6 +129,30 @@ namespace Xania.Graphs.Linq
 
             var methodInfo = EnumerableHelper.Select_TSource_2(sourceType, resultType);
             return Expression.Call(methodInfo, sourceExpression, Expression.Lambda(selectorExpr, paramExpr));
+        }
+
+        public static Expression Select(this Expression sourceExpression, LambdaExpression selectorLambda)
+        {
+            var resultType = selectorLambda.Body.Type;
+
+            var queryableType = typeof(IQueryable<>).MapFrom(sourceExpression.Type);
+            if (queryableType != null)
+            {
+                var sourceType = queryableType.GenericTypeArguments[0];
+                var methodInfo = QueryableHelper.Select_TSource_2(sourceType, resultType);
+                return Expression.Call(methodInfo, sourceExpression, selectorLambda);
+            }
+
+            var enumerableType = typeof(IEnumerable<>).MapFrom(sourceExpression.Type);
+            if (enumerableType != null)
+            {
+                var sourceType = enumerableType.GenericTypeArguments[0];
+                var methodInfo = EnumerableHelper.Select_TSource_2(sourceType, resultType);
+                return Expression.Call(methodInfo, sourceExpression, selectorLambda);
+            }
+
+            return ReplaceVisitor.VisitAndConvert(selectorLambda.Body, selectorLambda.Parameters[0],
+                sourceExpression);
         }
 
         public static Expression Select<TSource, TResult>(this Expression sourceExpression, Expression<Func<TSource, TResult>> selectorLambda)

@@ -140,7 +140,9 @@ namespace Xania.Graphs.Linq
                     var member = members[0];
                     if (member.Name.Equals("Id", StringComparison.InvariantCultureIgnoreCase))
                     {
-                        return vertexExpr.Select((Vertex v) => v.Id);
+                        var v = Expression.Parameter(typeof(Vertex), "v");
+                        var selectId = v.Property("Id").Convert(memberExpr.Type);
+                        return vertexExpr.Select(Expression.Lambda(selectId, v));
                     }
                 }
 
@@ -189,7 +191,7 @@ namespace Xania.Graphs.Linq
 
                 if (typeof(IEnumerable<>).MapFrom(left.Type) != null)
                 {
-                    return left.OfType(cons.Type).Contains(cons);
+                    return left.Contains(cons);
                 }
             }
 
