@@ -65,14 +65,6 @@ namespace Xania.Graphs.Linq
             .MakeGenericMethod(resultType);
     }
 
-    public static class GraphExpressions
-    {
-        public static Expression GetVertexExpression(Expression source)
-        {
-            return null;
-        }
-    }
-
     public static class CollectionHelper
     {
         private static MethodInfo s_CollectionAdd_1;

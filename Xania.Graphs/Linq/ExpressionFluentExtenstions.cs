@@ -135,15 +135,16 @@ namespace Xania.Graphs.Linq
             return Expression.Call(methodInfo, sourceExpression, valueExpression);
         }
 
-        public static Expression Debug(this Expression expr)
+        public static Expression Debug(this Expression expr, string label)
         {
             var method = typeof(ExpressionFluentExtenstions).GetMethod(nameof(DebugValue));
             var debugMethod = method.MakeGenericMethod(expr.Type);
-            return Expression.Call(debugMethod, expr);
+            return Expression.Call(debugMethod, expr, Expression.Constant(label));
         }
 
-        public static T DebugValue<T>(T value)
+        public static T DebugValue<T>(T value, string label)
         {
+            Console.WriteLine(label + ":\r\n==========================================");
             Console.WriteLine(JsonConvert.SerializeObject(value, Formatting.Indented));
             return value;
         }

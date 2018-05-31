@@ -89,24 +89,24 @@ namespace Xania.Graphs.Runtime.Tests
         public void FilterByFriend()
         {
             var persons =
-                from p in People
+                (from p in People
                 where p.Friend.Id == 2
-                select p;
+                select p).ToArray();
 
-            // var persons = persons.ToArray(); // .Should().ContainSingle().Subject;
-            Console.WriteLine(JsonConvert.SerializeObject(persons));
-            // AssertIbrahim(person);
+            var person = persons.Should().ContainSingle().Subject;
+            Console.WriteLine(JsonConvert.SerializeObject(person));
+            AssertIbrahim(person);
 
-            var g = TestData.GetPeople();
+            //var g = TestData.GetPeople();
 
-            var q =
-                from outV in g.Vertices
-                where outV.Label.Equals("person", StringComparison.InvariantCultureIgnoreCase)
-                join outE in g.Edges on outV.Id equals outE.OutV
-                where outE.Label.Equals("friend", StringComparison.CurrentCultureIgnoreCase)
-                join inV in g.Vertices on outE.InV equals inV.Id
-                where inV.Label.Equals("person", StringComparison.InvariantCultureIgnoreCase)
-                select inV;
+            //var q =
+            //    from outV in g.Vertices
+            //    where outV.Label.Equals("person", StringComparison.InvariantCultureIgnoreCase)
+            //    join outE in g.Edges on outV.Id equals outE.OutV
+            //    where outE.Label.Equals("friend", StringComparison.CurrentCultureIgnoreCase)
+            //    join inV in g.Vertices on outE.InV equals inV.Id
+            //    where inV.Label.Equals("person", StringComparison.InvariantCultureIgnoreCase)
+            //    select inV;
 
             //var expression = q.Expression;
 

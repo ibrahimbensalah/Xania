@@ -124,24 +124,12 @@ namespace Xania.Graphs.Linq
 
             if (members.Length == 0)
             {
-                var edgeParam = Expression.Parameter(typeof(Edge), "outE");
-                var vertexParam = Expression.Parameter(typeof(Vertex));
-
                 var member = memberExpr.Member;
-                var outV = ToGraphExpression(memberExpr.Expression, map); // .Where((Vertex v) => v.Label.Equals(member.Name, StringComparison.InvariantCultureIgnoreCase));
-
-                var equalsId = outV.Property(nameof(Structure.Vertex.Id)).StringEqual(edgeParam.Property(nameof(Edge.OutV)));
-                var equalsLabel = edgeParam.Property(nameof(Edge.Label)).StringEqual(member.Name);
-
-                var outE = Expression.Constant(_graph.Edges).Debug();// .Where(Expression.Lambda(equalsLabel, edgeParam));
-
-                var edgeKey = Expression.Lambda(edgeParam.Property(nameof(Edge.InV)), edgeParam).Quote();
-                var vertexKey = Expression.Lambda(vertexParam.Property(nameof(Structure.Vertex.Id)), vertexParam).Quote();
-                var inV = outE.Join(Expression.Constant(_graph.Vertices), edgeKey, vertexKey,
-                    Expression.Lambda(vertexParam, edgeParam, vertexParam).Quote()
-                );
-
-                return inV;
+                // var outV = ToGraphExpression(memberExpr.Expression, map); // .Where((Vertex v) => v.Label.Equals(member.Name, StringComparison.InvariantCultureIgnoreCase));
+                return
+                    ToGraphExpression(memberExpr.Expression, map)
+                        .OutE(_graph.Edges).Where((Edge e) => e.Label.Equals(member.Name, ignore))
+                        .InV(_graph.Vertices).Where((Vertex v) => v.Label.Equals(member.DeclaringType.Name, ignore));
             }
             else
             {

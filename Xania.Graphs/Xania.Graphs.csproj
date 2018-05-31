@@ -54,6 +54,7 @@
     <Compile Include="Gremlin\V.cs" />
     <Compile Include="Gremlin\Has.cs" />
     <Compile Include="Linq\ExpressionFluentExtenstions.cs" />
+    <Compile Include="Linq\Graphyable.cs" />
     <Compile Include="Linq\GraphMappingResolver.cs" />
     <Compile Include="Linq\GenericQueryable.cs" />
     <Compile Include="Gremlin\Drop.cs" />
@@ -88,7 +89,7 @@
     <Compile Include="Gremlin\Out.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Structure\Property.cs" />
-    <Compile Include="Edge.cs" />
+    <Compile Include="Structure\Edge.cs" />
     <Compile Include="Gremlin\Select.cs" />
     <Compile Include="Gremlin\Values.cs" />
     <Compile Include="Structure\Vertex.cs" />
