@@ -148,7 +148,7 @@
     <Compile Include="RuntimeBaseTests.cs" />
     <Compile Include="RuntimeTests.cs" />
     <Compile Include="SelectBaseTests.cs" />
-    <Compile Include="SelectTeests.cs" />
+    <Compile Include="SelectTests.cs" />
     <Compile Include="TraversalTests.cs" />
   </ItemGroup>
   <ItemGroup>

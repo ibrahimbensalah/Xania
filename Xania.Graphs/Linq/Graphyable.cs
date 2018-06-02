@@ -12,23 +12,23 @@ namespace Xania.Graphs.Linq
         {
             if (expression.Type == typeof(Vertex))
             {
-                var methodInfo = new Func<Vertex, IQueryable<Edge>, IQueryable<Edge>>(OutE).Method;
+                var methodInfo = new Func<Vertex, IEnumerable<Edge>, IEnumerable<Edge>>(OutE).Method;
                 return Expression.Call(null, methodInfo, expression, Expression.Constant(edges));
             }
             else
             {
-                var methodInfo = new Func<IQueryable<Vertex>, IQueryable<Edge>, IQueryable<Edge>>(OutE).Method;
+                var methodInfo = new Func<IEnumerable<Vertex>, IEnumerable<Edge>, IEnumerable<Edge>>(OutE).Method;
                 return Expression.Call(null, methodInfo, expression, Expression.Constant(edges));
             }
         }
 
-        public static Expression InV(this Expression expression, IQueryable<Vertex> vertices)
+        public static Expression InV(this Expression expression, IEnumerable<Vertex> vertices)
         {
-            var methodInfo = new Func<IQueryable<Edge>, IQueryable<Vertex>, IQueryable<Vertex>>(InV).Method;
+            var methodInfo = new Func<IEnumerable<Edge>, IEnumerable<Vertex>, IEnumerable<Vertex>>(InV).Method;
             return Expression.Call(null, methodInfo, expression, Expression.Constant(vertices));
         }
 
-        public static IQueryable<Edge> OutE(this Vertex v, IQueryable<Edge> edges)
+        public static IEnumerable<Edge> OutE(this Vertex v, IEnumerable<Edge> edges)
         {
             return
                 from e in edges
@@ -36,7 +36,7 @@ namespace Xania.Graphs.Linq
                 select e;
         }
 
-        public static IQueryable<Edge> OutE(this IQueryable<Vertex> vertices, IQueryable<Edge> edges)
+        public static IEnumerable<Edge> OutE(this IEnumerable<Vertex> vertices, IEnumerable<Edge> edges)
         {
             return 
                 from v in vertices
@@ -44,7 +44,7 @@ namespace Xania.Graphs.Linq
                 select e;
         }
 
-        public static IQueryable<Vertex> InV(this IQueryable<Edge> edges, IQueryable<Vertex> vertices)
+        public static IEnumerable<Vertex> InV(this IEnumerable<Edge> edges, IEnumerable<Vertex> vertices)
         {
             return 
                 from e in edges

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -189,15 +190,16 @@ namespace Xania.Graphs.Linq
 
         public static Expression Debug(this Expression expr, string label)
         {
-            var method = typeof(ExpressionFluentExtenstions).GetMethod(nameof(DebugValue));
+            var method = typeof(ExpressionFluentExtenstions).GetMethods().Where(m => m.Name.Equals(nameof(Debug)) && m.ContainsGenericParameters).Single();
             var debugMethod = method.MakeGenericMethod(expr.Type);
             return Expression.Call(debugMethod, expr, Expression.Constant(label));
         }
 
-        public static T DebugValue<T>(T value, string label)
+        public static T Debug<T>(T value, string label)
         {
             Console.WriteLine(label + ":\r\n==========================================");
             Console.WriteLine(JsonConvert.SerializeObject(value, Formatting.Indented));
+
             return value;
         }
 
@@ -281,12 +283,12 @@ namespace Xania.Graphs.Linq
             }
         }
 
-        private static (int level, (Type genericType, Type argType)[] map)? InferTypeArguments(Type[] argTypes, Type[] genericTypes)
+        public static (int level, (Type genericType, Type argType)[] map)? InferTypeArguments(this Type[] argTypes, Type[] genericTypes)
         {
             if (genericTypes.Length != argTypes.Length)
                 return null;
 
-            var inf = genericTypes.Select((genericType, idx) => argTypes[idx].InferTypeArguments(genericType));
+            var inf = genericTypes.Select((genericType, idx) => argTypes[idx].InferTypeArgument(genericType));
 
             return inf.Aggregate((nx, ny) =>
             {
@@ -321,9 +323,9 @@ namespace Xania.Graphs.Linq
             });
         }
 
-        private static (int level, (Type, Type)[] map) empty = (0, new(Type, Type)[0]);
+        private static readonly (int level, (Type, Type)[] map) empty = (0, new(Type, Type)[0]);
 
-        public static (int level, (Type genericType, Type argType)[] map)? InferTypeArguments(this Type argType, Type genericType)
+        public static (int level, (Type genericType, Type argType)[] map)? InferTypeArgument(this Type argType, Type genericType)
         {
             if (argType == null)
                 return null;
@@ -340,11 +342,14 @@ namespace Xania.Graphs.Linq
                 {
                     var gtmap =
                             genericType.GenericTypeArguments
-                                .Select((gt, idx) => InferTypeArguments(argType.GenericTypeArguments[idx], gt))
-                                .NotNull()
+                                .Select((gt, idx) => InferTypeArgument(argType.GenericTypeArguments[idx], gt))
+                                .ToArray()
                         ;
 
-                    return gtmap.Aggregate(empty, (x, y) =>
+                    if (gtmap.Any(e => e == null))
+                        return null;
+
+                    return gtmap.NotNull().Aggregate(empty, (x, y) =>
                     {
                         var level = Math.Min(x.level, y.level);
                         var map = x.map.Concat(y.map).ToArray();
@@ -356,7 +361,7 @@ namespace Xania.Graphs.Linq
 
             var matches = (
                 from b in GetParentTypes(argType)
-                let match = InferTypeArguments(b, genericType)
+                let match = InferTypeArgument(b, genericType)
                 where match != null
                 orderby match?.level
                 select match
@@ -369,6 +374,7 @@ namespace Xania.Graphs.Linq
             return (1 + first.Value.level, first.Value.map);
         }
 
+        [DebuggerStepThrough]
         private static IEnumerable<Type> GetParentTypes(Type type)
         {
             if (type.BaseType != null)
@@ -380,18 +386,21 @@ namespace Xania.Graphs.Linq
             }
         }
 
+        [DebuggerStepThrough]
         private static IEnumerable<T> NotNull<T>(this IEnumerable<T?> enumerable)
             where T : struct
         {
             return enumerable.Where(e => e != null).Select(e => e.Value);
         }
 
+        [DebuggerStepThrough]
         private static IEnumerable<T> NotNull<T>(this IEnumerable<T> enumerable)
             where T : class
         {
             return enumerable.Where(e => e != null);
         }
 
+        [DebuggerStepThrough]
         private static T? FirstOrNull<T>(this IEnumerable<T> enumerable)
             where T : struct
         {
