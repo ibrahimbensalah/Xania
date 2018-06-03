@@ -22,6 +22,14 @@ namespace Xania.Graphs.Linq
             return Expression.Property(expr, name);
         }
 
+        public static Expression Box(this Expression expr)
+        {
+            if (expr.Type.IsPrimitive)
+                return Expression.Convert(expr, typeof(object));
+
+            return expr;
+        }
+
         public static MethodInfo s_Convert_1 = new Func<string, int>(Convert<string, int>).GetMethodInfo().GetGenericMethodDefinition();
         public static Expression Convert(this Expression expr, Type type)
         {
@@ -407,6 +415,14 @@ namespace Xania.Graphs.Linq
             var arr = enumerable.Take(1).ToArray();
             if (arr.Any()) return arr[0];
             return null;
+        }
+
+        public static Expression FirstOrDefault(this Expression expr)
+        {
+            var enumerableType = typeof(IEnumerable<>).MapFrom(expr.Type);
+            var elementType = enumerableType.GenericTypeArguments[0];
+            var firstMethodInfo = EnumerableHelper.FirstOrDefault(elementType);
+            return Expression.Call(firstMethodInfo, expr);
         }
     }
 }

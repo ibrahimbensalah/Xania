@@ -124,7 +124,7 @@ namespace Xania.Graphs.Linq
                                 Expression.ElementInit(
                                     dictAdd,
                                     Expression.Constant(paramName),
-                                    ToGraphExpression(argExpr, map)
+                                    ToGraphExpression(argExpr, map).Box()
                                 )
                         )
                 ;
@@ -159,8 +159,12 @@ namespace Xania.Graphs.Linq
                     if (member.Name.Equals("Id", StringComparison.InvariantCultureIgnoreCase))
                     {
                         var v = Expression.Parameter(typeof(Vertex), "v");
-                        var selectId = v.Property("Id").Convert(memberExpr.Type);
-                        return vertexExpr.Select(Expression.Lambda(selectId, v));
+                        var selectExpr = vertexExpr.Select(Expression.Lambda(v.Property("Id").Convert(memberExpr.Type), v));
+
+                        if (!memberExpr.Type.IsEnumerable() && selectExpr.Type.IsEnumerable())
+                            return selectExpr.FirstOrDefault();
+
+                        return selectExpr;
                     }
                 }
 

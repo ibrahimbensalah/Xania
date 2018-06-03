@@ -175,7 +175,8 @@ namespace Xania.Graphs.Runtime.Tests
                 {
                     p.FirstName,
                     FriendId = p.Friend.Id
-                }).ToArray();
+                }
+            ).ToArray();
 
             var ibrahim = view.Should().ContainSingle().Subject;
             // ibrahim.FirstName.Should().Be("Ibrahim");
