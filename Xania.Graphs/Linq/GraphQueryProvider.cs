@@ -106,9 +106,33 @@ namespace Xania.Graphs.Linq
                     return ToGraphExpression(binary, map);
                 case MemberExpression member:
                     return ToGraphExpression(member, map);
+                case NewExpression newExpr:
+                    return ToGraphExpression(newExpr, map);
             }
 
             throw new NotSupportedException(expression.GetType().Name);
+        }
+
+        private Expression ToGraphExpression(NewExpression newExpr, IMap<Expression, Expression> map)
+        {
+            var dictAdd = DictionaryHelper.Add<string, object>();
+            var items =
+                    newExpr.Constructor.GetParameters()
+                        .Select(e => e.Name.ToCamelCase())
+                        .Zip(newExpr.Arguments,
+                            (paramName, argExpr) =>
+                                Expression.ElementInit(
+                                    dictAdd,
+                                    Expression.Constant(paramName),
+                                    ToGraphExpression(argExpr, map)
+                                )
+                        )
+                ;
+
+            return Expression.ListInit(
+                Expression.New(typeof(Dictionary<string, object>)),
+                items
+            );
         }
 
         private Expression ToGraphExpression(MemberExpression memberExpr, IMap<Expression, Expression> map)
