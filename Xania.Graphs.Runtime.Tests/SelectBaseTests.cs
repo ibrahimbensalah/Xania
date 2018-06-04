@@ -139,13 +139,10 @@ namespace Xania.Graphs.Runtime.Tests
         [Test]
         public void SelectFriendOfFriendsOfFriends()
         {
-            var friendOfDistantFriends =
-                from p in People
-                where p.Id == 3
-                from f in p.Friends
-                from g in f.Friends
-                from h in p.Friends
-                select p;
+            var friendOfDistantFriends = People.Where(p => p.Id == 3)
+                .SelectMany(p => p.Friends, (p, f) => new {p, f})
+                .SelectMany(@t => @t.f.Friends, (@t, g) => new {@t, g})
+                .SelectMany(@t => @t.g.Friends, (@t, h) => @t.@t.p);
             Console.WriteLine(JsonConvert.SerializeObject(friendOfDistantFriends, Formatting.Indented));
         }
 

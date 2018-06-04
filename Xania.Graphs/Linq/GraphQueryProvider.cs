@@ -113,25 +113,23 @@ namespace Xania.Graphs.Linq
             throw new NotSupportedException(expression.GetType().Name);
         }
 
+        readonly RuntimeReflectionHelper reflectionHelper = new RuntimeReflectionHelper();
         private Expression ToGraphExpression(NewExpression newExpr, IMap<Expression, Expression> map)
         {
-            var dictAdd = DictionaryHelper.Add<string, object>();
-            var items =
-                    newExpr.Constructor.GetParameters()
-                        .Select(e => e.Name.ToCamelCase())
+            var fields =
+                    (newExpr.Constructor.GetParameters()
                         .Zip(newExpr.Arguments,
-                            (paramName, argExpr) =>
-                                Expression.ElementInit(
-                                    dictAdd,
-                                    Expression.Constant(paramName),
-                                    ToGraphExpression(argExpr, map).Box()
-                                )
-                        )
+                            (param, argExpr) => (Name:param.Name, Expression:ToGraphExpression(argExpr, map)))).ToArray()
                 ;
+            var typeInfo = reflectionHelper.CreateType(fields.Select(p => new KeyValuePair<string, Type>(p.Name, p.Expression.Type)));
+            var bindings =
+                from property in typeInfo.GetProperties()
+                join field in fields on property.Name equals field.Name
+                select Expression.Bind(property, field.Expression);
 
-            return Expression.ListInit(
-                Expression.New(typeof(Dictionary<string, object>)),
-                items
+            return Expression.MemberInit(
+                Expression.New(typeInfo),
+                bindings
             );
         }
 
@@ -241,7 +239,7 @@ namespace Xania.Graphs.Linq
         {
             var dict = lambda.Parameters.ToDictionary(
                 p => p as Expression,
-                p => Expression.Parameter(ToGraphType(p.Type))
+                p => Expression.Parameter(ToGraphType(p.Type), p.Name)
             );
             var map = new ExpressionMap<ParameterExpression>(dict);
             var body = ToGraphExpression(lambda.Body, map);

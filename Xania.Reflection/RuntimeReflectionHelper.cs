@@ -19,7 +19,7 @@ namespace Xania.Reflection
             throw new InvalidOperationException("is not enumerable type " + enumerableType);
         }
 
-        public TypeInfo CreateType(IDictionary<string, Type> fields)
+        public TypeInfo CreateType(IEnumerable<KeyValuePair<string, Type>> fields)
         {
             TypeBuilder tb = GetTypeBuilder();
             var constructor = tb.DefineDefaultConstructor(MethodAttributes.Public | MethodAttributes.SpecialName |
@@ -66,7 +66,7 @@ namespace Xania.Reflection
                 .Single();
         }
 
-        private static TypeBuilder GetTypeBuilder()
+        public static TypeBuilder GetTypeBuilder()
         {
             var typeSignature = "MyDynamicType";
             var an = new AssemblyName(typeSignature);
@@ -83,7 +83,7 @@ namespace Xania.Reflection
             return tb;
         }
 
-        private static void CreateProperty(TypeBuilder tb, string propertyName, Type propertyType)
+        public static void CreateProperty(TypeBuilder tb, string propertyName, Type propertyType)
         {
             FieldBuilder fieldBuilder = tb.DefineField("_" + propertyName, propertyType, FieldAttributes.Private);
 
