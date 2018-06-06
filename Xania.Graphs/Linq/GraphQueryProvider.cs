@@ -17,6 +17,23 @@ namespace Xania.Graphs.Linq
         TValue GetValue(TKey key, out bool found);
     }
 
+    public class SelectManyResultMap : IMap<Expression, Expression>
+    {
+        public Type SourceParamType { get; }
+        public Type GraphParamType { get; }
+
+        public SelectManyResultMap(Type sourceParamType, Type graphParamType)
+        {
+            SourceParamType = sourceParamType;
+            GraphParamType = graphParamType;
+        }
+
+        public Expression GetValue(Expression key, out bool found)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
     public class ExpressionMap<TValue> : IMap<Expression, TValue>
     {
         private readonly Dictionary<Expression, TValue> _dict;
@@ -113,13 +130,13 @@ namespace Xania.Graphs.Linq
             throw new NotSupportedException(expression.GetType().Name);
         }
 
-        readonly RuntimeReflectionHelper reflectionHelper = new RuntimeReflectionHelper();
+        private readonly RuntimeReflectionHelper reflectionHelper = new RuntimeReflectionHelper();
         private Expression ToGraphExpression(NewExpression newExpr, IMap<Expression, Expression> map)
         {
             var fields =
                     (newExpr.Constructor.GetParameters()
                         .Zip(newExpr.Arguments,
-                            (param, argExpr) => (Name:param.Name, Expression:ToGraphExpression(argExpr, map)))).ToArray()
+                            (param, argExpr) => (Name: param.Name, Expression: ToGraphExpression(argExpr, map)))).ToArray()
                 ;
             var typeInfo = reflectionHelper.CreateType(fields.Select(p => new KeyValuePair<string, Type>(p.Name, p.Expression.Type)));
             var bindings =
@@ -283,13 +300,33 @@ namespace Xania.Graphs.Linq
 
         private Expression ToGraphExpression(MethodCallExpression methodCall, IMap<Expression, Expression> map)
         {
-            var instanceX = ToGraphExpression(methodCall.Object, map);
-            var arguments = methodCall.Arguments.Select(a => ToGraphExpression(a, map)).ToArray();
             var methodInfo = methodCall.Method;
+
+
+            if (IsSelectMany(methodCall))
+            {
+                var outerSelectMany = methodCall;
+                var sourceExpr = methodCall.Arguments[0];
+                var sourceGraphExpr = ToGraphExpression(methodCall.Arguments[0], map);
+                var sourceType = sourceGraphExpr.Type.GetItemType();
+
+
+                var resultMap =  new SelectManyResultMap(sourceExpr.Type.GetItemType(), sourceGraphExpr.Type.GetItemType());
+                var collectionSelector = ToGraphExpression(methodCall.Arguments[1], resultMap);
+                var resultSelector = ToGraphExpression(methodCall.Arguments[2], resultMap);
+            }
+
+            var arguments = methodCall.Arguments.Select(a => ToGraphExpression(a, map)).ToArray();
+            var instanceX = ToGraphExpression(methodCall.Object, map);
             var argTypes = arguments.Select(a => a.Type).ToArray();
             var overload = methodInfo.DeclaringType.FindOverload(methodInfo.Name, argTypes);
 
             return Expression.Call(instanceX, overload, arguments);
+
+            bool IsSelectMany(MethodCallExpression m)
+            {
+                return m.Method.Name.Equals("SelectMany") && m.Arguments.Count == 3;
+            }
         }
 
         private static (MemberInfo[] members, Expression instanceExpr) Split(MemberExpression memberExpression)

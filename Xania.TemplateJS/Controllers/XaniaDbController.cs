@@ -98,6 +98,11 @@ namespace Xania.TemplateJS.Controllers
             throw new InvalidOperationException("is not enumerable type " + enumerableType);
         }
 
+        public TypeInfo CreateType(IEnumerable<KeyValuePair<string, Type>> fields)
+        {
+            throw new NotImplementedException();
+        }
+
 
         private static readonly IDictionary<TypeDesc, TypeInfo> _anonymousTypes = new Dictionary<TypeDesc, TypeInfo>();
         private static readonly object _lockObject = new object();
