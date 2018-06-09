@@ -154,7 +154,9 @@ namespace Xania.Graphs.Linq
             var func = Expression.Lambda(graphExpression).Compile();
 
             var result = func.DynamicInvoke();
+            Console.WriteLine("GraphQueryProfile.Execute result:");
             Console.WriteLine(JsonConvert.SerializeObject(result, Formatting.Indented));
+            Console.WriteLine("********************************************");
             var mapper = new Mapper(new GraphMappingResolver(_graph));
             return mapper.MapTo<TResult>(result);
         }
@@ -243,8 +245,16 @@ namespace Xania.Graphs.Linq
                 }
 
                 var edgeLabel = member.Name;
-                return gx.OutE(_graph.Edges).Where((Edge e) => e.Label.Equals(edgeLabel, ignore))
-                    .InV(_graph.Vertices).Where((Vertex v) => v.Label.Equals(member.DeclaringType.Name, ignore));
+                var vertexLabel = member.DeclaringType.Name;
+
+                var edgeParam = Expression.Parameter(typeof(Edge), "edge");
+                var edgeLambda = edgeParam.Property(nameof(Edge.Label)).StringEqual(edgeLabel).ToLambda<Func<Edge, bool>>(edgeParam);
+
+                var vertexParam = Expression.Parameter(typeof(Vertex), "vertex");
+                var vertexLambda = vertexParam.Property(nameof(Structure.Vertex.Label)).StringEqual(vertexLabel).ToLambda<Func<Vertex, bool>>(vertexParam);
+
+                return gx.OutE(_graph.Edges).Where(edgeLambda)
+                    .InV(_graph.Vertices).Where(vertexLambda);
             }
             else
             {

@@ -144,7 +144,7 @@ namespace Xania.Graphs.Runtime.Tests
                 where p.Id == 3
                 from f in p.Friends
                 from g in f.Friends
-                select p;
+                select g;
             Console.WriteLine(JsonConvert.SerializeObject(friendOfDistantFriends, Formatting.Indented));
         }
 

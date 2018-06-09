@@ -33,16 +33,7 @@ namespace Xania.Graphs.Linq
 
             var relations = _graph.Edges.Where(edge => edge.OutV == _vertex.Id);
             foreach (var edge in relations)
-                yield return new KeyValuePair<string, object>(edge.Label, new Func<Type, object>(t =>
-                {
-                    if (t.IsEnumerable())
-                    {
-                        var itemType = t.GetItemType();
-                        return new[] { Proxy(itemType, edge.InV) };
-                    }
-
-                    return Proxy(t, edge.InV);
-                }));
+                yield return new KeyValuePair<string, object>(edge.Label, new { Id = edge.InV });
         }
 
         public static object ToClType(GraphValue result)

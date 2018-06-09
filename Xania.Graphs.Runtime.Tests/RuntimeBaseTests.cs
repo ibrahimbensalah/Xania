@@ -112,7 +112,7 @@ namespace Xania.Graphs.Runtime.Tests
                 Tags = new[] { "Programmer", "Entrepeneur" },
                 Friends = { friend }
             };
-            friend.Friends.Add(new Person { Id = 4, Friend = new Person { Id = 5 } });
+            friend.Friends.Add(new Person { Id = 4, FirstName = "test", Friend = new Person { Id = 5 } });
 
             return Graph.FromObject(friend, ibrahim);
         }
