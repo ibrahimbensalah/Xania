@@ -8,12 +8,6 @@ namespace Xania.Graphs.Linq
 {
     public static class Graphyable
     {
-        public static Expression OutE(this Expression expression, IQueryable<Edge> edges, string edgeLabel)
-        {
-            var ignore = StringComparison.CurrentCultureIgnoreCase;
-            return OutE(expression, edges).Where((Edge e) => e.Label.Equals(edgeLabel, ignore));
-        }
-
         public static Expression OutE(this Expression expression, IQueryable<Edge> edges)
         {
             if (expression.Type == typeof(Vertex))

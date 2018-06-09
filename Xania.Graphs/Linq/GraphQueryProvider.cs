@@ -22,7 +22,7 @@ namespace Xania.Graphs.Linq
             TypeMap = typeMap;
         }
 
-        public IDictionary<ParameterExpression, ParameterExpression> ExpressionMap { get; } = new Dictionary<ParameterExpression, ParameterExpression>();
+        private IDictionary<ParameterExpression, ParameterExpression> ExpressionMap { get; } = new Dictionary<ParameterExpression, ParameterExpression>();
 
         public Expression GetGraphExpression(Expression key)
         {
@@ -32,7 +32,7 @@ namespace Xania.Graphs.Linq
                     return value;
 
                 var graphType = TypeMap.GetGraphType(param.Type);
-                var graphParam = Expression.Parameter(graphType, param.Name);
+                var graphParam = Expression.Parameter(graphType, "g_"+param.Name);
                 ExpressionMap.Add(param, graphParam);
                 return graphParam;
             }
@@ -235,10 +235,16 @@ namespace Xania.Graphs.Linq
             if (members.Length == 0)
             {
                 var member = memberExpr.Member;
-                return
-                    ToGraphExpression(memberExpr.Expression, expressionMap)
-                        .OutE(_graph.Edges, member.Name)
-                        .InV(_graph.Vertices).Where((Vertex v) => v.Label.Equals(member.DeclaringType.Name, ignore));
+                var gx = ToGraphExpression(memberExpr.Expression, expressionMap);
+                var property = gx.Type.GetProperty(member.Name);
+                if (property != null)
+                {
+                    return Expression.Property(gx, property);
+                }
+
+                var edgeLabel = member.Name;
+                return gx.OutE(_graph.Edges).Where((Edge e) => e.Label.Equals(edgeLabel, ignore))
+                    .InV(_graph.Vertices).Where((Vertex v) => v.Label.Equals(member.DeclaringType.Name, ignore));
             }
             else
             {
@@ -380,35 +386,12 @@ namespace Xania.Graphs.Linq
         {
             var methodInfo = methodCall.Method;
 
-            if (IsSelectMany(methodCall))
-            {
-                var sourceType = methodCall.Method.GetGenericArguments()[0];
-
-                var outerSelectMany = methodCall;
-                var sourceExpr = methodCall.Arguments[0];
-                var sourceGraphExpr = ToGraphExpression(methodCall.Arguments[0], expressionMap);
-                var graphSourceType = sourceGraphExpr.Type.GetItemType();
-
-
-                // expressionMap.TypeMap.Dict.Add(sourceType, graphSourceType);
-                var collectionSelector = ToGraphExpression(methodCall.Arguments[1], expressionMap);
-                var resultSelector = ToGraphExpression(methodCall.Arguments[2], expressionMap);
-
-                var resultType = resultSelector.Type.GenericTypeArguments[0].GenericTypeArguments[2];
-
-            }
-
             var arguments = methodCall.Arguments.Select(a => ToGraphExpression(a, expressionMap)).ToArray();
             var instanceX = ToGraphExpression(methodCall.Object, expressionMap);
             var argTypes = arguments.Select(a => a.Type).ToArray();
             var overload = methodInfo.DeclaringType.FindOverload(methodInfo.Name, argTypes);
 
             return Expression.Call(instanceX, overload, arguments);
-
-            bool IsSelectMany(MethodCallExpression m)
-            {
-                return m.Method.Name.Equals("SelectMany") && m.Arguments.Count == 3;
-            }
         }
 
         private static (MemberInfo[] members, Expression instanceExpr) Split(MemberExpression memberExpression)
