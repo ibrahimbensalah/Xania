@@ -9,51 +9,119 @@ using Xania.Graphs.Gremlin;
 using Xania.Graphs.Structure;
 using Xania.Reflection;
 using Xania.ObjectMapper;
+using ParameterExpression = System.Linq.Expressions.ParameterExpression;
 
 namespace Xania.Graphs.Linq
 {
-    public interface IMap<in TKey, out TValue>
+    public class GraphExpressionMap
     {
-        TValue GetValue(TKey key, out bool found);
+        public GraphTypeMap TypeMap { get; }
+
+        public GraphExpressionMap(GraphTypeMap typeMap)
+        {
+            TypeMap = typeMap;
+        }
+
+        public IDictionary<ParameterExpression, ParameterExpression> ExpressionMap { get; } = new Dictionary<ParameterExpression, ParameterExpression>();
+
+        public Expression GetGraphExpression(Expression key)
+        {
+            if (key is ParameterExpression param)
+            {
+                if (ExpressionMap.TryGetValue(param, out var value))
+                    return value;
+
+                var graphType = TypeMap.GetGraphType(param.Type);
+                var graphParam = Expression.Parameter(graphType, param.Name);
+                ExpressionMap.Add(param, graphParam);
+                return graphParam;
+            }
+
+            return null;
+        }
     }
 
-    public class SelectManyResultMap : IMap<Expression, Expression>
+    public class GraphTypeMap
     {
-        public Type SourceParamType { get; }
-        public Type GraphParamType { get; }
+        private IDictionary<Type, Type> Dict { get; } = new Dictionary<Type, Type>();
 
-        public SelectManyResultMap(Type sourceParamType, Type graphParamType)
+        public Type GetGraphType(Type key)
         {
-            SourceParamType = sourceParamType;
-            GraphParamType = graphParamType;
+            if (Dict.TryGetValue(key, out var value))
+                return value;
+
+            var graphType = ToGraphType(key);
+            Dict.Add(key, graphType);
+            return graphType;
         }
 
-        public Expression GetValue(Expression key, out bool found)
+        public void Map(Type from, Type to)
         {
-            throw new NotImplementedException();
+            if (!Dict.TryGetValue(from, out var existing))
+                Dict.Add(from, to);
+            else if (existing != to)
+            {
+                throw new InvalidOperationException();
+            }
+        }
+
+        private Type ToGraphType(Type itemType)
+        {
+            if (itemType.IsPrimitive())
+                return typeof(GraphPrimitive);
+            if (itemType.IsComplexType())
+                return typeof(GraphValue);
+            if (itemType.IsAnonymousType())
+                throw new InvalidOperationException($"ToGraphType {itemType.Name}");
+            else
+                return typeof(Vertex);
+        }
+
+        public bool TryGetValue(Type type, out Type graphType)
+        {
+            return Dict.TryGetValue(type, out graphType);
         }
     }
 
-    public class ExpressionMap<TValue> : IMap<Expression, TValue>
-    {
-        private readonly Dictionary<Expression, TValue> _dict;
+    //public class SelectManyResultMap : IMap<Expression, Expression>
+    //{
+    //    public Type SourceType { get; }
+    //    public Type GraphSourceType { get; }
+    //    public IDictionary<ParameterExpression, ParameterExpression> Dict { get; }
 
-        public ExpressionMap(Dictionary<Expression, TValue> dict)
-        {
-            _dict = dict;
-        }
+    //    public SelectManyResultMap(Type sourceType, Type graphSourceType)
+    //    {
+    //        SourceType = sourceType;
+    //        GraphSourceType = graphSourceType;
+    //        Dict = new Dictionary<ParameterExpression, ParameterExpression>();
+    //    }
 
-        public void Add(Expression key, TValue value)
-        {
-            _dict.Add(key, value);
-        }
+    //    public Expression GetValue(Expression key)
+    //    {
+    //        if (key is ParameterExpression parameter)
+    //        {
+    //            if (Dict.TryGetValue(parameter, out var result))
+    //                return result;
 
-        public TValue GetValue(Expression key, out bool found)
-        {
-            found = _dict.TryGetValue(key, out var result);
-            return result;
-        }
-    }
+    //            var graphParam = Expression.Parameter(ToGraphType(parameter.Type), parameter.Name);
+    //            Dict.Add(parameter, graphParam);
+
+    //            return graphParam;
+    //        }
+
+    //        return null;
+    //    }
+
+    //    private Type ToGraphType(Type itemType)
+    //    {
+    //        if (itemType.IsPrimitive())
+    //            return typeof(GraphPrimitive);
+    //        if (itemType.IsComplexType())
+    //            return typeof(GraphValue);
+    //        else
+    //            return typeof(Vertex);
+    //    }
+    //}
 
     public class GraphQueryProvider : IQueryProvider
     {
@@ -81,7 +149,7 @@ namespace Xania.Graphs.Linq
 
         public TResult Execute<TResult>(Expression expression)
         {
-            var graphExpression = ToGraphExpression(expression, null);
+            var graphExpression = ToGraphExpression(expression, new GraphExpressionMap(new GraphTypeMap()));
             Console.WriteLine(graphExpression);
             var func = Expression.Lambda(graphExpression).Compile();
 
@@ -91,58 +159,67 @@ namespace Xania.Graphs.Linq
             return mapper.MapTo<TResult>(result);
         }
 
-        public TResult Execute<TResult>(Expression expression, IMap<Expression, Expression> dict)
+        public TResult Execute<TResult>(Expression expression, GraphExpressionMap expressionMap)
         {
-            var graphExpression = ToGraphExpression(expression, dict);
+            var graphExpression = ToGraphExpression(expression, expressionMap);
             var func = Expression.Lambda<Func<TResult>>(graphExpression).Compile();
             return func();
         }
 
-        public Expression ToGraphExpression(Expression expression, IMap<Expression, Expression> map)
+        public Expression ToGraphExpression(Expression expression, GraphExpressionMap expressionMap)
         {
             if (expression is null)
                 return null;
 
-            if (map != null)
-            {
-                var result = map.GetValue(expression, out var found);
-                if (found) return result;
-            }
+            var result = expressionMap?.GetGraphExpression(expression);
+            if (result != null) return result;
 
             switch (expression)
             {
                 case MethodCallExpression methodCall:
-                    return ToGraphExpression(methodCall, map);
+                    return ToGraphExpression(methodCall, expressionMap);
                 case ConstantExpression cons:
                     return ToGraphExpression(cons);
                 case UnaryExpression unary:
-                    return ToGraphExpression(unary.Operand, map);
+                    return ToGraphExpression(unary.Operand, expressionMap);
                 case LambdaExpression lambda:
-                    return ToGraphExpression(lambda);
+                    return ToGraphExpression(lambda, expressionMap);
                 case BinaryExpression binary:
-                    return ToGraphExpression(binary, map);
+                    return ToGraphExpression(binary, expressionMap);
                 case MemberExpression member:
-                    return ToGraphExpression(member, map);
+                    return ToGraphExpression(member, expressionMap);
                 case NewExpression newExpr:
-                    return ToGraphExpression(newExpr, map);
+                    return ToGraphExpression(newExpr, expressionMap);
             }
 
             throw new NotSupportedException(expression.GetType().Name);
         }
 
         private readonly RuntimeReflectionHelper reflectionHelper = new RuntimeReflectionHelper();
-        private Expression ToGraphExpression(NewExpression newExpr, IMap<Expression, Expression> map)
+        private Expression ToGraphExpression(NewExpression newExpr, GraphExpressionMap expressionMap)
         {
             var fields =
-                    (newExpr.Constructor.GetParameters()
+                    newExpr.Constructor.GetParameters()
                         .Zip(newExpr.Arguments,
-                            (param, argExpr) => (Name: param.Name, Expression: ToGraphExpression(argExpr, map)))).ToArray()
+                            (param, argExpr) => (Name: param.Name,
+                                Expression: ToGraphExpression(argExpr, expressionMap))).ToArray()
                 ;
-            var typeInfo = reflectionHelper.CreateType(fields.Select(p => new KeyValuePair<string, Type>(p.Name, p.Expression.Type)));
+
+            Type typeInfo;
+                if (expressionMap.TypeMap.TryGetValue(newExpr.Type, out var existing))
+                    typeInfo = existing;
+            else
+            {
+                typeInfo = reflectionHelper.CreateType(
+                    fields.Select(p => new KeyValuePair<string, Type>(p.Name, p.Expression.Type))
+                );
+                expressionMap.TypeMap.Map(newExpr.Type, typeInfo);
+            }
+
             var bindings =
                 from property in typeInfo.GetProperties()
                 join field in fields on property.Name equals field.Name
-                select Expression.Bind(property, field.Expression);
+                select Expression.Bind(property, Convert(field.Expression, property.PropertyType));
 
             return Expression.MemberInit(
                 Expression.New(typeInfo),
@@ -150,7 +227,7 @@ namespace Xania.Graphs.Linq
             );
         }
 
-        private Expression ToGraphExpression(MemberExpression memberExpr, IMap<Expression, Expression> map)
+        private Expression ToGraphExpression(MemberExpression memberExpr, GraphExpressionMap expressionMap)
         {
             var ignore = StringComparison.InvariantCultureIgnoreCase;
             var (members, instanceExpr) = Split(memberExpr);
@@ -158,15 +235,14 @@ namespace Xania.Graphs.Linq
             if (members.Length == 0)
             {
                 var member = memberExpr.Member;
-                // var outV = ToGraphExpression(memberExpr.Expression, map); // .Where((Vertex v) => v.Label.Equals(member.Name, StringComparison.InvariantCultureIgnoreCase));
                 return
-                    ToGraphExpression(memberExpr.Expression, map)
-                        .OutE(_graph.Edges).Where((Edge e) => e.Label.Equals(member.Name, ignore))
+                    ToGraphExpression(memberExpr.Expression, expressionMap)
+                        .OutE(_graph.Edges, member.Name)
                         .InV(_graph.Vertices).Where((Vertex v) => v.Label.Equals(member.DeclaringType.Name, ignore));
             }
             else
             {
-                var vertexExpr = ToGraphExpression(instanceExpr, map);
+                var vertexExpr = ToGraphExpression(instanceExpr, expressionMap);
 
                 if (members.Length == 1)
                 {
@@ -206,10 +282,10 @@ namespace Xania.Graphs.Linq
             }
         }
 
-        private Expression ToGraphExpression(BinaryExpression binary, IMap<Expression, Expression> map)
+        private Expression ToGraphExpression(BinaryExpression binary, GraphExpressionMap expressionMap)
         {
-            var left = ToGraphExpression(binary.Left, map);
-            var right = ToGraphExpression(binary.Right, map);
+            var left = ToGraphExpression(binary.Left, expressionMap);
+            var right = ToGraphExpression(binary.Right, expressionMap);
 
             if (left.Type == right.Type)
                 return Expression.MakeBinary(binary.NodeType, left, right);
@@ -242,6 +318,9 @@ namespace Xania.Graphs.Linq
 
         private Expression Convert(Expression expression, Type type)
         {
+            if (expression.Type == type)
+                return expression;
+
             if (expression is ConstantExpression cons)
             {
                 var converter = TypeDescriptor.GetConverter(type);
@@ -249,28 +328,27 @@ namespace Xania.Graphs.Linq
                 return Expression.Constant(converted);
             }
 
+            if (expression.Type == typeof(IEnumerable<GraphValue>))
+            {
+                if (type == typeof(IEnumerable<GraphPrimitive>))
+                {
+                    return expression.OfType<GraphPrimitive>();
+                }
+
+                if (type == typeof(GraphPrimitive))
+                {
+                    return expression.OfType<GraphPrimitive>().FirstOrDefault();
+                }
+            }
+
             throw new NotImplementedException($"Convert {expression.Type.Name} -> {type.Name}");
         }
 
-        private Expression ToGraphExpression(LambdaExpression lambda)
+        private Expression ToGraphExpression(LambdaExpression lambda, GraphExpressionMap expressionMap)
         {
-            var dict = lambda.Parameters.ToDictionary(
-                p => p as Expression,
-                p => Expression.Parameter(ToGraphType(p.Type), p.Name)
-            );
-            var map = new ExpressionMap<ParameterExpression>(dict);
-            var body = ToGraphExpression(lambda.Body, map);
-            return Expression.Quote(Expression.Lambda(body, dict.Values));
-        }
-
-        private Type ToGraphType(Type itemType)
-        {
-            if (itemType.IsPrimitive())
-                return typeof(GraphPrimitive);
-            if (itemType.IsComplexType())
-                return typeof(GraphValue);
-            else
-                return typeof(Vertex);
+            var parameters = lambda.Parameters.Select(expressionMap.GetGraphExpression).Cast<ParameterExpression>().ToArray();
+            var body = ToGraphExpression(lambda.Body, expressionMap);
+            return Expression.Quote(Expression.Lambda(body, parameters));
         }
 
         private Expression ToGraphExpression(ConstantExpression cons)
@@ -298,26 +376,30 @@ namespace Xania.Graphs.Linq
             throw new NotSupportedException(cons.Type.Name);
         }
 
-        private Expression ToGraphExpression(MethodCallExpression methodCall, IMap<Expression, Expression> map)
+        private Expression ToGraphExpression(MethodCallExpression methodCall, GraphExpressionMap expressionMap)
         {
             var methodInfo = methodCall.Method;
 
-
             if (IsSelectMany(methodCall))
             {
+                var sourceType = methodCall.Method.GetGenericArguments()[0];
+
                 var outerSelectMany = methodCall;
                 var sourceExpr = methodCall.Arguments[0];
-                var sourceGraphExpr = ToGraphExpression(methodCall.Arguments[0], map);
-                var sourceType = sourceGraphExpr.Type.GetItemType();
+                var sourceGraphExpr = ToGraphExpression(methodCall.Arguments[0], expressionMap);
+                var graphSourceType = sourceGraphExpr.Type.GetItemType();
 
 
-                var resultMap =  new SelectManyResultMap(sourceExpr.Type.GetItemType(), sourceGraphExpr.Type.GetItemType());
-                var collectionSelector = ToGraphExpression(methodCall.Arguments[1], resultMap);
-                var resultSelector = ToGraphExpression(methodCall.Arguments[2], resultMap);
+                // expressionMap.TypeMap.Dict.Add(sourceType, graphSourceType);
+                var collectionSelector = ToGraphExpression(methodCall.Arguments[1], expressionMap);
+                var resultSelector = ToGraphExpression(methodCall.Arguments[2], expressionMap);
+
+                var resultType = resultSelector.Type.GenericTypeArguments[0].GenericTypeArguments[2];
+
             }
 
-            var arguments = methodCall.Arguments.Select(a => ToGraphExpression(a, map)).ToArray();
-            var instanceX = ToGraphExpression(methodCall.Object, map);
+            var arguments = methodCall.Arguments.Select(a => ToGraphExpression(a, expressionMap)).ToArray();
+            var instanceX = ToGraphExpression(methodCall.Object, expressionMap);
             var argTypes = arguments.Select(a => a.Type).ToArray();
             var overload = methodInfo.DeclaringType.FindOverload(methodInfo.Name, argTypes);
 
