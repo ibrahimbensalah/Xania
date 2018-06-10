@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
@@ -13,6 +14,7 @@ using Xania.Graphs.Structure;
 using Xania.Invoice.Domain;
 using Xunit;
 using Xunit.Abstractions;
+using GraphObject = Xania.Graphs.Structure.GraphObject;
 using Vertex = Xania.Graphs.Structure.Vertex;
 
 namespace Xania.Graphs.EntityFramework.Tests
@@ -82,7 +84,7 @@ namespace Xania.Graphs.EntityFramework.Tests
                                     foreach (var item in list.Items)
                                     {
                                         var itemId = Guid.NewGuid().ToString();
-                                        db.Items.Add(new Relational.Item { Id = itemId, ObjectId = objectId });
+                                        db.Items.Add(new Relational.Item { ValueId = itemId, ListId = objectId });
 
                                         valuesStack.Push((itemId, item));
                                     }
@@ -156,7 +158,7 @@ namespace Xania.Graphs.EntityFramework.Tests
                     (from v in vertices
                         select new
                         {
-                            Id = v.Id,
+                            v.Id,
                             Count = v.Properties.Count()
                         }
                     ).ToArray();
@@ -176,6 +178,86 @@ namespace Xania.Graphs.EntityFramework.Tests
             method.ContainsGenericParameters.Should().BeFalse();
             method.Should().NotBeNull();
         }
+
+        [Fact]
+        public void InitGraphTest()
+        {
+            using (var db = new GraphDbContext(_loggerFactory))
+            {
+                var g = new Graph();
+                var values = new Dictionary<string, GraphValue>();
+                foreach (var v in db.Vertices.AsNoTracking())
+                {
+                    var vertex = new Vertex(v.Label) { Id = v.Id };
+                    g.Vertices.Add(vertex);
+                    values.Add(v.Id, vertex);
+                }
+
+                foreach(var prim in db.Primitives.AsNoTracking())
+                    values.Add(prim.Id, new GraphPrimitive(prim.Value));
+
+                var queue = new Queue<(GraphValue, string)>();
+                foreach (var prop in db.Properties.AsNoTracking())
+                {
+                    GraphObject gobject;
+                    if (values.TryGetValue(prop.ObjectId, out var exiting))
+                    {
+                        gobject = exiting as GraphObject;
+                        if (gobject == null)
+                            throw new InvalidOperationException();
+                    }
+                    else
+                    {
+                        gobject = new GraphObject();
+                        values.Add(prop.ObjectId, gobject);
+                    }
+                    queue.Enqueue((gobject, prop.ValueId));
+
+                    //if (!values.TryGetValue(prop.ValueId, out var value))
+                    //{
+                    //    properties.Enqueue(prop);
+                    //}
+                    //else
+                    //{
+                    //    gobject.Properties.Add(new Structure.Property(prop.Name, value));
+                    //}
+                }
+
+                foreach (var item in db.Items.AsNoTracking())
+                {
+                    GraphList glist;
+                    if (values.TryGetValue(item.ListId, out var exiting))
+                    {
+                        glist = exiting as GraphList;
+                        if (glist == null)
+                            throw new InvalidOperationException();
+                    }
+                    else
+                    {
+                        glist = new GraphList();
+                        values.Add(item.ListId, glist);
+                    }
+
+                    queue.Enqueue((glist, item.ValueId));
+                    //if (!values.TryGetValue(item.Id, out var value))
+                    //{
+                    //    items.Enqueue(item);
+                    //}
+                    //else
+                    //{
+                    //    glist.Items.Add(value);
+                    //}
+                }
+            }
+        }
     }
 
+    public static class HelperExtensions
+    {
+        public static TValue AddAndReturn<TKey, TValue>(this IDictionary<TKey, TValue> dict, TKey key, TValue value)
+        {
+            dict.Add(key, value);
+            return value;
+        }
+    }
 }

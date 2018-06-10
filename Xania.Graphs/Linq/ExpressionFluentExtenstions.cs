@@ -90,6 +90,11 @@ namespace Xania.Graphs.Linq
             return Expression.Lambda<TDelegate>(body, parameters);
         }
 
+        public static LambdaExpression ToLambda(this Expression body, params ParameterExpression[] parameters)
+        {
+            return Expression.Lambda(body, parameters);
+        }
+
         public static Expression NotNull(this Expression expr)
         {
             return Expression.NotEqual(expr, Expression.Constant(null));

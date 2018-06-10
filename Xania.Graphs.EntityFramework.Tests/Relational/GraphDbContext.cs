@@ -1,4 +1,7 @@
+using System;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
+using Microsoft.EntityFrameworkCore.ValueGeneration;
 using Microsoft.Extensions.Logging;
 
 namespace Xania.Graphs.EntityFramework.Tests.Relational
@@ -27,9 +30,35 @@ namespace Xania.Graphs.EntityFramework.Tests.Relational
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            // modelBuilder.Entity<Vertex>().HasMany(e=>e.)
             modelBuilder.Entity<Property>()
                 .HasKey(e => new { e.ObjectId, e.Name });
+
+            modelBuilder.Entity<Item>()
+                .HasKey(e => new { e.ListId, e.ValueId });
+
+            TrackLastUpdate<Vertex>(modelBuilder);
+            TrackLastUpdate<Property>(modelBuilder);
+            TrackLastUpdate<Primitive>(modelBuilder);
+            TrackLastUpdate<Item>(modelBuilder);
         }
+
+        private void TrackLastUpdate<T>(ModelBuilder modelBuilder) where T : class
+        {
+            modelBuilder.Entity<T>()
+                .Property<DateTimeOffset>("LastUpdated")
+                .HasValueGenerator(typeof(CurrentTimeGenerator))
+                ;
+
+        }
+    }
+
+    public class CurrentTimeGenerator: ValueGenerator<DateTimeOffset>
+    {
+        public override DateTimeOffset Next(EntityEntry entry)
+        {
+            return DateTimeOffset.UtcNow;
+        }
+
+        public override bool GeneratesTemporaryValues { get; } = false;
     }
 }

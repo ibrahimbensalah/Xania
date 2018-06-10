@@ -248,10 +248,10 @@ namespace Xania.Graphs.Linq
                 var vertexLabel = member.DeclaringType.Name;
 
                 var edgeParam = Expression.Parameter(typeof(Edge), "edge");
-                var edgeLambda = edgeParam.Property(nameof(Edge.Label)).StringEqual(edgeLabel).ToLambda<Func<Edge, bool>>(edgeParam);
+                var edgeLambda = edgeParam.Property(nameof(Edge.Label)).StringEqual(edgeLabel).ToLambda(edgeParam);
 
                 var vertexParam = Expression.Parameter(typeof(Vertex), "vertex");
-                var vertexLambda = vertexParam.Property(nameof(Structure.Vertex.Label)).StringEqual(vertexLabel).ToLambda<Func<Vertex, bool>>(vertexParam);
+                var vertexLambda = vertexParam.Property(nameof(Structure.Vertex.Label)).StringEqual(vertexLabel).ToLambda(vertexParam);
 
                 return gx.OutE(_graph.Edges).Where(edgeLambda)
                     .InV(_graph.Vertices).Where(vertexLambda);

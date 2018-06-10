@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Runtime.Remoting.Proxies;
 using FluentAssertions;
 using Newtonsoft.Json;
 using NUnit.Framework;
@@ -143,9 +144,10 @@ namespace Xania.Graphs.Runtime.Tests
                 from p in People
                 where p.Id == 3
                 from f in p.Friends
-                from g in f.Friends
-                select g;
-            Console.WriteLine(JsonConvert.SerializeObject(friendOfDistantFriends, Formatting.Indented));
+                select f;
+
+            var proxyJsonConverter = new ProxyJsonConverter();
+            Console.WriteLine(JsonConvert.SerializeObject(friendOfDistantFriends, Formatting.Indented, proxyJsonConverter));
         }
 
         [Test]
@@ -241,5 +243,23 @@ namespace Xania.Graphs.Runtime.Tests
             Console.WriteLine(JsonConvert.SerializeObject(view, Formatting.Indented));
         }
 
+    }
+
+    public class ProxyJsonConverter : JsonConverter
+    {
+        public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
+        {
+            writer.WriteValue(value.ToString());
+        }
+
+        public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override bool CanConvert(Type objectType)
+        {
+            return typeof(RealProxy).IsAssignableFrom(objectType);
+        }
     }
 }

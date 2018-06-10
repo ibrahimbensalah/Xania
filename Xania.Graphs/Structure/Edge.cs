@@ -19,7 +19,7 @@ namespace Xania.Graphs.Structure
 
         public override string ToString()
         {
-            return $"({OutV}) -> [{Label}({Id})] -> ({InV})";
+            return $"({OutV}) --[{Label}({Id})]-> ({InV})";
         }
     }
 }
