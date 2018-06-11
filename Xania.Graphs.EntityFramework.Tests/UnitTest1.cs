@@ -84,7 +84,7 @@ namespace Xania.Graphs.EntityFramework.Tests
                                     foreach (var item in list.Items)
                                     {
                                         var itemId = Guid.NewGuid().ToString();
-                                        db.Items.Add(new Relational.Item { ValueId = itemId, ListId = objectId });
+                                        db.Items.Add(new Relational.Item { ItemId = itemId, ListId = valueId });
 
                                         valuesStack.Push((itemId, item));
                                     }
@@ -180,12 +180,19 @@ namespace Xania.Graphs.EntityFramework.Tests
         }
 
         [Fact]
-        public void InitGraphTest()
+        public void LoadGraphTest()
         {
             using (var db = new GraphDbContext(_loggerFactory))
             {
                 var g = new Graph();
                 var values = new Dictionary<string, GraphValue>();
+
+                foreach (var prim in db.Primitives.AsNoTracking())
+                    values.Add(prim.Id, new GraphPrimitive(prim.Value));
+
+                foreach (var listId in db.Items.Select(p => p.ListId).Distinct().AsNoTracking())
+                    values.Add(listId, new GraphList());
+
                 foreach (var v in db.Vertices.AsNoTracking())
                 {
                     var vertex = new Vertex(v.Label) { Id = v.Id };
@@ -193,60 +200,36 @@ namespace Xania.Graphs.EntityFramework.Tests
                     values.Add(v.Id, vertex);
                 }
 
-                foreach(var prim in db.Primitives.AsNoTracking())
-                    values.Add(prim.Id, new GraphPrimitive(prim.Value));
-
-                var queue = new Queue<(GraphValue, string)>();
-                foreach (var prop in db.Properties.AsNoTracking())
+                foreach (var propertyGroup in db.Properties.GroupBy(p => p.ObjectId).AsNoTracking())
                 {
-                    GraphObject gobject;
-                    if (values.TryGetValue(prop.ObjectId, out var exiting))
+                    var objectId = propertyGroup.Key;
+                    var entry = values.TryGetValue(objectId, out var value)
+                        ? value
+                        : values.AddAndReturn(objectId, new GraphObject());
+
+                    if (entry is GraphObject obj)
                     {
-                        gobject = exiting as GraphObject;
-                        if (gobject == null)
-                            throw new InvalidOperationException();
+                        foreach (var property in propertyGroup)
+                        {
+                            obj.Properties.Add(new Structure.Property(property.Name, values[property.ValueId]));
+                        }
                     }
                     else
                     {
-                        gobject = new GraphObject();
-                        values.Add(prop.ObjectId, gobject);
+                        throw new InvalidOperationException();
                     }
-                    queue.Enqueue((gobject, prop.ValueId));
-
-                    //if (!values.TryGetValue(prop.ValueId, out var value))
-                    //{
-                    //    properties.Enqueue(prop);
-                    //}
-                    //else
-                    //{
-                    //    gobject.Properties.Add(new Structure.Property(prop.Name, value));
-                    //}
                 }
 
                 foreach (var item in db.Items.AsNoTracking())
                 {
-                    GraphList glist;
-                    if (values.TryGetValue(item.ListId, out var exiting))
+                    if (values.TryGetValue(item.ListId, out var existing) && existing is GraphList glist)
                     {
-                        glist = exiting as GraphList;
-                        if (glist == null)
-                            throw new InvalidOperationException();
+                        glist.Items.Add(values[item.ItemId]);
                     }
                     else
                     {
-                        glist = new GraphList();
-                        values.Add(item.ListId, glist);
+                        throw new InvalidOperationException();
                     }
-
-                    queue.Enqueue((glist, item.ValueId));
-                    //if (!values.TryGetValue(item.Id, out var value))
-                    //{
-                    //    items.Enqueue(item);
-                    //}
-                    //else
-                    //{
-                    //    glist.Items.Add(value);
-                    //}
                 }
             }
         }

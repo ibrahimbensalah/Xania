@@ -34,7 +34,7 @@ namespace Xania.Graphs.EntityFramework.Tests.Relational
                 .HasKey(e => new { e.ObjectId, e.Name });
 
             modelBuilder.Entity<Item>()
-                .HasKey(e => new { e.ListId, e.ValueId });
+                .HasKey(e => new { e.ListId, ValueId = e.ItemId });
 
             TrackLastUpdate<Vertex>(modelBuilder);
             TrackLastUpdate<Property>(modelBuilder);
