@@ -47,25 +47,7 @@ namespace Xania.Graphs.EntityFramework.Tests
         public void InitializeDb()
         {
             using (var db = new GraphDbContext(_loggerFactory))
-                db.Store(GetGraph());
-        }
-
-        private static Graph GetGraph()
-        {
-            return Graph.FromObject(
-                new Person
-                {
-                    Id = 1,
-                    Name = "Person 1",
-                    Friends = new[] {new Person {Id = 2, Name = "Person 2"}, new Person {Id = 3, Name = "Person 3"}},
-                    Lines = new List<AddressLine>
-                    {
-                        new AddressLine {Value = "Punter 315", Type = AddressType.Street},
-                        new AddressLine {Value = "Amstelveen", Type = AddressType.Location},
-                        new AddressLine {Value = "1186 PW", Type = AddressType.ZipCode},
-                    }
-                }
-            );
+                db.Store(Helper.GetGraph());
         }
 
         [Fact]
@@ -118,18 +100,25 @@ namespace Xania.Graphs.EntityFramework.Tests
         {
             using (var db = new GraphDbContext(_loggerFactory))
             {
+                // setup
                 var g = db.LoadFull();
 
+                // assert vertices count
                 g.Vertices.Should().HaveSameCount(db.Vertices);
+
+                // assert properties count
                 g.Vertices.SelectMany(GetProperties).Select(p => p.Name).Should().BeEquivalentTo(db.Properties.Select(e => e.Name));
 
-                _output.WriteLine(string.Join(" | ",
-                    g.Vertices
-                        .SelectMany(GetProperties)
-                        .Select(p => p.Value)
-                        .OfType<GraphPrimitive>()
-                        .Select(p => p.Value))
-                );
+                // assert edges
+                g.Edges
+                    .Select(e => new
+                    {
+                        InV = g.Vertices.Single(v => v.Id.Equals(e.InV)),
+                        OutV = g.Vertices.Single(v => v.Id.Equals(e.OutV)),
+                    })
+                    .Should()
+                    .HaveSameCount(g.Edges)
+                    ;
             }
         }
 

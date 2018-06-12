@@ -20,6 +20,7 @@ namespace Xania.Graphs.EntityFramework.Tests.Relational
         }
 
         public DbSet<Vertex> Vertices { get; set; }
+        public DbSet<Edge> Edges { get; set; }
         public DbSet<Property> Properties { get; set; }
         public DbSet<Primitive> Primitives { get; set; }
         public DbSet<Item> Items { get; set; }
@@ -44,14 +45,15 @@ namespace Xania.Graphs.EntityFramework.Tests.Relational
             TrackLastUpdate<Property>(modelBuilder);
             TrackLastUpdate<Primitive>(modelBuilder);
             TrackLastUpdate<Item>(modelBuilder);
+            TrackLastUpdate<Edge>(modelBuilder);
         }
 
         private void TrackLastUpdate<T>(ModelBuilder modelBuilder) where T : class
         {
-            modelBuilder.Entity<T>()
-                .Property<DateTimeOffset>("LastUpdated")
-                .HasValueGenerator(typeof(CurrentTimeGenerator))
-                ;
+            //modelBuilder.Entity<T>()
+            //    .Property<DateTimeOffset>("LastUpdated")
+            //    .HasValueGenerator(typeof(CurrentTimeGenerator))
+            //    ;
         }
     }
 
@@ -117,6 +119,12 @@ namespace Xania.Graphs.EntityFramework.Tests.Relational
                         }
                     }
                 }
+
+            }
+
+            foreach (var relation in graph.Edges)
+            {
+                db.Edges.Add(new Edge { Id = relation.Id, InV = relation.InV, OutV = relation.OutV, Label = relation.Label });
             }
 
             db.SaveChanges();
@@ -173,6 +181,11 @@ namespace Xania.Graphs.EntityFramework.Tests.Relational
                 {
                     throw new InvalidOperationException();
                 }
+            }
+
+            foreach (var edge in db.Edges.AsNoTracking())
+            {
+                g.Edges.Add(new Structure.Edge(edge.Label) {Id = edge.Id, InV = edge.InV, OutV = edge.OutV});
             }
 
             return g;

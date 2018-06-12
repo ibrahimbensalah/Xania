@@ -10,5 +10,6 @@ namespace Xania.Graphs.EntityFramework.Tests
         public ICollection<Person> Friends { get; set; }
         public string Name { get; set; }
         public ICollection<AddressLine> Lines { get; set; } = new Collection<AddressLine>();
+        public Person Parent { get; set; }
     }
 }

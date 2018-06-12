@@ -17,6 +17,11 @@ namespace Xania.Graphs.Structure
             Label = name.ToCamelCase();
         }
 
+        public Edge(string label)
+        {
+            Label = label;
+        }
+
         public override string ToString()
         {
             return $"({OutV}) --[{Label}({Id})]-> ({InV})";
