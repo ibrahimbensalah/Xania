@@ -1,5 +1,5 @@
 ﻿using System;
-using Xania.Graphs.Structure;
+using Xania.Graphs.Elements;
 using Xania.ObjectMapper;
 
 namespace Xania.Graphs.Linq

@@ -1,7 +1,7 @@
 ﻿using System;
 using Xania.Graphs.Gremlin;
 
-namespace Xania.Graphs.Structure
+namespace Xania.Graphs.Elements
 {
     public class Edge
     {

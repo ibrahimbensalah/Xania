@@ -1,10 +1,9 @@
 ﻿using System;
-using System.ComponentModel;
 using System.Runtime.Remoting.Messaging;
 using System.Runtime.Remoting.Proxies;
 using System.Security.Permissions;
 
-namespace Xania.Graphs.Structure
+namespace Xania.Graphs
 {
     internal class ShallowProxy : RealProxy
     {

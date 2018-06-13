@@ -4,7 +4,7 @@ using FluentAssertions;
 using Newtonsoft.Json;
 using NUnit.Framework;
 using Xania.Graphs;
-using Xania.Graphs.Structure;
+using Xania.Graphs.Elements;
 
 namespace Xania.CosmosDb.Tests
 {

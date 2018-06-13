@@ -5,7 +5,7 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using Xania.Graphs.Gremlin;
-using Xania.Graphs.Structure;
+using Xania.Graphs.Elements;
 
 namespace Xania.Graphs
 {

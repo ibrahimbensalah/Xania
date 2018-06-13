@@ -9,13 +9,13 @@ using Newtonsoft.Json;
 using Xania.Graphs.EntityFramework.Tests.Relational;
 using Xania.Graphs.EntityFramework.Tests.Relational.Queries;
 using Xania.Graphs.Linq;
-using Xania.Graphs.Structure;
+using Xania.Graphs.Elements;
 using Xania.Invoice.Domain;
 using Xunit;
 using Xunit.Abstractions;
-using GraphObject = Xania.Graphs.Structure.GraphObject;
-using Property = Xania.Graphs.Structure.Property;
-using Vertex = Xania.Graphs.Structure.Vertex;
+using GraphObject = Xania.Graphs.Elements.GraphObject;
+using Property = Xania.Graphs.Elements.Property;
+using Vertex = Xania.Graphs.Elements.Vertex;
 
 namespace Xania.Graphs.EntityFramework.Tests
 {
@@ -47,7 +47,11 @@ namespace Xania.Graphs.EntityFramework.Tests
         public void InitializeDb()
         {
             using (var db = new GraphDbContext(_loggerFactory))
-                db.Store(Helper.GetGraph());
+            {
+                var g = Helper.GetGraph();
+                db.Store(g);
+                
+            }
         }
 
         [Fact]

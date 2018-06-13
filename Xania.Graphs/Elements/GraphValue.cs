@@ -1,4 +1,4 @@
-﻿namespace Xania.Graphs.Structure
+﻿namespace Xania.Graphs.Elements
 {
     public abstract class GraphValue
     {

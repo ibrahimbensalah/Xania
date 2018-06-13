@@ -1,8 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using Xania.Graphs.Linq;
+﻿using System.Collections.Generic;
 
-namespace Xania.Graphs.Structure
+namespace Xania.Graphs.Elements
 {
     public class GraphObject : GraphValue
     {

@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using Xania.Graphs.Structure;
+using Xania.Graphs.Elements;
 using Xania.ObjectMapper;
 
 namespace Xania.Graphs.Linq

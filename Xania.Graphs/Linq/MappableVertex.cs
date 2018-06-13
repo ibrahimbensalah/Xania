@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
-using Xania.Graphs.Structure;
+using Xania.Graphs.Elements;
 using Xania.ObjectMapper;
 using Xania.Reflection;
 

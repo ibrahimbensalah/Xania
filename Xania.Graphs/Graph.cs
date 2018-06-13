@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using Xania.Graphs.Gremlin;
-using Xania.Graphs.Structure;
+using Xania.Graphs.Elements;
 using Xania.Reflection;
 
 namespace Xania.Graphs

@@ -2,7 +2,7 @@
 using System.Linq;
 using Xania.Graphs.Linq;
 
-namespace Xania.Graphs.Structure
+namespace Xania.Graphs.Elements
 {
     public class GraphList: GraphValue
     {

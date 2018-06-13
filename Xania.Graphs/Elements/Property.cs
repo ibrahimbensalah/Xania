@@ -6,7 +6,7 @@ using System.Text;
 using Xania.Graphs.Gremlin;
 using Xania.Graphs.Linq;
 
-namespace Xania.Graphs.Structure
+namespace Xania.Graphs.Elements
 {
     public class Property
     {

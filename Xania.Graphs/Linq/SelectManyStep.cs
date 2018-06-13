@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using Xania.Graphs.Gremlin;
-using Xania.Graphs.Structure;
+using Xania.Graphs.Elements;
 using Xania.Reflection;
 
 namespace Xania.Graphs.Linq

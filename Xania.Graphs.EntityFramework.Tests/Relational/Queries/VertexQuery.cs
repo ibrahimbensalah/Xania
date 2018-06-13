@@ -7,7 +7,7 @@ using System.Text;
 
 namespace Xania.Graphs.EntityFramework.Tests.Relational.Queries
 {
-    public class VertexQuery : IQueryable<Structure.Vertex>
+    public class VertexQuery : IQueryable<Elements.Vertex>
     {
         private readonly IQueryable<Vertex> _vertices;
 
@@ -16,7 +16,7 @@ namespace Xania.Graphs.EntityFramework.Tests.Relational.Queries
             _vertices = vertices;
         }
 
-        public IEnumerator<Structure.Vertex> GetEnumerator()
+        public IEnumerator<Elements.Vertex> GetEnumerator()
         {
             throw new NotImplementedException();
         }

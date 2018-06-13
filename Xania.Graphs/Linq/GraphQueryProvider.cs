@@ -6,7 +6,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 using Newtonsoft.Json;
 using Xania.Graphs.Gremlin;
-using Xania.Graphs.Structure;
+using Xania.Graphs.Elements;
 using Xania.Reflection;
 using Xania.ObjectMapper;
 using ParameterExpression = System.Linq.Expressions.ParameterExpression;
@@ -251,7 +251,7 @@ namespace Xania.Graphs.Linq
                 var edgeLambda = edgeParam.Property(nameof(Edge.Label)).StringEqual(edgeLabel).ToLambda(edgeParam);
 
                 var vertexParam = Expression.Parameter(typeof(Vertex), "vertex");
-                var vertexLambda = vertexParam.Property(nameof(Structure.Vertex.Label)).StringEqual(vertexLabel).ToLambda(vertexParam);
+                var vertexLambda = vertexParam.Property(nameof(Elements.Vertex.Label)).StringEqual(vertexLabel).ToLambda(vertexParam);
 
                 return gx.OutE(_graph.Edges).Where(edgeLambda)
                     .InV(_graph.Vertices).Where(vertexLambda);
@@ -382,7 +382,7 @@ namespace Xania.Graphs.Linq
 
 
                     var v = Expression.Parameter(typeof(Vertex), "v");
-                    var predicate = v.Property(nameof(Structure.Vertex.Label)).StringEqual(Expression.Constant(itemLabel)).ToLambda<Func<Vertex, bool>>(v);
+                    var predicate = v.Property(nameof(Elements.Vertex.Label)).StringEqual(Expression.Constant(itemLabel)).ToLambda<Func<Vertex, bool>>(v);
 
                     var vertices = _graph.Vertices.Where(predicate);
                     return Expression.Constant(vertices);

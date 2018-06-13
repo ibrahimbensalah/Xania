@@ -3,9 +3,10 @@ using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
+using Xania.Graphs.Elements;
 using Xania.Reflection;
 
-namespace Xania.Graphs.Structure
+namespace Xania.Graphs
 {
     public class GraphSON : IEnumerable<KeyValuePair<string, object>>
     {

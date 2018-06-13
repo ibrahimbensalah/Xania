@@ -64,11 +64,11 @@ namespace Xania.Graphs.EntityFramework.Tests.Relational.Queries
                 return Expression.Call(instanceX, methodInfo, args);
             }
             if (expression is ConstantExpression cons)
-                if (cons.Value is IQueryable<Structure.Vertex>)
+                if (cons.Value is IQueryable<Elements.Vertex>)
                 {
                     return Expression.Constant(_dbContext.Vertices);
                 }
-                else if (cons.Value is IQueryable<Structure.Property>)
+                else if (cons.Value is IQueryable<Elements.Property>)
                 {
                     return Expression.Constant(_dbContext.Properties);
                 }
@@ -146,10 +146,10 @@ namespace Xania.Graphs.EntityFramework.Tests.Relational.Queries
 
         private Type Transform(Type type)
         {
-            if (type == typeof(Structure.Vertex))
+            if (type == typeof(Elements.Vertex))
                 return typeof(Vertex);
 
-            if (type == typeof(Structure.Property))
+            if (type == typeof(Elements.Property))
                 return typeof(Property);
 
             if (type == typeof(string) || type.IsPrimitive || type.IsEnum)

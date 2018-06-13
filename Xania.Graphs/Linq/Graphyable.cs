@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
-using Xania.Graphs.Structure;
+using Xania.Graphs.Elements;
 
 namespace Xania.Graphs.Linq
 {

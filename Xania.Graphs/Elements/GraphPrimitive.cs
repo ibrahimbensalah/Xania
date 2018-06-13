@@ -1,7 +1,7 @@
 ﻿using System;
 using Xania.Graphs.Linq;
 
-namespace Xania.Graphs.Structure
+namespace Xania.Graphs.Elements
 {
     public class GraphPrimitive: GraphValue
     {

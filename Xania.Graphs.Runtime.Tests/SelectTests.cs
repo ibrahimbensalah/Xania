@@ -31,9 +31,9 @@ namespace Xania.Graphs.Runtime.Tests
             var argTypes =
                 new[]
                 {
-                    typeof(IQueryable<Structure.Vertex>),
-                    typeof(Expression<Func<Structure.Vertex, IQueryable<Structure.Vertex>>>),
-                    typeof(Expression<Func<Structure.Vertex, Structure.Vertex, Int32>>)
+                    typeof(IQueryable<Elements.Vertex>),
+                    typeof(Expression<Func<Elements.Vertex, IQueryable<Elements.Vertex>>>),
+                    typeof(Expression<Func<Elements.Vertex, Elements.Vertex, Int32>>)
                 };
 
             var declaringType = typeof(Queryable);
