@@ -10,7 +10,13 @@ namespace Xania.Data.DocumentDB
     {
         public XaniaDataContext(string endpointUrl, string primaryKey)
         {
-            var connectionPolicy = new ConnectionPolicy {ConnectionMode = ConnectionMode.Direct, ConnectionProtocol = Protocol.Tcp};
+            var connectionPolicy = new ConnectionPolicy
+            {
+                //ConnectionMode = ConnectionMode.Direct,
+                //ConnectionProtocol = Protocol.Tcp,
+                //EnableEndpointDiscovery = false
+            };
+
             var settings = new JsonSerializerSettings
             {
                 ContractResolver = new CamelCasePropertyNamesContractResolver()

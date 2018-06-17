@@ -63,8 +63,8 @@ namespace Xania.TemplateJS
 
             services.AddSingleton<IObjectStore<User>>(new TransientObjectStore<User>());
 
-            var endpointUrl = Configuration["xaniadb-endpointUrl"];
-            var primaryKey =  Configuration["xaniadb-primarykey"];
+            var endpointUrl = "https://localhost:8081/";// Configuration["xaniadb-endpointUrl"];
+            var primaryKey = "C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==";//Configuration["xaniadb-primarykey"];
 
             var dataContext  = new XaniaDataContext(endpointUrl, primaryKey);
             services.AddSingleton(dataContext);
@@ -76,14 +76,26 @@ namespace Xania.TemplateJS
                 "Portal"
             );
 
-            var companyStore = new AzureGraphStore<Company>(cosmosDbClient);
-            foreach (var company in dataContext.Store<Company>())
+            dataContext.Store<Company>().Add(new Company
             {
-                companyStore.Add(company);
-            }
+                Id = new Guid("67bdb6f0-16c6-4ad7-b1b4-ca50123ad791"),
+                Name = "Rider International",
+                Address = new Address
+                {
+                    FullName = "Edi Gittenberger",
+                    Location = "Hoofddorp",
+                    Lines = new[]
+                    {
+                        new AddressLine { Type= AddressType.ZipCode, Value="2132 WV"}, 
+                        new AddressLine { Type= AddressType.Location, Value="Hoofddorp"}, 
+                        new AddressLine { Type= AddressType.Street, Value="Diamantlaan 15"}, 
+                        new AddressLine { Type= AddressType.Phone, Value="020 261 8330"}, 
+                    }
+                }
+            });
 
             services.AddTransient<IObjectStore<Invoice.Domain.Invoice>>(ctx => dataContext.Store<Invoice.Domain.Invoice>());
-            services.AddTransient<IObjectStore<Company>>(ctx => companyStore);
+            services.AddTransient<IObjectStore<Company>>(ctx => dataContext.Store<Invoice.Domain.Company>());
             services.AddTransient<IObjectStore<TimeDeclaration>>(ctx => dataContext.Store<TimeDeclaration>());
             services.AddTransient<IObjectStore<TimeSheet>>(ctx => dataContext.Store<TimeSheet>());
 

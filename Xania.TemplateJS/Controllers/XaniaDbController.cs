@@ -100,7 +100,7 @@ namespace Xania.TemplateJS.Controllers
 
         public TypeInfo CreateType(IEnumerable<KeyValuePair<string, Type>> fields)
         {
-            throw new NotImplementedException();
+            return CreateType(fields.ToDictionary(e => e.Key, e => e.Value));
         }
 
 
