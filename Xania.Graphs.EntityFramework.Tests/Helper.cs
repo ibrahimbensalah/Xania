@@ -5,7 +5,7 @@ using Xania.Invoice.Domain;
 
 namespace Xania.Graphs.EntityFramework.Tests
 {
-    public class Helper
+    public static class Helper
     {
         public static Graph GetGraph()
         {
@@ -24,6 +24,11 @@ namespace Xania.Graphs.EntityFramework.Tests
                     }
                 }
             );
+        }
+
+        public static TValue TryGetValue<TKey, TValue>(this IDictionary<TKey, TValue> dictionary, TKey key, TValue defaultValue)
+        {
+            return dictionary.TryGetValue(key, out var value) ? value : defaultValue;
         }
     }
 }

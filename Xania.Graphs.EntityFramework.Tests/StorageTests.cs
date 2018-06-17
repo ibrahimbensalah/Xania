@@ -50,7 +50,7 @@ namespace Xania.Graphs.EntityFramework.Tests
             {
                 var g = Helper.GetGraph();
                 db.Store(g);
-                
+
             }
         }
 
@@ -76,11 +76,11 @@ namespace Xania.Graphs.EntityFramework.Tests
                 var vertices = new DbQueryable<Vertex>(new DbQueryProvider(db));
                 var result =
                     (from v in vertices
-                        select new
-                        {
-                            v.Id,
-                            Count = v.Properties.Count()
-                        }
+                     select new
+                     {
+                         v.Id,
+                         Count = v.Properties.Count()
+                     }
                     ).ToArray();
 
                 _output.WriteLine(JsonConvert.SerializeObject(result, Formatting.Indented));
@@ -110,8 +110,10 @@ namespace Xania.Graphs.EntityFramework.Tests
                 // assert vertices count
                 g.Vertices.Should().HaveSameCount(db.Vertices);
 
-                // assert properties count
-                g.Vertices.SelectMany(GetProperties).Select(p => p.Name).Should().BeEquivalentTo(db.Properties.Select(e => e.Name));
+                // assert properties
+                var properties = g.Vertices.SelectMany(GetProperties).ToArray();
+
+                properties.Select(p => p.Name).Should().BeEquivalentTo(db.Properties.Select(e => e.Name));
 
                 // assert edges
                 g.Edges

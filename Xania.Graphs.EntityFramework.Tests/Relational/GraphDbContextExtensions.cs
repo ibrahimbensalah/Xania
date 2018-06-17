@@ -6,7 +6,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Newtonsoft.Json;
 using Xania.Graphs.Elements;
-using Xania.Reflection;
 
 namespace Xania.Graphs.EntityFramework.Tests.Relational
 {
@@ -35,9 +34,24 @@ namespace Xania.Graphs.EntityFramework.Tests.Relational
             db.Merge(graph.Vertices.Select(v => new Relational.Vertex {Id = v.Id, Label = v.Label}).ToArray());
             db.Merge(items);
             db.Merge(primitives);
+
+            db.Merge(
+                graph.Edges.Select(e=> new Edge
+                {
+                    Id = e.Id,
+                    InV = e.InV,
+                    Label = e.Label,
+                    OutV = e.OutV
+                })
+            );
         }
 
-        public static void Merge<TEntity>(this DbContext db, IList<TEntity> entities) where TEntity : class
+        public static int Merge<TEntity>(this DbContext db, IEnumerable<TEntity> entities) where TEntity : class
+        {
+            return Merge(db, entities.ToArray());
+        }
+
+        public static int Merge<TEntity>(this DbContext db, IList<TEntity> entities) where TEntity : class
         {
             var model = db.Model.FindEntityType(typeof(TEntity));
             var modelProperties = model.GetProperties().ToArray();
@@ -69,11 +83,13 @@ namespace Xania.Graphs.EntityFramework.Tests.Relational
             sb.AppendLine($"] )");
             sb.Append("\tVALUES ( src.[");
             sb.AppendJoin("], src.[", modelProperties.Select(e => e.Name));
-            sb.AppendLine("] );");
+            sb.AppendLine("] )");
+            sb.AppendLine("WHEN NOT MATCHED BY SOURCE THEN DELETE");
+            sb.AppendLine(";");
 
             var values = entities.Select(db.Entry)
                 .SelectMany(entry => modelProperties.Select(p => entry.CurrentValues[p]));
-            db.Database.ExecuteSqlCommand(sb.ToString(), values);
+            return db.Database.ExecuteSqlCommand(sb.ToString(), values);
         }
 
         private static IEnumerable<Either<Property, Primitive, Item>> GetElements(Elements.Vertex v)
@@ -115,7 +131,7 @@ namespace Xania.Graphs.EntityFramework.Tests.Relational
                             {
                                 var item = list.Items[i];
 
-                                var itemId = i.ToString();
+                                var itemId = $"{valueId}.{i}";
                                 yield return new Item { ItemId = itemId, ListId = valueId };
 
                                 valuesStack.Push((itemId, item));
@@ -130,55 +146,78 @@ namespace Xania.Graphs.EntityFramework.Tests.Relational
         public static Graph LoadFull(this GraphDbContext db)
         {
             var g = new Graph();
-            var values = new Dictionary<string, GraphValue>();
+            var prims = new Dictionary<string, GraphPrimitive>();
+            var lists = new Dictionary<string, GraphList>();
+            var objects = new Dictionary<string, Elements.GraphObject>();
+            var vertices = new Dictionary<string, Elements.Vertex>();
 
             foreach (var prim in db.Primitives.AsNoTracking())
-                values.Add(prim.Id, new GraphPrimitive(JsonConvert.DeserializeObject(prim.Value)));
+                prims.Add(prim.Id, new GraphPrimitive(JsonConvert.DeserializeObject(prim.Value)));
 
             foreach (var listId in db.Items.Select(p => p.ListId).Distinct().AsNoTracking())
-                values.Add(listId, new GraphList());
+                lists.Add(listId, new GraphList());
 
             foreach (var v in db.Vertices.AsNoTracking())
             {
                 var vertex = new Elements.Vertex(v.Label) { Id = v.Id };
                 g.Vertices.Add(vertex);
-                values.Add(v.Id, vertex);
+                vertices.Add(v.Id, vertex);
             }
 
             foreach (var propertyGroup in db.Properties.GroupBy(p => p.ObjectId).AsNoTracking())
             {
                 var objectId = propertyGroup.Key;
-                var entry = values.TryGetValue(objectId, out var value)
-                    ? value
-                    : values.AddAndReturn(objectId, new Elements.GraphObject());
 
-                if (entry is Elements.GraphObject obj)
-                {
-                    foreach (var property in propertyGroup)
-                    {
-                        var propertyValue = values.TryGetValue($"{property.ObjectId}.{property.Name}", out var result)
-                            ? result
-                            : GraphValue.Null;
+                var obj =
+                    vertices.TryGetValue(objectId, null) ??
+                    objects.TryGetValue(objectId, null) ??
+                    objects.AddAndReturn(objectId, new Elements.GraphObject());
 
-                        obj.Properties.Add(new Elements.Property(property.Name, propertyValue));
-                    }
-                }
-                else
-                {
+                if (obj == null)
                     throw new InvalidOperationException();
+
+                foreach (var property in propertyGroup)
+                {
+                    var valueId = $"{property.ObjectId}.{property.Name}";
+                    GraphValue graphValue =
+                        prims.TryGetValue(valueId, null) ??
+                        lists.TryGetValue(valueId, null) ??
+                        objects.TryGetValue(valueId, null) ??
+                        GraphValue.Null;
+
+                    obj.Properties.Add(new Elements.Property(property.Name, graphValue));
                 }
+                //var entry = values.TryGetValue(objectId, out var value)
+                //    ? value
+                //    : values.AddAndReturn(objectId, new Elements.GraphObject());
+
+                //if (entry is Elements.GraphObject obj)
+                //{
+                //    foreach (var property in propertyGroup)
+                //    {
+                //        var propertyValue = values.TryGetValue($"{property.ObjectId}.{property.Name}", out var result)
+                //            ? result
+                //            : GraphValue.Null;
+
+                //        obj.Properties.Add(new Elements.Property(property.Name, propertyValue));
+                //    }
+                //}
             }
 
             foreach (var item in db.Items.AsNoTracking())
             {
-                if (values.TryGetValue(item.ListId, out var existing) && existing is GraphList glist)
+                if (lists.TryGetValue(item.ListId, out var glist))
                 {
-                    glist.Items.Add(values[item.ItemId]);
+                    var key = item.ItemId;
+                    glist.Items.Add(
+                        prims.TryGetValue(key, null) ??
+                        objects.TryGetValue(key, null) ??
+                        lists.TryGetValue(key, null) ??
+                        GraphValue.Null
+                    );
                 }
                 else
-                {
                     throw new InvalidOperationException();
-                }
             }
 
             foreach (var edge in db.Edges.AsNoTracking())
