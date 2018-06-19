@@ -11,5 +11,6 @@ namespace Xania.Graphs.EntityFramework.Tests
         public string Name { get; set; }
         public ICollection<AddressLine> Lines { get; set; } = new Collection<AddressLine>();
         public Person Parent { get; set; }
+        public AddressLine Main { get; set; }
     }
 }

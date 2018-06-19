@@ -14,6 +14,7 @@ namespace Xania.Graphs.EntityFramework.Tests
                 {
                     Id = 1,
                     Name = "Person 1",
+                    Main = new AddressLine(),
                     Parent = new Person() { Id = 4, Name="Person 4"},
                     Friends = new[] { new Person { Id = 2, Name = "Person 2" }, new Person { Id = 3, Name = "Person 3" } },
                     Lines = new List<AddressLine>

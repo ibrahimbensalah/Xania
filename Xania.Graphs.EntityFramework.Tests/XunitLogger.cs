@@ -4,12 +4,12 @@ using Xunit.Abstractions;
 
 namespace Xania.Graphs.EntityFramework.Tests
 {
-    public class XunitLogger : ILogger
+    public class XUnitLogger : ILogger
     {
         private readonly ITestOutputHelper _testOutputHelper;
         private readonly string _categoryName;
 
-        public XunitLogger(ITestOutputHelper testOutputHelper, string categoryName)
+        public XUnitLogger(ITestOutputHelper testOutputHelper, string categoryName)
         {
             _testOutputHelper = testOutputHelper;
             _categoryName = categoryName;
@@ -23,9 +23,12 @@ namespace Xania.Graphs.EntityFramework.Tests
 
         public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception exception, Func<TState, Exception, string> formatter)
         {
-            _testOutputHelper.WriteLine($"{_categoryName} [{eventId}] {formatter(state, exception)}");
-            if (exception != null)
-                _testOutputHelper.WriteLine(exception.ToString());
+            if (logLevel == LogLevel.Information)
+            {
+                _testOutputHelper.WriteLine($"{_categoryName} [{eventId}] {formatter(state, exception)}");
+                if (exception != null)
+                    _testOutputHelper.WriteLine(exception.ToString());
+            }
         }
 
         private class NoopDisposable : IDisposable

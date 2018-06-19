@@ -53,12 +53,12 @@ namespace Xania.Graphs.EntityFramework.Tests.Relational
 
         public static int Merge<TEntity>(this DbContext db, IList<TEntity> entities) where TEntity : class
         {
-            var model = db.Model.FindEntityType(typeof(TEntity));
-            var modelProperties = model.GetProperties().ToArray();
+            var entityType = db.Model.FindEntityType(typeof(TEntity));
+            var modelProperties = entityType.GetProperties().ToArray();
 
             var sb = new StringBuilder();
 
-            var tableName = model.GetAnnotations().Where(a => a.Name.Equals("Relational:TableName"))
+            var tableName = entityType.GetAnnotations().Where(a => a.Name.Equals("Relational:TableName"))
                 .Select(a => a.Value).FirstOrDefault();
             var tableSchema = "dbo";
 
@@ -74,7 +74,7 @@ namespace Xania.Graphs.EntityFramework.Tests.Relational
                 sb.AppendLine(i + 1 < entities.Count ? ")," : ")");
             }
             sb.Append($") AS src ([{string.Join("],[", modelProperties.Select(e => e.Name))}]) ON\n\t");
-            var primaryProperties = model.GetKeys().Where(e => e.IsPrimaryKey()).SelectMany(e => e.Properties);
+            var primaryProperties = entityType.GetKeys().Where(e => e.IsPrimaryKey()).SelectMany(e => e.Properties);
             sb.AppendJoin("\n\tAND ", primaryProperties.Select(key => $"src.[{key.Name}] = tar.[{key.Name}]"));
             sb.AppendLine();
             sb.AppendLine("WHEN NOT MATCHED THEN");

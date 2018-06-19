@@ -2,8 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Reflection;
-using System.Text;
+using Xania.Graphs.Elements;
 using Xania.Graphs.Linq;
 using Xania.ObjectMapper;
 using Xania.Reflection;
@@ -37,12 +36,54 @@ namespace Xania.Graphs.EntityFramework.Tests.Relational.Queries
         public TResult Execute<TResult>(Expression expression)
         {
             var dbExpression = Transform(expression, null);
-            var func = Expression.Lambda(dbExpression).Compile();
-            var result = func.DynamicInvoke();
-            return result.MapTo<TResult>();
+            var result = Invoke(dbExpression);
+
+            var mapper = new Mapper();
+            return mapper.MapTo<TResult>(result);
         }
 
-        private Expression Transform(Expression expression, IReadOnlyDictionary<ParameterExpression, ParameterExpression> map)
+        private object Invoke(Expression dbExpression)
+        {
+            var result = DynamicInvoke(dbExpression);
+
+            var queryableType = dbExpression.Type.MapFrom(dbExpression.Type);
+            if (queryableType != null)
+            {
+                var elementType = queryableType.GenericTypeArguments[0];
+                if (elementType == typeof(Property))
+                {
+                    var itemsExpr = dbExpression.SelectMany((Property p) =>
+                        _dbContext.Items.Where(i => i.ItemId.StartsWith(p.ObjectId + "." + p.Name)));
+                    var items = ((IEnumerable<Item>) DynamicInvoke(itemsExpr)).ToArray();
+
+                    var propertyExpr = dbExpression.SelectMany((Property p) =>
+                        _dbContext.Properties.Where(i => i.ObjectId.StartsWith(p.ObjectId + "." + p.Name)));
+                    var properties = ((IEnumerable<Property>) DynamicInvoke(propertyExpr)).ToArray();
+
+                    return BuildProperties(result as IEnumerable<Property>, items, properties);
+                }
+            }
+
+            return result;
+        }
+
+        private IEnumerable<Elements.Property> BuildProperties(IEnumerable<Property> baseProperties, Item[] valueItems,
+            Property[] valueProperties)
+        {
+            foreach (var p in baseProperties)
+            {
+                yield return new Elements.Property(p.Name, GraphValue.Null);
+            }
+        }
+
+        private object DynamicInvoke(Expression expr)
+        {
+            var func = Expression.Lambda(expr).Compile();
+            return func.DynamicInvoke();
+        }
+
+        private Expression Transform(Expression expression,
+            IReadOnlyDictionary<ParameterExpression, ParameterExpression> map)
         {
             if (expression == null)
                 return null;
@@ -63,6 +104,7 @@ namespace Xania.Graphs.EntityFramework.Tests.Relational.Queries
 
                 return Expression.Call(instanceX, methodInfo, args);
             }
+
             if (expression is ConstantExpression cons)
                 if (cons.Value is IQueryable<Elements.Vertex>)
                 {
@@ -76,6 +118,7 @@ namespace Xania.Graphs.EntityFramework.Tests.Relational.Queries
                 {
                     return expression;
                 }
+
             if (expression is UnaryExpression unary)
                 return Expression.MakeUnary(unary.NodeType, Transform(unary.Operand, map), Transform(unary.Type));
             if (expression is LambdaExpression lambda)
@@ -83,7 +126,7 @@ namespace Xania.Graphs.EntityFramework.Tests.Relational.Queries
                 var map2 = lambda.Parameters.ToDictionary(p => p, p => Expression.Parameter(Transform(p.Type), p.Name));
                 var body = Transform(lambda.Body, map2);
                 var delegateType = Transform(lambda.Type);
-                
+
                 return Expression.Lambda(delegateType, body, map2.Values);
             }
 
@@ -96,10 +139,10 @@ namespace Xania.Graphs.EntityFramework.Tests.Relational.Queries
                 if (memberName.Equals("Properties"))
                 {
                     var p = Expression.Parameter(typeof(Property), "p");
-                    var selectorLambda = 
+                    var selectorLambda =
                         Expression.Equal(p.Property(nameof(Property.ObjectId)), instanceX.Property(nameof(Vertex.Id)))
-                        // p.Property(nameof(Property.ObjectId)).Equal(instanceX.Property(nameof(Vertex.Id)))
-                        .ToLambda<Func<Property, bool>>(p);
+                            // p.Property(nameof(Property.ObjectId)).Equal(instanceX.Property(nameof(Vertex.Id)))
+                            .ToLambda<Func<Property, bool>>(p);
 
                     return Expression.Constant(_dbContext.Properties).Where(selectorLambda);
 

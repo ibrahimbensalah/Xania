@@ -29,7 +29,7 @@ namespace Xania.Graphs.EntityFramework.Tests
             _output = output;
             _loggerFactory = new LoggerFactory(new[]
             {
-                new XunitLoggerProvider(_output),
+                new XUnitLoggerProvider(_output),
             });
         }
 
@@ -64,7 +64,7 @@ namespace Xania.Graphs.EntityFramework.Tests
 
                 _output.WriteLine(JsonConvert.SerializeObject(result, Formatting.Indented));
 
-                result.Should().HaveCount(2);
+                result.Should().HaveCount(3);
             }
         }
 
@@ -85,7 +85,7 @@ namespace Xania.Graphs.EntityFramework.Tests
 
                 _output.WriteLine(JsonConvert.SerializeObject(result, Formatting.Indented));
 
-                result.Should().HaveCount(3);
+                result.Should().HaveCount(4);
             }
         }
 

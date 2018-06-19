@@ -3,17 +3,17 @@ using Xunit.Abstractions;
 
 namespace Xania.Graphs.EntityFramework.Tests
 {
-    public class XunitLoggerProvider : ILoggerProvider
+    public class XUnitLoggerProvider : ILoggerProvider
     {
         private readonly ITestOutputHelper _testOutputHelper;
 
-        public XunitLoggerProvider(ITestOutputHelper testOutputHelper)
+        public XUnitLoggerProvider(ITestOutputHelper testOutputHelper)
         {
             _testOutputHelper = testOutputHelper;
         }
 
         public ILogger CreateLogger(string categoryName)
-            => new XunitLogger(_testOutputHelper, categoryName);
+            => new XUnitLogger(_testOutputHelper, categoryName);
 
         public void Dispose()
         { }
