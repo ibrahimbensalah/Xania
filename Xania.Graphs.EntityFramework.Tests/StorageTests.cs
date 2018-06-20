@@ -105,7 +105,8 @@ namespace Xania.Graphs.EntityFramework.Tests
             using (var db = new GraphDbContext(_loggerFactory))
             {
                 // setup
-                var g = db.LoadFull();
+                var g = db.Load();
+                db.Load(g, DateTime.UtcNow);
 
                 // assert vertices count
                 g.Vertices.Should().HaveSameCount(db.Vertices);
@@ -113,7 +114,8 @@ namespace Xania.Graphs.EntityFramework.Tests
                 // assert properties
                 var properties = g.Vertices.SelectMany(GetProperties).ToArray();
 
-                properties.Select(p => p.Name).Should().BeEquivalentTo(db.Properties.Select(e => e.Name));
+                properties.Select(p => p.Name).OrderBy(e => e).Should()
+                    .BeEquivalentTo(db.Properties.Select(e => e.Name).OrderBy(e => e));
 
                 // assert edges
                 g.Edges

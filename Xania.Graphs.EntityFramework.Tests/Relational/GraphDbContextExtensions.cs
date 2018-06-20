@@ -22,11 +22,20 @@ namespace Xania.Graphs.EntityFramework.Tests.Relational
                 foreach (var element in GetElements(vertex))
                 {
                     if (element.Value is Property prop)
+                    {
                         properties.Add(prop);
+                        SetLastUpdated(db, prop);
+                    }
                     else if (element.Value is Item item)
+                    {
                         items.Add(item);
+                        SetLastUpdated(db, item);
+                    }
                     else if (element.Value is Primitive prim)
+                    {
                         primitives.Add(prim);
+                        SetLastUpdated(db, prim);
+                    }
                 }
             }
 
@@ -44,6 +53,11 @@ namespace Xania.Graphs.EntityFramework.Tests.Relational
                     OutV = e.OutV
                 })
             );
+        }
+
+        private static void SetLastUpdated<T>(GraphDbContext db, T model) where T : class
+        {
+            db.Entry(model).Property<DateTimeOffset>("LastUpdated").CurrentValue = DateTimeOffset.UtcNow;
         }
 
         public static int Merge<TEntity>(this DbContext db, IEnumerable<TEntity> entities) where TEntity : class
@@ -75,8 +89,16 @@ namespace Xania.Graphs.EntityFramework.Tests.Relational
             }
             sb.Append($") AS src ([{string.Join("],[", modelProperties.Select(e => e.Name))}]) ON\n\t");
             var primaryProperties = entityType.GetKeys().Where(e => e.IsPrimaryKey()).SelectMany(e => e.Properties);
+            var nonPrimaryProperties = entityType.GetProperties().Where(e => !e.IsPrimaryKey()).ToArray();
             sb.AppendJoin("\n\tAND ", primaryProperties.Select(key => $"src.[{key.Name}] = tar.[{key.Name}]"));
             sb.AppendLine();
+            if (nonPrimaryProperties.Any())
+            {
+                sb.AppendLine("WHEN MATCHED THEN");
+                sb.Append("\tUPDATE SET ");
+                sb.AppendJoin(", ", nonPrimaryProperties.Select(e => $"[{e.Name}] = src.[{e.Name}]"));
+                sb.AppendLine();
+            }
             sb.AppendLine("WHEN NOT MATCHED THEN");
             sb.Append("\tINSERT ( [");
             sb.AppendJoin("], [", modelProperties.Select(e => e.Name));
@@ -143,28 +165,43 @@ namespace Xania.Graphs.EntityFramework.Tests.Relational
         }
 
 
-        public static Graph LoadFull(this GraphDbContext db)
+        public static Graph Load(this GraphDbContext db)
         {
             var g = new Graph();
+            db.Load(g, null);
+            return g;
+        }
+
+        public static IQueryable<T> UpdatedSince<T>(this IQueryable<T> queryable, DateTimeOffset? dateTime)
+        {
+            if (dateTime == null)
+                return queryable;
+
+            return queryable.Where(e => EF.Property<DateTimeOffset>(e, "LastUpdated") > dateTime);
+        }
+
+        public static Graph Load(this GraphDbContext db, Graph g, DateTimeOffset? dateTime)
+        {
             var prims = new Dictionary<string, GraphPrimitive>();
             var lists = new Dictionary<string, GraphList>();
             var objects = new Dictionary<string, Elements.GraphObject>();
             var vertices = new Dictionary<string, Elements.Vertex>();
 
-            foreach (var prim in db.Primitives.AsNoTracking())
+            foreach (var prim in db.Primitives.UpdatedSince(dateTime).AsNoTracking())
                 prims.Add(prim.Id, new GraphPrimitive(JsonConvert.DeserializeObject(prim.Value)));
 
-            foreach (var listId in db.Items.Select(p => p.ListId).Distinct().AsNoTracking())
+            foreach (var listId in db.Items.UpdatedSince(dateTime).Select(p => p.ListId).Distinct().AsNoTracking())
                 lists.Add(listId, new GraphList());
 
-            foreach (var v in db.Vertices.AsNoTracking())
+            foreach (var v in db.Vertices.UpdatedSince(dateTime).AsNoTracking())
             {
                 var vertex = new Elements.Vertex(v.Label) { Id = v.Id };
                 g.Vertices.Add(vertex);
                 vertices.Add(v.Id, vertex);
             }
 
-            foreach (var propertyGroup in db.Properties.GroupBy(p => p.ObjectId).AsNoTracking())
+            var propertyGroups = db.Properties.UpdatedSince(dateTime).GroupBy(p => p.ObjectId).AsNoTracking().ToArray();
+            foreach (var propertyGroup in propertyGroups)
             {
                 var objectId = propertyGroup.Key;
 
@@ -172,6 +209,18 @@ namespace Xania.Graphs.EntityFramework.Tests.Relational
                     vertices.TryGetValue(objectId, null) ??
                     objects.TryGetValue(objectId, null) ??
                     objects.AddAndReturn(objectId, new Elements.GraphObject());
+
+                if (obj == null)
+                    throw new InvalidOperationException();
+            }
+
+            foreach (var propertyGroup in propertyGroups)
+            {
+                var objectId = propertyGroup.Key;
+
+                var obj =
+                    vertices.TryGetValue(objectId, null) ??
+                    objects.TryGetValue(objectId, null);
 
                 if (obj == null)
                     throw new InvalidOperationException();
@@ -187,24 +236,9 @@ namespace Xania.Graphs.EntityFramework.Tests.Relational
 
                     obj.Properties.Add(new Elements.Property(property.Name, graphValue));
                 }
-                //var entry = values.TryGetValue(objectId, out var value)
-                //    ? value
-                //    : values.AddAndReturn(objectId, new Elements.GraphObject());
-
-                //if (entry is Elements.GraphObject obj)
-                //{
-                //    foreach (var property in propertyGroup)
-                //    {
-                //        var propertyValue = values.TryGetValue($"{property.ObjectId}.{property.Name}", out var result)
-                //            ? result
-                //            : GraphValue.Null;
-
-                //        obj.Properties.Add(new Elements.Property(property.Name, propertyValue));
-                //    }
-                //}
             }
 
-            foreach (var item in db.Items.AsNoTracking())
+            foreach (var item in db.Items.UpdatedSince(dateTime).AsNoTracking())
             {
                 if (lists.TryGetValue(item.ListId, out var glist))
                 {
@@ -220,7 +254,7 @@ namespace Xania.Graphs.EntityFramework.Tests.Relational
                     throw new InvalidOperationException();
             }
 
-            foreach (var edge in db.Edges.AsNoTracking())
+            foreach (var edge in db.Edges.UpdatedSince(dateTime).AsNoTracking())
             {
                 g.Edges.Add(new Elements.Edge(edge.Label) { Id = edge.Id, InV = edge.InV, OutV = edge.OutV });
             }
