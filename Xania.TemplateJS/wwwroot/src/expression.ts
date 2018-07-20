@@ -272,7 +272,8 @@ export default class Expression {
 
     static compileAst(ast, stack: any[]) {
         const compile = Expression.compileAst;
-        if (typeof ast === "object") {
+        // if (typeof ast === "object")
+        {
             switch (ast.type) {
                 case IDENT:
                     switch (ast.name) {

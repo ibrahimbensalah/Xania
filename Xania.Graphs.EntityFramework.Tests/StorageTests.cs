@@ -105,10 +105,15 @@ namespace Xania.Graphs.EntityFramework.Tests
             using (var db = new GraphDbContext(_loggerFactory))
             {
                 // setup
-                var g = db.Load();
-                db.Load(g, DateTime.UtcNow);
+                var cache = db.Load();
+                var prim = db.Primitives.Single(e => e.Id.Equals("1.lines.0.value"));
+                prim.Value = JsonConvert.ToString(DateTimeOffset.UtcNow);
+                db.SetLastUpdated(prim);
+                db.SaveChanges();
+                db.Load(cache);
 
                 // assert vertices count
+                var g = cache.Graph;
                 g.Vertices.Should().HaveSameCount(db.Vertices);
 
                 // assert properties
@@ -153,8 +158,11 @@ namespace Xania.Graphs.EntityFramework.Tests
 
     public static class HelperExtensions
     {
-        public static TValue AddAndReturn<TKey, TValue>(this IDictionary<TKey, TValue> dict, TKey key, TValue value)
+        public static TValue TryAddAndReturn<TKey, TValue>(this IDictionary<TKey, TValue> dict, TKey key, TValue value)
         {
+            if (dict.TryGetValue(key, out var existing))
+                return existing;
+
             dict.Add(key, value);
             return value;
         }

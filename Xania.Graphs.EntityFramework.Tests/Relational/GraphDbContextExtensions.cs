@@ -55,7 +55,7 @@ namespace Xania.Graphs.EntityFramework.Tests.Relational
             );
         }
 
-        private static void SetLastUpdated<T>(GraphDbContext db, T model) where T : class
+        public static void SetLastUpdated<T>(this GraphDbContext db, T model) where T : class
         {
             db.Entry(model).Property<DateTimeOffset>("LastUpdated").CurrentValue = DateTimeOffset.UtcNow;
         }
@@ -165,11 +165,9 @@ namespace Xania.Graphs.EntityFramework.Tests.Relational
         }
 
 
-        public static Graph Load(this GraphDbContext db)
+        public static GraphCache Load(this GraphDbContext db)
         {
-            var g = new Graph();
-            db.Load(g, null);
-            return g;
+            return db.Load(new GraphCache());
         }
 
         public static IQueryable<T> UpdatedSince<T>(this IQueryable<T> queryable, DateTimeOffset? dateTime)
@@ -180,24 +178,35 @@ namespace Xania.Graphs.EntityFramework.Tests.Relational
             return queryable.Where(e => EF.Property<DateTimeOffset>(e, "LastUpdated") > dateTime);
         }
 
-        public static Graph Load(this GraphDbContext db, Graph g, DateTimeOffset? dateTime)
+        //private static DateTimeOffset LastUpdated<T>(this GraphDbContext db, T entity) where T : class
+        //{
+        //    return db.Entry(entity).Property<DateTimeOffset>("LastUpdated").CurrentValue;
+        //}
+
+        //private static DateTimeOffset Max(this DateTimeOffset date1, DateTimeOffset date2)
+        //{
+        //    return date1 > date2 ? date1 : date2;
+        //}
+
+        public static GraphCache Load(this GraphDbContext db, GraphCache cache)
         {
-            var prims = new Dictionary<string, GraphPrimitive>();
-            var lists = new Dictionary<string, GraphList>();
-            var objects = new Dictionary<string, Elements.GraphObject>();
-            var vertices = new Dictionary<string, Elements.Vertex>();
+            var dateTime = cache.LoadTime;
+            cache.LoadTime = DateTimeOffset.UtcNow;
 
             foreach (var prim in db.Primitives.UpdatedSince(dateTime).AsNoTracking())
-                prims.Add(prim.Id, new GraphPrimitive(JsonConvert.DeserializeObject(prim.Value)));
+                cache.prims[prim.Id] = new GraphPrimitive(JsonConvert.DeserializeObject(prim.Value));
 
             foreach (var listId in db.Items.UpdatedSince(dateTime).Select(p => p.ListId).Distinct().AsNoTracking())
-                lists.Add(listId, new GraphList());
+                cache.lists.TryAdd(listId, new GraphList());
 
-            foreach (var v in db.Vertices.UpdatedSince(dateTime).AsNoTracking())
+            foreach (var vtx in db.Vertices.UpdatedSince(dateTime).AsNoTracking())
             {
-                var vertex = new Elements.Vertex(v.Label) { Id = v.Id };
-                g.Vertices.Add(vertex);
-                vertices.Add(v.Id, vertex);
+                if (!cache.vertices.ContainsKey(vtx.Id))
+                {
+                    var vertex = new Elements.Vertex(vtx.Label) { Id = vtx.Id };
+                    cache.Graph.Vertices.Add(vertex);
+                    cache.vertices[vtx.Id] = vertex;
+                }
             }
 
             var propertyGroups = db.Properties.UpdatedSince(dateTime).GroupBy(p => p.ObjectId).AsNoTracking().ToArray();
@@ -206,9 +215,9 @@ namespace Xania.Graphs.EntityFramework.Tests.Relational
                 var objectId = propertyGroup.Key;
 
                 var obj =
-                    vertices.TryGetValue(objectId, null) ??
-                    objects.TryGetValue(objectId, null) ??
-                    objects.AddAndReturn(objectId, new Elements.GraphObject());
+                    cache.vertices.TryGetValue(objectId, null) ??
+                    cache.objects.TryGetValue(objectId, null) ??
+                    cache.objects.TryAddAndReturn(objectId, new Elements.GraphObject());
 
                 if (obj == null)
                     throw new InvalidOperationException();
@@ -219,36 +228,40 @@ namespace Xania.Graphs.EntityFramework.Tests.Relational
                 var objectId = propertyGroup.Key;
 
                 var obj =
-                    vertices.TryGetValue(objectId, null) ??
-                    objects.TryGetValue(objectId, null);
+                    cache.vertices.TryGetValue(objectId, null) ??
+                    cache.objects.TryGetValue(objectId, null);
 
                 if (obj == null)
                     throw new InvalidOperationException();
 
                 foreach (var property in propertyGroup)
                 {
-                    var valueId = $"{property.ObjectId}.{property.Name}";
-                    GraphValue graphValue =
-                        prims.TryGetValue(valueId, null) ??
-                        lists.TryGetValue(valueId, null) ??
-                        objects.TryGetValue(valueId, null) ??
-                        GraphValue.Null;
+                    if (!obj.Properties.Any(prop => prop.Name.Equals(property.Name)))
+                    {
+                        var valueId = $"{property.ObjectId}.{property.Name}";
+                        GraphValue graphValue =
+                            cache.prims.TryGetValue(valueId, null) ??
+                            cache.lists.TryGetValue(valueId, null) ??
+                            cache.objects.TryGetValue(valueId, null) ??
+                            GraphValue.Null;
 
-                    obj.Properties.Add(new Elements.Property(property.Name, graphValue));
+                        obj.Properties.Add(new Elements.Property(property.Name, graphValue));
+                    }
                 }
             }
 
             foreach (var item in db.Items.UpdatedSince(dateTime).AsNoTracking())
             {
-                if (lists.TryGetValue(item.ListId, out var glist))
+                if (cache.lists.TryGetValue(item.ListId, out var glist))
                 {
                     var key = item.ItemId;
-                    glist.Items.Add(
-                        prims.TryGetValue(key, null) ??
-                        objects.TryGetValue(key, null) ??
-                        lists.TryGetValue(key, null) ??
-                        GraphValue.Null
-                    );
+                    var gitem =
+                            cache.prims.TryGetValue(key, null) ??
+                            cache.objects.TryGetValue(key, null) ??
+                            cache.lists.TryGetValue(key, null) ??
+                            GraphValue.Null
+                        ;
+                    glist.Items.Add(gitem);
                 }
                 else
                     throw new InvalidOperationException();
@@ -256,11 +269,31 @@ namespace Xania.Graphs.EntityFramework.Tests.Relational
 
             foreach (var edge in db.Edges.UpdatedSince(dateTime).AsNoTracking())
             {
-                g.Edges.Add(new Elements.Edge(edge.Label) { Id = edge.Id, InV = edge.InV, OutV = edge.OutV });
+                cache.Graph.Edges.Add(new Elements.Edge(edge.Label) { Id = edge.Id, InV = edge.InV, OutV = edge.OutV });
             }
 
-            return g;
+            return cache;
         }
+    }
+
+    public class GraphCache
+    {
+        public Dictionary<string, GraphPrimitive> prims;
+        public Dictionary<string, GraphList> lists;
+        public Dictionary<string, Elements.GraphObject> objects;
+        public Dictionary<string, Elements.Vertex> vertices;
+        public DateTimeOffset? LoadTime { get; set; }
+
+        public GraphCache()
+        {
+            prims = new Dictionary<string, GraphPrimitive>();
+            lists = new Dictionary<string, GraphList>();
+            objects = new Dictionary<string, Elements.GraphObject>();
+            vertices = new Dictionary<string, Elements.Vertex>();
+            Graph = new Graph();
+        }
+
+        public Graph Graph { get; }
     }
 
     internal class Either<T0, T1, T2>

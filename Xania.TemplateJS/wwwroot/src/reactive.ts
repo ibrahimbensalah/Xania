@@ -1,10 +1,5 @@
-﻿import { Core } from "./core";
-
-export module Reactive {
-
-    interface IExpressionParser {
-        parse(expr: string): { execute(scope: { get(name: string) }) };
-    }
+﻿export module Reactive {
+    var empty = "";
 
     export interface IAction {
         execute();
@@ -73,7 +68,7 @@ export module Reactive {
             if (typeof value === "string")
                 return value;
             else if (value === void 0 || value === null)
-                return Core.empty;
+                return empty;
             else
                 return value.toString();
         }
@@ -400,6 +395,8 @@ export module Reactive {
                 if (g !== void 0)
                     return g;
             }
+
+            return void 0;
         }
 
         refresh() {
@@ -568,7 +565,6 @@ export module Reactive {
             }
         }
 
-
         where(source, predicate) {
             throw new Error("Not implemented");
         }
@@ -635,7 +631,7 @@ export module Reactive {
                 return result && result.toString();
             } else if (Array.isArray(parts)) {
                 var stack = parts.slice(0).reverse();
-                let result = Core.empty;
+                let result = empty;
 
                 while (stack.length) {
                     const cur = stack.pop();
